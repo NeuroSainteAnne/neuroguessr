@@ -67,7 +67,7 @@
       <button id="guess-button" class="guess-button" disabled>Confirm Guess</button>
     </div>
     <script type="module" async>
-      import * as niivue from "../dist/index.js";
+      import * as niivue from "./dist/index.js";
 
       // Game state
       let gameRunning = false;
@@ -114,17 +114,17 @@
       const atlas = urlParams.get('atlas') || 'aal';
       mode = urlParams.get('mode') || 'practice';
       const atlasFiles = {
-        'aal': { nii: '../data/aal.nii.gz', json: '../data/aal.json', name: 'AAL' },
-        'harvard-oxford': { nii: '../data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '../data/harvard_oxford.json', name: 'Harvard-Oxford' },
-        'brodmann' : {nii: "../data/brodmann_grid.nii.gz", json : "../data/brodmann.json", name : "Brodmann"},
-        'subcortical' : {nii: "../data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz", json : "../data/subcortical.json", name : "Subcortical"},
-        'cerebellum' : {nii: "../data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz", json : "../data/cerebellum.json", name : "Cerebellum"},
+        'aal': { nii: './data/aal.nii.gz', json: './data/aal.json', name: 'AAL' },
+        'harvard-oxford': { nii: './data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: './data/harvard_oxford.json', name: 'Harvard-Oxford' },
+        'brodmann' : {nii: "./data/brodmann_grid.nii.gz", json : "./data/brodmann.json", name : "Brodmann"},
+        'subcortical' : {nii: "./data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz", json : "./data/subcortical.json", name : "Subcortical"},
+        'cerebellum' : {nii: "./data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz", json : "./data/cerebellum.json", name : "Cerebellum"},
       };
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
 
       // Initialize Niivue
       const volumeList1 = [
-        { url: '../data/mni152.nii.gz' },
+        { url: './data/mni152.nii.gz' },
         { url: selectedAtlasFiles.nii }
       ];
 
