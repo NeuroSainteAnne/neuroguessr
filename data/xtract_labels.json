@@ -1,0 +1,62 @@
+{
+	"R": [
+		0, 255, 220, 255, 255, 255, 240, 218, 178, 199, 255, 238, 189, 124,
+		50, 0, 34, 154, 173, 0, 60, 0, 64, 30, 0, 255, 240, 152, 95, 135,
+		106, 233, 65, 255, 138, 127, 72, 46, 255, 148, 186, 205, 255
+	],
+	"G": [
+		0, 0, 20, 105, 215, 165, 230, 165, 34, 21, 255, 232, 183, 252, 205,
+		255, 139, 205, 255, 128, 179, 255, 224, 144, 191, 228, 128, 251, 158,
+		206, 90, 150, 105, 222, 43, 255, 61, 139, 0, 0, 85, 92, 99
+	],
+	"B": [
+		0, 0, 60, 180, 0, 0, 140, 32, 34, 133, 0, 170, 107, 0, 50, 0, 34,
+		50, 47, 0, 113, 255, 208, 255, 255, 196, 128, 152, 160, 235, 205,
+		122, 225, 173, 226, 212, 139, 87, 255, 211, 211, 92, 71
+	],
+	"labels": [
+		"Background",
+		"Anterior-Commissure",
+		"Arcuate-Fasciculus-L",
+		"Arcuate-Fasciculus-R",
+		"Acoustic-Radiation-L",
+		"Acoustic-Radiation-R",
+		"Anterior-Thalamic-Radiation-L",
+		"Anterior-Thalamic-Radiation-R",
+		"Cingulum-subsection:-Dorsal-L",
+		"Cingulum-subsection:-Dorsal-R",
+		"Cingulum-subsection:-Peri-genual-L",
+		"Cingulum-subsection:-Peri-genual-R",
+		"Cingulum-subsection:-Temporal-L",
+		"Cingulum-subsection:-Temporal-R",
+		"Corticospinal-Tract-L",
+		"Corticospinal-Tract-R",
+		"Frontal-Aslant-Tract-L",
+		"Frontal-Aslant-Tract-R",
+		"Forceps-Major",
+		"Forceps-Minor",
+		"Fornix-L",
+		"Fornix-R",
+		"Inferior-Fronto-Occipital-Fasciculus-L",
+		"Inferior-Fronto-Occipital-Fasciculus-R",
+		"Inferior-Longitudinal-Fasciculus-L",
+		"Inferior-Longitudinal-Fasciculus-R",
+		"Middle-Cerebellar-Peduncle",
+		"Middle-Longitudinal-Fasciculus-L",
+		"Middle-Longitudinal-Fasciculus-R",
+		"Optic-Radiation-L",
+		"Optic-Radiation-R",
+		"Superior-Longitudinal-Fasciculus-1-L",
+		"Superior-Longitudinal-Fasciculus-1-R",
+		"Superior-Longitudinal-Fasciculus-2-L",
+		"Superior-Longitudinal-Fasciculus-2-R",
+		"Superior-Longitudinal-Fasciculus-3-L",
+		"Superior-Longitudinal-Fasciculus-3-R",
+		"Superior-Thalamic-Radiation-L",
+		"Superior-Thalamic-Radiation-R",
+		"Uncinate-Fasciculus-L",
+		"Uncinate-Fasciculus-R",
+		"Vertical-Occipital-Fasciculus-L",
+		"Vertical-Occipital-Fasciculus-R"
+	]
+}

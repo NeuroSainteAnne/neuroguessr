@@ -52,7 +52,7 @@
           const viewportWidth = window.innerWidth;
           const canvasWidth = Math.min(viewportWidth, 3096);
           const viewportHeight = window.innerHeight;
-          const canvasHeight = Math.min(viewportHeight / 2, 1000);
+          const canvasHeight = Math.min(viewportHeight / 2, 1024);
           canvas.width = canvasWidth;
           canvas.height = canvasHeight;
           canvas.style.width = `${canvasWidth}px`;
@@ -120,6 +120,10 @@
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', name: 'Thalamus'},
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
       };
 
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
@@ -169,7 +173,6 @@
               const roundedData = atlasData.map(val => Math.round(val));
               nv1.volumes[1].setVolumeData(roundedData);
             }
-            // Remove setOpacity to respect LUT alpha values
             nv1.updateGLVolume();
             nv1.setMultiplanarPadPixels(5);
           } catch (e) {
@@ -345,6 +348,7 @@
         targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
+        attempts = 0; // Reset attempts for new target
         if (clut && nv1) {
           nv1.volumes[1].colormapLabel.lut = clut.slice();
           nv1.updateGLVolume();
@@ -424,7 +428,12 @@
         } else {
           errors++;
           errorLabel.textContent = `Errors: ${errors}`;
-          attempts = mode === 'practice' ? attempts + 1 : attempts;
+          if (mode === 'practice') {
+            attempts++;
+            if (attempts >= 3) {
+              highlightRegionFluorescentYellow(currentTarget);
+            }
+          }
           highlightTarget(false);
           if (mode === 'streak') {
             targetText.textContent = `Streak Ended! You got ${streak} in a row.`;
@@ -434,12 +443,8 @@
             }, 2000);
             return;
           }
-          if (mode === 'practice' && attempts >= 3) {
-            highlightRegionFluorescentYellow(currentTarget);
-          } else {
-            selectedVoxel = null;
-            guessButton.disabled = true;
-          }
+          selectedVoxel = null;
+          guessButton.disabled = true;
         }
       }
 
