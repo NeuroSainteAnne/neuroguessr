@@ -25,8 +25,14 @@
       </div>
       <div class="dropdown">
         <button class="dropbtn">
-          View
-          <span class="hamburger">☰</span>
+          View Options
+          <span class="hamburger">
+            <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
+              <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
+              <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
+            </svg>
+          </span>
         </button>
         <div class="dropdown-content">
           <a href="#" class="viewBtn" id="|Axial">Axial</a>
@@ -35,7 +41,7 @@
           <a class="viewBtn" id="|Render">Render</a>
           <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
           <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-          <a class="viewBtn divider dropdown-item-checked" id="Radiological">Radiological</a>
+          <a class="viewBtn" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
         </div>
       </div>
@@ -45,23 +51,50 @@
         id="gl1"
       ></canvas>
       <script>
-        // Dynamically set canvas size based on viewport
+        // Dynamically set canvas size based on viewport and device pixel ratio
         const canvas = document.getElementById("gl1");
 
         function setCanvasSize() {
+          // Get the device pixel ratio (e.g., 2 for Retina displays)
+          const dpr = window.devicePixelRatio || 1;
+
+          // Get the viewport dimensions
           const viewportWidth = window.innerWidth;
-          const canvasWidth = Math.min(viewportWidth, 3096);
           const viewportHeight = window.innerHeight;
-          const canvasHeight = Math.min(viewportHeight / 2, 1024);
-          canvas.width = canvasWidth;
-          canvas.height = canvasHeight;
+
+          // Get the parent container (main element) dimensions for more precise sizing
+          const mainElement = document.querySelector("main");
+          const containerWidth = mainElement ? mainElement.clientWidth : viewportWidth;
+
+          // Set canvas width to the container's width (full width of the viewport or main)
+          const canvasWidth = containerWidth;
+
+          // Calculate canvas height (e.g., 50% of viewport height or adjust as needed)
+          // You can modify this ratio based on your layout needs
+          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100); // Adjust offset for header/footer
+
+          // Set the canvas's internal resolution (scaled by DPR for sharpness)
+          canvas.width = canvasWidth * dpr;
+          canvas.height = canvasHeight * dpr;
+
+          // Set the canvas's CSS size to match the intended display size
           canvas.style.width = `${canvasWidth}px`;
           canvas.style.height = `${canvasHeight}px`;
+
+          // Optional: Ensure Niivue updates its rendering after resize
+          if (window.nv1) {
+            window.nv1.resizeListener();
+            window.nv1.drawScene();
+          }
         }
 
+        // Initial size setting
         setCanvasSize();
-        window.addEventListener('resize', setCanvasSize);
-      </script>
+
+        // Update size on window resize or orientation change
+        window.addEventListener("resize", setCanvasSize);
+        window.addEventListener("orientationchange", setCanvasSize);
+    </script>
     </main>
     <div class="button-container">
       <button id="return-button" class="return-button">Return</button>
@@ -104,7 +137,7 @@
 
       // Spacebar to confirm guess
       document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && !guessButton.disabled && gameRunning) {
+        if (e.code === 'Space' && ! GUESSButton.disabled && gameRunning) {
           e.preventDefault();
           validateGuess();
         }
@@ -167,7 +200,7 @@
             for (let a = 7; a < clut.length; a += 4) {
               clut[a] = 64; // Lower alpha for more transparency (~0.25)
             }
-            // For float32 data, ensure voxel values are treated as integers
+            // For float32 data, ensure voxel values are treated as auctions
             if (nv1.volumes[1].hdr.datatypeCode === 16) { // DT_FLOAT32
               const atlasData = await nv1.volumes[1].getVolumeData();
               const roundedData = atlasData.map(val => Math.round(val));

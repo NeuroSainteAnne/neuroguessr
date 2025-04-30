@@ -209,48 +209,58 @@ h2 {
 }
 
 .dropbtn {
-  background: transparent;
-  color: white;
-  font-size: 1.5rem;
-  font-weight: 300;
-  padding: 1rem 2rem;
+  background: #363636;
+  color: #d9dddc; /* Match target-text color */
+  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Match target-text font */
+  font-size: 1.8rem; /* Keep previous size */
+  font-weight: 500; /* Match target-text font-weight */
+  padding: 1.2rem 2rem;
   border: none;
-  border-bottom: 1px solid #808588;
   cursor: pointer;
-  transition: border-bottom 0.2s;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .dropbtn:hover {
-  border-bottom: 1px solid #e5e7eb;
+  background: #363636; /* Maintain background color on hover */
+  border: none;
 }
 
 .dropbtn:active {
-  border-bottom: 1.5px solid #e5e7eb;
+  background: #363636;
+  border: none;
 }
 
 .hamburger {
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.hamburger svg {
+  width: 24px;
+  height: 18px;
 }
 
 .dropdown-content {
   display: none;
   position: absolute;
   background-color: #2a2a2a;
-  min-width: 160px;
+  width: 100%; /* Match the width of the dropbtn */
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1000;
   border-radius: 8px;
+  border: 1px solid #808588; /* Match atlas button border */
 }
 
 .dropdown-content a {
-  color: #d9dddc;
-  padding: 12px 16px;
+  color: #d9dddc; /* Match target-text color */
+  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Match target-text font */
+  font-weight: 500; /* Match target-text font-weight */
+  font-size: 1.4rem; /* Keep previous size */
+  padding: 14px 18px;
   text-decoration: none;
   display: block;
-  font-size: 1.2rem;
 }
 
 .dropdown-content a:hover {

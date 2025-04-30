@@ -17,22 +17,25 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 ## Website
 
   - HTML5, CSS3, JavaScript (ES6): Core logic for game mechanics, UI interactions, and atlas loading.
-  - **Niivue**: WebGL-based library for rendering and interacting with 3D brain imaging data (`.nii.gz` files).
+  - **Niivue**: web-based visualization tool for neuroimaging [https://github.com/niivue/niivue]
 
 - **Data**:
   - **Brain Atlases**:
-    - AAL (`aal.nii.gz`, `aal.json`)
-    - Harvard-Oxford (`HarvardOxford-cort-maxprob-thr25-1mm.nii.gz`, `harvard_oxford.json`)
-    - Brodmann (`brodmann_grid.nii.gz`, `brodmann.json`)
-    - Subcortical (`ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz`, `subcortical.json`)
-    - Cerebellum (`Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz`, `cerebellum.json`)
-    - Base brain model: MNI152 (`mni152.nii.gz`)
+    - AAL3
+    - Harvard-Oxford 
+    - Brodmann (do not work for now)
+    - Subcortical 
+    - Cerebellum 
+    - White matter tracts (Xtract)
+    - Thalamus nuclei (low res)
+    - Hippocampus & amygdala subfields (low res)
+    - White matter (JHU)
   - **JSON Files**: Label mappings for each atlas, used for region identification and display.
 
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE] file for details.
 
 ## Author 
 François Ramon
