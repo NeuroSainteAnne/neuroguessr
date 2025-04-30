@@ -4,13 +4,16 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeuroGuessr Web</title>
+    <title>NeuroGuessr</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
   </head>
   <body>
     <header>
-      <h1 onclick="window.location.href='index.html'">NeuroGuessr Web</h1>
+      <div class="logo-title-container">
+        <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+        <h1 onclick="window.location.href='index.html'">NeuroGuessr Web</h1>
+      </div>
       <div class="game-status">
         <p id="target-label"><span class="target-text">Target: Not Started</span></p>
         <div class="score-error-container">
@@ -464,5 +467,5 @@
 
       initNiivue();
     </script>
-  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93876b645f22bd03',t:'MTc0NjAyMDA5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+  </body>
 </html>

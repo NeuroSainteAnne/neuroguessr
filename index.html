@@ -9,9 +9,10 @@
   </head>
   <body>
     <header>
-      <h1>NeuroGuessr Web</h1>
-    </header>
-    <main>
+      <div class="logo-title-container">
+        <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+        <h1>NeuroGuessr</h1>
+      </div>
       <section class="selection-container">
         <h2>Select Atlas</h2>
         <div class="atlas-buttons">
@@ -26,10 +27,18 @@
         <h2>Select Game Mode</h2>
         <div class="mode-buttons">
           <button class="mode-button" data-mode="practice">Practice</button>
-          <button class="mode-button" data-mode="streak">Streak</button>
-          <button class="mode-button" data-mode="time-attack">Time Attack</button>
+          <button class="mode-button" data-mode="streak">
+            <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
+            Streak
+          </button>
+          <button class="mode-button" data-mode="time-attack">
+            <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
+            Time Attack
+          </button>
         </div>
       </section>
+    </header>
+    <main>
       <button id="play-button" class="play-button" disabled>Play</button>
     </main>
     <div id="notification"></div>

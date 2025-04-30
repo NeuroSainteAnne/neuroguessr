@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+
 html {
   height: 100%;
   margin: 0;
@@ -12,7 +14,7 @@ body {
   padding: 0;
   min-height: 100vh;
   width: 100vw;
-  font-family: system-ui, Arial, Helvetica, sans-serif;
+  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
   user-select: none;
   color: #d9dddc;
   background: #363636;
@@ -23,18 +25,39 @@ body {
 header {
   margin: 20px 0;
   width: 100%;
-  max-width: 3096px;
+  max-width: 900px; /* Reduced max-width for tighter centering in index.html */
   padding: 0 20px;
   box-sizing: border-box;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column; /* Stack elements vertically for index.html */
+  align-items: center; /* Center all header content */
+  justify-content: center;
+}
+
+/* Specific header styling for viewer.html */
+body:has(canvas#gl1) header {
+  flex-direction: row; /* Row layout for viewer.html */
+  justify-content: space-between; /* Space out logo, game-status, and dropdown */
   align-items: center;
+  max-width: 3096px; /* Wider max-width for viewer.html */
+}
+
+.logo-title-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center; /* Center logo and title within its container */
+}
+
+.logo {
+  height: 100px;
+  width: auto;
 }
 
 main {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: center; /* Center content in main for both pages */
   width: 100%;
   background: #363636;
   padding: 20px;
@@ -60,14 +83,21 @@ h1 {
   font-size: 4rem;
   font-weight: bold;
   margin: 0;
-  text-align: left;
-  font-family: Arial, Helvetica, sans-serif;
+  text-align: center; /* Center title text */
+  font-family: 'Open Sans', Arial, Helvetica, sans-serif;
+  transition: transform 0.2s ease-in-out;
+}
+
+h1:hover {
+  transform: scale(1.02);
+  cursor: pointer;
 }
 
 h2 {
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 1rem;
+  text-align: center; /* Center section headings */
 }
 
 .game-status {
@@ -89,7 +119,17 @@ h2 {
   background: #363636;
   padding: 15px 30px;
   border-radius: 15px;
-  transition: color 0.1s ease-in-out, font-size 0.1s ease-in-out, font-weight 0.1s ease-in-out;
+  transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out;
+}
+
+.target-text.success {
+  color: #4ade80;
+  font-weight: bold;
+}
+
+.target-text.error {
+  color: #ff0000; /* Ferrari red */
+  font-weight: bold;
 }
 
 .score-error-container {
@@ -111,6 +151,7 @@ h2 {
   display: flex;
   gap: 20px;
   z-index: 1000;
+  justify-content: center; /* Center buttons */
 }
 
 .guess-button {
@@ -168,27 +209,26 @@ h2 {
 }
 
 .dropbtn {
-  background: #363636;
+  background: transparent;
   color: white;
   font-size: 1.5rem;
   font-weight: 300;
   padding: 1rem 2rem;
-  border: 1px solid #808588;
-  border-radius: 2rem;
+  border: none;
+  border-bottom: 1px solid #808588;
   cursor: pointer;
-  transition: background 0.2s, border 0.2s;
+  transition: border-bottom 0.2s;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .dropbtn:hover {
-  background: #2a2a2a;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .dropbtn:active {
-  background: #2a2a2a;
-  border: 1.5px solid #e5e7eb;
+  border-bottom: 1.5px solid #e5e7eb;
 }
 
 .hamburger {
@@ -235,13 +275,44 @@ h2 {
   margin: 20px 0;
   text-align: center;
   width: 100%;
+  max-width: 900px; /* Limit width for centering */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.atlas-buttons, .mode-buttons {
+.atlas-buttons {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
+  max-width: 900px;
+  justify-content: center;
+}
+
+.atlas-buttons .atlas-button {
+  flex: 1 1 calc(33.33% - 1rem);
+  box-sizing: border-box;
+}
+
+.mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.mode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-button img {
+  height: 20px;
+  width: auto;
+  margin-right: 0.5rem;
 }
 
 .atlas-button, .mode-button {
