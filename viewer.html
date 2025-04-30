@@ -55,33 +55,26 @@
         const canvas = document.getElementById("gl1");
 
         function setCanvasSize() {
-          // Get the device pixel ratio (e.g., 2 for Retina displays)
           const dpr = window.devicePixelRatio || 1;
-
-          // Get the viewport dimensions
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;
-
-          // Get the parent container (main element) dimensions for more precise sizing
           const mainElement = document.querySelector("main");
+          const headerElement = document.querySelector("header");
+          const buttonContainer = document.querySelector(".button-container");
+          
           const containerWidth = mainElement ? mainElement.clientWidth : viewportWidth;
-
-          // Set canvas width to the container's width (full width of the viewport or main)
+          const headerHeight = headerElement ? headerElement.offsetHeight : 0;
+          const buttonHeight = buttonContainer ? buttonContainer.offsetHeight : 0;
+          
           const canvasWidth = containerWidth;
-
-          // Calculate canvas height (e.g., 50% of viewport height or adjust as needed)
-          // You can modify this ratio based on your layout needs
-          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100); // Adjust offset for header/footer
-
-          // Set the canvas's internal resolution (scaled by DPR for sharpness)
+          const availableHeight = viewportHeight - headerHeight - buttonHeight - 20; // 20px buffer
+          const canvasHeight = Math.min(availableHeight * 0.6, viewportHeight * 0.5);
+          
           canvas.width = canvasWidth * dpr;
           canvas.height = canvasHeight * dpr;
-
-          // Set the canvas's CSS size to match the intended display size
           canvas.style.width = `${canvasWidth}px`;
           canvas.style.height = `${canvasHeight}px`;
-
-          // Optional: Ensure Niivue updates its rendering after resize
+          
           if (window.nv1) {
             window.nv1.resizeListener();
             window.nv1.drawScene();
@@ -135,9 +128,8 @@
         window.location.href = 'index.html';
       });
 
-      // Spacebar to confirm guess
       document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && ! GUESSButton.disabled && gameRunning) {
+        if ((e.code === 'Space' || e.key === ' ') && !guessButton.disabled && gameRunning) {
           e.preventDefault();
           validateGuess();
         }

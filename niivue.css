@@ -25,39 +25,39 @@ body {
 header {
   margin: 20px 0;
   width: 100%;
-  max-width: 900px; /* Reduced max-width for tighter centering in index.html */
+  max-width: 1000px; /* Increased for desktop */
   padding: 0 20px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column; /* Stack elements vertically for index.html */
-  align-items: center; /* Center all header content */
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 
-/* Specific header styling for viewer.html */
+/* Viewer page header */
 body:has(canvas#gl1) header {
-  flex-direction: row; /* Row layout for viewer.html */
-  justify-content: space-between; /* Space out logo, game-status, and dropdown */
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  max-width: 3096px; /* Wider max-width for viewer.html */
+  max-width: 1400px; /* Increased for viewer.html on desktop */
 }
 
 .logo-title-container {
   display: flex;
   align-items: center;
   gap: 1rem;
-  justify-content: center; /* Center logo and title within its container */
+  justify-content: center;
 }
 
 .logo {
-  height: 100px;
+  height: 80px; /* Increased from 60px */
   width: auto;
 }
 
 main {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center content in main for both pages */
+  align-items: center;
   width: 100%;
   background: #363636;
   padding: 20px;
@@ -68,6 +68,8 @@ main {
 canvas {
   cursor: crosshair;
   display: block;
+  width: 100%;
+  max-width: 100%;
 }
 
 canvas:focus {
@@ -80,10 +82,10 @@ footer {
 }
 
 h1 {
-  font-size: 4rem;
+  font-size: 3.5rem; /* Increased from 2.5rem */
   font-weight: bold;
   margin: 0;
-  text-align: center; /* Center title text */
+  text-align: center;
   font-family: 'Open Sans', Arial, Helvetica, sans-serif;
   transition: transform 0.2s ease-in-out;
 }
@@ -94,10 +96,10 @@ h1:hover {
 }
 
 h2 {
-  font-size: 2rem;
+  font-size: 2rem; /* Increased from 1.5rem */
   font-weight: 600;
   margin-bottom: 1rem;
-  text-align: center; /* Center section headings */
+  text-align: center;
 }
 
 .game-status {
@@ -113,12 +115,12 @@ h2 {
 }
 
 .target-text {
-  font-size: 3rem;
+  font-size: 2.5rem; /* Increased from 1.8rem */
   font-weight: 500;
   color: #d9dddc;
   background: #363636;
-  padding: 15px 30px;
-  border-radius: 15px;
+  padding: 15px 25px; /* Slightly larger padding */
+  border-radius: 12px;
   transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out;
 }
 
@@ -128,49 +130,52 @@ h2 {
 }
 
 .target-text.error {
-  color: #ff0000; /* Ferrari red */
+  color: #ff0000;
   font-weight: bold;
 }
 
 .score-error-container {
   display: flex;
   justify-content: center;
-  gap: 2rem;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .score-error-label {
-  font-size: 2rem;
+  font-size: 1.8rem; /* Increased from 1.5rem */
   font-weight: 600;
 }
 
 .button-container {
   position: fixed;
-  bottom: 30px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 20px;
+  gap: 15px;
   z-index: 1000;
-  justify-content: center; /* Center buttons */
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
-.guess-button {
+.guess-button, .return-button {
   background: #363636;
   color: white;
-  font-size: 2rem;
+  font-size: 1.5rem; /* Increased from 1.2rem */
   font-weight: 600;
-  padding: 1.5rem 3rem;
+  padding: 1.2rem 2.5rem; /* Larger padding */
   border: 1px solid #808588;
   border-radius: 2rem;
   cursor: pointer;
   transition: background 0.2s, border 0.2s;
+  min-width: 150px; /* Increased from 120px */
 }
 
-.guess-button:hover:not(:disabled) {
+.guess-button:hover:not(:disabled), .return-button:hover {
   background: #2a2a2a;
 }
 
-.guess-button:active:not(:disabled) {
+.guess-button:active:not(:disabled), .return-button:active {
   background: #2a2a2a;
   border: 1.5px solid #e5e7eb;
 }
@@ -182,27 +187,6 @@ h2 {
   opacity: 0.7;
 }
 
-.return-button {
-  background: #363636;
-  color: white;
-  font-size: 2rem;
-  font-weight: 600;
-  padding: 1.5rem 3rem;
-  border: 1px solid #808588;
-  border-radius: 2rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s;
-}
-
-.return-button:hover {
-  background: #2a2a2a;
-}
-
-.return-button:active {
-  background: #2a2a2a;
-  border: 1.5px solid #e5e7eb;
-}
-
 .dropdown {
   position: relative;
   display: inline-block;
@@ -210,55 +194,44 @@ h2 {
 
 .dropbtn {
   background: #363636;
-  color: #d9dddc; /* Match target-text color */
-  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Match target-text font */
-  font-size: 1.8rem; /* Keep previous size */
-  font-weight: 500; /* Match target-text font-weight */
-  padding: 1.2rem 2rem;
+  color: #d9dddc;
+  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+  font-size: 1.5rem; /* Increased from 1.2rem */
+  font-weight: 500;
+  padding: 1rem 2rem; /* Larger padding */
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.dropbtn:hover {
-  background: #363636; /* Maintain background color on hover */
-  border: none;
-}
-
-.dropbtn:active {
+.dropbtn:hover, .dropbtn:active {
   background: #363636;
-  border: none;
-}
-
-.hamburger {
-  display: flex;
-  align-items: center;
 }
 
 .hamburger svg {
-  width: 24px;
-  height: 18px;
+  width: 24px; /* Increased from 20px */
+  height: 18px; /* Increased from 15px */
 }
 
 .dropdown-content {
   display: none;
   position: absolute;
   background-color: #2a2a2a;
-  width: 100%; /* Match the width of the dropbtn */
+  width: 100%;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1000;
   border-radius: 8px;
-  border: 1px solid #808588; /* Match atlas button border */
+  border: 1px solid #808588;
 }
 
 .dropdown-content a {
-  color: #d9dddc; /* Match target-text color */
-  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Match target-text font */
-  font-weight: 500; /* Match target-text font-weight */
-  font-size: 1.4rem; /* Keep previous size */
-  padding: 14px 18px;
+  color: #d9dddc;
+  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+  font-weight: 500;
+  font-size: 1.2rem; /* Increased from 1rem */
+  padding: 12px 16px; /* Slightly larger padding */
   text-decoration: none;
   display: block;
 }
@@ -285,56 +258,31 @@ h2 {
   margin: 20px 0;
   text-align: center;
   width: 100%;
-  max-width: 900px; /* Limit width for centering */
+  max-width: 1000px; /* Increased for desktop */
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.atlas-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  max-width: 900px;
-  justify-content: center;
-}
-
-.atlas-buttons .atlas-button {
-  flex: 1 1 calc(33.33% - 1rem);
-  box-sizing: border-box;
-}
-
-.mode-buttons {
+.atlas-buttons, .mode-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
   justify-content: center;
-}
-
-.mode-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mode-button img {
-  height: 20px;
-  width: auto;
-  margin-right: 0.5rem;
 }
 
 .atlas-button, .mode-button {
   background: #363636;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.2rem; /* Increased from 1rem */
   font-weight: 300;
-  padding: 1rem 2rem;
+  padding: 1rem 2rem; /* Larger padding */
   border: 1px solid #808588;
   border-radius: 2rem;
   cursor: pointer;
   transition: background 0.2s, border 0.2s;
+  min-width: 120px; /* Increased from 100px */
 }
 
 .atlas-button:hover, .mode-button:hover {
@@ -346,16 +294,12 @@ h2 {
   border: 1.5px solid #e5e7eb;
 }
 
-.atlas-button.selected:hover, .mode-button.selected:hover {
-  background: #2a2a2a;
-}
-
 .play-button {
   background: #363636;
   color: white;
-  font-size: 2.5rem;
+  font-size: 2rem; /* Increased from 1.5rem */
   font-weight: 600;
-  padding: 2rem 4rem;
+  padding: 1.5rem 3rem; /* Larger padding */
   border: 1px solid #808588;
   border-radius: 2.5rem;
   cursor: pointer;
@@ -376,4 +320,104 @@ h2 {
   border: 1px solid #4a4a4a;
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.mode-button img {
+  height: 20px; /* Increased from 16px */
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 600px) {
+  header {
+    margin: 5px 0;
+    padding: 0 5px;
+  }
+
+  body:has(canvas#gl1) header {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .logo-title-container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .logo {
+    height: 40px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  .game-status {
+    margin: 0.5rem 0;
+  }
+
+  .target-text {
+    font-size: 1.2rem;
+    padding: 8px 15px;
+  }
+
+  .score-error-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .score-error-label {
+    font-size: 1rem;
+  }
+
+  .atlas-buttons, .mode-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .atlas-button, .mode-button {
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    min-width: 80%;
+  }
+
+  .play-button {
+    font-size: 1.2rem;
+    padding: 1rem 2rem;
+  }
+
+  .button-container {
+    bottom: 10px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .guess-button, .return-button {
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    min-width: 80%;
+  }
+
+  .dropbtn {
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .dropdown-content a {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  canvas {
+    height: auto !important;
+    max-height: 50vh;
+  }
 }
