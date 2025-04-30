@@ -1,0 +1,298 @@
+html {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100vw;
+  font-family: system-ui, Arial, Helvetica, sans-serif;
+  user-select: none;
+  color: #d9dddc;
+  background: #363636;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+header {
+  margin: 20px 0;
+  width: 100%;
+  max-width: 3096px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background: #363636;
+  padding: 20px;
+  box-sizing: border-box;
+  flex-grow: 1;
+}
+
+canvas {
+  cursor: crosshair;
+  display: block;
+}
+
+canvas:focus {
+  outline: 0px;
+}
+
+footer {
+  margin: 20px 0;
+  text-align: center;
+}
+
+h1 {
+  font-size: 4rem;
+  font-weight: bold;
+  margin: 0;
+  text-align: left;
+  font-family: "EB Garamond", Garamond, serif;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.game-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+}
+
+.target-label {
+  text-align: center;
+  margin: 0;
+}
+
+.target-text {
+  font-size: 3rem;
+  font-weight: 500;
+  color: #d9dddc;
+  background: #363636;
+  padding: 15px 30px;
+  border-radius: 15px;
+  transition: color 0.1s ease-in-out, font-size 0.1s ease-in-out, font-weight 0.1s ease-in-out;
+}
+
+.score-error-container {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.score-error-label {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.button-container {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  z-index: 1000;
+}
+
+.guess-button {
+  background: #363636;
+  color: white;
+  font-size: 2rem;
+  font-weight: 600;
+  padding: 1.5rem 3rem;
+  border: 1px solid #808588;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.guess-button:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+
+.guess-button:active:not(:disabled) {
+  background: #2a2a2a;
+  border: 1.5px solid #e5e7eb;
+}
+
+.guess-button:disabled {
+  background: #363636;
+  border: 1px solid #4a4a4a;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.return-button {
+  background: #363636;
+  color: white;
+  font-size: 2rem;
+  font-weight: 600;
+  padding: 1.5rem 3rem;
+  border: 1px solid #808588;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.return-button:hover {
+  background: #2a2a2a;
+}
+
+.return-button:active {
+  background: #2a2a2a;
+  border: 1.5px solid #e5e7eb;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropbtn {
+  background: #363636;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 300;
+  padding: 1rem 2rem;
+  border: 1px solid #808588;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropbtn:hover {
+  background: #2a2a2a;
+}
+
+.dropbtn:active {
+  background: #2a2a2a;
+  border: 1.5px solid #e5e7eb;
+}
+
+.hamburger {
+  font-size: 1.2rem;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #2a2a2a;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+.dropdown-content a {
+  color: #d9dddc;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 1.2rem;
+}
+
+.dropdown-content a:hover {
+  background-color: #363636;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content .dropdown-item-checked::before {
+  content: '✓ ';
+  color: #4ade80;
+}
+
+.dropdown-content .divider {
+  border-top: 1px solid #808588;
+  margin: 8px 0;
+}
+
+.selection-container {
+  margin: 20px 0;
+  text-align: center;
+  width: 100%;
+}
+
+.atlas-buttons, .mode-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.atlas-button, .mode-button {
+  background: #363636;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 300;
+  padding: 1rem 2rem;
+  border: 1px solid #808588;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.atlas-button:hover, .mode-button:hover {
+  background: #2a2a2a;
+}
+
+.atlas-button.selected, .mode-button.selected {
+  background: #2a2a2a;
+  border: 1.5px solid #e5e7eb;
+}
+
+.atlas-button.selected:hover, .mode-button.selected:hover {
+  background: #2a2a2a;
+}
+
+.play-button {
+  background: #363636;
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 600;
+  padding: 2rem 4rem;
+  border: 1px solid #808588;
+  border-radius: 2.5rem;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.play-button:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+
+.play-button:active:not(:disabled) {
+  background: #2a2a2a;
+  border: 1.5px solid #e5e7eb;
+}
+
+.play-button:disabled {
+  background: #363636;
+  border: 1px solid #4a4a4a;
+  cursor: not-allowed;
+  opacity: 0.7;
+}

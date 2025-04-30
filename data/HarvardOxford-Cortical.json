@@ -1,0 +1,722 @@
+{
+  "1": {
+    "name": "Frontal Pole (BA 10)",
+    "structure": [
+      "Most anterior portion of the frontal lobe",
+      "Rich in granular cells with prominent layer IV",
+      "High proportion of dendritic spines",
+      "Extensive connections with prefrontal association areas, limbic structures, and anterior thalamic nuclei"
+    ],
+    "function": [
+      "Involved in higher cognitive functions including working memory and executive functions",
+      "Plays a key role in prospective memory and multitasking",
+      "Participates in cognitive branching and integration of outcomes from multiple cognitive operations",
+      "Associated with metacognition, insight, and introspection"
+    ]
+  },
+  "2": {
+    "name": "Insular Cortex",
+    "structure": [
+      "Located deep within the lateral sulcus, covered by frontal, parietal, and temporal opercula",
+      "Divided into anterior (agranular) and posterior (granular) portions",
+      "Rich in von Economo neurons in the anterior division",
+      "Connected to limbic structures, thalamus, basal ganglia, and multiple cortical regions"
+    ],
+    "function": [
+      "Integrates interoceptive information including visceral sensation, pain, temperature, and taste",
+      "Contributes to emotional processing and empathy",
+      "Involved in salience detection and attentional switching",
+      "Participates in autonomic regulation and visceromotor control"
+    ]
+  },
+  "3": {
+    "name": "Superior Frontal Gyrus (BA 8, 9)",
+    "structure": [
+      "Located in the dorsolateral and medial surfaces of the frontal lobe",
+      "Extends from the precentral gyrus to the frontal pole",
+      "Posterior portion contains the frontal eye field (BA 8)",
+      "Connected extensively with prefrontal and premotor regions, and thalamic nuclei"
+    ],
+    "function": [
+      "Participates in higher cognitive functions including working memory and executive control",
+      "Frontal eye field portion controls voluntary eye movements and visual attention",
+      "Involved in spatial cognition and self-awareness",
+      "Contributes to planning complex movements and response inhibition"
+    ]
+  },
+  "4": {
+    "name": "Middle Frontal Gyrus (BA 9, 46)",
+    "structure": [
+      "Located between superior and inferior frontal sulci",
+      "Contains the dorsolateral prefrontal cortex (DLPFC)",
+      "Rich in pyramidal cells with extensive dendritic arborization",
+      "Connected with multiple association areas, thalamus, and striatum"
+    ],
+    "function": [
+      "Critical for working memory maintenance and manipulation",
+      "Essential for cognitive flexibility and task switching",
+      "Involved in abstract reasoning and problem-solving",
+      "Participates in decision-making and goal-directed behavior"
+    ]
+  },
+  "5": {
+    "name": "Inferior Frontal Gyrus, pars triangularis (BA 45)",
+    "structure": [
+      "Forms part of Broca's area in the dominant (usually left) hemisphere",
+      "Triangular-shaped region bounded by anterior ascending and horizontal rami of the lateral sulcus",
+      "Contains high density of language-related neural circuits",
+      "Connected to other language areas via the arcuate fasciculus and superior longitudinal fasciculus"
+    ],
+    "function": [
+      "Critical component of the expressive language network",
+      "Involved in semantic processing and word retrieval",
+      "Participates in syntax processing and grammatical operations",
+      "When damaged in the dominant hemisphere, contributes to Broca's aphasia"
+    ]
+  },
+  "6": {
+    "name": "Inferior Frontal Gyrus, pars opercularis (BA 44)",
+    "structure": [
+      "Posterior component of Broca's area in the dominant hemisphere",
+      "Located between precentral sulcus and vertical ramus of lateral sulcus",
+      "Contains mirror neurons in humans",
+      "Connected to premotor cortex, arcuate fasciculus, and superior longitudinal fasciculus"
+    ],
+    "function": [
+      "Critical for speech production and articulatory planning",
+      "Involved in phonological processing and working memory",
+      "Participates in action observation and imitation",
+      "Damage results in effortful speech with preserved comprehension in Broca's aphasia"
+    ]
+  },
+  "7": {
+    "name": "Precentral Gyrus (BA 4, 6)",
+    "structure": [
+      "Primary motor cortex (BA 4) and premotor cortex (BA 6)",
+      "Located anterior to central sulcus",
+      "Contains giant pyramidal Betz cells in layer V of BA 4",
+      "Organized somatotopically as motor homunculus (legs superior, face inferior)"
+    ],
+    "function": [
+      "Execution of voluntary movement through direct projections to spinal motor neurons",
+      "Premotor regions involved in movement planning and preparation",
+      "Encodes parameters of movement including direction, force, and velocity",
+      "Damage results in contralateral hemiparesis with upper motor neuron signs"
+    ]
+  },
+  "8": {
+    "name": "Temporal Pole (BA 38)",
+    "structure": [
+      "Most anterior portion of temporal lobe",
+      "Transitional cortex between neocortex and allocortex",
+      "Rich connections with limbic structures including amygdala and orbitofrontal cortex",
+      "Part of the anterior temporal lobe network"
+    ],
+    "function": [
+      "Integration of complex, highly processed perceptual inputs with emotional responses",
+      "Involved in social-emotional processing including theory of mind",
+      "Contributes to semantic memory for unique entities",
+      "Associated with personal semantic memory and autobiographical memory"
+    ]
+  },
+  "9": {
+    "name": "Superior Temporal Gyrus, anterior division (BA 22, 38)",
+    "structure": [
+      "Anterior portion of the superior temporal gyrus",
+      "Bordered medially by the lateral sulcus and inferiorly by superior temporal sulcus",
+      "Contains auditory association cortex",
+      "Connected to primary auditory cortex, inferior frontal gyrus, and limbic structures"
+    ],
+    "function": [
+      "Processes complex auditory stimuli including speech and voice recognition",
+      "Contributes to language comprehension in the dominant hemisphere",
+      "Involved in social cognition through voice prosody analysis",
+      "Participates in auditory working memory"
+    ]
+  },
+  "10": {
+    "name": "Superior Temporal Gyrus, posterior division (BA 22)",
+    "structure": [
+      "Posterior portion of superior temporal gyrus",
+      "Contains Wernicke's area in the dominant hemisphere",
+      "Adjacent to temporoparietal junction",
+      "Connected to arcuate fasciculus, angular gyrus, and other language areas"
+    ],
+    "function": [
+      "Critical for auditory language comprehension in dominant hemisphere",
+      "Involved in phonological processing and speech perception",
+      "Participates in integration of auditory and visual information",
+      "Damage to this area in dominant hemisphere can result in Wernicke's aphasia"
+    ]
+  },
+  "11": {
+    "name": "Middle Temporal Gyrus, anterior division (BA 21)",
+    "structure": [
+      "Anterior portion of middle temporal gyrus",
+      "Located between superior and inferior temporal sulci",
+      "Association cortex with columnar organization",
+      "Connected to temporal pole, superior temporal gyrus, and ventral processing stream"
+    ],
+    "function": [
+      "Involved in semantic processing of language",
+      "Contributes to multimodal integration of sensory information",
+      "Participates in conceptual knowledge representation",
+      "Associated with processing of contextual associations"
+    ]
+  },
+  "12": {
+    "name": "Middle Temporal Gyrus, posterior division (BA 21, 37)",
+    "structure": [
+      "Posterior portion of middle temporal gyrus",
+      "Located at the interface of temporal and parietal lobes",
+      "Higher-order association cortex",
+      "Connected to dorsal and ventral processing streams"
+    ],
+    "function": [
+      "Involved in lexical-semantic processing",
+      "Contributes to audiovisual integration",
+      "Participates in tool recognition and action understanding",
+      "Associated with processing of biological motion"
+    ]
+  },
+  "13": {
+    "name": "Middle Temporal Gyrus, temporooccipital part (BA 37, 39)",
+    "structure": [
+      "Junction between temporal and occipital lobes",
+      "Part of the ventral visual processing stream",
+      "Association cortex with connections to visual and language areas",
+      "Connected to inferior temporal gyrus and angular gyrus"
+    ],
+    "function": [
+      "Involved in visual word form recognition",
+      "Contributes to semantic processing of visual stimuli",
+      "Participates in object recognition and naming",
+      "Associated with cross-modal integration of visual and linguistic information"
+    ]
+  },
+  "14": {
+    "name": "Inferior Temporal Gyrus, anterior division (BA 20)",
+    "structure": [
+      "Anterior portion of the inferior temporal gyrus",
+      "Located lateral to the fusiform gyrus, inferior to the middle temporal gyrus",
+      "Part of the ventral visual processing stream",
+      "Connected to temporal pole and other temporal lobe structures"
+    ],
+    "function": [
+      "Involved in complex visual processing and object recognition",
+      "Contributes to visual semantics and conceptual knowledge",
+      "Participates in face recognition",
+      "Associated with lexical-semantic processing for concrete concepts"
+    ]
+  },
+  "15": {
+    "name": "Inferior Temporal Gyrus, posterior division (BA 20, 37)",
+    "structure": [
+      "Posterior portion of inferior temporal gyrus",
+      "Higher-order visual association cortex",
+      "Part of the ventral visual stream",
+      "Connected to middle temporal and fusiform gyri"
+    ],
+    "function": [
+      "Involved in high-level visual processing and object recognition",
+      "Contributes to visual categorization and identification",
+      "Participates in reading and visual word form processing",
+      "Associated with visual-semantic integration"
+    ]
+  },
+  "16": {
+    "name": "Inferior Temporal Gyrus, temporooccipital part (BA 37)",
+    "structure": [
+      "Junction between inferior temporal gyrus and occipital lobe",
+      "Part of the ventral visual stream",
+      "Connected to visual areas and language networks",
+      "Adjacent to lateral occipital complex"
+    ],
+    "function": [
+      "Involved in high-level visual object recognition",
+      "Contributes to reading and visual word form processing",
+      "Participates in naming and categorization of visual stimuli",
+      "Associated with visual semantics and memory"
+    ]
+  },
+  "17": {
+    "name": "Postcentral Gyrus (BA 1, 2, 3)",
+    "structure": [
+      "Primary somatosensory cortex located posterior to central sulcus",
+      "Organized somatotopically as sensory homunculus",
+      "BA 3 (anterior) receives thalamocortical projections, BA 1 and 2 (posterior) are higher-order",
+      "Connected to thalamus via thalamocortical radiations and to motor cortex"
+    ],
+    "function": [
+      "Processes tactile sensation, proprioception, and haptic information",
+      "Discriminates touch, pressure, vibration, and joint position",
+      "Maps the contralateral body with disproportionate representation of hands and face",
+      "Damage results in contralateral sensory loss and astereognosis"
+    ]
+  },
+  "18": {
+    "name": "Superior Parietal Lobule (BA 5, 7)",
+    "structure": [
+      "Located posterior to postcentral gyrus and superior to intraparietal sulcus",
+      "Higher-order association cortex",
+      "Connected to dorsal visual stream and sensorimotor areas",
+      "Rich in neurons that integrate multimodal sensory information"
+    ],
+    "function": [
+      "Integrates somatosensory and visual information for spatial processing",
+      "Involved in visuomotor coordination and reaching movements",
+      "Contributes to spatial attention and mental rotation",
+      "Damage may result in optic ataxia and deficits in visual guidance of movement"
+    ]
+  },
+  "19": {
+    "name": "Supramarginal Gyrus, anterior division (BA 40)",
+    "structure": [
+      "Anterior portion of the supramarginal gyrus",
+      "Part of the inferior parietal lobule",
+      "Arches around the posterior end of the lateral sulcus",
+      "Connected to sensorimotor areas and arcuate fasciculus"
+    ],
+    "function": [
+      "Involved in processing of somatosensory information and phonological working memory",
+      "Contributes to tactile object recognition and tool use",
+      "Participates in phonological aspects of language processing",
+      "Damage to left hemisphere may contribute to conduction aphasia and ideomotor apraxia"
+    ]
+  },
+  "20": {
+    "name": "Supramarginal Gyrus, posterior division (BA 40)",
+    "structure": [
+      "Posterior portion of supramarginal gyrus",
+      "Part of the inferior parietal lobule",
+      "Connected to superior temporal and angular gyri",
+      "Part of the ventral attention network"
+    ],
+    "function": [
+      "Involved in spatial attention and awareness",
+      "Contributes to phonological processing and working memory",
+      "Participates in gesture recognition and production",
+      "Right hemisphere damage associated with neglect syndrome"
+    ]
+  },
+  "21": {
+    "name": "Angular Gyrus (BA 39)",
+    "structure": [
+      "Located at the posterior part of inferior parietal lobule",
+      "Surrounds the ascending portion of superior temporal sulcus",
+      "Multimodal association cortex at the junction of temporal, parietal, and occipital lobes",
+      "Connected to language, visual, and attention networks"
+    ],
+    "function": [
+      "Critical for reading comprehension and semantic processing",
+      "Involved in number processing and calculation",
+      "Contributes to verbal working memory and theory of mind",
+      "Damage to left angular gyrus may result in Gerstmann syndrome"
+    ]
+  },
+  "22": {
+    "name": "Lateral Occipital Cortex, superior division (BA 19)",
+    "structure": [
+      "Superior portion of lateral occipital cortex",
+      "Higher-order visual association area",
+      "Part of the dorsal visual stream ('where' pathway)",
+      "Connected to V1, V2, and parietal visual areas"
+    ],
+    "function": [
+      "Processes global form perception and spatial relationships",
+      "Involved in motion perception and visual spatial attention",
+      "Contributes to object recognition based on shape",
+      "Participates in visually guided actions"
+    ]
+  },
+  "23": {
+    "name": "Lateral Occipital Cortex, inferior division (BA 18, 19)",
+    "structure": [
+      "Inferior portion of lateral occipital cortex",
+      "Part of the ventral visual stream ('what' pathway)",
+      "Higher-order visual association area",
+      "Connected to primary visual cortex and temporal visual areas"
+    ],
+    "function": [
+      "Critical for object recognition and visual form processing",
+      "Contains the lateral occipital complex (LOC) which responds to object shapes",
+      "Involved in figure-ground segregation",
+      "Contributes to visual working memory"
+    ]
+  },
+  "24": {
+    "name": "Intracalcarine Cortex (BA 17)",
+    "structure": [
+      "Primary visual cortex (V1) located within the calcarine sulcus",
+      "Striate cortex with distinctive line of Gennari in layer IV",
+      "Retinotopically organized with posterior portions representing central vision",
+      "Receives direct projections from lateral geniculate nucleus of thalamus"
+    ],
+    "function": [
+      "Initial cortical processing of visual information",
+      "Detects basic visual features including orientation, spatial frequency, and color",
+      "Provides hierarchical input to higher visual areas",
+      "Damage results in contralateral visual field defects"
+    ]
+  },
+  "25": {
+    "name": "Frontal Medial Cortex (BA 10, 32)",
+    "structure": [
+      "Located on the medial surface of the frontal lobe",
+      "Includes portions of medial prefrontal cortex and anterior cingulate",
+      "Rich in connections with limbic structures and other prefrontal regions",
+      "Part of the default mode network"
+    ],
+    "function": [
+      "Involved in social cognition and theory of mind",
+      "Contributes to self-referential processing and introspection",
+      "Participates in value-based decision making",
+      "Associated with emotion regulation and mentalization"
+    ]
+  },
+  "26": {
+    "name": "Juxtapositional Lobule Cortex (Supplementary Motor Area, BA 6)",
+    "structure": [
+      "Located on medial surface of frontal lobe anterior to paracentral lobule",
+      "Contains supplementary motor area (SMA) and pre-SMA",
+      "Connected to primary motor cortex, basal ganglia, and spinal cord",
+      "Somatotopically organized but less distinctly than primary motor cortex"
+    ],
+    "function": [
+      "Critical for motor planning and initiation of voluntary movements",
+      "Involved in sequential movement programming and bimanual coordination",
+      "Contributes to speech motor planning",
+      "Damage can result in alien hand syndrome and akinesia"
+    ]
+  },
+  "27": {
+    "name": "Subcallosal Cortex (BA 25)",
+    "structure": [
+      "Located below the genu of corpus callosum",
+      "Part of the subgenual cingulate region",
+      "Connected to hypothalamus, amygdala, and other limbic structures",
+      "Contains portions of septal nuclei and ventral striatum"
+    ],
+    "function": [
+      "Key node in the limbic system involved in emotion processing",
+      "Implicated in mood regulation and autonomic response to emotional stimuli",
+      "Target for deep brain stimulation in treatment-resistant depression",
+      "Participates in reward processing and motivation"
+    ]
+  },
+  "28": {
+    "name": "Paracingulate Gyrus (BA 32)",
+    "structure": [
+      "Located dorsal to the cingulate gyrus on the medial surface",
+      "Present variably with left hemisphere predominance",
+      "Connected to dorsolateral prefrontal cortex and anterior cingulate",
+      "Part of the cognitive control network"
+    ],
+    "function": [
+      "Involved in cognitive control and performance monitoring",
+      "Contributes to conflict resolution and error detection",
+      "Participates in action selection and inhibition",
+      "Associated with theory of mind and social cognition"
+    ]
+  },
+  "29": {
+    "name": "Cingulate Gyrus, anterior division (BA 24, 32)",
+    "structure": [
+      "Located above corpus callosum in the medial frontal lobe",
+      "Part of the limbic system with agranular/dysgranular cortex",
+      "Connected to prefrontal cortex, insula, and subcortical structures",
+      "Contains spindle-shaped von Economo neurons"
+    ],
+    "function": [
+      "Involved in cognitive control, error detection, and conflict monitoring",
+      "Participates in attention regulation and task engagement",
+      "Contributes to autonomic control and emotional processing",
+      "Associated with motivation and reward-based decision making"
+    ]
+  },
+  "30": {
+    "name": "Cingulate Gyrus, posterior division (BA 23, 31)",
+    "structure": [
+      "Posterior portion of cingulate gyrus above corpus callosum",
+      "Connected to parietal cortex, parahippocampal regions, and anterior cingulate",
+      "Part of the default mode network",
+      "Contains transition from limbic to higher-order association cortex"
+    ],
+    "function": [
+      "Involved in spatial memory and navigation",
+      "Contributes to autobiographical memory retrieval",
+      "Participates in self-reflection and internal mentation",
+      "Associated with assessment of personal significance of events"
+    ]
+  },
+  "31": {
+    "name": "Precuneous Cortex (BA 7, 31)",
+    "structure": [
+      "Located on the medial surface of the parietal lobe anterior to occipital lobe",
+      "Higher-order association cortex with complex columnar organization",
+      "Connected to posterior cingulate, lateral parietal cortex, and visual areas",
+      "Key hub of the default mode network"
+    ],
+    "function": [
+      "Involved in episodic memory retrieval and self-processing",
+      "Contributes to visuospatial processing and mental imagery",
+      "Participates in consciousness and self-awareness",
+      "Associated with theory of mind and perspective taking"
+    ]
+  },
+  "32": {
+    "name": "Cuneal Cortex (BA 17, 18, 19)",
+    "structure": [
+      "Located on the medial surface of the occipital lobe above calcarine sulcus",
+      "Contains portions of primary (BA 17) and secondary (BA 18, 19) visual cortex",
+      "Retinotopically organized representing superior visual field",
+      "Connected to lateral geniculate nucleus and higher visual areas"
+    ],
+    "function": [
+      "Processes visual information from the inferior visual field",
+      "Contributes to basic visual feature detection",
+      "Participates in visual attention and awareness",
+      "Damage results in inferior quadrantanopia"
+    ]
+  },
+  "33": {
+    "name": "Frontal Orbital Cortex (BA 11, 47)",
+    "structure": [
+      "Located on the orbital surface of the frontal lobe",
+      "Includes lateral and medial orbitofrontal regions",
+      "Connected to limbic structures, insula, and other prefrontal regions",
+      "Rich in connections with olfactory system and gustatory cortex"
+    ],
+    "function": [
+      "Critical for reward processing and value-based decision making",
+      "Involved in response inhibition and behavioral regulation",
+      "Contributes to emotional processing and social cognition",
+      "Associated with olfactory and gustatory processing"
+    ]
+  },
+  "34": {
+    "name": "Parahippocampal Gyrus, anterior division (BA 28, 34, 35)",
+    "structure": [
+      "Anterior portion of parahippocampal gyrus including entorhinal cortex",
+      "Transitional cortex between neocortex and allocortex",
+      "Major input to hippocampus via perforant pathway",
+      "Connected to amygdala, hippocampus, and association cortices"
+    ],
+    "function": [
+      "Critical for memory encoding and consolidation",
+      "Processes contextual information for episodic memory",
+      "Contributes to spatial navigation via grid cells",
+      "Early site of pathology in Alzheimer's disease"
+    ]
+  },
+  "35": {
+    "name": "Parahippocampal Gyrus, posterior division (BA 27, 36)",
+    "structure": [
+      "Posterior portion of parahippocampal gyrus including parahippocampal cortex",
+      "Connected to hippocampus, visual association areas, and retrosplenial cortex",
+      "Part of the medial temporal lobe memory system",
+      "Contains parahippocampal place area"
+    ],
+    "function": [
+      "Involved in processing spatial context and scenes",
+      "Contributes to episodic memory encoding and retrieval",
+      "Participates in navigation and spatial orientation",
+      "Damage associated with topographical disorientation"
+    ]
+  },
+  "36": {
+    "name": "Lingual Gyrus (BA 17, 18, 19)",
+    "structure": [
+      "Located on the medial surface of the occipital lobe below calcarine sulcus",
+      "Contains portions of primary (V1) and secondary (V2, V3) visual cortex",
+      "Retinotopically organized representing superior visual field",
+      "Connected to visual processing streams and parahippocampal gyrus"
+    ],
+    "function": [
+      "Processes visual information from the superior visual field",
+      "Involved in color processing and visual recognition",
+      "Contributes to visual memory and dream imagery",
+      "Damage may result in superior quadrantanopia"
+    ]
+  },
+  "37": {
+    "name": "Temporal Fusiform Cortex, anterior division (BA 20, 36)",
+    "structure": [
+      "Anterior portion of fusiform gyrus on the ventral surface of temporal lobe",
+      "Connected to anterior temporal lobe, amygdala, and ventral visual stream",
+      "Part of the ventral visual pathway",
+      "Association cortex with complex columnar organization"
+    ],
+    "function": [
+      "Involved in processing of high-level visual concepts",
+      "Contributes to semantic memory and concept formation",
+      "Participates in face and object recognition",
+      "Associated with processing socially relevant visual stimuli"
+    ]
+  },
+  "38": {
+    "name": "Temporal Fusiform Cortex, posterior division (BA 37)",
+    "structure": [
+      "Posterior portion of fusiform gyrus on ventral temporal surface",
+      "Contains the fusiform face area (FFA) and visual word form area (VWFA)",
+      "Higher-order visual association cortex",
+      "Connected to early visual areas and anterior temporal lobe"
+    ],
+    "function": [
+      "Specialized for face processing in fusiform face area",
+      "Critical for visual word recognition in visual word form area",
+      "Contributes to object recognition and categorization",
+      "Associated with color processing and synesthetic experiences"
+    ]
+  },
+  "39": {
+    "name": "Temporal Occipital Fusiform Cortex (BA 37)",
+    "structure": [
+      "Junction between temporal and occipital portions of fusiform gyrus",
+      "Higher-order visual association cortex",
+      "Part of the ventral visual stream",
+      "Connected to early visual areas and inferior temporal regions"
+    ],
+    "function": [
+      "Involved in object recognition and visual categorization",
+      "Contributes to reading and visual word form processing",
+      "Participates in face perception",
+      "Specialized for recognizing specific visual categories (e.g., places, bodies)"
+    ]
+  },
+  "40": {
+    "name": "Occipital Fusiform Gyrus (BA 18, 19)",
+    "structure": [
+      "Posterior portion of fusiform gyrus in the occipital lobe",
+      "Secondary and tertiary visual cortex",
+      "Part of the ventral visual stream",
+      "Connected to primary visual cortex and temporal fusiform regions"
+    ],
+    "function": [
+      "Early stages of object recognition and form processing",
+      "Involved in color perception and visual feature integration",
+      "Contributes to figure-ground segregation",
+      "Participates in visual attention to objects"
+    ]
+  },
+  "41": {
+    "name": "Frontal Operculum Cortex (BA 44, 45, 47)",
+    "structure": [
+      "Inferior frontal lobe region covering insula",
+      "Includes portions of inferior frontal gyrus",
+      "Connected to insular cortex, ventral premotor cortex, and language areas",
+      "Part of the ventral language stream"
+    ],
+    "function": [
+      "Involved in language processing particularly phonological and syntactic aspects",
+      "Contributes to response inhibition and executive control",
+      "Participates in working memory operations",
+      "Associated with processing of hierarchical structures in language and music"
+    ]
+  },
+  "42": {
+    "name": "Central Opercular Cortex (BA 43, 6, 4)",
+    "structure": [
+      "Located at the junction of frontal, parietal, and temporal opercula",
+      "Covers portion of insula adjacent to central sulcus",
+      "Connected to primary sensorimotor areas and insula",
+      "Contains representations of face, mouth, and tongue"
+    ],
+    "function": [
+      "Involved in sensorimotor processing of orofacial movements",
+      "Contributes to speech articulation and phonation",
+      "Participates in gustatory processing",
+      "Associated with oral tactile sensation"
+    ]
+  },
+  "43": {
+    "name": "Parietal Operculum Cortex (BA 40, 43)",
+    "structure": [
+      "Inferior parietal lobe region covering posterior insula",
+      "Contains secondary somatosensory cortex (S2)",
+      "Connected to primary somatosensory cortex, insula, and thalamus",
+      "Receives projections from both ipsilateral and contralateral body"
+    ],
+    "function": [
+      "Processes complex somatosensory information including texture and shape",
+      "Involved in pain processing and modulation",
+      "Contributes to sensorimotor integration",
+      "Participates in vestibular processing"
+    ]
+  },
+  "44": {
+    "name": "Planum Polare (BA 38, 22)",
+    "structure": [
+      "Located on the superior temporal gyrus anterior to Heschl's gyrus",
+      "Flat surface on the superior aspect of temporal lobe",
+      "Connected to primary auditory cortex and other auditory association areas",
+      "Part of the non-primary auditory cortex"
+    ],
+    "function": [
+      "Involved in processing complex auditory features including melody and timbre",
+      "Contributes to voice recognition and emotional prosody",
+      "Participates in music perception",
+      "Associated with processing of non-verbal auditory stimuli"
+    ]
+  },
+  "45": {
+    "name": "Heschl's Gyrus (BA 41, 42)",
+    "structure": [
+      "Primary auditory cortex located on transverse temporal gyrus",
+      "Lies deep within lateral sulcus on superior temporal plane",
+      "Tonotopically organized with medial-to-lateral high-to-low frequency mapping",
+      "Receives direct projections from medial geniculate nucleus of thalamus"
+    ],
+    "function": [
+      "Initial cortical processing of auditory information",
+      "Encodes basic auditory features including frequency, amplitude, and timing",
+      "Critical for sound detection and discrimination",
+      "Bilateral lesions can result in cortical deafness"
+    ]
+  },
+   "46": {
+    "name": "Planum Temporale (BA 22)",
+    "structure": [
+      "Located on the superior surface of the temporal lobe, posterior to Heschl's gyrus",
+      "Part of the Wernicke's area in the left hemisphere",
+      "Larger in the left hemisphere in most right-handed individuals (structural asymmetry)",
+      "Rich in neuronal connections with auditory cortex, inferior parietal lobule, and frontal regions"
+    ],
+    "function": [
+      "Critical for language comprehension and phonological processing",
+      "Involved in auditory processing of complex sounds and speech",
+      "Plays a role in music perception and processing of pitch patterns",
+      "Left planum temporale damage contributes to receptive language disorders like Wernicke's aphasia"
+    ]
+  },
+  "47": {
+    "name": "Supracalcarine Cortex (BA 17/18)",
+    "structure": [
+      "Located superior to the calcarine sulcus in the medial occipital lobe",
+      "Primarily represents the inferior visual field in the primary visual cortex",
+      "Contains high density of cells in layer IV receiving direct projections from the lateral geniculate nucleus",
+      "Has distinctive stria of Gennari (dense band of myelinated fibers in layer IV)"
+    ],
+    "function": [
+      "Processes visual information from the contralateral lower quadrant of visual field",
+      "Performs initial cortical processing of visual features including orientation, spatial frequency, and color",
+      "Integrates information from both eyes with ocular dominance columns",
+      "Damage results in inferior quadrantanopia in the contralateral visual field"
+    ]
+  },
+  "48": {
+    "name": "Occipital Pole (BA 17/18)",
+    "structure": [
+      "Forms the posterior extremity of the occipital lobe",
+      "Contains primary visual cortex (V1) and adjacent secondary visual areas",
+      "Characterized by thin cortex with prominent layer IV (granular) and stria of Gennari",
+      "Receives direct projections from the lateral geniculate nucleus via the optic radiations"
+    ],
+    "function": [
+      "Processes central (foveal) vision with large cortical representation",
+      "Performs initial detection of visual features including edges, orientation, and spatial frequency",
+      "Organizes visual input retinotopically with central vision represented posteriorly",
+      "Damage results in central scotomas or homonymous hemianopia depending on extent"
+    ]
+  }
+}

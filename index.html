@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroGuessr Web - Welcome</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <header>
+      <h1>NeuroGuessr Web</h1>
+    </header>
+    <main>
+      <section class="selection-container">
+        <h2>Select Atlas</h2>
+        <div class="atlas-buttons">
+          <button class="atlas-button" data-atlas="aal">AAL</button>
+          <button class="atlas-button" data-atlas="harvard-oxford">Harvard-Oxford</button>
+          <button class="atlas-button" data-atlas="brodmann">Brodmann</button>
+          <button class="atlas-button" data-atlas="subcortical">Subcortical</button>
+          <button class="atlas-button" data-atlas="cerebellum">Cerebellum</button>
+        </div>
+      </section>
+      <section class="selection-container">
+        <h2>Select Game Mode</h2>
+        <div class="mode-buttons">
+          <button class="mode-button" data-mode="practice">Practice</button>
+          <button class="mode-button" data-mode="streak">Streak</button>
+          <button class="mode-button" data-mode="time-attack">Time Attack</button>
+        </div>
+      </section>
+      <button id="play-button" class="play-button" disabled>Play</button>
+    </main>
+    <div id="notification"></div>
+    <script>
+      // UI elements
+      const atlasButtons = document.querySelectorAll('.atlas-button');
+      const modeButtons = document.querySelectorAll('.mode-button');
+      const playButton = document.getElementById('play-button');
+      const notification = document.getElementById('notification');
+
+      // Selection state
+      let selectedAtlas = null;
+      let selectedMode = null;
+
+      // Notification function
+      function showNotification(message, isSuccess) {
+        notification.textContent = message;
+        notification.className = isSuccess ? 'success' : 'error';
+        notification.style.display = 'block';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 3000);
+      }
+
+      // Display score from previous game
+      const urlParams = new URLSearchParams(window.location.search);
+      const score = urlParams.get('score');
+      const time = urlParams.get('time');
+      if (score && time) {
+        const minutes = Math.floor(time / 60);
+        const seconds = (time % 60).toString().padStart(2, '0');
+        showNotification(`Previous Game - Accuracy: ${score}%, Time: ${minutes}m ${seconds}s`, true);
+      } else if (score) {
+        showNotification(`Previous Streak: ${score} regions`, true);
+      }
+
+      // Atlas button handling
+      atlasButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          atlasButtons.forEach(btn => btn.classList.remove('selected'));
+          button.classList.add('selected');
+          selectedAtlas = button.dataset.atlas;
+          updatePlayButton();
+        });
+      });
+
+      // Mode button handling
+      modeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          modeButtons.forEach(btn => btn.classList.remove('selected'));
+          button.classList.add('selected');
+          selectedMode = button.dataset.mode;
+          updatePlayButton();
+        });
+      });
+
+      // Enable/disable play button
+      function updatePlayButton() {
+        if (selectedAtlas && selectedMode) {
+          playButton.disabled = false;
+        } else {
+          playButton.disabled = true;
+        }
+      }
+
+      // Play button handling
+      playButton.addEventListener('click', () => {
+        if (selectedAtlas && selectedMode) {
+          window.location.href = `viewer.html?atlas=${selectedAtlas}&mode=${selectedMode}`;
+        } else {
+          showNotification('Please select an atlas and game mode!', false);
+        }
+      });
+    </script>
+  </body>
+</html>

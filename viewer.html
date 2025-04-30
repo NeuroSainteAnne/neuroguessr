@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroGuessr Web</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <header>
+      <h1>NeuroGuessr Web</h1>
+      <div class="game-status">
+        <p id="target-label"><span class="target-text">Target: Not Started</span></p>
+        <div class="score-error-container">
+          <p id="score-label">Correct: 0</p>
+          <p id="error-label">Errors: 0</p>
+          <p id="streak-label" style="display: none;">Streak: 0</p>
+          <p id="time-label" style="display: none;">Time: 00:00</p>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="dropbtn">
+          View
+          <span class="hamburger">☰</span>
+        </button>
+        <div class="dropdown-content">
+          <a href="#" class="viewBtn" id="|Axial">Axial</a>
+          <a class="viewBtn" id="|Sagittal">Sagittal</a>
+          <a class="viewBtn" id="|Coronal">Coronal</a>
+          <a class="viewBtn" id="|Render">Render</a>
+          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
+          <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
+          <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
+          <a class="viewBtn" id="Radiological">Radiological</a>
+          <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
+          <a class="viewBtn dropdown-item-checked" id="DarkBackground">Dark Background</a>
+        </div>
+      </div>
+    </header>
+    <main>
+      <canvas 
+        id="gl1"
+      ></canvas>
+      <script>
+        // Dynamically set canvas size based on viewport
+        const canvas = document.getElementById("gl1");
+
+        function setCanvasSize() {
+          const viewportWidth = window.innerWidth;
+          const canvasWidth = Math.min(viewportWidth, 3096);
+          const viewportHeight = window.innerHeight;
+          const canvasHeight = Math.min(viewportHeight / 2, 1000);
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+          canvas.style.width = `${canvasWidth}px`;
+          canvas.style.height = `${canvasHeight}px`;
+        }
+
+        setCanvasSize();
+        window.addEventListener('resize', setCanvasSize);
+      </script>
+    </main>
+    <div class="button-container">
+      <button id="return-button" class="return-button">Return</button>
+      <button id="guess-button" class="guess-button" disabled>Confirm Guess</button>
+    </div>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js";
+
+      // Game state
+      let gameRunning = false;
+      let score = 0;
+      let errors = 0;
+      let streak = 0;
+      let currentTarget = null;
+      let selectedVoxel = null;
+      let validRegions = [];
+      let cmap = null;
+      let nv1 = null;
+      let clut = null;
+      let mode = null;
+      let attempts = 0;
+      let startTime = null;
+      let timerInterval = null;
+      let usedRegions = [];
+
+      // UI elements
+      const guessButton = document.getElementById("guess-button");
+      const returnButton = document.getElementById("return-button");
+      const targetLabel = document.getElementById("target-label");
+      const scoreLabel = document.getElementById("score-label");
+      const errorLabel = document.getElementById("error-label");
+      const streakLabel = document.getElementById("streak-label");
+      const timeLabel = document.getElementById("time-label");
+      const targetText = targetLabel.querySelector('.target-text');
+
+      // Return button handler
+      returnButton.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      // Spacebar to confirm guess
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !guessButton.disabled && gameRunning) {
+          e.preventDefault();
+          validateGuess();
+        }
+      });
+
+      // Get atlas and mode from query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const atlas = urlParams.get('atlas') || 'aal';
+      mode = urlParams.get('mode') || 'practice';
+      const atlasFiles = {
+        'aal': { nii: '../data/aal.nii.gz', json: '../data/aal.json', name: 'AAL' },
+        'harvard-oxford': { nii: '../data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '../data/harvard_oxford.json', name: 'Harvard-Oxford' },
+        'brodmann' : {nii: "../data/brodmann_grid.nii.gz", json : "../data/brodmann.json", name : "Brodmann"},
+        'subcortical' : {nii: "../data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz", json : "../data/subcortical.json", name : "Subcortical"},
+        'cerebellum' : {nii: "../data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz", json : "../data/cerebellum.json", name : "Cerebellum"},
+      };
+      const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
+
+      // Initialize Niivue
+      const volumeList1 = [
+        { url: '../data/mni152.nii.gz' },
+        { url: selectedAtlasFiles.nii }
+      ];
+
+      async function initNiivue() {
+        try {
+          nv1 = new niivue.Niivue({
+            show3Dcrosshair: true,
+            backColor: [0, 0, 0, 1], // Default to dark background
+            crosshairColor: [1, 1, 1, 1]
+          });
+          await nv1.attachTo("gl1");
+          nv1.setInterpolation(true);
+          nv1.opts.crosshairGap = 12;
+          nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+          nv1.opts.dragMode = nv1.dragModes.pan;
+          nv1.opts.yoke3Dto2DZoom = true;
+          try {
+            await nv1.loadVolumes(volumeList1);
+          } catch (e) {
+            throw new Error(`Failed to load volume: ${e.message}`);
+          }
+
+          try {
+            cmap = await fetchJSON(selectedAtlasFiles.json);
+            nv1.volumes[1].setColormapLabel(cmap);
+            clut = nv1.volumes[1].colormapLabel.lut;
+            for (let a = 3; a < clut.length; a += 4) {
+              clut[a] = 96;
+            }
+            nv1.setOpacity(1, 1.0); // Default to fully opaque
+            nv1.updateGLVolume();
+            nv1.setMultiplanarPadPixels(5);
+          } catch (e) {
+            throw new Error(`Failed to load ${selectedAtlasFiles.name} labels: ${e.message}`);
+          }
+
+          validRegions = Object.keys(cmap.labels)
+            .map(Number)
+            .filter((val) => val > 0);
+
+          try {
+            const atlasData = await nv1.volumes[1].getVolumeData();
+            const dataRegions = [...new Set(atlasData.filter((val) => val > 0 && val in cmap.labels))];
+            if (dataRegions.length > 0) {
+              validRegions = dataRegions;
+            } else {
+              console.warn(`No valid regions found in ${selectedAtlasFiles.name} data, using label indices.`);
+            }
+          } catch (e) {
+            console.error(`getVolumeData failed for ${selectedAtlasFiles.name}:`, e);
+          }
+
+          if (validRegions.length === 0) {
+            throw new Error(`No valid regions in ${selectedAtlasFiles.name}. Check atlas compatibility.`);
+          }
+
+          // Disable clip planes for render view
+          nv1.setClipPlane([2, 270, 0]); // Depth > 1 to disable clip plane
+          nv1.opts.isSliceMM = true; // Enable mm-based scrolling
+
+          // Add scroll event listener for slice navigation
+          document.getElementById("gl1").addEventListener("wheel", (e) => {
+            e.preventDefault();
+            if (!nv1) return;
+            const sliceType = nv1.scene.sliceType;
+            if (sliceType === nv1.sliceTypeAxial || sliceType === nv1.sliceTypeCoronal || sliceType === nv1.sliceTypeSagittal) {
+              const delta = e.deltaY > 0 ? -1 : 1;
+              nv1.moveCrosshairInVox(0, 0, delta);
+              nv1.drawScene();
+            }
+          });
+
+          setupViewMenu();
+          startGame();
+        } catch (error) {
+          console.error(`Failed to initialize Niivue for ${selectedAtlasFiles.name}:`, error);
+          targetText.textContent = `Error: Failed to load ${selectedAtlasFiles.name} data`;
+        }
+      }
+
+      async function fetchJSON(fnm) {
+        try {
+          const response = await fetch(fnm);
+          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          return await response.json();
+        } catch (e) {
+          console.error(`Fetch failed for ${fnm}:`, e);
+          throw new Error(`${e.message}`);
+        }
+      }
+
+      function toggleGroup(id) {
+        let buttons = document.getElementsByClassName("viewBtn");
+        let char0 = id.charAt(0);
+        for (let i = 0; i < buttons.length; i++) {
+          if (buttons[i].id.charAt(0) !== char0) continue;
+          buttons[i].classList.remove("dropdown-item-checked");
+          if (buttons[i].id === id)
+            buttons[i].classList.add("dropdown-item-checked");
+        }
+      }
+
+      function setupViewMenu() {
+        async function onViewButtonClick(event) {
+          event.preventDefault();
+          if (event.target.id.charAt(0) === "|") {
+            if (event.target.id === "|Axial") nv1.setSliceType(nv1.sliceTypeAxial);
+            if (event.target.id === "|Coronal") nv1.setSliceType(nv1.sliceTypeCoronal);
+            if (event.target.id === "|Sagittal") nv1.setSliceType(nv1.sliceTypeSagittal);
+            if (event.target.id === "|Render") {
+              nv1.setSliceType(nv1.sliceTypeRender);
+              nv1.setClipPlane([2, 270, 0]); // Ensure no clip plane in render
+            }
+            if (event.target.id === "|MultiPlanar") {
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
+              nv1.setSliceType(nv1.sliceTypeMultiplanar);
+            }
+            if (event.target.id === "|MultiPlanarRender") {
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+              nv1.setSliceType(nv1.sliceTypeMultiplanar);
+            }
+            toggleGroup(event.target.id);
+          }
+          if (event.target.id === "Colorbar") {
+            nv1.opts.isColorbar = !nv1.opts.isColorbar;
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.drawScene();
+            return;
+          }
+          if (event.target.id === "Radiological") {
+            nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention;
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.drawScene();
+            return;
+          }
+          if (event.target.id === "ColoredAtlas") {
+            const isChecked = event.srcElement.classList.contains("dropdown-item-checked");
+            nv1.setOpacity(1, isChecked ? 0.0 : 1.0);
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.updateGLVolume();
+            return;
+          }
+          if (event.target.id === "DarkBackground") {
+            nv1.opts.backColor = nv1.opts.backColor[0] < 0.5 ? [1, 1, 1, 1] : [0, 0, 0, 1];
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.drawScene();
+            return;
+          }
+        }
+
+        var buttons = document.getElementsByClassName("viewBtn");
+        for (let i = 0; i < buttons.length; i++)
+          buttons[i].addEventListener("click", onViewButtonClick, false);
+      }
+
+      function highlightTarget(isSuccess) {
+        targetText.style.transition = 'all 0.1s ease-in-out';
+        targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
+        targetText.style.fontWeight = 'bold';
+        targetText.style.fontSize = '3.5rem';
+        setTimeout(() => {
+          targetText.style.color = '#d9dddc';
+          targetText.style.fontWeight = '500';
+          targetText.style.fontSize = '3rem';
+          setTimeout(() => {
+            targetText.style.transition = '';
+          }, 100);
+        }, 200);
+      }
+
+      function resetGameState() {
+        currentTarget = null;
+        selectedVoxel = null;
+        attempts = 0;
+        usedRegions = [];
+        targetText.textContent = "Target: Not Started";
+        targetText.style.color = '#d9dddc';
+        targetText.style.fontWeight = '500';
+        targetText.style.fontSize = '3rem';
+        targetText.style.transition = '';
+        guessButton.disabled = true;
+        if (clut && nv1) {
+          nv1.volumes[1].colormapLabel.lut = clut.slice();
+          nv1.updateGLVolume();
+        }
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function selectNewTarget() {
+        if (validRegions.length === 0) {
+          resetGameState();
+          return;
+        }
+        if (mode === 'time-attack' && usedRegions.length === validRegions.length) {
+          endTimeAttack();
+          return;
+        }
+        let availableRegions = mode === 'time-attack' 
+          ? validRegions.filter(r => !usedRegions.includes(r))
+          : validRegions;
+        if (availableRegions.length === 0) {
+          resetGameState();
+          return;
+        }
+        currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        if (mode === 'time-attack') {
+          usedRegions.push(currentTarget);
+        }
+        targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
+        targetText.style.color = '#d9dddc';
+        targetText.style.fontWeight = '500';
+        targetText.style.fontSize = '3rem';
+        targetText.style.transition = '';
+        guessButton.disabled = true;
+        if (clut && nv1) {
+          nv1.volumes[1].colormapLabel.lut = clut.slice();
+          nv1.updateGLVolume();
+        }
+      }
+
+      function highlightRegionFluorescentYellow(regionId) {
+        if (clut && nv1) {
+          const lut = clut.slice();
+          lut[regionId * 4 + 0] = 255; // R
+          lut[regionId * 4 + 1] = 255; // G
+          lut[regionId * 4 + 2] = 0;   // B
+          lut[regionId * 4 + 3] = 255; // A
+          nv1.volumes[1].colormapLabel.lut = lut;
+          nv1.updateGLVolume();
+        }
+      }
+
+      function startTimer() {
+        startTime = Date.now();
+        timeLabel.style.display = 'block';
+        timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+          const seconds = (elapsed % 60).toString().padStart(2, '0');
+          timeLabel.textContent = `Time: ${minutes}:${seconds}`;
+        }, 1000);
+      }
+
+      function endTimeAttack() {
+        clearInterval(timerInterval);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const accuracy = ((score / (score + errors)) * 100).toFixed(2);
+        targetText.textContent = `Game Over! Accuracy: ${accuracy}%, Time: ${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+        highlightTarget(true);
+        setTimeout(() => {
+          window.location.href = `index.html?score=${accuracy}&time=${elapsed}`;
+        }, 2000);
+      }
+
+      function startGame() {
+        gameRunning = true;
+        score = 0;
+        errors = 0;
+        streak = 0;
+        scoreLabel.textContent = "Correct: 0";
+        errorLabel.textContent = "Errors: 0";
+        streakLabel.textContent = "Streak: 0";
+        timeLabel.textContent = "Time: 00:00";
+        streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
+        timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
+        if (mode === 'time-attack') {
+          startTimer();
+        }
+        selectNewTarget();
+      }
+
+      function validateGuess() {
+        if (!selectedVoxel || !gameRunning || !currentTarget) {
+          return;
+        }
+        const clickedRegion = nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]);
+        const targetName = cmap.labels[currentTarget] || "Unknown";
+
+        if (clickedRegion === currentTarget) {
+          score++;
+          scoreLabel.textContent = `Correct: ${score}`;
+          streak = mode === 'streak' ? streak + 1 : streak;
+          streakLabel.textContent = `Streak: ${streak}`;
+          highlightTarget(true);
+          attempts = 0;
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+          }
+          selectNewTarget();
+        } else {
+          errors++;
+          errorLabel.textContent = `Errors: ${errors}`;
+          attempts = mode === 'practice' ? attempts + 1 : attempts;
+          highlightTarget(false);
+          if (mode === 'streak') {
+            targetText.textContent = `Streak Ended! You got ${streak} in a row.`;
+            highlightTarget(false);
+            setTimeout(() => {
+              window.location.href = `index.html?score=${streak}`;
+            }, 2000);
+            return;
+          }
+          if (mode === 'practice' && attempts >= 3) {
+            highlightRegionFluorescentYellow(currentTarget);
+          } else {
+            selectedVoxel = null;
+            guessButton.disabled = true;
+          }
+        }
+      }
+
+      document.getElementById("gl1").addEventListener("click", (e) => {
+        if (!gameRunning || !nv1) return;
+        const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
+        const frac = nv1.canvasPos2frac([pos.x * nv1.uiData.dpr, pos.y * nv1.uiData.dpr]);
+        if (frac[0] >= 0) {
+          const mm = nv1.frac2mm(frac);
+          const vox = nv1.volumes[1].mm2vox(mm);
+          const idx = nv1.volumes[1].getValue(vox[0], vox[1], vox[2]);
+          if (isFinite(idx) && idx in cmap.labels) {
+            selectedVoxel = vox;
+            guessButton.disabled = false;
+            nv1.opts.crosshairColor = [1, 1, 1, 1];
+            nv1.drawScene();
+          } else {
+            selectedVoxel = null;
+            guessButton.disabled = true;
+          }
+        }
+      });
+
+      guessButton.onclick = validateGuess;
+
+      initNiivue();
+    </script>
+  </body>
+</html>

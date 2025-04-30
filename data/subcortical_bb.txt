@@ -1,0 +1,24 @@
+#No. Label Name:                            R   G   B   A
+0    Background                          0   0   0   0
+1    left_red_nucleus                    200 50  50  255
+2    right_red_nucleus                   200 50  100 255
+3    left_substantia_nigra               20  20  20  255
+4    right_substantia_nigra              20  20  80  255
+5    left_subthalamic_nucleus            180 100 50  255
+6    right_subthalamic_nucleus           180 100 100 255
+7    left_caudate                        100 150 200 255
+8    right_caudate                       100 150 255 255
+9    left_putamen                        150 80  80  255
+10   right_putamen                       150 80  150 255
+11   left_globus_pallidus_externa        80  200 120 255
+12   right_globus_pallidus_externa       80  200 180 255
+13   left_globus_pallidus_interna        160 230 50  255
+14   right_globus_pallidus_Interna       160 230 100 255
+15   left_thalamus                       220 120 50  255
+16   right_thalamus                      220 120 120 255
+17   left_hippocampus                    70  130 180 255
+18   right_hippocampus                   70  130 230 255
+19   left_nucleus_accumbens              240 200 80  255
+20   right_nucleus_accumbens             240 200 150 255
+21   left_amygdala                       180 60  180 255
+22   right_amygdala                      180 60  240 255
