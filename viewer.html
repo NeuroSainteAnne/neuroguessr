@@ -10,7 +10,7 @@
   </head>
   <body>
     <header>
-      <h1>NeuroGuessr Web</h1>
+      <h1 onclick="window.location.href='index.html'">NeuroGuessr Web</h1>
       <div class="game-status">
         <p id="target-label"><span class="target-text">Target: Not Started</span></p>
         <div class="score-error-container">
@@ -32,10 +32,8 @@
           <a class="viewBtn" id="|Render">Render</a>
           <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
           <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-          <a class="viewBtn divider dropdown-item-checked" id="Colorbar">Colorbar</a>
-          <a class="viewBtn" id="Radiological">Radiological</a>
+          <a class="viewBtn divider dropdown-item-checked" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
-          <a class="viewBtn dropdown-item-checked" id="DarkBackground">Dark Background</a>
         </div>
       </div>
     </header>
@@ -121,7 +119,6 @@
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
       };
 
-
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
 
       const volumeList1 = [
@@ -133,14 +130,14 @@
         try {
           nv1 = new niivue.Niivue({
             show3Dcrosshair: true,
-            backColor: [0, 0, 0, 1], // Default to dark background
+            backColor: [0, 0, 0, 1], // Set to black background
             crosshairColor: [1, 1, 1, 1]
           });
           await nv1.attachTo("gl1");
           nv1.setInterpolation(true);
           nv1.opts.crosshairGap = 12;
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
-          nv1.opts.dragMode = nv1.dragModes.pan;
+          nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;
           try {
             await nv1.loadVolumes(volumeList1);
@@ -152,10 +149,24 @@
             cmap = await fetchJSON(selectedAtlasFiles.json);
             nv1.volumes[1].setColormapLabel(cmap);
             clut = nv1.volumes[1].colormapLabel.lut;
-            for (let a = 3; a < clut.length; a += 4) {
-              clut[a] = 96;
+            // Ensure region 0 is fully transparent
+            if (clut && clut.length >= 4) {
+              clut[0] = 0; // R
+              clut[1] = 0; // G
+              clut[2] = 0; // B
+              clut[3] = 0; // A
             }
-            nv1.setOpacity(1, 1.0); // Default to fully opaque
+            // Set alpha for non-zero regions to more transparent
+            for (let a = 7; a < clut.length; a += 4) {
+              clut[a] = 64; // Lower alpha for more transparency (~0.25)
+            }
+            // For float32 data, ensure voxel values are treated as integers
+            if (nv1.volumes[1].hdr.datatypeCode === 16) { // DT_FLOAT32
+              const atlasData = await nv1.volumes[1].getVolumeData();
+              const roundedData = atlasData.map(val => Math.round(val));
+              nv1.volumes[1].setVolumeData(roundedData);
+            }
+            // Remove setOpacity to respect LUT alpha values
             nv1.updateGLVolume();
             nv1.setMultiplanarPadPixels(5);
           } catch (e) {
@@ -249,12 +260,6 @@
             }
             toggleGroup(event.target.id);
           }
-          if (event.target.id === "Colorbar") {
-            nv1.opts.isColorbar = !nv1.opts.isColorbar;
-            event.srcElement.classList.toggle("dropdown-item-checked");
-            nv1.drawScene();
-            return;
-          }
           if (event.target.id === "Radiological") {
             nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention;
             event.srcElement.classList.toggle("dropdown-item-checked");
@@ -266,12 +271,6 @@
             nv1.setOpacity(1, isChecked ? 0.0 : 1.0);
             event.srcElement.classList.toggle("dropdown-item-checked");
             nv1.updateGLVolume();
-            return;
-          }
-          if (event.target.id === "DarkBackground") {
-            nv1.opts.backColor = nv1.opts.backColor[0] < 0.5 ? [1, 1, 1, 1] : [0, 0, 0, 1];
-            event.srcElement.classList.toggle("dropdown-item-checked");
-            nv1.drawScene();
             return;
           }
         }
@@ -448,7 +447,7 @@
         if (frac[0] >= 0) {
           const mm = nv1.frac2mm(frac);
           const vox = nv1.volumes[1].mm2vox(mm);
-          const idx = nv1.volumes[1].getValue(vox[0], vox[1], vox[2]);
+          const idx = Math.round(nv1.volumes[1].getValue(vox[0], vox[1], vox[2]));
           if (isFinite(idx) && idx in cmap.labels) {
             selectedVoxel = vox;
             guessButton.disabled = false;
@@ -465,5 +464,5 @@
 
       initNiivue();
     </script>
-  </body>
+  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93876b645f22bd03',t:'MTc0NjAyMDA5Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
