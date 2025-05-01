@@ -55,26 +55,33 @@
         const canvas = document.getElementById("gl1");
 
         function setCanvasSize() {
+          // Get the device pixel ratio (e.g., 2 for Retina displays)
           const dpr = window.devicePixelRatio || 1;
+
+          // Get the viewport dimensions
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;
+
+          // Get the parent container (main element) dimensions for more precise sizing
           const mainElement = document.querySelector("main");
-          const headerElement = document.querySelector("header");
-          const buttonContainer = document.querySelector(".button-container");
-          
           const containerWidth = mainElement ? mainElement.clientWidth : viewportWidth;
-          const headerHeight = headerElement ? headerElement.offsetHeight : 0;
-          const buttonHeight = buttonContainer ? buttonContainer.offsetHeight : 0;
-          
+
+          // Set canvas width to the container's width (full width of the viewport or main)
           const canvasWidth = containerWidth;
-          const availableHeight = viewportHeight - headerHeight - buttonHeight - 20; // 20px buffer
-          const canvasHeight = Math.min(availableHeight * 0.6, viewportHeight * 0.5);
-          
+
+          // Calculate canvas height (e.g., 50% of viewport height or adjust as needed)
+          // You can modify this ratio based on your layout needs
+          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100); // Adjust offset for header/footer
+
+          // Set the canvas's internal resolution (scaled by DPR for sharpness)
           canvas.width = canvasWidth * dpr;
           canvas.height = canvasHeight * dpr;
+
+          // Set the canvas's CSS size to match the intended display size
           canvas.style.width = `${canvasWidth}px`;
           canvas.style.height = `${canvasHeight}px`;
-          
+
+          // Optional: Ensure Niivue updates its rendering after resize
           if (window.nv1) {
             window.nv1.resizeListener();
             window.nv1.drawScene();
@@ -128,8 +135,9 @@
         window.location.href = 'index.html';
       });
 
+      // Spacebar to confirm guess
       document.addEventListener('keydown', (e) => {
-        if ((e.code === 'Space' || e.key === ' ') && !guessButton.disabled && gameRunning) {
+        if (e.code === 'Space' && ! GUESSButton.disabled && gameRunning) {
           e.preventDefault();
           validateGuess();
         }
@@ -143,6 +151,10 @@
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
+        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
+      //  'desikan' :{ nii: '/neuroguessr_web/data/DKT_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/desikan.json', name: 'Desikan' },
+        'destrieux' :{ nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
+
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
@@ -192,6 +204,8 @@
             for (let a = 7; a < clut.length; a += 4) {
               clut[a] = 64; // Lower alpha for more transparency (~0.25)
             }
+
+            print(clut)
             // For float32 data, ensure voxel values are treated as auctions
             if (nv1.volumes[1].hdr.datatypeCode === 16) { // DT_FLOAT32
               const atlasData = await nv1.volumes[1].getVolumeData();
