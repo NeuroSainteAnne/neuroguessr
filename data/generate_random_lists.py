@@ -38,7 +38,7 @@ def print_json_list_lengths(filepath):
         data = json.load(f)
     
     for key, value in data.items():
-        print(f"{key}: {len(value)}")
+        print(f'{key} : {value[1]}')
 
 # Example usage
 print_json_list_lengths('/Users/francoisramon/Desktop/These/neuroguessr_web/data/glasser_neuroparc.json')
