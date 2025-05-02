@@ -19,9 +19,9 @@
           <button class="atlas-button" data-atlas="aal">AAL</button>
           <button class="atlas-button" data-atlas="harvard-oxford">Harvard-Oxford</button>
           <button class="atlas-button" data-atlas="brodmann">Brodmann</button>
-          <!-- <button class="atlas-button" data-atlas="glasser">Glasser</button> -->
+          <button class="atlas-button" data-atlas="glasser">Glasser</button>
           <!-- <button class="atlas-button" data-atlas="desikan">Desikan-Kiliany</button> -->
-          <!-- <button class="atlas-button" data-atlas="destrieux">Destrieux</button> -->
+          <button class="atlas-button" data-atlas="destrieux">Destrieux</button>
           <button class="atlas-button" data-atlas="subcortical">Subcortical</button>
           <button class="atlas-button" data-atlas="cerebellum">Cerebellum</button>
           <button class="atlas-button" data-atlas="xtract">White Matter</button>
@@ -33,7 +33,14 @@
       <section class="selection-container">
         <h2>Select Game Mode</h2>
         <div class="mode-buttons">
-          <button class="mode-button" data-mode="practice">Practice</button>
+          <button class="mode-button" data-mode="navigation">
+            <img src="/neuroguessr_web/data/boussole.png" alt="boussole Icon" />
+            Navigation
+          </button>
+          <button class="mode-button" data-mode="practice">      
+            <img src="/neuroguessr_web/data/practice.png" alt="practice Icon" />
+            Practice
+          </button>
           <button class="mode-button" data-mode="streak">
             <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
             Streak
@@ -82,12 +89,37 @@
         showNotification(`Previous Streak: ${score} regions`, true);
       }
 
+      // Update mode buttons based on atlas selection
+      function updateModeButtons() {
+        modeButtons.forEach(button => {
+          if (selectedAtlas === 'glasser') {
+            // For Glasser atlas, only Navigation mode is enabled
+            if (button.dataset.mode === 'navigation') {
+              button.disabled = false;
+            } else {
+              button.disabled = true;
+              button.classList.remove('selected'); // Remove selection from disabled modes
+            }
+          } else {
+            // For other atlases, all modes are enabled
+            button.disabled = false;
+          }
+        });
+
+        // If the selected mode is not allowed for Glasser, clear it
+        if (selectedAtlas === 'glasser' && selectedMode !== 'navigation') {
+          selectedMode = null;
+          modeButtons.forEach(btn => btn.classList.remove('selected'));
+        }
+      }
+
       // Atlas button handling
       atlasButtons.forEach(button => {
         button.addEventListener('click', () => {
           atlasButtons.forEach(btn => btn.classList.remove('selected'));
           button.classList.add('selected');
           selectedAtlas = button.dataset.atlas;
+          updateModeButtons(); // Update mode buttons when atlas changes
           updatePlayButton();
         });
       });
@@ -95,10 +127,13 @@
       // Mode button handling
       modeButtons.forEach(button => {
         button.addEventListener('click', () => {
-          modeButtons.forEach(btn => btn.classList.remove('selected'));
-          button.classList.add('selected');
-          selectedMode = button.dataset.mode;
-          updatePlayButton();
+          // Only allow selection if the button is not disabled
+          if (!button.disabled) {
+            modeButtons.forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+            selectedMode = button.dataset.mode;
+            updatePlayButton();
+          }
         });
       });
 

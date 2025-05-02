@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
     <style>
-      /* Add basic styling for the opacity slider */
       .slider {
         width: 100px;
         margin: 0 10px;
@@ -78,7 +77,6 @@
     <main>
       <canvas id="gl1"></canvas>
       <script>
-        // Dynamically set canvas size based on viewport and device pixel ratio
         const canvas = document.getElementById("gl1");
 
         function setCanvasSize() {
@@ -111,7 +109,6 @@
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
 
-      // Game state
       let gameRunning = false;
       let score = 0;
       let errors = 0;
@@ -122,13 +119,11 @@
       let cmap = null;
       let nv1 = null;
       let clut = null;
-      // let mode = null;
       let attempts = 0;
       let startTime = null;
       let timerInterval = null;
       let usedRegions = [];
 
-      // UI elements
       const guessButton = document.getElementById("guess-button");
       const returnButton = document.getElementById("return-button");
       const targetLabel = document.getElementById("target-label");
@@ -139,26 +134,22 @@
       const targetText = targetLabel.querySelector('.target-text');
       const alphaSlider = document.getElementById("alphaSlider");
 
-      // Return button handler
       returnButton.addEventListener('click', () => {
         window.location.href = 'index.html';
       });
 
-      // Spacebar to confirm guess
       document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && !guessButton.disabled && gameRunning) {
+        if (e.code === 'Space' && !guessButton.disabled && gameRunning && mode !== 'navigation') {
           e.preventDefault();
           validateGuess();
         }
       });
 
-      // Opacity slider handler
       alphaSlider.oninput = function () {
         nv1.setOpacity(1, this.value / 255);
         nv1.updateGLVolume();
       };
 
-      // Get atlas and mode from query parameters
       const urlParams = new URLSearchParams(window.location.search);
       const atlas = urlParams.get('atlas') || 'aal';
       const mode = urlParams.get('mode') || 'practice';
@@ -198,34 +189,26 @@
           ];
           await nv1.loadVolumes(volumeList1);
 
-          // Load JSON and set colormap
           cmap = await fetchJSON(selectedAtlasFiles.json);
           nv1.volumes[1].setColormapLabel(cmap);
           clut = new Uint8Array(cmap.R.length * 4);
-          // clut[0] = 0;
-          // clut[1] = 0;
-          // clut[2] = 0;
-          // clut[3] = 0;
 
-          if (atlas === 'aal'){
+          if (atlas === 'aal') {
             clut[0] = cmap.R[0];
             clut[1] = cmap.G[0];
             clut[2] = cmap.B[0];
             clut[3] = 255;
-
             clut[4] = cmap.R[1];
             clut[5] = cmap.G[1];
             clut[6] = cmap.B[1];
             clut[7] = 255;
-
-          } if (atlas === 'glasser' || atlas === 'destrieux'){
-            //
+          } else if (atlas === 'glasser' || atlas === 'destrieux') {
+            console.log('Glasser cmap.labels:', cmap.labels);
           } else {
             clut[0] = 0;
             clut[1] = 0;
             clut[2] = 0;
             clut[3] = 0;
-
             clut[4] = cmap.R[1];
             clut[5] = cmap.G[1];
             clut[6] = cmap.B[1];
@@ -236,19 +219,34 @@
             clut[i * 4 + 0] = cmap.R[i];
             clut[i * 4 + 1] = cmap.G[i];
             clut[i * 4 + 2] = cmap.B[i];
-            clut[i * 4 + 3] = 255; 
+            clut[i * 4 + 3] = 255;
           }
           nv1.volumes[1].colormapLabel.lut = clut.slice();
-          nv1.setOpacity(1, 0.7); // Ensure full opacity
+          nv1.setOpacity(1, 0.6);
           nv1.updateGLVolume();
 
-          // Get valid regions from atlas data
           const atlasData = await nv1.volumes[1].getVolumeData();
-          const dataRegions = [...new Set(atlasData.filter(val => val > 0))];
-          validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined);
+          // Round floating-point values to integers and ensure uniqueness
+          const dataRegions = [...new Set(atlasData.filter(val => val > 0).map(val => Math.round(val)))];
+          // Filter regions to only those with valid labels
+          validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined && Number.isInteger(val));
+
+          console.log(`Atlas: ${selectedAtlasFiles.name}`);
+          console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
+          console.log(`Data Regions (rounded):`, dataRegions);
+          console.log(`Valid Regions:`, validRegions);
+          console.log(`Valid Region Labels:`, validRegions.map(id => cmap.labels[id]));
+
           if (validRegions.length === 0) {
-            console.warn(`No valid regions found in ${selectedAtlasFiles.name} data, using label indices as fallback.`);
-            validRegions = Object.keys(cmap.labels).map(Number).filter(val => val > 0);
+            console.error(`No valid regions found in ${selectedAtlasFiles.name} data.`);
+            console.log(`cmap.labels keys:`, Object.keys(cmap.labels));
+            validRegions = Object.keys(cmap.labels)
+              .map(Number)
+              .filter(val => val > 0 && Number.isInteger(val));
+            if (validRegions.length === 0) {
+              throw new Error(`No valid regions available for ${selectedAtlasFiles.name}`);
+            }
+            console.warn(`Fallback to cmap.labels keys:`, validRegions);
           }
 
           nv1.setClipPlane([2, 270, 0]);
@@ -345,7 +343,7 @@
         selectedVoxel = null;
         attempts = 0;
         usedRegions = [];
-        targetText.textContent = "Target: Not Started";
+        targetText.textContent = mode === 'navigation' ? "Click to identify a region" : "Target: Not Started";
         targetText.style.color = '#d9dddc';
         targetText.style.fontWeight = '500';
         targetText.style.fontSize = '3rem';
@@ -395,21 +393,19 @@
       }
 
       function highlightRegionFluorescentYellow(regionId) {
-        console.log('highlightRegionFluorescentYellow called with regionId:', regionId); // Debug
+        console.log('highlightRegionFluorescentYellow called with regionId:', regionId);
         if (clut && nv1 && regionId * 4 < clut.length) {
           const lut = clut.slice();
-          // Set alpha to 0 for all regions
           for (let i = 3; i < lut.length; i += 4) {
-            lut[i] = 0; // Set alpha to fully transparent
+            lut[i] = 0;
           }
-          // Set target region to fluorescent yellow with full opacity
-          lut[regionId * 4 + 0] = 255; // R
-          lut[regionId * 4 + 1] = 255; // G
-          lut[regionId * 4 + 2] = 0;   // B
-          lut[regionId * 4 + 3] = 255; // A
+          lut[regionId * 4 + 0] = 255;
+          lut[regionId * 4 + 1] = 255;
+          lut[regionId * 4 + 2] = 0;
+          lut[regionId * 4 + 3] = 255;
           nv1.volumes[1].colormapLabel.lut = lut;
           nv1.updateGLVolume();
-          nv1.drawScene(); // Force redraw
+          nv1.drawScene();
         } else {
           console.error('Cannot highlight region:', {
             clut: !!clut,
@@ -419,6 +415,7 @@
           });
         }
       }
+
       function startTimer() {
         startTime = Date.now();
         timeLabel.style.display = 'block';
@@ -452,10 +449,17 @@
         timeLabel.textContent = "Time: 30:00";
         streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
         timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
+        guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
+        scoreLabel.style.display = mode === 'navigation' ? 'none' : 'block';
+        errorLabel.style.display = mode === 'navigation' ? 'none' : 'block';
         if (mode === 'time-attack') {
           startTimer();
         }
-        selectNewTarget();
+        if (mode === 'navigation') {
+          targetText.textContent = "Click to identify a region";
+        } else {
+          selectNewTarget();
+        }
       }
 
       function validateGuess() {
@@ -463,7 +467,7 @@
           return;
         }
         const clickedRegion = nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]);
-        const targetName = cmap.labels[currentTarget] || "Unknown";
+        const targetName = cmap.labels[currentTarget] || `Region ${currentTarget} (Unknown)`;
 
         if (clickedRegion === currentTarget) {
           score++;
@@ -482,9 +486,19 @@
           errorLabel.textContent = `Errors: ${errors}`;
           if (mode === 'practice') {
             attempts++;
+            const incorrectRegionName = cmap.labels[clickedRegion] || `Region ${clickedRegion} (Unknown)`;
+            targetText.textContent = `It's not ${incorrectRegionName}, it's ${targetName}!`;
             if (attempts >= 3) {
               highlightRegionFluorescentYellow(currentTarget);
             }
+            // Revert to "Find: [region]" after 2 seconds
+            setTimeout(() => {
+              targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
+              targetText.style.color = '#d9dddc';
+              targetText.style.fontWeight = '500';
+              targetText.style.fontSize = '3rem';
+              targetText.style.transition = '';
+            }, 1000);
           }
           highlightTarget(false);
           if (mode === 'streak') {
@@ -492,14 +506,13 @@
             highlightTarget(false);
             setTimeout(() => {
               window.location.href = `index.html?score=${streak}`;
-            }, 2000);
+            }, 1000);
             return;
           }
           selectedVoxel = null;
           guessButton.disabled = true;
         }
       }
-
       document.getElementById("gl1").addEventListener("click", (e) => {
         if (!gameRunning || !nv1) return;
         const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
@@ -510,12 +523,24 @@
           const idx = Math.round(nv1.volumes[1].getValue(vox[0], vox[1], vox[2]));
           if (isFinite(idx) && idx in cmap.labels) {
             selectedVoxel = vox;
-            guessButton.disabled = false;
-            nv1.opts.crosshairColor = [1, 1, 1, 1];
-            nv1.drawScene();
+            if (mode === 'navigation') {
+              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"}`;
+              nv1.opts.crosshairColor = [1, 1, 1, 1];
+              nv1.drawScene();
+            } else {
+              guessButton.disabled = false;
+              nv1.opts.crosshairColor = [1, 1, 1, 1];
+              nv1.drawScene();
+            }
+            console.log(`Clicked voxel: ${vox}, Region ID: ${idx}, Region Name: ${cmap.labels[idx] || "Unknown"}`);
           } else {
             selectedVoxel = null;
-            guessButton.disabled = true;
+            if (mode === 'navigation') {
+              targetText.textContent = "No region selected";
+            } else {
+              guessButton.disabled = true;
+            }
+            console.log(`Clicked voxel: ${vox}, Invalid region ID: ${idx}`);
           }
         }
       });
@@ -524,5 +549,5 @@
 
       initNiivue();
     </script>
-  </body>
+ </body>
 </html>
