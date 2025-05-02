@@ -498,7 +498,7 @@
               targetText.style.fontWeight = '500';
               targetText.style.fontSize = '3rem';
               targetText.style.transition = '';
-            }, 1000);
+            }, 2000);
           }
           highlightTarget(false);
           if (mode === 'streak') {
@@ -525,6 +525,7 @@
             selectedVoxel = vox;
             if (mode === 'navigation') {
               targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"}`;
+              highlightRegionFluorescentYellow(idx);
               nv1.opts.crosshairColor = [1, 1, 1, 1];
               nv1.drawScene();
             } else {
@@ -537,11 +538,28 @@
             selectedVoxel = null;
             if (mode === 'navigation') {
               targetText.textContent = "No region selected";
+              if (clut && nv1) {
+                nv1.volumes[1].colormapLabel.lut = clut.slice();
+                nv1.updateGLVolume();
+              }
             } else {
               guessButton.disabled = true;
             }
             console.log(`Clicked voxel: ${vox}, Invalid region ID: ${idx}`);
           }
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Escape' && gameRunning && mode === 'navigation') {
+          e.preventDefault();
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+            nv1.drawScene();
+          }
+          targetText.textContent = "Click to identify a region";
+          selectedVoxel = null;
         }
       });
 
