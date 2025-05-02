@@ -202,16 +202,16 @@
           cmap = await fetchJSON(selectedAtlasFiles.json);
           nv1.volumes[1].setColormapLabel(cmap);
           clut = new Uint8Array(cmap.R.length * 4);
-          clut[0] = 0;
-          clut[1] = 0;
-          clut[2] = 0;
-          clut[3] = 0;
+          // clut[0] = 0;
+          // clut[1] = 0;
+          // clut[2] = 0;
+          // clut[3] = 0;
 
-          for (let i = 4; i < cmap.R.length; i++) {
+          for (let i = 0; i < cmap.R.length; i++) {
             clut[i * 4 + 0] = cmap.R[i];
             clut[i * 4 + 1] = cmap.G[i];
             clut[i * 4 + 2] = cmap.B[i];
-            clut[i * 4 + 3] = 255; // Set alpha to fully opaque
+            clut[i * 4 + 3] = (i === 0 && (atlas === 'glasser' || atlas === 'destrieux')) ? 0 : 255;
           }
           nv1.volumes[1].colormapLabel.lut = clut.slice();
           nv1.setOpacity(1, 0.7); // Ensure full opacity
