@@ -13,147 +13,337 @@
         <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
         <h1>NeuroGuessr</h1>
       </div>
-      <section class="selection-container">
-        <h2>Select Atlas</h2>
-        <div class="atlas-buttons">
-          <button class="atlas-button" data-atlas="aal">AAL</button>
-          <button class="atlas-button" data-atlas="harvard-oxford">Harvard-Oxford</button>
-          <button class="atlas-button" data-atlas="brodmann">Brodmann</button>
-          <button class="atlas-button" data-atlas="glasser">Glasser</button>
-          <!-- <button class="atlas-button" data-atlas="desikan">Desikan-Kiliany</button> -->
-          <button class="atlas-button" data-atlas="destrieux">Destrieux</button>
-          <button class="atlas-button" data-atlas="subcortical">Subcortical</button>
-          <button class="atlas-button" data-atlas="cerebellum">Cerebellum</button>
-          <button class="atlas-button" data-atlas="xtract">White Matter</button>
-          <button class="atlas-button" data-atlas="thalamus">Thalamus</button>
-          <button class="atlas-button" data-atlas="HippoAmyg">Hippocampus & Amygdala</button>
-          <button class="atlas-button" data-atlas="JHU">JHU</button>
-        </div>
-      </section>
-      <section class="selection-container">
-        <h2>Select Game Mode</h2>
-        <div class="mode-buttons">
-          <button class="mode-button" data-mode="navigation">
-            <img src="/neuroguessr_web/data/boussole.png" alt="boussole Icon" />
-            Navigation
-          </button>
-          <button class="mode-button" data-mode="practice">      
-            <img src="/neuroguessr_web/data/practice.png" alt="practice Icon" />
-            Practice
-          </button>
-          <button class="mode-button" data-mode="streak">
-            <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
-            Streak
-          </button>
-          <button class="mode-button" data-mode="time-attack">
-            <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
-            Time Attack
-          </button>
-        </div>
-      </section>
     </header>
+
     <main>
-      <button id="play-button" class="play-button" disabled>Play</button>
+      <div class="selection-container">
+
+        <section class="atlas-selection">
+          <h2>Select Atlas</h2>
+          <div class="atlas-layout">
+            <div class="category-list">
+              <button class="category-button" data-category="cortex">Cortex</button>
+              <button class="category-button" data-category="subcortical">Subcortical Regions</button>
+              <button class="category-button" data-category="white-matter">White Matter</button>
+              <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
+            </div>
+            <div class="atlas-choices-display">
+              </div>
+          </div>
+
+          <div style="display: none;">
+            <div id="atlas-buttons-cortex">
+              <button class="panel-button" data-atlas="brodmann">
+                Brodmann
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="harvard-oxford">
+                Harvard-Oxford
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="aal">
+                AAL
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="destrieux">
+                Destrieux
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="glasser">
+                Glasser
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+            </div>
+            <div id="atlas-buttons-subcortical">
+              <button class="panel-button" data-atlas="subcortical">
+                Subcortical
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="cerebellum">
+                Cerebellum
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="thalamus">
+                Thalamus
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="HippoAmyg">
+                Amygdala/Hippocampus
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+            </div>
+            <div id="atlas-buttons-white-matter">
+              <button class="panel-button" data-atlas="JHU">
+                JHU
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="xtract">
+                White Matter
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+            </div>
+            <div id="atlas-buttons-cerebral-arteries">
+              <p class="no-atlas-message">No atlases available for this category yet.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="mode-selection">
+          <h2>Select Game Mode</h2>
+          <div class="mode-buttons">
+            <button class="mode-button" data-mode="navigation">
+              <img src="/neuroguessr_web/data/boussole.png" alt="boussole Icon" />
+              Navigation
+            </button>
+            <button class="mode-button" data-mode="practice">
+              <img src="/neuroguessr_web/data/practice.png" alt="practice Icon" />
+              Practice
+            </button>
+            <button class="mode-button" data-mode="streak">
+              <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
+              Streak
+            </button>
+            <button class="mode-button" data-mode="time-attack">
+              <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
+              Time Attack
+            </button>
+          </div>
+        </section>
+      </div>
     </main>
+
+    <footer>
+      <button id="play-button" class="play-button" disabled>Play</button>
+    </footer>
+
     <div id="notification"></div>
+
     <script>
-      // UI elements
-      const atlasButtons = document.querySelectorAll('.atlas-button');
+      // Get references to relevant UI elements
       const modeButtons = document.querySelectorAll('.mode-button');
       const playButton = document.getElementById('play-button');
       const notification = document.getElementById('notification');
+      const categoryButtons = document.querySelectorAll('.category-button');
+      const atlasChoicesDisplay = document.querySelector('.atlas-choices-display');
 
-      // Selection state
+      // Variables to store user selections
       let selectedAtlas = null;
       let selectedMode = null;
+      let selectedCategoryButton = null; // Keep track of the selected category button
 
-      // Notification function
+      /**
+       * Displays a temporary notification message.
+       * @param {string} message - The message to display.
+       * @param {boolean} isSuccess - True for success styling, false for error styling.
+       */
       function showNotification(message, isSuccess) {
         notification.textContent = message;
-        notification.className = isSuccess ? 'success' : 'error';
-        notification.style.display = 'block';
+        notification.className = isSuccess ? 'success' : 'error'; // Apply class for styling
+        notification.style.display = 'block'; // Make notification visible
+        // Hide notification after 3 seconds
         setTimeout(() => {
           notification.style.display = 'none';
         }, 3000);
       }
 
-      // Display score from previous game
+      // --- Display Score from Previous Game (if available in URL) ---
       const urlParams = new URLSearchParams(window.location.search);
       const score = urlParams.get('score');
       const time = urlParams.get('time');
-      if (score && time) {
+      if (score && time) { // Time Attack score
         const minutes = Math.floor(time / 60);
         const seconds = (time % 60).toString().padStart(2, '0');
         showNotification(`Previous Game - Accuracy: ${score}%, Time: ${minutes}m ${seconds}s`, true);
-      } else if (score) {
+      } else if (score) { // Streak score
         showNotification(`Previous Streak: ${score} regions`, true);
       }
 
-      // Update mode buttons based on atlas selection
+      /**
+       * Updates the enabled/disabled state and selection of mode buttons
+       * based on the currently selected atlas.
+       */
       function updateModeButtons() {
         modeButtons.forEach(button => {
+          // Special case: Glasser atlas only allows 'navigation' mode
           if (selectedAtlas === 'glasser') {
-            // For Glasser atlas, only Navigation mode is enabled
             if (button.dataset.mode === 'navigation') {
               button.disabled = false;
             } else {
               button.disabled = true;
-              button.classList.remove('selected'); // Remove selection from disabled modes
+              button.classList.remove('selected'); // Deselect disabled modes
             }
           } else {
-            // For other atlases, all modes are enabled
+            // Enable all modes for other atlases
             button.disabled = false;
           }
         });
 
-        // If the selected mode is not allowed for Glasser, clear it
-        if (selectedAtlas === 'glasser' && selectedMode !== 'navigation') {
-          selectedMode = null;
-          modeButtons.forEach(btn => btn.classList.remove('selected'));
+        // If Glasser is selected and a non-navigation mode was previously selected, deselect it
+        if (selectedAtlas === 'glasser' && selectedMode && selectedMode !== 'navigation') {
+            modeButtons.forEach(btn => {
+                if(btn.dataset.mode === selectedMode) {
+                    btn.classList.remove('selected');
+                }
+            });
+            selectedMode = null; // Reset selected mode
         }
       }
 
-      // Atlas button handling
-      atlasButtons.forEach(button => {
+      /**
+       * Updates the enabled/disabled state of the 'Play' button
+       * based on whether both an atlas and a mode are selected.
+       */
+      function updatePlayButton() {
+        if (selectedAtlas && selectedMode) {
+          playButton.disabled = false; // Enable button
+        } else {
+          playButton.disabled = true; // Disable button
+        }
+        // console.log("Play Button State:", { selectedAtlas, selectedMode, disabled: playButton.disabled }); // Optional debug log
+      }
+
+
+      // --- Event Listener for Category Buttons ---
+      categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
-          atlasButtons.forEach(btn => btn.classList.remove('selected'));
+          const category = button.dataset.category;
+
+          // --- Update Category Button Selection Style ---
+          if (selectedCategoryButton) {
+            // Remove 'selected' class from the previously selected category button
+            selectedCategoryButton.classList.remove('selected');
+          }
+          // Add 'selected' class to the clicked category button
           button.classList.add('selected');
-          selectedAtlas = button.dataset.atlas;
-          updateModeButtons(); // Update mode buttons when atlas changes
+          selectedCategoryButton = button; // Update the tracked selected button
+
+          // --- Populate Atlas Choices Column ---
+          atlasChoicesDisplay.innerHTML = ''; // Clear previous atlas buttons
+          selectedAtlas = null; // Reset selected atlas when category changes
+          atlasChoicesDisplay.scrollTop = 0; // Scroll atlas list to top
+
+          // Find the hidden div containing the template buttons for this category
+          const atlasButtonsContainer = document.getElementById(`atlas-buttons-${category}`);
+
+          if (atlasButtonsContainer && atlasButtonsContainer.children.length > 0 && atlasButtonsContainer.children[0].tagName !== 'P') {
+            // If the container exists and has buttons (not just the 'no atlas' message)
+            atlasButtonsContainer.querySelectorAll('.panel-button').forEach(atlasButtonTemplate => {
+              // Clone the template button to avoid modifying the original
+              const clone = atlasButtonTemplate.cloneNode(true);
+
+              // --- Add Click Listener to the CLONED Atlas Button ---
+              clone.addEventListener('click', () => {
+                  // Remove 'selected' from any other atlas button in the display area
+                  atlasChoicesDisplay.querySelectorAll('.panel-button.selected').forEach(btn => btn.classList.remove('selected'));
+                  // Add 'selected' to the clicked atlas button
+                  clone.classList.add('selected');
+                  selectedAtlas = clone.dataset.atlas; // Store the selected atlas value
+
+                  // Update mode buttons availability and Play button state
+                  updateModeButtons();
+                  updatePlayButton();
+                  // console.log("Atlas Selected:", selectedAtlas); // Optional debug log
+              });
+              // Add the cloned, interactive button to the display column
+              atlasChoicesDisplay.appendChild(clone);
+            });
+          } else if (atlasButtonsContainer) {
+             // If the container exists but is empty or has the 'no atlas' message
+             const noAtlasMessageElement = atlasButtonsContainer.querySelector('.no-atlas-message');
+             if (noAtlasMessageElement) {
+                 atlasChoicesDisplay.appendChild(noAtlasMessageElement.cloneNode(true));
+             } else {
+                 // Fallback message if the specific element isn't found
+                 atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlases available for this category yet.</p>';
+             }
+          } else {
+            // Fallback if the hidden container itself is missing
+            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">Error: Atlas data not found.</p>';
+          }
+
+          // Update button states as atlas selection has been reset
+          updateModeButtons();
           updatePlayButton();
         });
       });
 
-      // Mode button handling
+      // --- Event Listener for Mode Buttons ---
       modeButtons.forEach(button => {
         button.addEventListener('click', () => {
-          // Only allow selection if the button is not disabled
+          // Only process click if the button is not disabled
           if (!button.disabled) {
+            // Deselect any other selected mode button
             modeButtons.forEach(btn => btn.classList.remove('selected'));
+            // Select the clicked mode button
             button.classList.add('selected');
-            selectedMode = button.dataset.mode;
+            selectedMode = button.dataset.mode; // Store the selected mode value
+
+            // Update the Play button state
             updatePlayButton();
+            // console.log("Mode Selected:", selectedMode); // Optional debug log
           }
         });
       });
 
-      // Enable/disable play button
-      function updatePlayButton() {
-        if (selectedAtlas && selectedMode) {
-          playButton.disabled = false;
-        } else {
-          playButton.disabled = true;
-        }
-      }
-
-      // Play button handling
+      // --- Event Listener for Play Button ---
       playButton.addEventListener('click', () => {
-        if (selectedAtlas && selectedMode) {
+        // Only proceed if the button is enabled (atlas and mode selected)
+        if (!playButton.disabled) {
+          // Navigate to the viewer page with selected atlas and mode as URL parameters
           window.location.href = `viewer.html?atlas=${selectedAtlas}&mode=${selectedMode}`;
         } else {
-          showNotification('Please select an atlas and game mode!', false);
+          // Should not happen if button is disabled, but as a fallback:
+          showNotification('Please select an atlas and game mode first!', false);
         }
       });
+
+      // --- Initialize Page State ---
+      // Automatically click the first category button to show its atlases on load
+      if (categoryButtons.length > 0) {
+          categoryButtons[0].click();
+      } else {
+          // Handle case where there are no categories
+          atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlas categories found.</p>';
+          updatePlayButton(); // Ensure play button is disabled
+      }
+
     </script>
   </body>
 </html>
