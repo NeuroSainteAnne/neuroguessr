@@ -207,11 +207,36 @@
           // clut[2] = 0;
           // clut[3] = 0;
 
-          for (let i = 0; i < cmap.R.length; i++) {
+          if (atlas === 'aal'){
+            clut[0] = cmap.R[0];
+            clut[1] = cmap.G[0];
+            clut[2] = cmap.B[0];
+            clut[3] = 255;
+
+            clut[4] = cmap.R[1];
+            clut[5] = cmap.G[1];
+            clut[6] = cmap.B[1];
+            clut[7] = 255;
+
+          } if (atlas === 'glasser' || atlas === 'destrieux'){
+            //
+          } else {
+            clut[0] = 0;
+            clut[1] = 0;
+            clut[2] = 0;
+            clut[3] = 0;
+
+            clut[4] = cmap.R[1];
+            clut[5] = cmap.G[1];
+            clut[6] = cmap.B[1];
+            clut[7] = 255;
+          }
+
+          for (let i = 2; i < cmap.R.length; i++) {
             clut[i * 4 + 0] = cmap.R[i];
             clut[i * 4 + 1] = cmap.G[i];
             clut[i * 4 + 2] = cmap.B[i];
-            clut[i * 4 + 3] = (i === 0 && (atlas === 'glasser' || atlas === 'destrieux')) ? 0 : 255;
+            clut[i * 4 + 3] = 255; 
           }
           nv1.volumes[1].colormapLabel.lut = clut.slice();
           nv1.setOpacity(1, 0.7); // Ensure full opacity
