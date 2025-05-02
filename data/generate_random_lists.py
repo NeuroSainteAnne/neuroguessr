@@ -22,9 +22,8 @@ def generate_random_numbers(n):
         return combined
 
 # Example usage:
-random_numbers = generate_random_numbers(75)
-random_str = [ str(i) for i in random_numbers]
-print(random_str)
+random_numbers = generate_random_numbers(181)
+print(random_numbers)
 
 
 df = pd.read_csv("/Users/francoisramon/Downloads/Destrieux.csv")
@@ -42,4 +41,4 @@ def print_json_list_lengths(filepath):
         print(f"{key}: {len(value)}")
 
 # Example usage
-print_json_list_lengths('/Users/francoisramon/Desktop/These/neuroguessr_web/data/desikan.json')
+print_json_list_lengths('/Users/francoisramon/Desktop/These/neuroguessr_web/data/glasser_neuroparc.json')

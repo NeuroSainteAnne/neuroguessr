@@ -7,6 +7,24 @@
     <title>NeuroGuessr</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
+    <style>
+      /* Add basic styling for the opacity slider */
+      .slider {
+        width: 100px;
+        margin: 0 10px;
+      }
+      .slider-label {
+        color: white;
+        font-size: 14px;
+        margin-right: 5px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+      }
+    </style>
   </head>
   <body>
     <header>
@@ -22,6 +40,17 @@
           <p id="streak-label" style="display: none;">Streak: 0</p>
           <p id="time-label" style="display: none;">Time: 00:00</p>
         </div>
+      </div>
+      <div class="controls">
+        <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
+        <input
+          type="range"
+          min="0"
+          max="255"
+          value="255"
+          class="slider"
+          id="alphaSlider"
+        />
       </div>
       <div class="dropdown">
         <button class="dropbtn">
@@ -47,54 +76,33 @@
       </div>
     </header>
     <main>
-      <canvas 
-        id="gl1"
-      ></canvas>
+      <canvas id="gl1"></canvas>
       <script>
         // Dynamically set canvas size based on viewport and device pixel ratio
         const canvas = document.getElementById("gl1");
 
         function setCanvasSize() {
-          // Get the device pixel ratio (e.g., 2 for Retina displays)
           const dpr = window.devicePixelRatio || 1;
-
-          // Get the viewport dimensions
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;
-
-          // Get the parent container (main element) dimensions for more precise sizing
           const mainElement = document.querySelector("main");
           const containerWidth = mainElement ? mainElement.clientWidth : viewportWidth;
-
-          // Set canvas width to the container's width (full width of the viewport or main)
           const canvasWidth = containerWidth;
-
-          // Calculate canvas height (e.g., 50% of viewport height or adjust as needed)
-          // You can modify this ratio based on your layout needs
-          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100); // Adjust offset for header/footer
-
-          // Set the canvas's internal resolution (scaled by DPR for sharpness)
+          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100);
           canvas.width = canvasWidth * dpr;
           canvas.height = canvasHeight * dpr;
-
-          // Set the canvas's CSS size to match the intended display size
           canvas.style.width = `${canvasWidth}px`;
           canvas.style.height = `${canvasHeight}px`;
-
-          // Optional: Ensure Niivue updates its rendering after resize
           if (window.nv1) {
             window.nv1.resizeListener();
             window.nv1.drawScene();
           }
         }
 
-        // Initial size setting
         setCanvasSize();
-
-        // Update size on window resize or orientation change
         window.addEventListener("resize", setCanvasSize);
         window.addEventListener("orientationchange", setCanvasSize);
-    </script>
+      </script>
     </main>
     <div class="button-container">
       <button id="return-button" class="return-button">Return</button>
@@ -114,7 +122,7 @@
       let cmap = null;
       let nv1 = null;
       let clut = null;
-      let mode = null;
+      // let mode = null;
       let attempts = 0;
       let startTime = null;
       let timerInterval = null;
@@ -129,6 +137,7 @@
       const streakLabel = document.getElementById("streak-label");
       const timeLabel = document.getElementById("time-label");
       const targetText = targetLabel.querySelector('.target-text');
+      const alphaSlider = document.getElementById("alphaSlider");
 
       // Return button handler
       returnButton.addEventListener('click', () => {
@@ -137,24 +146,28 @@
 
       // Spacebar to confirm guess
       document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && ! GUESSButton.disabled && gameRunning) {
+        if (e.code === 'Space' && !guessButton.disabled && gameRunning) {
           e.preventDefault();
           validateGuess();
         }
       });
 
+      // Opacity slider handler
+      alphaSlider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255);
+        nv1.updateGLVolume();
+      };
+
       // Get atlas and mode from query parameters
       const urlParams = new URLSearchParams(window.location.search);
       const atlas = urlParams.get('atlas') || 'aal';
-      mode = urlParams.get('mode') || 'practice';
+      const mode = urlParams.get('mode') || 'practice';
       const atlasFiles = {
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
-      //  'desikan' :{ nii: '/neuroguessr_web/data/DKT_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/desikan.json', name: 'Desikan' },
-        'destrieux' :{ nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
-
+        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
@@ -165,16 +178,11 @@
 
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
 
-      const volumeList1 = [
-        { url: '/neuroguessr_web/data/mni152.nii.gz' },
-        { url: selectedAtlasFiles.nii }
-      ];
-
       async function initNiivue() {
         try {
           nv1 = new niivue.Niivue({
             show3Dcrosshair: true,
-            backColor: [0, 0, 0, 1], // Set to black background
+            backColor: [0, 0, 0, 1],
             crosshairColor: [1, 1, 1, 1]
           });
           await nv1.attachTo("gl1");
@@ -183,76 +191,43 @@
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
           nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;
-          try {
-            await nv1.loadVolumes(volumeList1);
-          } catch (e) {
-            throw new Error(`Failed to load volume: ${e.message}`);
+
+          const volumeList1 = [
+            { url: '/neuroguessr_web/data/mni152.nii.gz' },
+            { url: selectedAtlasFiles.nii, isApplyScaling: false }
+          ];
+          await nv1.loadVolumes(volumeList1);
+
+          // Load JSON and set colormap
+          cmap = await fetchJSON(selectedAtlasFiles.json);
+          nv1.volumes[1].setColormapLabel(cmap);
+          clut = new Uint8Array(cmap.R.length * 4);
+          clut[0] = 0;
+          clut[1] = 0;
+          clut[2] = 0;
+          clut[3] = 0;
+
+          for (let i = 4; i < cmap.R.length; i++) {
+            clut[i * 4 + 0] = cmap.R[i];
+            clut[i * 4 + 1] = cmap.G[i];
+            clut[i * 4 + 2] = cmap.B[i];
+            clut[i * 4 + 3] = 255; // Set alpha to fully opaque
           }
+          nv1.volumes[1].colormapLabel.lut = clut.slice();
+          nv1.setOpacity(1, 0.7); // Ensure full opacity
+          nv1.updateGLVolume();
 
-          try {
-            cmap = await fetchJSON(selectedAtlasFiles.json);
-            nv1.volumes[1].setColormapLabel(cmap);
-            clut = nv1.volumes[1].colormapLabel.lut;
-            // Ensure region 0 is fully transparent
-            if (clut && clut.length >= 4) {
-              clut[0] = 0; // R
-              clut[1] = 0; // G
-              clut[2] = 0; // B
-              clut[3] = 0; // A
-            }
-            // Set alpha for non-zero regions to more transparent
-            for (let a = 7; a < clut.length; a += 4) {
-              clut[a] = 64; // Lower alpha for more transparency (~0.25)
-            }
-
-            print(clut)
-            // For float32 data, ensure voxel values are treated as auctions
-            if (nv1.volumes[1].hdr.datatypeCode === 16) { // DT_FLOAT32
-              const atlasData = await nv1.volumes[1].getVolumeData();
-              const roundedData = atlasData.map(val => Math.round(val));
-              nv1.volumes[1].setVolumeData(roundedData);
-            }
-            nv1.updateGLVolume();
-            nv1.setMultiplanarPadPixels(5);
-          } catch (e) {
-            throw new Error(`Failed to load ${selectedAtlasFiles.name} labels: ${e.message}`);
-          }
-
-          validRegions = Object.keys(cmap.labels)
-            .map(Number)
-            .filter((val) => val > 0);
-
-          try {
-            const atlasData = await nv1.volumes[1].getVolumeData();
-            const dataRegions = [...new Set(atlasData.filter((val) => val > 0 && val in cmap.labels))];
-            if (dataRegions.length > 0) {
-              validRegions = dataRegions;
-            } else {
-              console.warn(`No valid regions found in ${selectedAtlasFiles.name} data, using label indices.`);
-            }
-          } catch (e) {
-            console.error(`getVolumeData failed for ${selectedAtlasFiles.name}:`, e);
-          }
-
+          // Get valid regions from atlas data
+          const atlasData = await nv1.volumes[1].getVolumeData();
+          const dataRegions = [...new Set(atlasData.filter(val => val > 0))];
+          validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined);
           if (validRegions.length === 0) {
-            throw new Error(`No valid regions in ${selectedAtlasFiles.name}. Check atlas compatibility.`);
+            console.warn(`No valid regions found in ${selectedAtlasFiles.name} data, using label indices as fallback.`);
+            validRegions = Object.keys(cmap.labels).map(Number).filter(val => val > 0);
           }
 
-          // Disable clip planes for render view
-          nv1.setClipPlane([2, 270, 0]); // Depth > 1 to disable clip plane
-          nv1.opts.isSliceMM = true; // Enable mm-based scrolling
-
-          // Add scroll event listener for slice navigation
-          document.getElementById("gl1").addEventListener("wheel", (e) => {
-            e.preventDefault();
-            if (!nv1) return;
-            const sliceType = nv1.scene.sliceType;
-            if (sliceType === nv1.sliceTypeAxial || sliceType === nv1.sliceTypeCoronal || sliceType === nv1.sliceTypeSagittal) {
-              const delta = e.deltaY > 0 ? -1 : 1;
-              nv1.moveCrosshairInVox(0, 0, delta);
-              nv1.drawScene();
-            }
-          });
+          nv1.setClipPlane([2, 270, 0]);
+          nv1.opts.isSliceMM = true;
 
           setupViewMenu();
           startGame();
@@ -293,7 +268,7 @@
             if (event.target.id === "|Sagittal") nv1.setSliceType(nv1.sliceTypeSagittal);
             if (event.target.id === "|Render") {
               nv1.setSliceType(nv1.sliceTypeRender);
-              nv1.setClipPlane([2, 270, 0]); // Ensure no clip plane in render
+              nv1.setClipPlane([2, 270, 0]);
             }
             if (event.target.id === "|MultiPlanar") {
               nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
@@ -313,7 +288,7 @@
           }
           if (event.target.id === "ColoredAtlas") {
             const isChecked = event.srcElement.classList.contains("dropdown-item-checked");
-            nv1.setOpacity(1, isChecked ? 0.0 : 1.0);
+            nv1.setOpacity(1, isChecked ? 0.0 : alphaSlider.value / 255);
             event.srcElement.classList.toggle("dropdown-item-checked");
             nv1.updateGLVolume();
             return;
@@ -329,7 +304,7 @@
         targetText.style.transition = 'all 0.1s ease-in-out';
         targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
         targetText.style.fontWeight = 'bold';
-        targetText.style.fontSize = '3.5rem';
+        targetText.style.fontSize = '3rem';
         setTimeout(() => {
           targetText.style.color = '#d9dddc';
           targetText.style.fontWeight = '500';
@@ -387,7 +362,7 @@
         targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
-        attempts = 0; // Reset attempts for new target
+        attempts = 0;
         if (clut && nv1) {
           nv1.volumes[1].colormapLabel.lut = clut.slice();
           nv1.updateGLVolume();
@@ -395,17 +370,30 @@
       }
 
       function highlightRegionFluorescentYellow(regionId) {
-        if (clut && nv1) {
+        console.log('highlightRegionFluorescentYellow called with regionId:', regionId); // Debug
+        if (clut && nv1 && regionId * 4 < clut.length) {
           const lut = clut.slice();
+          // Set alpha to 0 for all regions
+          for (let i = 3; i < lut.length; i += 4) {
+            lut[i] = 0; // Set alpha to fully transparent
+          }
+          // Set target region to fluorescent yellow with full opacity
           lut[regionId * 4 + 0] = 255; // R
           lut[regionId * 4 + 1] = 255; // G
           lut[regionId * 4 + 2] = 0;   // B
           lut[regionId * 4 + 3] = 255; // A
           nv1.volumes[1].colormapLabel.lut = lut;
           nv1.updateGLVolume();
+          nv1.drawScene(); // Force redraw
+        } else {
+          console.error('Cannot highlight region:', {
+            clut: !!clut,
+            nv1: !!nv1,
+            regionId,
+            lutLength: clut?.length
+          });
         }
       }
-
       function startTimer() {
         startTime = Date.now();
         timeLabel.style.display = 'block';
@@ -436,7 +424,7 @@
         scoreLabel.textContent = "Correct: 0";
         errorLabel.textContent = "Errors: 0";
         streakLabel.textContent = "Streak: 0";
-        timeLabel.textContent = "Time: 00:00";
+        timeLabel.textContent = "Time: 30:00";
         streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
         timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
         if (mode === 'time-attack') {
