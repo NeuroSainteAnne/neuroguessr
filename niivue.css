@@ -77,43 +77,62 @@ main {
   box-sizing: border-box;
   flex-grow: 1; /* Allow main to fill available vertical space */
   min-height: 60vh; /* Ensure minimum height */
+  position: relative; /* Needed for central separator */
 }
 
-/* Container for Atlas and Mode Selection Sections */
+/* Central Separator - Index Page Only, Half Height */
+body.index-page main::after { /* Target only body with class="index-page" */
+  content: '';
+  position: absolute;
+  top: 10%; 
+  height: 70%; 
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background-color: #808588;
+  z-index: 1;
+  display: block; /* Display by default (but only on index page now) */
+}
+
+/* Remove the old generic main::after rule if it exists */
+/* main::after { display: none; } /* Or just delete the old rule */
+
 /* Container for Atlas and Mode Selection Sections */
 .selection-container {
   display: flex;
   flex-direction: row; /* Side-by-side layout */
   justify-content: center; /* Center sections if space allows */
-  align-items: flex-start; /* Align tops of sections */
+  align-items: stretch; /* Ensure sections have equal height */
   width: 100%;
   max-width: 90vw; /* Limit overall width */
   gap: 2rem; /* Space between atlas and mode sections */
-  /* Added: ensure children distribute space equally */
   flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 
 /* Atlas Selection Section Styles */
 .atlas-selection {
-  flex: 1; /* Allows section to grow and shrink, taking equal space */
+  flex: 1; /* Allows section to grow and shrink */
   min-width: 300px; /* Ensure a minimum width before wrapping */
+  /* max-width: 500px; /* Optional: Limit maximum width */
+  margin: 0 1rem; /* Add horizontal margins */
   text-align: left;
   min-height: 50vh; /* Minimum height */
   display: flex;
   flex-direction: column; /* Stack title and layout vertically */
+  /* border-right: 1px solid #808588; /* REMOVED Vertical separator line */
+  /* padding-right: 1rem; /* REMOVED: Space before the border */
 }
 
 /* Mode Selection Section Styles */
 .mode-selection {
-  flex: 1; /* Allows section to grow and shrink, taking equal space */
-   min-width: 250px; /* Ensure a minimum width before wrapping */
+  flex: 1; /* Allows section to grow and shrink */
+  min-width: 250px; /* Ensure a minimum width before wrapping */
   text-align: center;
   min-height: 50vh; /* Match height */
-  padding-top: 3rem; /* Add padding to align content visually */
-  /* Added: Center content vertically if needed */
   display: flex;
   flex-direction: column;
   align-items: center; /* Center the mode buttons container */
+  margin: 0 1rem; /* Add horizontal margins for symmetry */
 }
 
 /* Canvas Styles (for viewer page) */
@@ -167,7 +186,8 @@ h2 {
 /* Styles for Game Status Display (viewer page) */
 .game-status { display: flex; flex-direction: column; align-items: center; margin: 0; }
 .target-label { text-align: center; margin: 0; }
-.target-text { font-size: 0.7rem; font-weight: 500; color: #d9dddc; background: #363636; padding: 0.75rem 1.5rem; border-radius: 0.75rem; transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out; }
+/* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase) */
+.target-text { font-size: 1.6875rem; font-weight: 500; color: #d9dddc; background: #363636; padding: 0.75rem 1.5rem; border-radius: 0.75rem; transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out; }
 .target-text.success { color: #4ade80; font-weight: bold; }
 .target-text.error { color: #f87171; font-weight: bold; }
 .score-error-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
@@ -182,9 +202,10 @@ h2 {
 
 /* Dropdown Menu Styles (viewer page) */
 .dropdown { position: relative; display: inline-block; }
-.dropbtn { background: #363636; color: #d9dddc; font-size: 1.125rem; font-weight: 500; padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
+/* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase) */
+.dropbtn { background: #363636; color: #d9dddc; font-size: 1.6875rem; font-weight: 500; padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
 .dropbtn:hover, .dropbtn:active { background: #363636; border: none; }
-.hamburger svg { width: 1.5rem; height: 1.125rem; }
+.hamburger svg { width: 1.5rem; height: 1.125rem; } /* Consider scaling this if needed */
 .dropdown-content { display: none; position: absolute; background-color: #2a2a2a; width: 100%; min-width: 12rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2); z-index: 1000; border-radius: 0.5rem; border: 1px solid #808588; }
 .dropdown:hover .dropdown-content { display: block; }
 .dropdown-content a { color: #d9dddc; font-weight: 500; font-size: 0.875rem; padding: 0.75rem 1rem; text-decoration: none; display: block; }
@@ -214,7 +235,6 @@ h2 {
   flex-basis: 200px; /* Fixed width for the list */
   flex-shrink: 0; /* Prevent list from shrinking */
   padding: 0.5rem; /* Padding inside the list */
-  /* Removed: border-right: 1px solid #808588; */ /* Separator line */
   overflow-y: auto; /* Add scrollbar if categories overflow */
 }
 
@@ -227,7 +247,6 @@ h2 {
   gap: 0.5rem; /* Space between atlas buttons */
   overflow-y: auto; /* Add scrollbar if atlases overflow */
   background: #363636; /* Background for this column */
-  /* max-height: calc(40vh + 1rem); /* Optional: Limit height */
 }
 
 /* --- Button Styles --- */
@@ -265,7 +284,6 @@ h2 {
 
 /* Category Button Style - Inherits from Panel Button */
 .category-button {
-  /* Apply the exact same base styles as .panel-button */
   background: #363636;
   color: #d9dddc;
   font-size: 1rem;
@@ -284,14 +302,11 @@ h2 {
   margin-bottom: 0.25rem; /* Add space between category buttons */
 }
 .category-button:hover {
-  /* Same hover effect as .panel-button */
   background: #4a4a4a;
   border-color: #aaa;
   color: #fff;
 }
-/* Style for Selected Category Button */
 .category-button.selected {
-  /* Same selected effect as selected .panel-button */
   background: #5a5a5a;
   font-weight: 600;
   border-color: #e5e7eb;
@@ -311,18 +326,17 @@ h2 {
 
 /* Message Style for No Atlases */
 .no-atlas-message {
-    color: #aaa;
-    font-style: italic;
-    padding: 1rem;
-    text-align: center;
+  color: #aaa;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
 }
-
 
 /* Mode Selection Button Styles */
 .mode-buttons {
   display: flex;
   flex-direction: column;
-  align-items: center; /* This already centers buttons horizontally */
+  align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
   width: 100%; /* Ensure the container takes full width of its parent */
@@ -362,14 +376,14 @@ h2 {
   background: #5a5a5a; /* Keep selected style on hover */
 }
 .mode-button:disabled {
-    background: #303030;
-    border-color: #4a4a4a;
-    color: #777;
-    cursor: not-allowed;
-    opacity: 0.6;
+  background: #303030;
+  border-color: #4a4a4a;
+  color: #777;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 .mode-button:disabled img {
-    opacity: 0.5; /* Dim icon when disabled */
+  opacity: 0.5; /* Dim icon when disabled */
 }
 
 /* Play Button Style */
@@ -424,51 +438,61 @@ h2 {
 /* Controls Styles (viewer page) */
 .controls { display: flex; align-items: center; gap: 0.5rem; }
 .slider { width: 6rem; margin: 0 0.5rem; }
-.slider-label { color: white; font-size: 1.125rem; font-weight: 500; }
+/* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase) */
+.slider-label { color: white; font-size: 1.6875rem; font-weight: 500; }
 
 /* --- Media Queries for Responsive Design --- */
 
 /* Larger Tablets / Small Laptops */
 @media (max-width: 1024px) {
-   .selection-container {
+  main::after {
+    display: none; /* Hide central separator when stacked */
+  }
+  .selection-container {
     flex-direction: column; /* Stack sections vertically */
     align-items: center; /* Center sections */
   }
   .atlas-selection,
   .mode-selection {
-     flex: none; /* Reset flex sizing */
-     width: 100%; /* Take full width */
-     max-width: 90vw; /* Limit width */
-     min-height: auto; /* Reset min height */
-     padding-top: 0; /* Reset padding */
+    flex: none; /* Reset flex sizing */
+    width: 100%; /* Take full width */
+    max-width: 90vw; /* Limit width */
+    min-height: auto; /* Reset min height */
+    margin: 0; /* Remove margins for stacked layout */
+    padding: 0; /* Remove padding when stacked */
+    /* border-right: none; /* Ensure no right border */
   }
-   .atlas-layout {
-     min-height: 30vh; /* Reduce height */
-   }
-   .mode-selection h2 {
-       margin-top: 1.5rem; /* Add space above mode title */
-   }
+  .atlas-selection {
+     border-bottom: 1px solid #808588; /* Add horizontal separator */
+     margin-bottom: 2rem; /* Add space below atlas section when stacked */
+  }
+  .mode-selection {
+     /* Ensure mode selection takes remaining space correctly */
+  }
+  .atlas-layout {
+    min-height: 30vh; /* Reduce height */
+  }
+  .mode-selection h2 {
+    margin-top: 1.5rem; /* Add space above mode title */
+  }
 }
 
 /* Smaller Tablets */
 @media (max-width: 768px) {
-   /* Keep column layout for selection-container */
-   .atlas-layout {
-       /* Optional: Stack columns vertically if needed, but side-by-side might still work */
-       /* flex-direction: column; */
-       min-height: auto; /* Allow height to adjust */
-       max-height: 60vh; /* Limit total height */
-   }
-   /* If stacking atlas columns: */
-   /* .category-list { flex-basis: auto; border-right: none; border-bottom: 1px solid #808588; max-height: 25vh; } */
-   /* .atlas-choices-display { max-height: 35vh; padding: 0.5rem; } */
-
-   .mode-buttons {
-      align-items: center;
-   }
-   .mode-button {
-      width: 90%; /* Ensure buttons are wide */
-   }
+  .atlas-layout {
+    min-height: auto; /* Allow height to adjust */
+    max-height: 60vh; /* Limit total height */
+  }
+  .mode-buttons {
+    align-items: center;
+  }
+  .mode-button {
+    width: 90%; /* Ensure buttons are wide */
+  }
+  /* Adjustments for increased base font sizes */
+  .target-text { font-size: 1.5rem; } /* Slightly smaller on tablets */
+  .dropbtn { font-size: 1.5rem; } /* Slightly smaller on tablets */
+  .slider-label { font-size: 1.5rem; } /* Slightly smaller on tablets */
 }
 
 /* Mobile Phones */
@@ -477,31 +501,31 @@ h2 {
   h2 { font-size: 1.25rem; }
   .logo { height: 4rem; }
   .play-button { font-size: 1rem; padding: 0.75rem 1.5rem; }
-
-  /* Adjust button text/padding */
   .category-button, .panel-button {
-      font-size: 0.875rem;
-      padding: 0.6rem 0.8rem;
+    font-size: 0.875rem;
+    padding: 0.6rem 0.8rem;
   }
   .mode-button {
-      font-size: 0.9rem;
-      padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
   }
   .mode-button img { height: 1.1rem; }
-
-  /* Ensure atlas layout fits */
-   .atlas-layout {
-       max-height: 70vh; /* Allow more height */
-       flex-direction: column; /* Force stack on mobile */
-   }
-   .category-list {
-       flex-basis: auto; /* Reset basis */
-       border-right: none; /* Remove side border */
-       border-bottom: 1px solid #808588; /* Add bottom border */
-       max-height: 30vh; /* Limit category list height */
-   }
-   .atlas-choices-display {
-       max-height: 40vh; /* Adjust choices height */
-       padding: 0.5rem; /* Reduce padding */
-    }
+  .atlas-layout {
+    max-height: 70vh; /* Allow more height */
+    flex-direction: column; /* Force stack on mobile */
+  }
+  .category-list {
+    flex-basis: auto; /* Reset basis */
+    border-right: none; /* Remove side border */
+    border-bottom: 1px solid #808588; /* Add bottom border */
+    max-height: 30vh; /* Limit category list height */
+  }
+  .atlas-choices-display {
+    max-height: 40vh; /* Adjust choices height */
+    padding: 0.5rem; /* Reduce padding */
+  }
+  /* Further adjustments for increased base font sizes */
+  .target-text { font-size: 1.25rem; } /* Smaller on mobile */
+  .dropbtn { font-size: 1.25rem; } /* Smaller on mobile */
+  .slider-label { font-size: 1.25rem; } /* Smaller on mobile */
 }
