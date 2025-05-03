@@ -22,7 +22,7 @@ def generate_random_numbers(n):
         return combined
 
 # Example usage:
-random_numbers = generate_random_numbers(17)
+random_numbers = generate_random_numbers(37)
 print(random_numbers)
 
 

@@ -23,17 +23,6 @@
           <p id="time-label" style="display: none;">Time: 00:00</p>
         </div>
       </div>
-      <div class="controls">
-        <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
-        <input
-          type="range"
-          min="0"
-          max="255"
-          value="255"
-          class="slider"
-          id="alphaSlider"
-        />
-      </div>
       <div class="dropdown">
         <button class="dropbtn">
           View Options
@@ -54,6 +43,17 @@
           <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
           <a class="viewBtn" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
+          <div class="slider-container">
+            <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value="255"
+              class="slider"
+              id="alphaSlider"
+            />
+          </div>
         </div>
       </div>
     </header>
@@ -151,6 +151,7 @@
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
         'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', name: 'Thalamus'},
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
+        'territories': { nii: '/neuroguessr_web/data/Arterial_atlas_level2.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', name: 'Territories' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
       };
 
