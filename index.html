@@ -7,7 +7,7 @@
     <title>NeuroGuessr Web - Welcome</title>
     <link rel="stylesheet" href="niivue.css" />
   </head>
-  <body>
+  <body class="index-page">
     <header>
       <div class="logo-title-container">
         <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
@@ -25,6 +25,7 @@
               <button class="category-button" data-category="cortex">Cortex</button>
               <button class="category-button" data-category="subcortical">Subcortical Regions</button>
               <button class="category-button" data-category="white-matter">White Matter</button>
+              <button class="category-button" data-category="functional">Functional Networks</button>
               <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
             </div>
             <div class="atlas-choices-display">
@@ -33,6 +34,18 @@
 
           <div style="display: none;">
             <div id="atlas-buttons-cortex">
+              <button class="panel-button" data-atlas="hemisphere">
+                Hemispheres
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="tissues">
+                Tissue classes
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
               <button class="panel-button" data-atlas="brodmann">
                 Brodmann
                 <span class="difficulty-icons">
@@ -66,6 +79,21 @@
                 Glasser
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+            </div>
+            <div id="atlas-buttons-functional">
+              <button class="panel-button" data-atlas="yeo7">
+                Yeo's 7 networks
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button>
+              <button class="panel-button" data-atlas="yeo17">
+                Yeo's 17 networks
+                <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>

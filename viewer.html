@@ -7,23 +7,6 @@
     <title>NeuroGuessr</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
-    <style>
-      .slider {
-        width: 100px;
-        margin: 0 10px;
-      }
-      .slider-label {
-        color: white;
-        font-size: 14px;
-        margin-right: 5px;
-      }
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px;
-      }
-    </style>
   </head>
   <body>
     <header>
@@ -156,9 +139,13 @@
       const atlasFiles = {
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/Tissue_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
+        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
         'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', name: 'yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', name: 'yeo17' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
@@ -327,11 +314,11 @@
         targetText.style.transition = 'all 0.1s ease-in-out';
         targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
         targetText.style.fontWeight = 'bold';
-        targetText.style.fontSize = '3rem';
+        // targetText.style.fontSize = '3rem';
         setTimeout(() => {
           targetText.style.color = '#d9dddc';
-          targetText.style.fontWeight = '500';
-          targetText.style.fontSize = '3rem';
+          // targetText.style.fontWeight = '500';
+          // targetText.style.fontSize = '3rem';
           setTimeout(() => {
             targetText.style.transition = '';
           }, 100);
@@ -345,8 +332,8 @@
         usedRegions = [];
         targetText.textContent = mode === 'navigation' ? "Click to identify a region" : "Target: Not Started";
         targetText.style.color = '#d9dddc';
-        targetText.style.fontWeight = '500';
-        targetText.style.fontSize = '3rem';
+        // targetText.style.fontWeight = '500';
+        // targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
         if (clut && nv1) {
@@ -381,8 +368,8 @@
         }
         targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
         targetText.style.color = '#d9dddc';
-        targetText.style.fontWeight = '500';
-        targetText.style.fontSize = '3rem';
+        // targetText.style.fontWeight = '500';
+        // targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
         attempts = 0;
@@ -495,8 +482,8 @@
             setTimeout(() => {
               targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
               targetText.style.color = '#d9dddc';
-              targetText.style.fontWeight = '500';
-              targetText.style.fontSize = '3rem';
+              // targetText.style.fontWeight = '500';
+              // targetText.style.fontSize = '3rem';
               targetText.style.transition = '';
             }, 2000);
           }
