@@ -148,7 +148,13 @@
               </button>
             </div>
             <div id="atlas-buttons-cerebral-arteries">
-              <p class="no-atlas-message">No atlases available for this category yet.</p>
+              <!-- <button class="panel-button" data-atlas="territories">
+                Arteries Territories
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button> -->
             </div>
           </div>
         </section>
@@ -237,6 +243,12 @@
               button.disabled = true;
               button.classList.remove('selected'); // Deselect disabled modes
             }
+          }
+          else if (selectedAtlas === 'hemisphere') {
+            if (button.dataset.mode === 'navigation') {
+              button.disabled = true;
+              button.classList.remove('selected'); // Deselect navigation if selected
+              } 
           } else {
             // Enable all modes for other atlases
             button.disabled = false;
@@ -251,6 +263,12 @@
                 }
             });
             selectedMode = null; // Reset selected mode
+        }
+
+        if (selectedAtlas === 'hemisphere') {
+            if (button.dataset.mode === 'navigation') {
+              button.disabled = true;
+            } 
         }
       }
 

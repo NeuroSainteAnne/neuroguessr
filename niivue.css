@@ -94,9 +94,6 @@ body.index-page main::after { /* Target only body with class="index-page" */
   display: block; /* Display by default (but only on index page now) */
 }
 
-/* Remove the old generic main::after rule if it exists */
-/* main::after { display: none; } /* Or just delete the old rule */
-
 /* Container for Atlas and Mode Selection Sections */
 .selection-container {
   display: flex;
@@ -185,7 +182,7 @@ h2 {
 
 /* Styles for Game Status Display (viewer page) */
 .game-status { display: flex; flex-direction: column; align-items: center; margin: 0; }
-.target-label { text-align: center; margin: 0; }
+.target-label { text screening-test: center; margin: 0; }
 /* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase) */
 .target-text { font-size: 1.6875rem; font-weight: 500; color: #d9dddc; background: #363636; padding: 0.75rem 1.5rem; border-radius: 0.75rem; transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out; }
 .target-text.success { color: #4ade80; font-weight: bold; }
@@ -212,6 +209,10 @@ h2 {
 .dropdown-content a:hover { background-color: #363636; }
 .dropdown-content .dropdown-item-checked::before { content: '✓ '; color: #4ade80; }
 .dropdown-content .divider { border-top: 1px solid #808588; margin: 0.5rem 0; }
+.slider-container { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; }
+.slider { width: 6rem; margin: 0; }
+/* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase), adjusted for dropdown */
+.slider-label { color: white; font-size: 0.875rem; font-weight: 500; }
 
 /* --- Atlas Selection Two-Column Layout --- */
 .atlas-layout {
@@ -435,12 +436,6 @@ h2 {
   color: #3c1a1a;
 }
 
-/* Controls Styles (viewer page) */
-.controls { display: flex; align-items: center; gap: 0.5rem; }
-.slider { width: 6rem; margin: 0 0.5rem; }
-/* CHANGED font-size from 1.125rem to 1.6875rem (1.5x increase) */
-.slider-label { color: white; font-size: 1.6875rem; font-weight: 500; }
-
 /* --- Media Queries for Responsive Design --- */
 
 /* Larger Tablets / Small Laptops */
@@ -492,7 +487,7 @@ h2 {
   /* Adjustments for increased base font sizes */
   .target-text { font-size: 1.5rem; } /* Slightly smaller on tablets */
   .dropbtn { font-size: 1.5rem; } /* Slightly smaller on tablets */
-  .slider-label { font-size: 1.5rem; } /* Slightly smaller on tablets */
+  .slider-label { font-size: 0.875rem; } /* Slightly smaller on tablets */
 }
 
 /* Mobile Phones */
@@ -527,5 +522,5 @@ h2 {
   /* Further adjustments for increased base font sizes */
   .target-text { font-size: 1.25rem; } /* Smaller on mobile */
   .dropbtn { font-size: 1.25rem; } /* Smaller on mobile */
-  .slider-label { font-size: 1.25rem; } /* Smaller on mobile */
+  .slider-label { font-size: 0.75rem; } /* Smaller on mobile */
 }
