@@ -2,5 +2,5 @@
 	"R" : [0,230,40],
 	"G" : [0,0,0],
 	"B" : [0,0,245],
-	"labels" : ["Unknown","Left-Hemisphere","Right-Hemisphere"]
+	"labels" : ["Unknown","Right-Hemisphere","Left-Hemisphere"]
 }
