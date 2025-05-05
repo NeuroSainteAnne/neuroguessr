@@ -17,29 +17,32 @@
 
     <main>
       <div class="selection-container">
-
         <section class="atlas-selection">
           <h2>Select Atlas</h2>
           <div class="atlas-layout">
             <div class="category-list">
-              <button class="category-button" data-category="cortex">Cortex</button>
+              <button class="category-button" data-category="cortex">Cortical Regions</button>
               <button class="category-button" data-category="subcortical">Subcortical Regions</button>
-              <button class="category-button" data-category="white-matter">White Matter</button>
+              <button class="category-button" data-category="white-matter">White Matter Tracts</button>
               <button class="category-button" data-category="functional">Functional Networks</button>
               <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
             </div>
-            <div class="atlas-choices-display">
-              </div>
+            <div class="atlas-choices-display"></div>
+          </div>
+          <!-- Search Bar for All Atlases -->
+          <div class="search-container">
+            <h3>Neurotheka - Search for a brain region</h3>
+            <input
+              type="text"
+              id="atlas-search"
+              placeholder="Search all atlas regions (e.g., Amygdala, Frontal Pole...)"
+              class="search-input"
+            />
+            <div id="search-suggestions" class="search-suggestions"></div>
           </div>
 
           <div style="display: none;">
             <div id="atlas-buttons-cortex">
-<!--               <button class="panel-button" data-atlas="hemisphere">
-                <span class="atlas-info">Hemispheres <span class="atlas-description">Brain hemispheres</span></span>
-                <span class="difficulty-icons">
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                </span>
-              </button> -->
               <button class="panel-button" data-atlas="tissues">
                 <span class="atlas-info">Tissue classes <span class="atlas-description">Tissue types (CSF, WM, GM)</span></span>
                 <span class="difficulty-icons">
@@ -47,7 +50,7 @@
                 </span>
               </button>
               <button class="panel-button" data-atlas="brodmann">
-                <span class="atlas-info">Brodmann <span class="atlas-description">Cytoarchitectonic brain regoins</span></span>
+                <span class="atlas-info">Brodmann <span class="atlas-description">Cytoarchitectonic brain regions</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -67,14 +70,6 @@
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
-<!--               <button class="panel-button" data-atlas="schaefer">
-                <span class="atlas-info">Schaefer 100 <span class="atlas-description">rs-fMRI connectivity based parcellation</span></span>
-                <span class="difficulty-icons">
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                </span>
-              </button> -->
               <button class="panel-button" data-atlas="destrieux">
                 <span class="atlas-info">Destrieux <span class="atlas-description">Gyral-sulcal parcellation</span></span>
                 <span class="difficulty-icons">
@@ -91,6 +86,13 @@
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
+<!--               <button class="panel-button" data-atlas="schaefer">
+                <span class="atlas-info">Schaefer <span class="atlas-description">Cortical parcellation</span></span>
+                <span class="difficulty-icons">
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                </span>
+              </button> -->
             </div>
             <div id="atlas-buttons-functional">
               <button class="panel-button" data-atlas="yeo7">
@@ -141,7 +143,7 @@
             </div>
             <div id="atlas-buttons-white-matter">
               <button class="panel-button" data-atlas="JHU">
-                <span class="atlas-info">JHU <span class="atlas-description">JHU White matter tracts</span></span>
+                <span class="atlas-info">JHU <span class="atlas-description">JHU's White matter tracts</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -171,244 +173,277 @@
           <h2>Select Game Mode</h2>
           <div class="mode-buttons">
             <button class="mode-button" data-mode="navigation">
-              <img src="/neuroguessr_web/data/boussole.png" alt="boussole Icon" />
+              <img src="/neuroguessr_web/data/boussole.png" alt="Boussole Icon" />
               Navigation
+              <span class="mode-description">Identify brain regions</span>
             </button>
             <button class="mode-button" data-mode="practice">
-              <img src="/neuroguessr_web/data/practice.png" alt="practice Icon" />
+              <img src="/neuroguessr_web/data/practice.png" alt="Practice Icon" />
               Practice
+              <span class="mode-description">Learn with feedback</span>
             </button>
             <button class="mode-button" data-mode="streak">
               <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
               Streak
+              <span class="mode-description">Test consecutive accuracy</span>
             </button>
             <button class="mode-button" data-mode="time-attack">
               <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
               Time Attack
+              <span class="mode-description">Race against time</span>
             </button>
           </div>
+          <button id="play-button" class="play-button" disabled>Play</button>
         </section>
       </div>
     </main>
 
-    <footer>
-      <button id="play-button" class="play-button" disabled>Play</button>
-    </footer>
-
     <div id="notification"></div>
 
     <script>
-      // Get references to relevant UI elements
+      // Get references to UI elements
       const modeButtons = document.querySelectorAll('.mode-button');
       const playButton = document.getElementById('play-button');
       const notification = document.getElementById('notification');
       const categoryButtons = document.querySelectorAll('.category-button');
       const atlasChoicesDisplay = document.querySelector('.atlas-choices-display');
+      const searchInput = document.getElementById('atlas-search');
+      const searchSuggestions = document.getElementById('search-suggestions');
 
       // Variables to store user selections
       let selectedAtlas = null;
       let selectedMode = null;
-      let selectedCategoryButton = null; // Keep track of the selected category button
+      let selectedCategoryButton = null;
+      let atlasRegions = [];
 
-      /**
-       * Displays a temporary notification message.
-       * @param {string} message - The message to display.
-       * @param {boolean} isSuccess - True for success styling, false for error styling.
-       */
+      // Atlas configuration
+      const atlasFiles = {
+        'aal': { json: '/neuroguessr_web/data/aal.json', viewer: 'neurotheka.html', name: 'AAL' },
+        'harvard-oxford': { json: '/neuroguessr_web/data/harvard_oxford.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
+        'tissues': { json: '/neuroguessr_web/data/tissue.json', viewer: 'neurotheka.html', name: 'Tissue' },
+        'hemisphere': { json: '/neuroguessr_web/data/hemisphere.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
+        'brodmann': { json: '/neuroguessr_web/data/brodmann.json', viewer: 'neurotheka.html', name: 'Brodmann' },
+        'glasser': { json: '/neuroguessr_web/data/glasser_neuroparc.json', viewer: 'neurotheka.html', name: 'Glasser' },
+        'destrieux': { json: '/neuroguessr_web/data/destrieux.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'schaefer': { json: '/neuroguessr_web/data/schaefer100.json', viewer: 'neurotheka.html', name: 'Schaefer' },
+        'yeo7': { json: '/neuroguessr_web/data/yeo7.json', viewer: 'neurotheka.html', name: 'Yeo7' },
+        'yeo17': { json: '/neuroguessr_web/data/yeo17.json', viewer: 'neurotheka.html', name: 'Yeo17' },
+        'subcortical': { json: '/neuroguessr_web/data/subcortical.json', viewer: 'neurotheka.html', name: 'Subcortical' },
+        'cerebellum': { json: '/neuroguessr_web/data/cerebellum.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
+        'xtract': { json: '/neuroguessr_web/data/xtract_labels.json', viewer: 'neurotheka.html', name: 'White Matter' },
+        'thalamus': { json: '/neuroguessr_web/data/thalamus_labels.json', viewer: 'neurotheka.html', name: 'Thalamus' },
+        'HippoAmyg': { json: '/neuroguessr_web/data/HippoAmyg_labels.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
+        'JHU': { json: '/neuroguessr_web/data/JHU_labels.json', viewer: 'neurotheka.html', name: 'JHU' },
+        'territories': { json: '/neuroguessr_web/data/artery_territories.json', viewer: 'neurotheka.html', name: 'Territories' }
+      };
+
+      // Display notification
       function showNotification(message, isSuccess) {
         notification.textContent = message;
-        notification.className = isSuccess ? 'success' : 'error'; // Apply class for styling
-        notification.style.display = 'block'; // Make notification visible
-        // Hide notification after 3 seconds
+        notification.className = isSuccess ? 'success' : 'error';
+        notification.style.display = 'block';
         setTimeout(() => {
           notification.style.display = 'none';
         }, 3000);
       }
 
-      // --- Display Score from Previous Game (if available in URL) ---
+      // Show previous game score if available
       const urlParams = new URLSearchParams(window.location.search);
       const score = urlParams.get('score');
       const time = urlParams.get('time');
-      if (score && time) { // Time Attack score
+      if (score && time) {
         const minutes = Math.floor(time / 60);
         const seconds = (time % 60).toString().padStart(2, '0');
         showNotification(`Previous Game - Accuracy: ${score}%, Time: ${minutes}m ${seconds}s`, true);
-      } else if (score) { // Streak score
+      } else if (score) {
         showNotification(`Previous Streak: ${score} regions`, true);
       }
 
-      /**
-       * Updates the enabled/disabled state and selection of mode buttons
-       * based on the currently selected atlas.
-       */
+      // Update mode buttons based on selected atlas
       function updateModeButtons() {
         modeButtons.forEach(button => {
-          // Special case: Glasser atlas only allows 'navigation' mode
+          button.disabled = false;
           if (selectedAtlas === 'glasser') {
-            if (button.dataset.mode === 'navigation') {
-              button.disabled = false;
-            } else {
-              button.disabled = true;
-              button.classList.remove('selected'); // Deselect disabled modes
-            }
-          }
-          else if (selectedAtlas === 'hemisphere') {
-            if (button.dataset.mode === 'navigation') {
-              button.disabled = true;
-              button.classList.remove('selected'); // Deselect navigation if selected
-              }
-          } else {
-            // Enable all modes for other atlases
-            button.disabled = false;
+            button.disabled = button.dataset.mode !== 'navigation';
+            if (button.disabled) button.classList.remove('selected');
+          } else if (selectedAtlas === 'hemisphere') {
+            button.disabled = button.dataset.mode === 'navigation';
+            if (button.disabled) button.classList.remove('selected');
           }
         });
-
-        // If Glasser is selected and a non-navigation mode was previously selected, deselect it
         if (selectedAtlas === 'glasser' && selectedMode && selectedMode !== 'navigation') {
-            modeButtons.forEach(btn => {
-                if(btn.dataset.mode === selectedMode) {
-                    btn.classList.remove('selected');
-                }
-            });
-            selectedMode = null; // Reset selected mode
+          selectedMode = null;
+          modeButtons.forEach(btn => btn.classList.remove('selected'));
         }
-
-        // If hemisphere is selected, disable navigation mode
-        if (selectedAtlas === 'hemisphere') {
-             modeButtons.forEach(button => {
-                 if (button.dataset.mode === 'navigation') {
-                    button.disabled = true;
-                    if(selectedMode === 'navigation') { // If navigation was selected, deselect it
-                        button.classList.remove('selected');
-                        selectedMode = null;
-                    }
-                 }
-             });
+        if (selectedAtlas === 'hemisphere' && selectedMode === 'navigation') {
+          selectedMode = null;
+          modeButtons.forEach(btn => {
+            if (btn.dataset.mode === 'navigation') btn.classList.remove('selected');
+          });
         }
       }
 
-      /**
-       * Updates the enabled/disabled state of the 'Play' button
-       * based on whether both an atlas and a mode are selected.
-       */
+      // Update play button state
       function updatePlayButton() {
-        if (selectedAtlas && selectedMode) {
-          playButton.disabled = false; // Enable button
-          playButton.classList.add('enabled'); // ADDED: Add 'enabled' class for styling
-        } else {
-          playButton.disabled = true; // Disable button
-          playButton.classList.remove('enabled'); // ADDED: Remove 'enabled' class
-        }
-        // console.log("Play Button State:", { selectedAtlas, selectedMode, disabled: playButton.disabled }); // Optional debug log
+        playButton.disabled = !(selectedAtlas && selectedMode);
+        playButton.classList.toggle('enabled', !playButton.disabled);
       }
 
+      // Load labels for all atlases
+      async function loadAtlasLabels() {
+        atlasRegions = [];
+        for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
+          try {
+            const response = await fetch(json);
+            if (!response.ok) throw new Error(`HTTP ${response.status} for ${atlas}`);
+            const labels = await response.json();
+            const regions = Object.entries(labels.labels)
+              .filter(([id]) => Number(id) > 0 && Number.isInteger(Number(id)))
+              .map(([id, label]) => ({
+                id: Number(id),
+                name: label || `Region ${id}`,
+                atlas,
+                atlasName: name
+              }));
+            atlasRegions.push(...regions);
+            console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+          } catch (error) {
+            console.error(`Failed to load labels for ${atlas}:`, error);
+            showNotification(`Failed to load regions for ${name}.`, false);
+          }
+        }
+        console.log('Total regions loaded:', atlasRegions.length);
+        if (atlasRegions.length === 0) {
+          showNotification('No atlas regions loaded. Search disabled.', false);
+          searchInput.disabled = true;
+        }
+      }
 
-      // --- Event Listener for Category Buttons ---
+      // Search across all atlas regions
+      function searchAtlasRegions(query) {
+        searchSuggestions.innerHTML = '';
+        if (!query.trim()) {
+          searchSuggestions.style.display = 'none';
+          return;
+        }
+        const lowerQuery = query.toLowerCase();
+        const matches = atlasRegions
+          .filter(region => region.name.toLowerCase().includes(lowerQuery))
+          .sort((a, b) => {
+            const aIndex = a.name.toLowerCase().indexOf(lowerQuery);
+            const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
+            if (aIndex !== bIndex) return aIndex - bIndex;
+            return a.name.length - b.name.length;
+          })
+          .slice(0, 10); // Limit to 10 suggestions
+        if (matches.length === 0) {
+          searchSuggestions.style.display = 'none';
+          return;
+        }
+        matches.forEach(region => {
+          const suggestion = document.createElement('div');
+          suggestion.className = 'search-suggestion';
+          suggestion.textContent = `${region.name} (${region.atlasName})`;
+          suggestion.dataset.regionId = region.id;
+          suggestion.dataset.atlas = region.atlas;
+          suggestion.addEventListener('click', () => {
+            const viewerUrl = `${atlasFiles[region.atlas].viewer}?region=${region.id}&atlas=${region.atlas}`;
+            console.log(`Navigating to: ${viewerUrl}`);
+            window.location.href = viewerUrl;
+          });
+          searchSuggestions.appendChild(suggestion);
+        });
+        searchSuggestions.style.display = 'block';
+      }
+
+      // Event listeners
+      searchInput.addEventListener('input', () => {
+        console.log('Search input:', searchInput.value);
+        searchAtlasRegions(searchInput.value);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+          searchSuggestions.style.display = 'none';
+        }
+      });
+
       categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
-          const category = button.dataset.category;
-
-          // --- Update Category Button Selection Style ---
+          console.log('Category button clicked:', button.dataset.category);
           if (selectedCategoryButton) {
-            // Remove 'selected' class from the previously selected category button
             selectedCategoryButton.classList.remove('selected');
           }
-          // Add 'selected' class to the clicked category button
           button.classList.add('selected');
-          selectedCategoryButton = button; // Update the tracked selected button
+          selectedCategoryButton = button;
 
-          // --- Populate Atlas Choices Column ---
-          atlasChoicesDisplay.innerHTML = ''; // Clear previous atlas buttons
-          selectedAtlas = null; // Reset selected atlas when category changes
-          selectedMode = null; // Reset selected mode when category changes
-          modeButtons.forEach(btn => btn.classList.remove('selected')); // Deselect all mode buttons visually
-          atlasChoicesDisplay.scrollTop = 0; // Scroll atlas list to top
-
-          // Find the hidden div containing the template buttons for this category
-          const atlasButtonsContainer = document.getElementById(`atlas-buttons-${category}`);
-
-          if (atlasButtonsContainer && atlasButtonsContainer.children.length > 0 && atlasButtonsContainer.children[0].tagName !== 'P') {
-            // If the container exists and has buttons (not just the 'no atlas' message)
-            atlasButtonsContainer.querySelectorAll('.panel-button').forEach(atlasButtonTemplate => {
-              // Clone the template button to avoid modifying the original
-              const clone = atlasButtonTemplate.cloneNode(true);
-
-              // --- Add Click Listener to the CLONED Atlas Button ---
-              clone.addEventListener('click', () => {
-                  // Remove 'selected' from any other atlas button in the display area
-                  atlasChoicesDisplay.querySelectorAll('.panel-button.selected').forEach(btn => btn.classList.remove('selected'));
-                  // Add 'selected' to the clicked atlas button
-                  clone.classList.add('selected');
-                  selectedAtlas = clone.dataset.atlas; // Store the selected atlas value
-
-                  // Update mode buttons availability and Play button state
-                  updateModeButtons();
-                  updatePlayButton();
-                  // console.log("Atlas Selected:", selectedAtlas); // Optional debug log
-              });
-              // Add the cloned, interactive button to the display column
-              atlasChoicesDisplay.appendChild(clone);
-            });
-          } else if (atlasButtonsContainer) {
-             // If the container exists but is empty or has the 'no atlas' message
-             const noAtlasMessageElement = atlasButtonsContainer.querySelector('.no-atlas-message');
-             if (noAtlasMessageElement) {
-                 atlasChoicesDisplay.appendChild(noAtlasMessageElement.cloneNode(true));
-             } else {
-                 // Fallback message if the specific element isn't found
-                 atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlases available for this category yet.</p>';
-             }
-          } else {
-            // Fallback if the hidden container itself is missing
-            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">Error: Atlas data not found.</p>';
-          }
-
-          // Update button states as atlas/mode selection has been reset
+          atlasChoicesDisplay.innerHTML = '';
+          selectedAtlas = null;
           updateModeButtons();
           updatePlayButton();
+
+          const category = button.dataset.category;
+          const atlasButtonsContainer = document.getElementById(`atlas-buttons-${category}`);
+          if (!atlasButtonsContainer) {
+            console.error(`No container found for category: ${category}`);
+            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">Error: Atlas data not found.</p>';
+            return;
+          }
+
+          const atlasButtons = atlasButtonsContainer.querySelectorAll('.panel-button');
+          if (atlasButtons.length === 0) {
+            console.error(`No atlas buttons found for category: ${category}`);
+            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlases available for this category.</p>';
+            return;
+          }
+
+          atlasButtons.forEach(template => {
+            const clone = template.cloneNode(true);
+            clone.addEventListener('click', () => {
+              console.log('Atlas button clicked:', clone.dataset.atlas);
+              atlasChoicesDisplay.querySelectorAll('.panel-button').forEach(btn => btn.classList.remove('selected'));
+              clone.classList.add('selected');
+              selectedAtlas = clone.dataset.atlas;
+              updateModeButtons();
+              updatePlayButton();
+            });
+            atlasChoicesDisplay.appendChild(clone);
+          });
         });
       });
 
-      // --- Event Listener for Mode Buttons ---
       modeButtons.forEach(button => {
         button.addEventListener('click', () => {
-          // Only process click if the button is not disabled
           if (!button.disabled) {
-            // Deselect any other selected mode button
+            console.log('Mode button clicked:', button.dataset.mode);
             modeButtons.forEach(btn => btn.classList.remove('selected'));
-            // Select the clicked mode button
             button.classList.add('selected');
-            selectedMode = button.dataset.mode; // Store the selected mode value
-
-            // Update the Play button state
+            selectedMode = button.dataset.mode;
             updatePlayButton();
-            // console.log("Mode Selected:", selectedMode); // Optional debug log
           }
         });
       });
 
-      // --- Event Listener for Play Button ---
       playButton.addEventListener('click', () => {
-        // Only proceed if the button is enabled (atlas and mode selected)
         if (!playButton.disabled) {
-          // Navigate to the viewer page with selected atlas and mode as URL parameters
+          console.log('Play button clicked:', selectedAtlas, selectedMode);
           window.location.href = `viewer.html?atlas=${selectedAtlas}&mode=${selectedMode}`;
         } else {
-          // Should not happen if button is disabled, but as a fallback:
           showNotification('Please select an atlas and game mode first!', false);
         }
       });
 
-      // --- Initialize Page State ---
-      // Automatically click the first category button to show its atlases on load
-      if (categoryButtons.length > 0) {
+      // Initialize
+      console.log('Initializing page');
+      loadAtlasLabels().then(() => {
+        if (categoryButtons.length > 0) {
+          console.log('Triggering first category button click');
           categoryButtons[0].click();
-      } else {
-          // Handle case where there are no categories
+        } else {
+          console.error('No category buttons found');
           atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlas categories found.</p>';
-          updatePlayButton(); // Ensure play button is disabled
-      }
-
+        }
+      });
     </script>
   </body>
 </html>
