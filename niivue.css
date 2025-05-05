@@ -56,8 +56,9 @@ body:has(canvas#gl1) header {
 
 .logo-title-container {
   display: flex;
+  flex-direction: column; /* Stack title and region vertically */
   align-items: center;
-  gap: 1rem; /* Space between logo and title */
+  gap: 0.5rem; /* Reduced space between title and region */
   justify-content: center;
 }
 
@@ -165,6 +166,13 @@ h2 {
   text-align: center; /* Center mode title */
 }
 
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
 /* Styles for Game Status Display (viewer page) */
 .game-status { display: flex; flex-direction: column; align-items: center; margin: 0; }
 .target-label { text-align: center; margin: 0; }
@@ -209,10 +217,8 @@ h2 {
   color: #f87171; /* Ensure error color during shake */
 }
 
-
 .score-error-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
 .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1.125rem; font-weight: 600; margin: 0.25rem 0; /* Added margin from viewer.html */ }
-
 
 /* Styles for Buttons Below Canvas (viewer page) */
 .button-container { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 1rem; z-index: 1000; justify-content: center; }
@@ -283,7 +289,6 @@ h2 {
 .return-button:hover { background: #2a2a2a; }
 .return-button:active { background: #2a2a2a; border: 1.5px solid #e5e7eb; }
 
-
 /* NEW: Canvas Flash Animation */
 @keyframes correct-guess-flash-anim {
   0% { border-color: transparent; box-shadow: none; }
@@ -295,7 +300,6 @@ h2 {
   /* border property is on canvas selector */
   animation: correct-guess-flash-anim 0.6s ease-out; /* Apply the animation */
 }
-
 
 /* Dropdown Menu Styles (viewer page) */
 .dropdown { position: relative; display: inline-block; }
@@ -320,7 +324,7 @@ h2 {
   width: 100%;
   border: 1px solid #808588; /* Border around the layout */
   border-radius: 0.5rem;
-  min-height: 40vh; /* Minimum height */
+  min-height: 30vh; /* Reduced height */
   background: #2f2f2f; /* Background for the category list area */
   overflow: hidden; /* Clip content to border radius */
   flex-grow: 1; /* Allow layout to fill space */
@@ -465,7 +469,7 @@ h2 {
 .mode-button {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* Align content to the left */
   background: #363636;
   color: white;
   font-size: 1rem;
@@ -507,6 +511,15 @@ h2 {
   opacity: 0.5; /* Dim icon when disabled */
 }
 
+/* Mode Description Style (inside .mode-button) */
+.mode-description {
+  color: #808588; /* Grey color for descriptions */
+  font-size: 0.875rem;
+  margin-left: 0.5rem; /* Space between mode name and description */
+  font-weight: 300;
+  white-space: nowrap; /* Prevent wrapping */
+}
+
 /* Play Button Style (Index Page) */
 .play-button {
   background: #363636;
@@ -519,6 +532,7 @@ h2 {
   cursor: pointer;
   transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s; /* Added color transition */
   z-index: 1000;
+  margin-top: 1rem; /* Add spacing above play button */
 }
 .play-button:hover:not(:disabled) {
   background: #4a4a4a; /* Darker hover for default state */
@@ -571,6 +585,64 @@ h2 {
   color: #3c1a1a;
 }
 
+/* --- Search Bar and Suggestions (Index Page) --- */
+.search-container {
+  margin-top: 1rem;
+  width: 100%;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem; /* Adjusted padding for icon */
+  background: #2f2f2f;
+  color: #d9dddc;
+  font-size: 1rem;
+  font-weight: 400;
+  border: 1px solid #555;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background 0.2s;
+  background-image: url('/neuroguessr_web/data/search.png'); /* Search icon */
+  background-position: 0.75rem center; /* Position icon */
+  background-repeat: no-repeat;
+  background-size: 1.25rem; /* Icon size */
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #e5e7eb;
+  background: #363636;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #2a2a2a;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  max-height: 150px; /* Adjusted to show ~5 items */
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
+}
+
+.search-suggestion {
+  padding: 0.75rem 1rem;
+  color: #d9dddc;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-suggestion:hover {
+  background: #363636;
+}
+
 /* --- Media Queries for Responsive Design --- */
 
 /* Larger Tablets / Small Laptops */
@@ -596,7 +668,7 @@ h2 {
      /* Ensure mode selection takes remaining space correctly */
   }
   .atlas-layout {
-    min-height: 30vh; /* Reduce height */
+    min-height: 20vh; /* Further reduced height */
   }
   .mode-selection h2 {
     margin-top: 1.5rem; /* Add space above mode title */
@@ -605,6 +677,21 @@ h2 {
   .dropbtn { font-size: 1rem; padding: 0.6rem 1rem; } /* Adjusted */
   .hamburger svg { width: 1.2rem; height: 0.9rem; } /* Adjusted */
   .slider-label { font-size: 0.875rem; }
+}
+
+.region-tooltip {
+  position: absolute;
+  background: #2a2a2a;
+  color: #d9dddc;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #808588;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
+  z-index: 2000;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 /* Smaller Tablets */
@@ -632,6 +719,7 @@ h2 {
 @media (max-width: 480px) {
   h1 { font-size: 2rem; }
   h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
   .logo { height: 4rem; }
   .play-button { font-size: 1.1rem; padding: 0.8rem 1.5rem; } /* Adjusted */
   .category-button, .panel-button {
@@ -670,4 +758,6 @@ h2 {
   .guess-button, .return-button { font-size: 0.9rem; padding: 0.7rem 1.2rem; } /* Adjusted */
   .confirm-text { /* Maybe smaller on mobile? */ }
   .space-text { font-size: 0.8em; }
+  .search-input { font-size: 0.875rem; padding: 0.6rem 0.8rem 0.6rem 2.25rem; background-size: 1.1rem; background-position: 0.6rem center; }
+  .search-suggestion { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
 }

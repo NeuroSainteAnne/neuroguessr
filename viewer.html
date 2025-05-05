@@ -41,7 +41,7 @@
           <a class="viewBtn" id="|Render">Render</a>
           <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
           <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-          <a class="viewBtn" id="Radiological">Radiological</a>
+          <a class="viewBtn dropdown-item-checked" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
           <div class="slider-container">
             <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
@@ -87,7 +87,7 @@
     </main>
     <div class="button-container">
       <button id="return-button" class="return-button">Return</button>
-      <button id="guess-button" class="guess-button" disabled>Confirm Guess</button>
+      <button id="guess-button" class="guess-button" disabled><span class="confirm-text">CONFIRM GUESS</span><span class="space-text">(space)</span></button>
     </div>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
@@ -106,6 +106,8 @@
       let startTime = null;
       let timerInterval = null;
       let usedRegions = [];
+      let highlightedRegion = null; // Track clicked region for persistent highlight
+      let tooltip = null; // Tooltip for hover region name
 
       const guessButton = document.getElementById("guess-button");
       const returnButton = document.getElementById("return-button");
@@ -171,6 +173,7 @@
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
           nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;
+          nv1.opts.isRadiologicalConvention = true; // Set radiological view as default
 
           const volumeList1 = [
             { url: '/neuroguessr_web/data/mni152.nii.gz' },
@@ -181,9 +184,7 @@
           cmap = await fetchJSON(selectedAtlasFiles.json);
           nv1.volumes[1].setColormapLabel(cmap);
 
-          // Determine the number of regions from cmap.labels
           const numRegions = Object.keys(cmap.labels).length;
-          // Initialize clut: 4 bytes per region (R, G, B, A)
           clut = new Uint8Array(numRegions * 4);
 
           if (atlas === 'aal') {
@@ -208,12 +209,11 @@
             clut[7] = 255;
           }
 
-          // Populate clut with random RGB values for indices >= 1
           for (let i = 2; i < numRegions; i++) {
-            clut[i * 4 + 0] = Math.floor(Math.random() * 256); // Random R (0-255)
-            clut[i * 4 + 1] = Math.floor(Math.random() * 256); // Random G (0-255)
-            clut[i * 4 + 2] = Math.floor(Math.random() * 256); // Random B (0-255)
-            clut[i * 4 + 3] = 255; // Full opacity
+            clut[i * 4 + 0] = Math.floor(Math.random() * 256);
+            clut[i * 4 + 1] = Math.floor(Math.random() * 256);
+            clut[i * 4 + 2] = Math.floor(Math.random() * 256);
+            clut[i * 4 + 3] = 255;
           }
 
           nv1.volumes[1].colormapLabel.lut = clut.slice();
@@ -221,9 +221,7 @@
           nv1.updateGLVolume();
 
           const atlasData = await nv1.volumes[1].getVolumeData();
-          // Round floating-point values to integers and ensure uniqueness
           const dataRegions = [...new Set(atlasData.filter(val => val > 0).map(val => Math.round(val)))];
-          // Filter regions to only those with valid labels
           validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined && Number.isInteger(val));
 
           console.log(`Atlas: ${selectedAtlasFiles.name}`);
@@ -322,14 +320,9 @@
         targetText.style.transition = 'all 0.1s ease-in-out';
         targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
         targetText.style.fontWeight = 'bold';
-        // targetText.style.fontSize = '3rem';
         setTimeout(() => {
           targetText.style.color = '#d9dddc';
-          // targetText.style.fontWeight = '500';
-          // targetText.style.fontSize = '3rem';
-          setTimeout(() => {
-            targetText.style.transition = '';
-          }, 100);
+          targetText.style.transition = '';
         }, 200);
       }
 
@@ -338,10 +331,9 @@
         selectedVoxel = null;
         attempts = 0;
         usedRegions = [];
-        targetText.textContent = mode === 'navigation' ? "Click to identify a region" : "Target: Not Started";
+        highlightedRegion = null;
+        targetText.textContent = mode === 'navigation' ? "Click to identify a region (Press Esc to reset view)" : "Target: Not Started";
         targetText.style.color = '#d9dddc';
-        // targetText.style.fontWeight = '500';
-        // targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
         if (clut && nv1) {
@@ -351,6 +343,10 @@
         if (timerInterval) {
           clearInterval(timerInterval);
           timerInterval = null;
+        }
+        if (tooltip) {
+          tooltip.remove();
+          tooltip = null;
         }
       }
 
@@ -376,8 +372,6 @@
         }
         targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
         targetText.style.color = '#d9dddc';
-        // targetText.style.fontWeight = '500';
-        // targetText.style.fontSize = '3rem';
         targetText.style.transition = '';
         guessButton.disabled = true;
         attempts = 0;
@@ -408,6 +402,38 @@
             regionId,
             lutLength: clut?.length
           });
+        }
+      }
+
+      function highlightRegionOpacity(regionId) {
+        if (clut && nv1 && regionId * 4 < clut.length) {
+          const lut = clut.slice();
+          for (let i = 0; i < lut.length / 4; i++) {
+            if (i === regionId) {
+              // Hovered region: 90% opacity, unless it's region 0 for non-aal atlases
+              if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
+                lut[i * 4 + 3] = 0; // Region 0 remains invisible
+              } else {
+                lut[i * 4 + 3] = Math.round(0.9 * 255); // 90% opacity
+              }
+            } else if (highlightedRegion && i === highlightedRegion) {
+              // Clicked region: Fluorescent yellow, 100% opacity
+              lut[i * 4 + 0] = 255;
+              lut[i * 4 + 1] = 255;
+              lut[i * 4 + 2] = 0;
+              lut[i * 4 + 3] = 255;
+            } else {
+              // Non-hovered, non-clicked regions: Respect initNiivue alpha settings
+              if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
+                lut[i * 4 + 3] = 0; // Region 0 invisible for non-aal atlases
+              } else {
+                lut[i * 4 + 3] = Math.round(0.6 * 255); // Default 60% opacity
+              }
+            }
+          }
+          nv1.volumes[1].colormapLabel.lut = lut;
+          nv1.updateGLVolume();
+          nv1.drawScene();
         }
       }
 
@@ -451,7 +477,7 @@
           startTimer();
         }
         if (mode === 'navigation') {
-          targetText.textContent = "Click to identify a region";
+          targetText.textContent = "Click to identify a region (Press Esc to reset view)";
         } else {
           selectNewTarget();
         }
@@ -486,12 +512,9 @@
             if (attempts >= 3) {
               highlightRegionFluorescentYellow(currentTarget);
             }
-            // Revert to "Find: [region]" after 2 seconds
             setTimeout(() => {
               targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
               targetText.style.color = '#d9dddc';
-              // targetText.style.fontWeight = '500';
-              // targetText.style.fontSize = '3rem';
               targetText.style.transition = '';
             }, 2000);
           }
@@ -508,6 +531,47 @@
           guessButton.disabled = true;
         }
       }
+
+      function createTooltip(text, x, y) {
+        if (tooltip) {
+          tooltip.remove();
+        }
+        tooltip = document.createElement('div');
+        tooltip.className = 'region-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.position = 'absolute';
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+        document.body.appendChild(tooltip);
+      }
+
+      document.getElementById("gl1").addEventListener("mousemove", (e) => {
+        if (!gameRunning || !nv1 || mode !== 'navigation' || highlightedRegion !== null) return;
+        const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
+        const frac = nv1.canvasPos2frac([pos.x * nv1.uiData.dpr, pos.y * nv1.uiData.dpr]);
+        if (frac[0] >= 0) {
+          const mm = nv1.frac2mm(frac);
+          const vox = nv1.volumes[1].mm2vox(mm);
+          const idx = Math.round(nv1.volumes[1].getValue(vox[0], vox[1], vox[2]));
+          if (isFinite(idx) && idx in cmap.labels) {
+            createTooltip(cmap.labels[idx] || "Unknown", e.clientX, e.clientY);
+          } else {
+            if (tooltip) {
+              tooltip.remove();
+              tooltip = null;
+            }
+          }
+        }
+      });
+
+      document.getElementById("gl1").addEventListener("mouseleave", () => {
+        if (!gameRunning || !nv1 || mode !== 'navigation' || highlightedRegion !== null) return;
+        if (tooltip) {
+          tooltip.remove();
+          tooltip = null;
+        }
+      });
+
       document.getElementById("gl1").addEventListener("click", (e) => {
         if (!gameRunning || !nv1) return;
         const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
@@ -519,8 +583,13 @@
           if (isFinite(idx) && idx in cmap.labels) {
             selectedVoxel = vox;
             if (mode === 'navigation') {
-              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"}`;
+              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"} (Press Esc to reset view)`;
+              highlightedRegion = idx;
               highlightRegionFluorescentYellow(idx);
+              if (tooltip) {
+                tooltip.remove();
+                tooltip = null;
+              }
               nv1.opts.crosshairColor = [1, 1, 1, 1];
               nv1.drawScene();
             } else {
@@ -532,7 +601,8 @@
           } else {
             selectedVoxel = null;
             if (mode === 'navigation') {
-              targetText.textContent = "No region selected";
+              targetText.textContent = "No region selected (Press Esc to reset view)";
+              highlightedRegion = null;
               if (clut && nv1) {
                 nv1.volumes[1].colormapLabel.lut = clut.slice();
                 nv1.updateGLVolume();
@@ -553,8 +623,9 @@
             nv1.updateGLVolume();
             nv1.drawScene();
           }
-          targetText.textContent = "Click to identify a region";
+          targetText.textContent = "Click to identify a region (Press Esc to reset view)";
           selectedVoxel = null;
+          highlightedRegion = null;
         }
       });
 
