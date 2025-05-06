@@ -485,15 +485,26 @@
         top: 0.5rem;
         width: 100%;
         max-width: 700px;
+        z-index: 10001; /* Higher than canvas to ensure suggestions are above */
       }
       .search-input {
         width: 100%;
         box-sizing: border-box;
       }
       .search-suggestions {
+        position: absolute; /* Match dropdown-content positioning */
         width: 100%;
         max-width: 700px;
-        max-height: 450px;
+        max-height: 300px; /* Match index.html */
+        top: calc(100% + 0.5rem); /* Position just below search input */
+        left: 0;
+        right: 0;
+        z-index: 10000; /* Match z-index in niivue.css, higher than canvas */
+        background: #2a2a2a;
+        border: 1px solid #808588;
+        border-radius: 0.5rem;
+        overflow-y: auto;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
       }
     </style>
   </body>
