@@ -623,7 +623,7 @@ h3 {
   background: #2a2a2a;
   border: 1px solid #808588;
   border-radius: 0.5rem;
-  max-height: 150px; /* Adjusted to show ~5 items */
+  max-height: 300px; /* Doubled from 150px to show ~10 items */
   overflow-y: auto;
   z-index: 1000;
   display: none;
