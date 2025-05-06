@@ -31,7 +31,7 @@
           </div>
           <!-- Search Bar for All Atlases -->
           <div class="search-container">
-            <h3>Neurotheka - Search for a brain region</h3>
+            <h3>NeuroGlossaire - Search for a brain region</h3>
             <input
               type="text"
               id="atlas-search"
@@ -48,14 +48,7 @@
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
-<!--               </button>
-              <button class="panel-button" data-atlas="brodmann">
-                <span class="atlas-info">Brodmann <span class="atlas-description">Cytoarchitectonic brain regions</span></span>
-                <span class="difficulty-icons">
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                </span>
-              </button> -->
+              </button>
               <button class="panel-button" data-atlas="harvard-oxford">
                 <span class="atlas-info">Harvard-Oxford <span class="atlas-description">Probabilistic anatomical regions</span></span>
                 <span class="difficulty-icons">
@@ -86,13 +79,6 @@
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
-<!--               <button class="panel-button" data-atlas="schaefer">
-                <span class="atlas-info">Schaefer <span class="atlas-description">Cortical parcellation</span></span>
-                <span class="difficulty-icons">
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                </span>
-              </button> -->
             </div>
             <div id="atlas-buttons-functional">
               <button class="panel-button" data-atlas="yeo7">
@@ -158,13 +144,6 @@
               </button>
             </div>
             <div id="atlas-buttons-cerebral-arteries">
-<!--               <button class="panel-button" data-atlas="territories">
-                <span class="atlas-info">Arteries Territories <span class="atlas-description">Vascular territories</span></span>
-                <span class="difficulty-icons">
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                  <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                </span>
-              </button> -->
             </div>
           </div>
         </section>
@@ -222,10 +201,8 @@
         'harvard-oxford': { json: '/neuroguessr_web/data/harvard_oxford.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
         'tissues': { json: '/neuroguessr_web/data/tissue.json', viewer: 'neurotheka.html', name: 'Tissue' },
         'hemisphere': { json: '/neuroguessr_web/data/hemisphere.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
-        // 'brodmann': { json: '/neuroguessr_web/data/brodmann.json', viewer: 'neurotheka.html', name: 'Brodmann' },
         'glasser': { json: '/neuroguessr_web/data/glasser_neuroparc.json', viewer: 'neurotheka.html', name: 'Glasser' },
         'destrieux': { json: '/neuroguessr_web/data/destrieux.json', viewer: 'neurotheka.html', name: 'Destrieux' },
-        // 'schaefer': { json: '/neuroguessr_web/data/schaefer100.json', viewer: 'neurotheka.html', name: 'Schaefer' },
         'yeo7': { json: '/neuroguessr_web/data/yeo7.json', viewer: 'neurotheka.html', name: 'Yeo7' },
         'yeo17': { json: '/neuroguessr_web/data/yeo17.json', viewer: 'neurotheka.html', name: 'Yeo17' },
         'subcortical': { json: '/neuroguessr_web/data/subcortical.json', viewer: 'neurotheka.html', name: 'Subcortical' },
@@ -342,7 +319,7 @@
         matches.forEach(region => {
           const suggestion = document.createElement('div');
           suggestion.className = 'search-suggestion';
-          suggestion.textContent = `${region.name} (${region.atlasName})`;
+          suggestion.innerHTML = `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`;
           suggestion.dataset.regionId = region.id;
           suggestion.dataset.atlas = region.atlas;
           suggestion.addEventListener('click', () => {

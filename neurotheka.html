@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeuroTheka - AAL Region Viewer</title>
+    <title>NeuroGlossaire - Region Viewer</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
   </head>
@@ -13,7 +13,7 @@
       <div class="header-container">
         <!-- Left: NeuroTheka and Current Region -->
         <div class="logo-title-container">
-          <h1 onclick="window.location.href='index.html'">NeuroTheka</h1>
+          <h1 onclick="window.location.href='index.html'">NeuroGlossaire</h1>
           <p id="target-label"><span class="target-text">Region: Loading...</span></p>
         </div>
         <!-- Center: Search Bar -->
@@ -92,10 +92,8 @@
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
         'tissues': { nii: '/neuroguessr_web/data/Tissue_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
         'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
-        'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
         'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
-        'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', name: 'Schaefer' },
         'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', name: 'Yeo7' },
         'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', name: 'Yeo17' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
@@ -261,7 +259,7 @@
         matches.forEach(region => {
           const suggestion = document.createElement('div');
           suggestion.className = 'search-suggestion';
-          suggestion.textContent = `${region.name} (${region.atlasName})`;
+          suggestion.innerHTML = `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`;
           suggestion.dataset.regionId = region.id;
           suggestion.dataset.atlas = region.atlas;
           suggestion.addEventListener('click', () => {
@@ -497,21 +495,6 @@
         max-width: 700px;
         max-height: 450px;
       }
-      .dropdown {
-        align-self: flex-start;
-      }
-      #target-label .target-text {
-        display: inline-block;
-      }
-      .dropbtn {
-        font-size: 1.6875rem;
-      }
-      .dropdown-content a {
-        font-size: 1.6875rem;
-      }
-      .slider-label {
-        font-size: 0.875rem;
-      }
     </style>
-  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93b0db3c9b387bdc',t:'MTc0NjQ1NDU5NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+  </body>
 </html>
