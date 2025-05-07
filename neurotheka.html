@@ -90,7 +90,7 @@
       const atlasFiles = {
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
-        'tissues': { nii: '/neuroguessr_web/data/Tissue_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
         'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
         'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
@@ -99,7 +99,7 @@
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter' },
-        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', name: 'Thalamus' },
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', name: 'Thalamus'},
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
         'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', name: 'Territories' }
@@ -140,7 +140,7 @@
           if (buttons[i].id.charAt(0) !== char0) continue;
           buttons[i].classList.remove("dropdown-item-checked");
           if (buttons[i].id === id)
-            buttons[i].classList.add("dropdown-item-checked");
+            buttons[i].classList.add("dropdownrenderer-item-checked");
         }
       }
 
@@ -453,59 +453,6 @@
         initNiivue();
       });
     </script>
-    <style>
-      /* Header layout */
-      .header-container {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        width: 100%;
-        padding: 0.5rem 1rem;
-        position: relative;
-      }
-      .logo-title-container {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
-      }
-      .logo-title-container h1 {
-        margin: 0;
-        cursor: pointer;
-        text-align: left;
-      }
-      .logo-title-container #target-label {
-        margin: 0.5rem 0 0 0;
-        text-align: left;
-      }
-      .search-container {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        top: 0.5rem;
-        width: 100%;
-        max-width: 700px;
-        z-index: 10001; /* Higher than canvas to ensure suggestions are above */
-      }
-      .search-input {
-        width: 100%;
-        box-sizing: border-box;
-      }
-      .search-suggestions {
-        position: absolute; /* Match dropdown-content positioning */
-        width: 100%;
-        max-width: 700px;
-        max-height: 300px; /* Match index.html */
-        top: calc(100% + 0.5rem); /* Position just below search input */
-        left: 0;
-        right: 0;
-        z-index: 10000; /* Match z-index in niivue.css, higher than canvas */
-        background: #2a2a2a;
-        border: 1px solid #808588;
-        border-radius: 0.5rem;
-        overflow-y: auto;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
-      }
-    </style>
+    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93ba7258ed71675e',t:'MTc0NjU1NTE1NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
   </body>
 </html>

@@ -10,49 +10,51 @@
   </head>
   <body>
     <header>
-      <div class="logo-title-container">
-        <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
-        <h1 onclick="window.location.href='index.html'">NeuroGuessr</h1>
-      </div>
-      <div class="game-status">
-        <p id="target-label"><span class="target-text">Target: Not Started</span></p>
-        <div class="score-error-container">
-          <p id="score-label">Correct: 0</p>
-          <p id="error-label">Errors: 0</p>
-          <p id="streak-label" style="display: none;">Streak: 0</p>
-          <p id="time-label" style="display: none;">Time: 00:00</p>
+      <div class="header-container">
+        <div class="logo-title-container">
+          <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+          <h1 onclick="window.location.href='index.html'">NeuroGuessr</h1>
         </div>
-      </div>
-      <div class="dropdown">
-        <button class="dropbtn">
-          View Options
-          <span class="hamburger">
-            <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
-              <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
-              <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
-            </svg>
-          </span>
-        </button>
-        <div class="dropdown-content">
-          <a href="#" class="viewBtn" id="|Axial">Axial</a>
-          <a class="viewBtn" id="|Sagittal">Sagittal</a>
-          <a class="viewBtn" id="|Coronal">Coronal</a>
-          <a class="viewBtn" id="|Render">Render</a>
-          <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
-          <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-          <a class="viewBtn dropdown-item-checked" id="Radiological">Radiological</a>
-          <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
-          <div class="slider-container">
-            <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
-            <input
-              type="range"
-              min="0"
-              max="255"
-              value="255"
-              class="slider"
-              id="alphaSlider"
-            />
+        <div class="game-status">
+          <p id="target-label"><span class="target-text">Target: Not Started</span></p>
+          <div class="score-error-container">
+            <p id="score-label">Correct: 0</p>
+            <p id="error-label">Errors: 0</p>
+            <p id="streak-label" style="display: none;">Streak: 0</p>
+            <p id="time-label" style="display: none;">Time: 00:00</p>
+          </div>
+        </div>
+        <div class="dropdown">
+          <button class="dropbtn">
+            View Options
+            <span class="hamburger">
+              <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
+                <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
+                <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
+              </svg>
+            </span>
+          </button>
+          <div class="dropdown-content">
+            <a href="#" class="viewBtn" id="|Axial">Axial</a>
+            <a class="viewBtn" id="|Sagittal">Sagittal</a>
+            <a class="viewBtn" id="|Coronal">Coronal</a>
+            <a class="viewBtn" id="|Render">Render</a>
+            <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
+            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
+            <a class="viewBtn dropdown-item-checked" id="Radiological">Radiological</a>
+            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
+            <div class="slider-container">
+              <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
+              <input
+                type="range"
+                min="0"
+                max="255"
+                value="255"
+                class="slider"
+                id="alphaSlider"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -87,6 +89,7 @@
     </main>
     <div class="button-container">
       <button id="return-button" class="return-button">Return</button>
+      <button id="restore-color-button" class="return-button" style="display: none;">Restore Color (Esc)</button>
       <button id="guess-button" class="guess-button" disabled><span class="confirm-text">CONFIRM GUESS</span><span class="space-text">(space)</span></button>
     </div>
     <script type="module" async>
@@ -106,11 +109,12 @@
       let startTime = null;
       let timerInterval = null;
       let usedRegions = [];
-      let highlightedRegion = null; // Track clicked region for persistent highlight
-      let tooltip = null; // Tooltip for hover region name
+      let highlightedRegion = null;
+      let tooltip = null;
 
       const guessButton = document.getElementById("guess-button");
       const returnButton = document.getElementById("return-button");
+      const restoreColorButton = document.getElementById("restore-color-button");
       const targetLabel = document.getElementById("target-label");
       const scoreLabel = document.getElementById("score-label");
       const errorLabel = document.getElementById("error-label");
@@ -121,6 +125,19 @@
 
       returnButton.addEventListener('click', () => {
         window.location.href = 'index.html';
+      });
+
+      restoreColorButton.addEventListener('click', () => {
+        if (gameRunning && mode === 'navigation') {
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+            nv1.drawScene();
+          }
+          targetText.textContent = "Click to identify a region";
+          selectedVoxel = null;
+          highlightedRegion = null;
+        }
       });
 
       document.addEventListener('keydown', (e) => {
@@ -141,7 +158,7 @@
       const atlasFiles = {
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
-        'tissues': { nii: '/neuroguessr_web/data/Tissue_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
         'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
@@ -152,7 +169,7 @@
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
         'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
         'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
-        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', name: 'Thalamus'},
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', name: 'Thalamus'},
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
         'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', name: 'territories' }
@@ -171,9 +188,11 @@
           nv1.setInterpolation(true);
           nv1.opts.crosshairGap = 12;
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+          nv1.opts.multiplanarForceRender = true; // Ensure 2x2 with render
+          nv1.setSliceType(nv1.sliceTypeMultiplanar); // Set 2x2 layout
           nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;
-          nv1.opts.isRadiologicalConvention = true; // Set radiological view as default
+          nv1.opts.isRadiologicalConvention = true;
 
           const volumeList1 = [
             { url: '/neuroguessr_web/data/mni152.nii.gz' },
@@ -196,7 +215,7 @@
             clut[5] = Math.floor(Math.random() * 256);
             clut[6] = Math.floor(Math.random() * 256);
             clut[7] = 255;
-          } else if (atlas === 'glasser' || atlas === 'destrieux'  || atlas === 'schaefer') {
+          } else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
             console.log('Glasser cmap.labels:', cmap.labels);
           } else {
             clut[0] = 0;
@@ -332,7 +351,7 @@
         attempts = 0;
         usedRegions = [];
         highlightedRegion = null;
-        targetText.textContent = mode === 'navigation' ? "Click to identify a region (Press Esc to reset view)" : "Target: Not Started";
+        targetText.textContent = mode === 'navigation' ? "Click to identify a region" : "Target: Not Started";
         targetText.style.color = '#d9dddc';
         targetText.style.transition = '';
         guessButton.disabled = true;
@@ -382,6 +401,7 @@
       }
 
       function highlightRegionFluorescentYellow(regionId) {
+        if (mode === 'navigation' && regionId === 0) return; // Don't color region 0 in navigation mode
         console.log('highlightRegionFluorescentYellow called with regionId:', regionId);
         if (clut && nv1 && regionId * 4 < clut.length) {
           const lut = clut.slice();
@@ -410,24 +430,21 @@
           const lut = clut.slice();
           for (let i = 0; i < lut.length / 4; i++) {
             if (i === regionId) {
-              // Hovered region: 90% opacity, unless it's region 0 for non-aal atlases
               if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
-                lut[i * 4 + 3] = 0; // Region 0 remains invisible
+                lut[i * 4 + 3] = 0;
               } else {
-                lut[i * 4 + 3] = Math.round(0.9 * 255); // 90% opacity
+                lut[i * 4 + 3] = Math.round(0.9 * 255);
               }
             } else if (highlightedRegion && i === highlightedRegion) {
-              // Clicked region: Fluorescent yellow, 100% opacity
               lut[i * 4 + 0] = 255;
               lut[i * 4 + 1] = 255;
               lut[i * 4 + 2] = 0;
               lut[i * 4 + 3] = 255;
             } else {
-              // Non-hovered, non-clicked regions: Respect initNiivue alpha settings
               if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
-                lut[i * 4 + 3] = 0; // Region 0 invisible for non-aal atlases
+                lut[i * 4 + 3] = 0;
               } else {
-                lut[i * 4 + 3] = Math.round(0.6 * 255); // Default 60% opacity
+                lut[i * 4 + 3] = Math.round(0.6 * 255);
               }
             }
           }
@@ -471,13 +488,14 @@
         streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
         timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
         guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
+        restoreColorButton.style.display = mode === 'navigation' ? 'inline-block' : 'none';
         scoreLabel.style.display = mode === 'navigation' ? 'none' : 'block';
         errorLabel.style.display = mode === 'navigation' ? 'none' : 'block';
         if (mode === 'time-attack') {
           startTimer();
         }
         if (mode === 'navigation') {
-          targetText.textContent = "Click to identify a region (Press Esc to reset view)";
+          targetText.textContent = "Click to identify a region";
         } else {
           selectNewTarget();
         }
@@ -508,7 +526,7 @@
           if (mode === 'practice') {
             attempts++;
             const incorrectRegionName = cmap.labels[clickedRegion] || `Region ${clickedRegion} (Unknown)`;
-            targetText.textContent = `It's ${incorrectRegionName}, find ${targetName}!`;
+            targetText.textContent = `It's ${incorrectRegionName} !`;
             if (attempts >= 3) {
               highlightRegionFluorescentYellow(currentTarget);
             }
@@ -572,9 +590,12 @@
         }
       });
 
-      document.getElementById("gl1").addEventListener("click", (e) => {
+      function handleCanvasInteraction(e) {
         if (!gameRunning || !nv1) return;
-        const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
+        e.preventDefault();
+        const isTouch = e.type === 'touchstart';
+        const touch = isTouch ? e.touches[0] : e;
+        const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition({ clientX: touch.clientX, clientY: touch.clientY }, nv1.gl.canvas);
         const frac = nv1.canvasPos2frac([pos.x * nv1.uiData.dpr, pos.y * nv1.uiData.dpr]);
         if (frac[0] >= 0) {
           const mm = nv1.frac2mm(frac);
@@ -583,7 +604,7 @@
           if (isFinite(idx) && idx in cmap.labels) {
             selectedVoxel = vox;
             if (mode === 'navigation') {
-              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"} (Press Esc to reset view)`;
+              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"}`;
               highlightedRegion = idx;
               highlightRegionFluorescentYellow(idx);
               if (tooltip) {
@@ -601,7 +622,7 @@
           } else {
             selectedVoxel = null;
             if (mode === 'navigation') {
-              targetText.textContent = "No region selected (Press Esc to reset view)";
+              targetText.textContent = "No region selected";
               highlightedRegion = null;
               if (clut && nv1) {
                 nv1.volumes[1].colormapLabel.lut = clut.slice();
@@ -613,7 +634,10 @@
             console.log(`Clicked voxel: ${vox}, Invalid region ID: ${idx}`);
           }
         }
-      });
+      }
+
+      document.getElementById("gl1").addEventListener("click", handleCanvasInteraction);
+      document.getElementById("gl1").addEventListener("touchstart", handleCanvasInteraction);
 
       document.addEventListener('keydown', (e) => {
         if (e.code === 'Escape' && gameRunning && mode === 'navigation') {
@@ -623,7 +647,7 @@
             nv1.updateGLVolume();
             nv1.drawScene();
           }
-          targetText.textContent = "Click to identify a region (Press Esc to reset view)";
+          targetText.textContent = "Click to identify a region";
           selectedVoxel = null;
           highlightedRegion = null;
         }
@@ -633,5 +657,5 @@
 
       initNiivue();
     </script>
- </body>
+  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93baa5a91f852733',t:'MTc0NjU1NzI1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93c119224b54b01c',t:'MTc0NjYyNDkwMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

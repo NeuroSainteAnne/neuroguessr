@@ -20,9 +20,14 @@ body {
   font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
   user-select: none; /* Prevent text selection */
   color: #d9dddc; /* Default text color */
-  background: #363636; /* Dark background */
+  background: #363636; /* Match game mode button background */
   box-sizing: border-box;
   overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* Specific background for index page */
+body.index-page {
+  background: #363636; /* Match game mode button background */
 }
 
 /* Header Styles */
@@ -54,12 +59,80 @@ body:has(canvas#gl1) header {
   }
 }
 
+/* Header layout for neurotheka.html and viewer.html */
+.header-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  position: relative;
+}
+
 .logo-title-container {
   display: flex;
-  flex-direction: column; /* Stack title and region vertically */
-  align-items: center;
-  gap: 0.5rem; /* Reduced space between title and region */
-  justify-content: center;
+  flex-direction: row; /* Show logo and title side by side */
+  align-items: center; /* Vertically center items */
+  justify-content: flex-start;
+  gap: 1rem; /* Space between logo and title */
+}
+
+.logo-title-container h1 {
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.logo-title-container #target-label {
+  margin: 0;
+  text-align: left;
+}
+
+.logo-title-container .target-text {
+  font-style: italic; /* Make region text italic */
+}
+
+.search-container {
+  width: 100%;
+  position: relative;
+  margin-bottom: 1rem; /* Space below search bar */
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem 0.75rem 2.5rem; /* Adjusted padding for icon */
+  background: #2f2f2f;
+  color: #d9dddc;
+  font-size: 1rem;
+  font-weight: 400;
+  border: 1px solid #555;
+  border-radius: 0.5rem;
+  transition: border-color 0.2s, background 0.2s;
+  background-image: url('/neuroguessr_web/data/search.png'); /* Search icon */
+  background-position: 0.75rem center; /* Position icon */
+  background-repeat: no-repeat;
+  background-size: 1.25rem; /* Icon size */
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #e5e7eb;
+  background: #363636;
+}
+
+.search-suggestions {
+  position: absolute; /* Position below search input */
+  width: 100%;
+  max-height: 300px;
+  top: calc(100% + 0.5rem); /* Position just below search input */
+  left: 0;
+  z-index: 10000; /* Higher than canvas */
+  background: #2a2a2a;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  overflow-y: auto;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
 }
 
 .logo {
@@ -79,6 +152,7 @@ main {
   flex-grow: 1; /* Allow main to fill available vertical space */
   min-height: 60vh; /* Ensure minimum height */
   position: relative; /* Needed for central separator */
+  background: #363636; /* Match light.css for canvas background */
 }
 
 /* Container for Atlas and Mode Selection Sections */
@@ -116,17 +190,44 @@ main {
   margin: 0 1rem; /* Add horizontal margins for symmetry */
 }
 
-/* Canvas Styles (for viewer page) */
+/* Canvas Styles */
 canvas {
   cursor: crosshair;
   display: block;
   width: 100%;
-  max-width: 90vw;
-  max-height: 50vh; /* Adjusted from original viewer */
-  aspect-ratio: 2 / 1; /* Maintain aspect ratio */
-  border: 2px solid transparent; /* Added border for feedback animation */
-  transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out; /* Smooth transition for feedback */
+  max-width: 100vw; /* Allow full viewport width */
+  height: auto; /* Let height adjust based on aspect ratio */
+  max-height: 80vh; /* Limit max height to avoid overflow */
+  border: 2px solid transparent; /* For feedback animation */
+  transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
 }
+
+/* Responsive canvas sizing for multiplanar layout */
+@media (min-width: 1024px) {
+  canvas {
+    aspect-ratio: 2 / 1; /* Wide aspect for 4 views in a row */
+    max-width: 90vw;
+  }
+  .search-container {
+    max-width: 50%; /* Search bar half width on desktop */
+  }
+}
+
+@media (max-width: 1023px) and (min-width: 481px) {
+  canvas {
+    aspect-ratio: 1 / 1; /* Square for 2x2 grid */
+    max-width: 90vw;
+  }
+}
+
+@media (max-width: 480px) {
+  canvas {
+    aspect-ratio: 1 / 1; /* Square for 2x2 grid */
+    max-width: 100vw; /* Full width on phones */
+    max-height: 60vh; /* Reduce height for mobile */
+  }
+}
+
 canvas:focus {
   outline: 0; /* Remove focus outline */
 }
@@ -183,7 +284,7 @@ h3 {
   background: #363636;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
-  transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out, background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out; /* Added background/shadow/transform */
+  transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out, background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 
 /* Style for Target Text during success flash */
@@ -194,19 +295,19 @@ h3 {
   box-shadow: 0 0 15px #7CB342; /* Green glow */
 }
 
-/* Persistent success state (optional) */
+/* Persistent success state */
 .target-text.success {
   color: #4ade80;
   font-weight: bold;
 }
 
-/* Persistent error state (optional) */
+/* Persistent error state */
 .target-text.error {
   color: #f87171;
   font-weight: bold;
 }
 
-/* Add this if you want error text to shake slightly */
+/* Error shake animation */
 @keyframes shake-error {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-3px); }
@@ -214,16 +315,16 @@ h3 {
 }
 .target-text.flash-error {
   animation: shake-error 0.2s linear;
-  color: #f87171; /* Ensure error color during shake */
+  color: #f87171;
 }
 
 .score-error-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
-.score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1.125rem; font-weight: 600; margin: 0.25rem 0; /* Added margin from viewer.html */ }
+.score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1.125rem; font-weight: 600; margin: 0.25rem 0; }
 
 /* Styles for Buttons Below Canvas (viewer page) */
 .button-container { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 1rem; z-index: 1000; justify-content: center; }
 
-/* Guess Button uses enabled play button style */
+/* Guess Button */
 .guess-button {
   color: white;
   font-size: 1.125rem;
@@ -236,8 +337,6 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-
-  /* Apply green background */
   background-color: #7CB342;
   border: 1px solid #689F38;
 }
@@ -250,11 +349,11 @@ h3 {
   border: 1.5px solid #9CCC65;
 }
 .guess-button:disabled {
-  background: #363636; /* Match disabled play button */
+  background: #363636;
   border: 1px solid #4a4a4a;
   cursor: not-allowed;
   opacity: 0.7;
-  color: #aaa; /* Match disabled play button */
+  color: #aaa;
 }
 
 /* Styles for text inside Guess Button */
@@ -264,11 +363,11 @@ h3 {
   text-transform: uppercase;
 }
 .space-text {
-  font-size: 0.85em; /* Slightly smaller */
-  color: #c0c0c0; /* Lighter gray than description */
+  font-size: 0.85em;
+  color: #c0c0c0;
   font-weight: normal;
   font-style: normal;
-  text-transform: lowercase; /* Ensure lowercase */
+  text-transform: lowercase;
 }
 
 /* Return button style */
@@ -289,26 +388,25 @@ h3 {
 .return-button:hover { background: #2a2a2a; }
 .return-button:active { background: #2a2a2a; border: 1.5px solid #e5e7eb; }
 
-/* NEW: Canvas Flash Animation */
+/* Canvas Flash Animation */
 @keyframes correct-guess-flash-anim {
   0% { border-color: transparent; box-shadow: none; }
-  50% { border-color: #7CB342; box-shadow: 0 0 20px 5px #7CB342; } /* Bright green glow */
+  50% { border-color: #7CB342; box-shadow: 0 0 20px 5px #7CB342; }
   100% { border-color: transparent; box-shadow: none; }
 }
 
 .canvas-flash {
-  /* border property is on canvas selector */
-  animation: correct-guess-flash-anim 0.6s ease-out; /* Apply the animation */
+  animation: correct-guess-flash-anim 0.6s ease-out;
 }
 
-/* Dropdown Menu Styles (viewer page) */
+/* Dropdown Menu Styles */
 .dropdown { position: relative; display: inline-block; }
-.dropbtn { background: #363636; color: #d9dddc; /* font-size: 1.6875rem; */ /* Using padding instead */ font-weight: 500; padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
+.dropbtn { background: #363636; color: #d9dddc; font-weight: 500; padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
 .dropbtn:hover, .dropbtn:active { background: #363636; border: none; }
-.hamburger svg { width: 1.5rem; height: 1.125rem; } /* Adjusted from viewer.html inline */
-.dropdown-content { display: none; position: absolute; background-color: #2a2a2a; width: auto; /* Adjust width as needed */ min-width: 12rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2); z-index: 1000; border-radius: 0.5rem; border: 1px solid #808588; }
+.hamburger svg { width: 1.5rem; height: 1.125rem; }
+.dropdown-content { display: none; position: absolute; background-color: #2a2a2a; width: auto; min-width: 12rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2); z-index: 1000; border-radius: 0.5rem; border: 1px solid #808588; }
 .dropdown:hover .dropdown-content { display: block; }
-.dropdown-content a { color: #d9dddc; font-weight: 500; font-size: 0.875rem; padding: 0.75rem 1rem; text-decoration: none; display: block; white-space: nowrap; /* Prevent wrapping */ }
+.dropdown-content a { color: #d9dddc; font-weight: 500; font-size: 0.875rem; padding: 0.75rem 1rem; text-decoration: none; display: block; white-space: nowrap; }
 .dropdown-content a:hover { background-color: #363636; }
 .dropdown-content .dropdown-item-checked::before { content: '✓ '; color: #4ade80; }
 .dropdown-content .divider { border-top: 1px solid #808588; margin: 0.5rem 0; }
@@ -316,95 +414,88 @@ h3 {
 .slider { width: 6rem; margin: 0; }
 .slider-label { color: white; font-size: 0.875rem; font-weight: 500; white-space: nowrap; }
 
-/* --- Atlas Selection Two-Column Layout --- */
+/* Atlas Selection Two-Column Layout */
 .atlas-layout {
   display: flex;
-  flex-direction: row; /* Side-by-side columns */
-  gap: 0; /* No gap, use borders */
+  flex-direction: row;
+  gap: 0;
   width: 100%;
-  border: 1px solid #808588; /* Border around the layout */
+  border: 1px solid #808588;
   border-radius: 0.5rem;
-  min-height: 30vh; /* Reduced height */
-  background: #2f2f2f; /* Background for the category list area */
-  overflow: hidden; /* Clip content to border radius */
-  flex-grow: 1; /* Allow layout to fill space */
+  min-height: 30vh;
+  background: #2f2f2f;
+  overflow: hidden;
+  flex-grow: 1;
 }
 
 /* Column 1: Category List */
 .category-list {
   display: flex;
-  flex-direction: column; /* Stack buttons vertically */
-  align-items: stretch; /* Make buttons fill width */
-  flex-basis: 200px; /* Fixed width for the list */
-  flex-shrink: 0; /* Prevent list from shrinking */
-  padding: 0.5rem; /* Padding inside the list */
-  overflow-y: auto; /* Add scrollbar if categories overflow */
+  flex-direction: column;
+  align-items: stretch;
+  flex-basis: 200px;
+  flex-shrink: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
 }
 
 /* Column 2: Atlas Choices Display Area */
 .atlas-choices-display {
-  flex-grow: 1; /* Take remaining horizontal space */
-  padding: 0.5rem; /* Padding inside the display area */
+  flex-grow: 1;
+  padding: 0.5rem;
   display: flex;
-  flex-direction: column; /* Stack atlas buttons vertically */
-  gap: 0.5rem; /* Space between atlas buttons */
-  overflow-y: auto; /* Add scrollbar if atlases overflow */
-  background: #363636; /* Background for this column */
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  background: #363636;
 }
 
-/* --- Button Styles (Index Page) --- */
-
-/* Base Style for Atlas Buttons (Panel Buttons) */
+/* Button Styles (Index Page) */
 .panel-button {
   background: #363636;
-  color: #d9dddc; /* Default text color */
+  color: #d9dddc;
   font-size: 1rem;
   font-weight: 400;
   padding: 0.75rem 1rem;
-  border: 1px solid #555; /* Subtle border */
+  border: 1px solid #555;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-  display: flex; /* Use flexbox */
-  justify-content: space-between; /* Pushes atlas-info left and stars right */
-  align-items: center; /* Vertically aligns items */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   box-sizing: border-box;
-  text-align: left; /* Text within atlas-info aligns left */
+  text-align: left;
 }
 .panel-button:hover {
-  background: #4a4a4a; /* Darker background on hover */
-  border-color: #aaa; /* Lighter border on hover */
-  color: #fff; /* White text on hover */
+  background: #4a4a4a;
+  border-color: #aaa;
+  color: #fff;
 }
-/* Style for Selected Atlas Buttons */
 .atlas-choices-display .panel-button.selected {
-  background: #5a5a5a; /* Distinct background for selected */
-  font-weight: 600; /* Bolder text */
-  border-color: #e5e7eb; /* Highlight border */
-  color: #fff; /* White text */
+  background: #5a5a5a;
+  font-weight: 600;
+  border-color: #e5e7eb;
+  color: #fff;
 }
 
-/* Container for Atlas Title and Description */
-/* Renaming based on index.html structure */
 .atlas-info {
-  display: inline; /* Allows description to sit next to title */
-  margin-right: auto; /* Pushes stars far right */
-  overflow: hidden; /* Prevents text overflow issues */
-  text-overflow: ellipsis; /* Adds ... if text is too long */
-  white-space: nowrap; /* Prevents wrapping of title/description */
+  display: inline;
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Atlas Description Style (inside .atlas-info) */
 .atlas-description {
-  color: #808588; /* Grey color for descriptions */
+  color: #808588;
   font-size: 0.875rem;
-  margin-left: 0.25rem; /* Add a small space */
+  margin-left: 0.25rem;
   padding: 0;
-  display: inline; /* Ensure it stays inline */
+  display: inline;
 }
 
-/* Category Button Style - Inherits from Panel Button */
 .category-button {
   background: #363636;
   color: #d9dddc;
@@ -416,12 +507,12 @@ h3 {
   cursor: pointer;
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
   display: flex;
-  justify-content: space-between; /* Keep consistent alignment */
+  justify-content: space-between;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
   text-align: left;
-  margin-bottom: 0.25rem; /* Add space between category buttons */
+  margin-bottom: 0.25rem;
 }
 .category-button:hover {
   background: #4a4a4a;
@@ -435,21 +526,19 @@ h3 {
   color: #fff;
 }
 
-/* Difficulty Icons (Stars) inside buttons */
 .difficulty-icons {
   display: flex;
-  gap: 0.25rem; /* Space between stars */
-  margin-left: 0.5rem; /* Add a little space between text/desc and stars */
-  flex-shrink: 0; /* Prevent stars container from shrinking */
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
 }
 .star-icon {
   width: 1rem;
   height: 1rem;
   image-rendering: optimizeQuality;
-  flex-shrink: 0; /* Prevent stars themselves from shrinking */
+  flex-shrink: 0;
 }
 
-/* Message Style for No Atlases */
 .no-atlas-message {
   color: #aaa;
   font-style: italic;
@@ -457,25 +546,24 @@ h3 {
   text-align: center;
 }
 
-/* Mode Selection Button Styles */
 .mode-buttons {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
-  width: 100%; /* Ensure the container takes full width of its parent */
+  width: 100%;
 }
 .mode-button {
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* Align content to the left */
+  justify-content: flex-start;
   background: #363636;
   color: white;
   font-size: 1rem;
-  font-weight: 300; /* Lighter weight for mode buttons */
+  font-weight: 300;
   padding: 0.75rem 1.25rem;
-  border: 1px solid #808588; /* More prominent border */
+  border: 1px solid #808588;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.2s, border 0.2s, opacity 0.2s;
@@ -493,12 +581,12 @@ h3 {
   background: #4a4a4a;
 }
 .mode-button.selected {
-  background: #5a5a5a; /* Match selected atlas/category */
-  border: 1.5px solid #e5e7eb; /* Highlight border */
-  font-weight: 600; /* Bolder text */
+  background: #5a5a5a;
+  border: 1.5px solid #e5e7eb;
+  font-weight: 600;
 }
 .mode-button.selected:hover {
-  background: #5a5a5a; /* Keep selected style on hover */
+  background: #5a5a5a;
 }
 .mode-button:disabled {
   background: #303030;
@@ -508,19 +596,17 @@ h3 {
   opacity: 0.6;
 }
 .mode-button:disabled img {
-  opacity: 0.5; /* Dim icon when disabled */
+  opacity: 0.5;
 }
 
-/* Mode Description Style (inside .mode-button) */
 .mode-description {
-  color: #808588; /* Grey color for descriptions */
+  color: #808588;
   font-size: 0.875rem;
-  margin-left: 0.5rem; /* Space between mode name and description */
+  margin-left: 0.5rem;
   font-weight: 300;
-  white-space: nowrap; /* Prevent wrapping */
+  white-space: nowrap;
 }
 
-/* Play Button Style (Index Page) */
 .play-button {
   background: #363636;
   color: white;
@@ -528,14 +614,14 @@ h3 {
   font-weight: 600;
   padding: 1rem 2rem;
   border: 1px solid #808588;
-  border-radius: 1.25rem; /* Larger radius */
+  border-radius: 1.25rem;
   cursor: pointer;
-  transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s; /* Added color transition */
+  transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
   z-index: 1000;
-  margin-top: 1rem; /* Add spacing above play button */
+  margin-top: 1rem;
 }
 .play-button:hover:not(:disabled) {
-  background: #4a4a4a; /* Darker hover for default state */
+  background: #4a4a4a;
 }
 .play-button:active:not(:disabled) {
   border: 1.5px solid #e5e7eb;
@@ -545,25 +631,23 @@ h3 {
   border: 1px solid #4a4a4a;
   cursor: not-allowed;
   opacity: 0.7;
-  color: #aaa; /* Dimmer text when disabled */
+  color: #aaa;
 }
 
-/* Style for enabled Play Button */
 .play-button.enabled {
-  background-color: #7CB342; /* Our chosen green */
-  color: #ffffff; /* White text for contrast */
-  border: 1px solid #689F38; /* Slightly darker green border */
+  background-color: #7CB342;
+  color: #ffffff;
+  border: 1px solid #689F38;
 }
 .play-button.enabled:hover {
-  background-color: #689F38; /* Darker green on hover */
+  background-color: #689F38;
   border-color: #558B2F;
 }
 .play-button.enabled:active {
-  background-color: #558B2F; /* Even darker green when active */
-  border: 1.5px solid #9CCC65; /* Lighter border when active */
+  background-color: #558B2F;
+  border: 1.5px solid #9CCC65;
 }
 
-/* Notification Area Styles */
 #notification {
   position: fixed;
   top: 2vh;
@@ -573,61 +657,16 @@ h3 {
   border-radius: 0.5rem;
   font-size: 1rem;
   z-index: 1000;
-  display: none; /* Hidden by default */
+  display: none;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 #notification.success {
-  background: #4ade80; /* Green for success */
+  background: #4ade80;
   color: #1a3c1f;
 }
 #notification.error {
-  background: #f87171; /* Red for error */
+  background: #f87171;
   color: #3c1a1a;
-}
-
-/* --- Search Bar and Suggestions (Index Page) --- */
-.search-container {
-  margin-top: 1rem;
-  width: 100%;
-  position: relative;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem; /* Adjusted padding for icon */
-  background: #2f2f2f;
-  color: #d9dddc;
-  font-size: 1rem;
-  font-weight: 400;
-  border: 1px solid #555;
-  border-radius: 0.5rem;
-  box-sizing: border-box;
-  transition: border-color 0.2s, background 0.2s;
-  background-image: url('/neuroguessr_web/data/search.png'); /* Search icon */
-  background-position: 0.75rem center; /* Position icon */
-  background-repeat: no-repeat;
-  background-size: 1.25rem; /* Icon size */
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #e5e7eb;
-  background: #363636;
-}
-
-.search-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #2a2a2a;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  max-height: 300px; /* Doubled from 150px to show ~10 items */
-  overflow-y: auto;
-  z-index: 1000;
-  display: none;
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
 }
 
 .search-suggestion {
@@ -643,42 +682,7 @@ h3 {
   background: #363636;
 }
 
-/* --- Media Queries for Responsive Design --- */
-
-/* Larger Tablets / Small Laptops */
-@media (max-width: 1024px) {
-  .selection-container {
-    flex-direction: column; /* Stack sections vertically */
-    align-items: center; /* Center sections */
-  }
-  .atlas-selection,
-  .mode-selection {
-    flex: none; /* Reset flex sizing */
-    width: 100%; /* Take full width */
-    max-width: 90vw; /* Limit width */
-    min-height: auto; /* Reset min height */
-    margin: 0; /* Remove margins for stacked layout */
-    padding: 0; /* Remove padding when stacked */
-  }
-  .atlas-selection {
-     border-bottom: 1px solid #808588; /* Add horizontal separator */
-     margin-bottom: 2rem; /* Add space below atlas section when stacked */
-  }
-  .mode-selection {
-     /* Ensure mode selection takes remaining space correctly */
-  }
-  .atlas-layout {
-    min-height: 20vh; /* Further reduced height */
-  }
-  .mode-selection h2 {
-    margin-top: 1.5rem; /* Add space above mode title */
-  }
-  .target-text { font-size: 1.5rem; } /* Adjusted from viewer */
-  .dropbtn { font-size: 1rem; padding: 0.6rem 1rem; } /* Adjusted */
-  .hamburger svg { width: 1.2rem; height: 0.9rem; } /* Adjusted */
-  .slider-label { font-size: 0.875rem; }
-}
-
+/* Region Tooltip */
 .region-tooltip {
   position: absolute;
   background: #2a2a2a;
@@ -694,40 +698,69 @@ h3 {
   white-space: nowrap;
 }
 
-/* Smaller Tablets */
+/* Media Queries for Responsive Design */
+@media (max-width: 1024px) {
+  .selection-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  .atlas-selection,
+  .mode-selection {
+    flex: none;
+    width: 100%;
+    max-width: 90vw;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+  }
+  .atlas-selection {
+    border-bottom: 1px solid #808588;
+    margin-bottom: 2rem;
+  }
+  .atlas-layout {
+    min-height: 20vh;
+  }
+  .mode-selection h2 {
+    margin-top: 1.5rem;
+  }
+  .target-text { font-size: 1.5rem; }
+  .dropbtn { font-size: 1rem; padding: 0.6rem 1rem; }
+  .hamburger svg { width: 1.2rem; height: 0.9rem; }
+  .slider-label { font-size: 0.875rem; }
+}
+
 @media (max-width: 768px) {
   .atlas-layout {
-    min-height: auto; /* Allow height to adjust */
-    max-height: 60vh; /* Limit total height */
+    min-height: auto;
+    max-height: 60vh;
   }
   .mode-buttons {
     align-items: center;
   }
   .mode-button {
-    width: 90%; /* Ensure buttons are wide */
+    width: 90%;
   }
-  .target-text { font-size: 1.3rem; padding: 0.6rem 1.2rem; } /* Adjusted */
-  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1rem; } /* Adjusted */
-  .dropbtn { font-size: 0.9rem; padding: 0.5rem 0.8rem; gap: 0.5rem; } /* Adjusted */
-  .hamburger svg { width: 1.1rem; height: 0.8rem; } /* Adjusted */
+  .target-text { font-size: 1.3rem; padding: 0.6rem 1.2rem; }
+  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1rem; }
+  .dropbtn { font-size: 0.9rem; padding: 0.5rem 0.8rem; gap: 0.5rem; }
+  .hamburger svg { width: 1.1rem; height: 0.8rem; }
   .slider-label { font-size: 0.8rem; }
   .dropdown-content a { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
-  .guess-button, .return-button { font-size: 1rem; padding: 0.8rem 1.5rem; } /* Adjusted */
+  .guess-button, .return-button { font-size: 1rem; padding: 0.8rem 1.5rem; }
 }
 
-/* Mobile Phones */
 @media (max-width: 480px) {
   h1 { font-size: 2rem; }
   h2 { font-size: 1.25rem; }
   h3 { font-size: 1.1rem; }
-  .logo { height: 4rem; }
-  .play-button { font-size: 1.1rem; padding: 0.8rem 1.5rem; } /* Adjusted */
+  .logo { display: none; }
+  .play-button { font-size: 1.1rem; padding: 0.8rem 1.5rem; }
   .category-button, .panel-button {
     font-size: 0.875rem;
     padding: 0.6rem 0.8rem;
   }
   .atlas-info {
-      white-space: normal; /* Allow text wrapping on small screens */
+    white-space: normal;
   }
   .mode-button {
     font-size: 0.9rem;
@@ -735,29 +768,76 @@ h3 {
   }
   .mode-button img { height: 1.1rem; }
   .atlas-layout {
-    max-height: 70vh; /* Allow more height */
-    flex-direction: column; /* Force stack on mobile */
+    max-height: 70vh;
+    flex-direction: column;
   }
   .category-list {
-    flex-basis: auto; /* Reset basis */
-    border-right: none; /* Remove side border */
-    border-bottom: 1px solid #808588; /* Add bottom border */
-    max-height: 30vh; /* Limit category list height */
+    flex-basis: auto;
+    border-right: none;
+    border-bottom: 1px solid #808588;
+    max-height: 30vh;
   }
   .atlas-choices-display {
-    max-height: 40vh; /* Adjust choices height */
-    padding: 0.5rem; /* Reduce padding */
+    max-height: 40vh;
+    padding: 0.5rem;
   }
-  .target-text { font-size: 1.1rem; padding: 0.5rem 1rem; } /* Adjusted */
-  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 0.9rem; gap: 0.5rem;} /* Adjusted */
-  .dropbtn { font-size: 0.8rem; padding: 0.4rem 0.6rem; gap: 0.3rem;} /* Adjusted */
-  .hamburger svg { width: 1rem; height: 0.7rem; } /* Adjusted */
+  .target-text { font-size: 0.9rem; padding: 0.5rem 1rem; }
+  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 0.9rem; gap: 0.5rem; }
+  .dropbtn { font-size: 0.8rem; padding: 0.4rem 0.6rem; gap: 0.3rem; }
+  .hamburger svg { width: 1rem; height: 0.7rem; }
   .slider-label { font-size: 0.75rem; }
   .dropdown-content { min-width: 10rem; }
   .dropdown-content a { font-size: 0.75rem; padding: 0.5rem 0.7rem; }
-  .guess-button, .return-button { font-size: 0.9rem; padding: 0.7rem 1.2rem; } /* Adjusted */
-  .confirm-text { /* Maybe smaller on mobile? */ }
+  .guess-button, .return-button { font-size: 0.9rem; padding: 0.7rem 1.2rem; }
+  .confirm-text { font-size: 0.9rem; }
   .space-text { font-size: 0.8em; }
   .search-input { font-size: 0.875rem; padding: 0.6rem 0.8rem 0.6rem 2.25rem; background-size: 1.1rem; background-position: 0.6rem center; }
   .search-suggestion { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
+  .header-container {
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+  }
+  .logo-title-container {
+    align-items: center;
+    text-align: center;
+  }
+  .logo-title-container h1 {
+    text-align: center;
+  }
+  .game-status {
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+  .game-status .target-label {
+    text-align: center;
+  }
+  .search-container {
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .search-suggestions {
+    position: absolute;
+    top: calc(100% + 0.2rem);
+    width: 100%;
+    max-width: none;
+  }
+  .dropdown {
+    margin-top: 1rem;
+  }
+}
+
+@media (min-width: 481px) {
+  .search-container {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .search-suggestions {
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+  }
 }
