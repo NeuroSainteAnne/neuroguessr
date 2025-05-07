@@ -18,17 +18,6 @@
     <main>
       <div class="selection-container">
         <section class="atlas-selection">
-          <h2>Select Atlas</h2>
-          <div class="atlas-layout">
-            <div class="category-list">
-              <button class="category-button" data-category="cortex">Cortical Regions</button>
-              <button class="category-button" data-category="subcortical">Subcortical Regions</button>
-              <button class="category-button" data-category="white-matter">White Matter Tracts</button>
-              <button class="category-button" data-category="functional">Functional Networks</button>
-              <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
-            </div>
-            <div class="atlas-choices-display"></div>
-          </div>
           <!-- Search Bar for All Atlases -->
           <div class="search-container">
             <h3>NeuroGlossaire - Search for a brain region</h3>
@@ -40,7 +29,17 @@
             />
             <div id="search-suggestions" class="search-suggestions"></div>
           </div>
-
+          <h2>Select Atlas</h2>
+          <div class="atlas-layout">
+            <div class="category-list">
+              <button class="category-button" data-category="cortex">Cortical Regions</button>
+              <button class="category-button" data-category="subcortical">Subcortical Regions</button>
+              <button class="category-button" data-category="white-matter">White Matter Tracts</button>
+              <button class="category-button" data-category="functional">Functional Networks</button>
+              <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
+            </div>
+            <div class="atlas-choices-display"></div>
+          </div>
           <div style="display: none;">
             <div id="atlas-buttons-cortex">
               <button class="panel-button" data-atlas="tissues">
@@ -197,21 +196,23 @@
 
       // Atlas configuration
       const atlasFiles = {
-        'aal': { json: '/neuroguessr_web/data/aal.json', viewer: 'neurotheka.html', name: 'AAL' },
-        'harvard-oxford': { json: '/neuroguessr_web/data/harvard_oxford.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
-        'tissues': { json: '/neuroguessr_web/data/tissue.json', viewer: 'neurotheka.html', name: 'Tissue' },
-        'hemisphere': { json: '/neuroguessr_web/data/hemisphere.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
-        'glasser': { json: '/neuroguessr_web/data/glasser_neuroparc.json', viewer: 'neurotheka.html', name: 'Glasser' },
-        'destrieux': { json: '/neuroguessr_web/data/destrieux.json', viewer: 'neurotheka.html', name: 'Destrieux' },
-        'yeo7': { json: '/neuroguessr_web/data/yeo7.json', viewer: 'neurotheka.html', name: 'Yeo7' },
-        'yeo17': { json: '/neuroguessr_web/data/yeo17.json', viewer: 'neurotheka.html', name: 'Yeo17' },
-        'subcortical': { json: '/neuroguessr_web/data/subcortical.json', viewer: 'neurotheka.html', name: 'Subcortical' },
-        'cerebellum': { json: '/neuroguessr_web/data/cerebellum.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
-        'xtract': { json: '/neuroguessr_web/data/xtract_labels.json', viewer: 'neurotheka.html', name: 'White Matter' },
-        'thalamus': { json: '/neuroguessr_web/data/thalamus_labels.json', viewer: 'neurotheka.html', name: 'Thalamus' },
-        'HippoAmyg': { json: '/neuroguessr_web/data/HippoAmyg_labels.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
-        'JHU': { json: '/neuroguessr_web/data/JHU_labels.json', viewer: 'neurotheka.html', name: 'JHU' },
-        'territories': { json: '/neuroguessr_web/data/artery_territories.json', viewer: 'neurotheka.html', name: 'Territories' }
+        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', viewer: 'neurotheka.html', name: 'AAL' },
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', viewer: 'neurotheka.html', name: 'Tissue' },
+        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
+        'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', viewer: 'neurotheka.html', viewer: 'neurotheka.html', name: 'Brodmann' },
+        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', viewer: 'neurotheka.html', name: 'Glasser' },
+        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', viewer: 'neurotheka.html', name: 'schaefer' },     
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', viewer: 'neurotheka.html', name: 'yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', viewer: 'neurotheka.html', name: 'yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', viewer: 'neurotheka.html', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', viewer: 'neurotheka.html', name: 'White Matter'},
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', viewer: 'neurotheka.html', name: 'Thalamus'},
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', viewer: 'neurotheka.html', name: 'JHU' },
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', viewer: 'neurotheka.html', name: 'territories' }
       };
 
       // Display notification
@@ -421,5 +422,5 @@
         }
       });
     </script>
-  </body>
+  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93c0e331b92a53c7',t:'MTc0NjYyMjY5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
