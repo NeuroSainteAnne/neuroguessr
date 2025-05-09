@@ -1,69 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeuroGuessr Web - Welcome</title>
+    <title data-i18n="app_title">NeuroGuessr Web - Welcome</title>
     <link rel="stylesheet" href="niivue.css" />
   </head>
   <body class="index-page">
     <header>
       <div class="logo-title-container">
         <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
-        <h1>NeuroGuessr</h1>
+        <h1 data-i18n="app_title">NeuroGuessr</h1>
+      </div>
+      <div class="language-switcher">
+        <button class="lang-btn" data-lang="fr">FR</button>
+        <button class="lang-btn" data-lang="en">EN</button>
       </div>
     </header>
 
     <main>
       <div class="selection-container">
         <section class="atlas-selection">
-          <!-- Search Bar for All Atlases -->
           <div class="search-container">
-            <h3>NeuroGlossaire - Search for a brain region</h3>
+            <h2 data-i18n="neuroglossaire_title">NeuroGlossaire - Search for a brain region</h2>
             <input
               type="text"
               id="atlas-search"
-              placeholder="Search all atlas regions (e.g., Amygdala, Frontal Pole...)"
+              data-i18n="[placeholder]search_placeholder"
               class="search-input"
             />
             <div id="search-suggestions" class="search-suggestions"></div>
           </div>
-          <h2>Select Atlas</h2>
+          <h2 data-i18n="select_atlas">Select Atlas</h2>
           <div class="atlas-layout">
             <div class="category-list">
-              <button class="category-button" data-category="cortex">Cortical Regions</button>
-              <button class="category-button" data-category="subcortical">Subcortical Regions</button>
-              <button class="category-button" data-category="white-matter">White Matter Tracts</button>
-              <button class="category-button" data-category="functional">Functional Networks</button>
-              <button class="category-button" data-category="cerebral-arteries">Cerebral Arteries</button>
+              <button class="category-button" data-category="cortex" data-i18n="cortical_regions">Cortical Regions</button>
+              <button class="category-button" data-category="subcortical" data-i18n="subcortical_regions">Subcortical Regions</button>
+              <button class="category-button" data-category="white-matter" data-i18n="white_matter_tracts">White Matter Tracts</button>
+              <button class="category-button" data-category="functional" data-i18n="functional_networks">Functional Networks</button>
+              <button class="category-button" data-category="cerebral-arteries" data-i18n="cerebral_arteries">Cerebral Arteries</button>
             </div>
             <div class="atlas-choices-display"></div>
           </div>
           <div style="display: none;">
             <div id="atlas-buttons-cortex">
               <button class="panel-button" data-atlas="tissues">
-                <span class="atlas-info">Tissue classes <span class="atlas-description">Tissue types (CSF, WM, GM)</span></span>
+                <span class="atlas-info" data-i18n="[html]tissues_info">Tissue classes <span class="atlas-description">Tissue types (CSF, WM, GM)</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="harvard-oxford">
-                <span class="atlas-info">Harvard-Oxford <span class="atlas-description">Probabilistic anatomical regions</span></span>
+                <span class="atlas-info" data-i18n="[html]harvard_oxford_info">Harvard-Oxford <span class="atlas-description">Probabilistic anatomical regions</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="aal">
-                <span class="atlas-info">AAL <span class="atlas-description">Automated Anatomical Labeling</span></span>
+                <span class="atlas-info" data-i18n="[html]aal_info">AAL <span class="atlas-description">Automated Anatomical Labeling</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="destrieux">
-                <span class="atlas-info">Destrieux <span class="atlas-description">Gyral-sulcal parcellation</span></span>
+                <span class="atlas-info" data-i18n="[html]destrieux_info">Destrieux <span class="atlas-description">Gyral-sulcal parcellation</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -71,7 +74,7 @@
                 </span>
               </button>
               <button class="panel-button" data-atlas="glasser">
-                <span class="atlas-info">Glasser <span class="atlas-description">Multimodal cortical parcellation</span></span>
+                <span class="atlas-info" data-i18n="[html]glasser_info">Glasser <span class="atlas-description">Multimodal cortical parcellation</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -81,13 +84,13 @@
             </div>
             <div id="atlas-buttons-functional">
               <button class="panel-button" data-atlas="yeo7">
-                <span class="atlas-info">Yeo's 7 networks <span class="atlas-description">7 resting-state functional networks</span></span>
+                <span class="atlas-info" data-i18n="[html]yeo7_info">Yeo's 7 networks <span class="atlas-description">7 resting-state functional networks</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="yeo17">
-                <span class="atlas-info">Yeo's 17 networks <span class="atlas-description">17 resting-state functional networks</span></span>
+                <span class="atlas-info" data-i18n="[html]yeo17_info">Yeo's 17 networks <span class="atlas-description">17 resting-state functional networks</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -96,21 +99,21 @@
             </div>
             <div id="atlas-buttons-subcortical">
               <button class="panel-button" data-atlas="subcortical">
-                <span class="atlas-info">Subcortical <span class="atlas-description">Deep brain structures</span></span>
+                <span class="atlas-info" data-i18n="[html]subcortical_info">Subcortical <span class="atlas-description">Deep brain structures</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="cerebellum">
-                <span class="atlas-info">Cerebellum <span class="atlas-description">Cerebellar regions</span></span>
+                <span class="atlas-info" data-i18n="[html]cerebellum_info">Cerebellum <span class="atlas-description">Cerebellar regions</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="thalamus">
-                <span class="atlas-info">Thalamus <span class="atlas-description">Thalamic nuclei</span></span>
+                <span class="atlas-info" data-i18n="[html]thalamus_info">Thalamus <span class="atlas-description">Thalamic nuclei</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -118,7 +121,7 @@
                 </span>
               </button>
               <button class="panel-button" data-atlas="HippoAmyg">
-                <span class="atlas-info">Amygdala/Hippocampus <span class="atlas-description">Amygdala/Hippocampus subfields</span></span>
+                <span class="atlas-info" data-i18n="[html]hippo_amyg_info">Amygdala/Hippocampus <span class="atlas-description">Amygdala/Hippocampus subfields</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -128,14 +131,14 @@
             </div>
             <div id="atlas-buttons-white-matter">
               <button class="panel-button" data-atlas="JHU">
-                <span class="atlas-info">JHU <span class="atlas-description">JHU's White matter tracts</span></span>
+                <span class="atlas-info" data-i18n="[html]jhu_info">JHU <span class="atlas-description">JHU's White matter tracts</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                 </span>
               </button>
               <button class="panel-button" data-atlas="xtract">
-                <span class="atlas-info">White Matter <span class="atlas-description">FSL's White matter tracts</span></span>
+                <span class="atlas-info" data-i18n="[html]xtract_info">White Matter <span class="atlas-description">FSL's White matter tracts</span></span>
                 <span class="difficulty-icons">
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                   <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
@@ -148,37 +151,87 @@
         </section>
 
         <section class="mode-selection">
-          <h2>Select Game Mode</h2>
+          <h2 data-i18n="select_game_mode">Select Game Mode</h2>
           <div class="mode-buttons">
             <button class="mode-button" data-mode="navigation">
               <img src="/neuroguessr_web/data/boussole.png" alt="Boussole Icon" />
-              Navigation
-              <span class="mode-description">Identify brain regions</span>
+              <span data-i18n="navigation_mode">Navigation</span>
+              <span class="mode-description" data-i18n="navigation_description">Identify brain regions</span>
             </button>
             <button class="mode-button" data-mode="practice">
               <img src="/neuroguessr_web/data/practice.png" alt="Practice Icon" />
-              Practice
-              <span class="mode-description">Learn with feedback</span>
+              <span data-i18n="practice_mode">Practice</span>
+              <span class="mode-description" data-i18n="practice_description">Learn with feedback</span>
             </button>
             <button class="mode-button" data-mode="streak">
               <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
-              Streak
-              <span class="mode-description">Test consecutive accuracy</span>
+              <span data-i18n="streak_mode">Streak</span>
+              <span class="mode-description" data-i18n="streak_description">Test consecutive accuracy</span>
             </button>
             <button class="mode-button" data-mode="time-attack">
               <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
-              Time Attack
-              <span class="mode-description">Race against time</span>
+              <span data-i18n="time_attack_mode">Time Attack</span>
+              <span class="mode-description" data-i18n="time_attack_description">Race against time</span>
             </button>
           </div>
-          <button id="play-button" class="play-button" disabled>Play</button>
+          <button id="play-button" class="play-button" disabled data-i18n="play_button">Play</button>
         </section>
       </div>
     </main>
 
     <div id="notification"></div>
 
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script>
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+            elem.textContent = i18next.t(key);
+          }
+        });
+      }
+
+      // Language switcher
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            loadAtlasLabels().then(() => {
+              searchAtlasRegions(searchInput.value);
+            });
+          });
+        });
+      });
+
       // Get references to UI elements
       const modeButtons = document.querySelectorAll('.mode-button');
       const playButton = document.getElementById('play-button');
@@ -196,28 +249,28 @@
 
       // Atlas configuration
       const atlasFiles = {
-        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', viewer: 'neurotheka.html', name: 'AAL' },
-        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
-        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', viewer: 'neurotheka.html', name: 'Tissue' },
-        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
-        'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', viewer: 'neurotheka.html', viewer: 'neurotheka.html', name: 'Brodmann' },
-        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', viewer: 'neurotheka.html', name: 'Glasser' },
-        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', viewer: 'neurotheka.html', name: 'Destrieux' },
-        'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', viewer: 'neurotheka.html', name: 'schaefer' },     
-        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', viewer: 'neurotheka.html', name: 'yeo7' },
-        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', viewer: 'neurotheka.html', name: 'yeo17' },
-        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', viewer: 'neurotheka.html', name: 'Subcortical' },
-        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
-        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', viewer: 'neurotheka.html', name: 'White Matter'},
-        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_web.nii.gz', json: '/neuroguessr_web/data/thalamus_labels.json', viewer: 'neurotheka.html', name: 'Thalamus'},
-        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
-        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', viewer: 'neurotheka.html', name: 'JHU' },
-        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', viewer: 'neurotheka.html', name: 'territories' }
+        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', viewer: 'neurotheka.html', name: 'AAL' },
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', viewer: 'neurotheka.html', name: 'Tissue' },
+        // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
+        // 'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', viewer: 'neurotheka.html', name: 'Brodmann' },
+        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', viewer: 'neurotheka.html', name: 'Glasser' },
+        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        // 'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', viewer: 'neurotheka.html', name: 'Schaefer' },
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', viewer: 'neurotheka.html', name: 'Yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', viewer: 'neurotheka.html', name: 'Yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', viewer: 'neurotheka.html', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', viewer: 'neurotheka.html', name: 'White Matter' },
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', viewer: 'neurotheka.html', name: 'Thalamus' },
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', viewer: 'neurotheka.html', name: 'JHU' },
+        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', viewer: 'neurotheka.html', name: 'Territories' }
       };
 
       // Display notification
-      function showNotification(message, isSuccess) {
-        notification.textContent = message;
+      function showNotification(messageKey, isSuccess, params = {}) {
+        notification.textContent = i18next.t(messageKey, params);
         notification.className = isSuccess ? 'success' : 'error';
         notification.style.display = 'block';
         setTimeout(() => {
@@ -232,9 +285,9 @@
       if (score && time) {
         const minutes = Math.floor(time / 60);
         const seconds = (time % 60).toString().padStart(2, '0');
-        showNotification(`Previous Game - Accuracy: ${score}%, Time: ${minutes}m ${seconds}s`, true);
+        showNotification('previous_game', true, { accuracy: score, minutes, seconds });
       } else if (score) {
-        showNotification(`Previous Streak: ${score} regions`, true);
+        showNotification('previous_streak', true, { streak: score });
       }
 
       // Update mode buttons based on selected atlas
@@ -270,9 +323,11 @@
       // Load labels for all atlases
       async function loadAtlasLabels() {
         atlasRegions = [];
-        for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
+        const lang = i18next.language;
+        for (const [atlas, { json, json_fr, name }] of Object.entries(atlasFiles)) {
           try {
-            const response = await fetch(json);
+            const jsonFile = lang === 'fr' && json_fr ? json_fr : json;
+            const response = await fetch(jsonFile);
             if (!response.ok) throw new Error(`HTTP ${response.status} for ${atlas}`);
             const labels = await response.json();
             const regions = Object.entries(labels.labels)
@@ -287,12 +342,12 @@
             console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
           } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
-            showNotification(`Failed to load regions for ${name}.`, false);
+            showNotification('error_loading_atlas', false, { atlas: name });
           }
         }
         console.log('Total regions loaded:', atlasRegions.length);
         if (atlasRegions.length === 0) {
-          showNotification('No atlas regions loaded. Search disabled.', false);
+          showNotification('no_regions_loaded', false);
           searchInput.disabled = true;
         }
       }
@@ -312,7 +367,7 @@
             const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
             if (aIndex !== bIndex) return aIndex - bIndex;
             return a.name.length - b.name.length;
-          })
+          });
         if (matches.length === 0) {
           searchSuggestions.style.display = 'none';
           return;
@@ -363,14 +418,14 @@
           const atlasButtonsContainer = document.getElementById(`atlas-buttons-${category}`);
           if (!atlasButtonsContainer) {
             console.error(`No container found for category: ${category}`);
-            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">Error: Atlas data not found.</p>';
+            atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
             return;
           }
 
           const atlasButtons = atlasButtonsContainer.querySelectorAll('.panel-button');
           if (atlasButtons.length === 0) {
             console.error(`No atlas buttons found for category: ${category}`);
-            atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlases available for this category.</p>';
+            atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
             return;
           }
 
@@ -418,9 +473,9 @@
           categoryButtons[0].click();
         } else {
           console.error('No category buttons found');
-          atlasChoicesDisplay.innerHTML = '<p class="no-atlas-message">No atlas categories found.</p>';
+          atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
         }
       });
     </script>
-  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93c0e331b92a53c7',t:'MTc0NjYyMjY5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+  </body>
 </html>

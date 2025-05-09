@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeuroGuessr</title>
+    <title data-i18n="app_title">NeuroGuessr</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
   </head>
@@ -13,19 +13,19 @@
       <div class="header-container">
         <div class="logo-title-container">
           <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
-          <h1 onclick="window.location.href='index.html'">NeuroGuessr</h1>
+          <h1 data-i18n="app_title" onclick="window.location.href='index.html'">NeuroGuessr</h1>
         </div>
         <div class="game-status">
-          <p id="target-label"><span class="target-text">Target: Not Started</span></p>
+          <p id="target-label"><span class="target-text" data-i18n="not_started">Target: Not Started</span></p>
           <div class="score-error-container">
-            <p id="score-label">Correct: 0</p>
-            <p id="error-label">Errors: 0</p>
-            <p id="streak-label" style="display: none;">Streak: 0</p>
-            <p id="time-label" style="display: none;">Time: 00:00</p>
+            <p id="score-label" data-i18n="correct_label">Correct: 0</p>
+            <p id="error-label" data-i18n="errors_label">Errors: 0</p>
+            <p id="streak-label" style="display: none;" data-i18n="streak_label">Streak: 0</p>
+            <p id="time-label" style="display: none;" data-i18n="time_label">Time: 00:00</p>
           </div>
         </div>
         <div class="dropdown">
-          <button class="dropbtn">
+          <button class="dropbtn" data-i18n="view_options">
             View Options
             <span class="hamburger">
               <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,16 +36,16 @@
             </span>
           </button>
           <div class="dropdown-content">
-            <a href="#" class="viewBtn" id="|Axial">Axial</a>
-            <a class="viewBtn" id="|Sagittal">Sagittal</a>
-            <a class="viewBtn" id="|Coronal">Coronal</a>
-            <a class="viewBtn" id="|Render">Render</a>
-            <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
-            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-            <a class="viewBtn dropdown-item-checked" id="Radiological">Radiological</a>
-            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
+            <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
+            <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
+            <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
+            <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
+            <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
+            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
+            <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
+            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
             <div class="slider-container">
-              <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
+              <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
               <input
                 type="range"
                 min="0"
@@ -56,6 +56,10 @@
               />
             </div>
           </div>
+        </div>
+        <div class="language-switcher">
+          <button class="lang-btn" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="fr">FR</button>
         </div>
       </div>
     </header>
@@ -88,12 +92,67 @@
       </script>
     </main>
     <div class="button-container">
-      <button id="return-button" class="return-button">Return</button>
-      <button id="restore-color-button" class="return-button" style="display: none;">Restore Color (Esc)</button>
-      <button id="guess-button" class="guess-button" disabled><span class="confirm-text">CONFIRM GUESS</span><span class="space-text">(space)</span></button>
+      <button id="return-button" class="return-button" data-i18n="return_button">Return</button>
+      <button id="restore-color-button" class="return-button" style="display: none;" data-i18n="restore_color">Restore Color (Esc)</button>
+      <button id="guess-button" class="guess-button" disabled><span class="confirm-text" data-i18n="confirm_guess">CONFIRM GUESS</span><span class="space-text" data-i18n="space_key">(space)</span></button>
     </div>
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
+
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+      }).catch(err => {
+        console.error('Failed to load translation files:', err);
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+            elem.textContent = i18next.t(key);
+          }
+        });
+      }
+
+      // Language switcher
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            // Reload atlas labels for the new language
+            loadAtlasData().then(() => {
+              if (gameRunning) {
+                updateGameDisplay();
+              }
+            });
+          });
+        });
+      });
 
       let gameRunning = false;
       let score = 0;
@@ -134,7 +193,7 @@
             nv1.updateGLVolume();
             nv1.drawScene();
           }
-          targetText.textContent = "Click to identify a region";
+          targetText.textContent = i18next.t('click_to_identify');
           selectedVoxel = null;
           highlightedRegion = null;
         }
@@ -156,26 +215,127 @@
       const atlas = urlParams.get('atlas') || 'aal';
       const mode = urlParams.get('mode') || 'practice';
       const atlasFiles = {
-        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
-        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
-        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
-        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
-        'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', name: 'Brodmann' },
-        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
-        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
-        'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', name: 'schaefer' },     
-        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', name: 'yeo7' },
-        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', name: 'yeo17' },
-        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
-        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
-        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter'},
-        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', name: 'Thalamus'},
-        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
-        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
-        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', name: 'territories' }
+        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
+        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
+        'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', name: 'Brodmann' },
+        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser' },
+        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', name: 'Destrieux' },
+        'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', name: 'Schaefer' },     
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', name: 'White Matter'},
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
       };
 
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
+
+      async function fetchJSON(fnm) {
+        try {
+          const response = await fetch(fnm);
+          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          return await response.json();
+        } catch (e) {
+          console.error(`Fetch failed for ${fnm}:`, e);
+          throw new Error(`${e.message}`);
+        }
+      }
+
+      async function loadAtlasData() {
+        try {
+          const lang = i18next.language;
+          const jsonFile = lang === 'fr' && selectedAtlasFiles.json_fr ? selectedAtlasFiles.json_fr : selectedAtlasFiles.json;
+          cmap = await fetchJSON(jsonFile);
+          console.log(`Loaded atlas JSON (${jsonFile}):`, cmap);
+          if (nv1 && nv1.volumes.length > 1) {
+            nv1.volumes[1].setColormapLabel(cmap);
+            const numRegions = Object.keys(cmap.labels).length;
+            clut = new Uint8Array(numRegions * 4);
+
+            if (atlas === 'aal') {
+              clut[0] = Math.floor(Math.random() * 256);
+              clut[1] = Math.floor(Math.random() * 256);
+              clut[2] = Math.floor(Math.random() * 256);
+              clut[3] = 255;
+              clut[4] = Math.floor(Math.random() * 256);
+              clut[5] = Math.floor(Math.random() * 256);
+              clut[6] = Math.floor(Math.random() * 256);
+              clut[7] = 255;
+            } else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
+              console.log('Atlas cmap.labels:', cmap.labels);
+            } else {
+              clut[0] = 0;
+              clut[1] = 0;
+              clut[2] = 0;
+              clut[3] = 0;
+              clut[4] = Math.floor(Math.random() * 256);
+              clut[5] = Math.floor(Math.random() * 256);
+              clut[6] = Math.floor(Math.random() * 256);
+              clut[7] = 255;
+            }
+
+            for (let i = 2; i < numRegions; i++) {
+              clut[i * 4 + 0] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 1] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 2] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 3] = 255;
+            }
+
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.setOpacity(1, 0.6);
+            nv1.updateGLVolume();
+
+            const atlasData = await nv1.volumes[1].getVolumeData();
+            const dataRegions = [...new Set(atlasData.filter(val => val > 0).map(val => Math.round(val)))];
+            validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined && Number.isInteger(val));
+
+            console.log(`Atlas: ${selectedAtlasFiles.name}`);
+            console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
+            console.log(`Data Regions (rounded):`, dataRegions);
+            console.log(`Valid Regions:`, validRegions);
+            console.log(`Valid Region Labels:`, validRegions.map(id => cmap.labels[id]));
+
+            if (validRegions.length === 0) {
+              console.error(`No valid regions found in ${selectedAtlasFiles.name} data.`);
+              console.log(`cmap.labels keys:`, Object.keys(cmap.labels));
+              validRegions = Object.keys(cmap.labels)
+                .map(Number)
+                .filter(val => val > 0 && Number.isInteger(val));
+              if (validRegions.length === 0) {
+                throw new Error(`No valid regions available for ${selectedAtlasFiles.name}`);
+              }
+              console.warn(`Fallback to cmap.labels keys:`, validRegions);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load atlas data for ${selectedAtlasFiles.name}:`, error);
+          targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
+        }
+      }
+
+      function updateGameDisplay() {
+        scoreLabel.textContent = i18next.t('correct_label') + `: ${score}`;
+        errorLabel.textContent = i18next.t('errors_label') + `: ${errors}`;
+        streakLabel.textContent = i18next.t('streak_label') + `: ${streak}`;
+        if (mode === 'navigation') {
+          targetText.textContent = highlightedRegion 
+            ? cmap.labels[highlightedRegion] || i18next.t('no_region_selected')
+            : i18next.t('click_to_identify');
+        } else if (currentTarget !== null && cmap && cmap.labels[currentTarget]) {
+          const prefix = i18next.language === 'fr' ? 'Trouver : ' : 'Find: ';
+          targetText.textContent = prefix + cmap.labels[currentTarget];
+          console.log(`Displaying target: ${cmap.labels[currentTarget]} (ID: ${currentTarget})`);
+        } else {
+          targetText.textContent = i18next.t('not_started');
+          console.log('No valid target or cmap.labels not loaded:', { currentTarget, cmap });
+        }
+      }
 
       async function initNiivue() {
         try {
@@ -188,8 +348,8 @@
           nv1.setInterpolation(true);
           nv1.opts.crosshairGap = 12;
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
-          nv1.opts.multiplanarForceRender = true; // Ensure 2x2 with render
-          nv1.setSliceType(nv1.sliceTypeMultiplanar); // Set 2x2 layout
+          nv1.opts.multiplanarForceRender = true;
+          nv1.setSliceType(nv1.sliceTypeMultiplanar);
           nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;
           nv1.opts.isRadiologicalConvention = true;
@@ -200,66 +360,7 @@
           ];
           await nv1.loadVolumes(volumeList1);
 
-          cmap = await fetchJSON(selectedAtlasFiles.json);
-          nv1.volumes[1].setColormapLabel(cmap);
-
-          const numRegions = Object.keys(cmap.labels).length;
-          clut = new Uint8Array(numRegions * 4);
-
-          if (atlas === 'aal') {
-            clut[0] = Math.floor(Math.random() * 256);
-            clut[1] = Math.floor(Math.random() * 256);
-            clut[2] = Math.floor(Math.random() * 256);
-            clut[3] = 255;
-            clut[4] = Math.floor(Math.random() * 256);
-            clut[5] = Math.floor(Math.random() * 256);
-            clut[6] = Math.floor(Math.random() * 256);
-            clut[7] = 255;
-          } else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
-            console.log('Glasser cmap.labels:', cmap.labels);
-          } else {
-            clut[0] = 0;
-            clut[1] = 0;
-            clut[2] = 0;
-            clut[3] = 0;
-            clut[4] = Math.floor(Math.random() * 256);
-            clut[5] = Math.floor(Math.random() * 256);
-            clut[6] = Math.floor(Math.random() * 256);
-            clut[7] = 255;
-          }
-
-          for (let i = 2; i < numRegions; i++) {
-            clut[i * 4 + 0] = Math.floor(Math.random() * 256);
-            clut[i * 4 + 1] = Math.floor(Math.random() * 256);
-            clut[i * 4 + 2] = Math.floor(Math.random() * 256);
-            clut[i * 4 + 3] = 255;
-          }
-
-          nv1.volumes[1].colormapLabel.lut = clut.slice();
-          nv1.setOpacity(1, 0.6);
-          nv1.updateGLVolume();
-
-          const atlasData = await nv1.volumes[1].getVolumeData();
-          const dataRegions = [...new Set(atlasData.filter(val => val > 0).map(val => Math.round(val)))];
-          validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined && Number.isInteger(val));
-
-          console.log(`Atlas: ${selectedAtlasFiles.name}`);
-          console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
-          console.log(`Data Regions (rounded):`, dataRegions);
-          console.log(`Valid Regions:`, validRegions);
-          console.log(`Valid Region Labels:`, validRegions.map(id => cmap.labels[id]));
-
-          if (validRegions.length === 0) {
-            console.error(`No valid regions found in ${selectedAtlasFiles.name} data.`);
-            console.log(`cmap.labels keys:`, Object.keys(cmap.labels));
-            validRegions = Object.keys(cmap.labels)
-              .map(Number)
-              .filter(val => val > 0 && Number.isInteger(val));
-            if (validRegions.length === 0) {
-              throw new Error(`No valid regions available for ${selectedAtlasFiles.name}`);
-            }
-            console.warn(`Fallback to cmap.labels keys:`, validRegions);
-          }
+          await loadAtlasData();
 
           nv1.setClipPlane([2, 270, 0]);
           nv1.opts.isSliceMM = true;
@@ -268,18 +369,7 @@
           startGame();
         } catch (error) {
           console.error(`Failed to initialize Niivue for ${selectedAtlasFiles.name}:`, error);
-          targetText.textContent = `Error: Failed to load ${selectedAtlasFiles.name} data`;
-        }
-      }
-
-      async function fetchJSON(fnm) {
-        try {
-          const response = await fetch(fnm);
-          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          return await response.json();
-        } catch (e) {
-          console.error(`Fetch failed for ${fnm}:`, e);
-          throw new Error(`${e.message}`);
+          targetText.textContent = i18next.t('error_initializing');
         }
       }
 
@@ -351,7 +441,7 @@
         attempts = 0;
         usedRegions = [];
         highlightedRegion = null;
-        targetText.textContent = mode === 'navigation' ? "Click to identify a region" : "Target: Not Started";
+        targetText.textContent = mode === 'navigation' ? i18next.t('click_to_identify') : i18next.t('not_started');
         targetText.style.color = '#d9dddc';
         targetText.style.transition = '';
         guessButton.disabled = true;
@@ -371,6 +461,7 @@
 
       function selectNewTarget() {
         if (validRegions.length === 0) {
+          console.warn('No valid regions available for target selection');
           resetGameState();
           return;
         }
@@ -382,6 +473,7 @@
           ? validRegions.filter(r => !usedRegions.includes(r))
           : validRegions;
         if (availableRegions.length === 0) {
+          console.warn('No available regions for target selection');
           resetGameState();
           return;
         }
@@ -389,7 +481,14 @@
         if (mode === 'time-attack') {
           usedRegions.push(currentTarget);
         }
-        targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
+        if (cmap && cmap.labels[currentTarget]) {
+          const prefix = i18next.language === 'fr' ? 'Trouver : ' : 'Find: ';
+          targetText.textContent = prefix + cmap.labels[currentTarget];
+          console.log(`Selected new target: ${cmap.labels[currentTarget]} (ID: ${currentTarget})`);
+        } else {
+          targetText.textContent = i18next.language === 'fr' ? 'Trouver : Inconnu' : 'Find: Unknown';
+          console.error(`No label for currentTarget ${currentTarget}`, cmap);
+        }
         targetText.style.color = '#d9dddc';
         targetText.style.transition = '';
         guessButton.disabled = true;
@@ -401,7 +500,7 @@
       }
 
       function highlightRegionFluorescentYellow(regionId) {
-        if (mode === 'navigation' && regionId === 0) return; // Don't color region 0 in navigation mode
+        if (mode === 'navigation' && regionId === 0) return;
         console.log('highlightRegionFluorescentYellow called with regionId:', regionId);
         if (clut && nv1 && regionId * 4 < clut.length) {
           const lut = clut.slice();
@@ -461,7 +560,7 @@
           const elapsed = Math.floor((Date.now() - startTime) / 1000);
           const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
           const seconds = (elapsed % 60).toString().padStart(2, '0');
-          timeLabel.textContent = `Time: ${minutes}:${seconds}`;
+          timeLabel.textContent = i18next.t('time_label') + `: ${minutes}:${seconds}`;
         }, 1000);
       }
 
@@ -469,7 +568,7 @@
         clearInterval(timerInterval);
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const accuracy = ((score / (score + errors)) * 100).toFixed(2);
-        targetText.textContent = `Game Over! Accuracy: ${accuracy}%, Time: ${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+        targetText.textContent = i18next.t('game_over', { accuracy, minutes: Math.floor(elapsed / 60), seconds: elapsed % 60 });
         highlightTarget(true);
         setTimeout(() => {
           window.location.href = `index.html?score=${accuracy}&time=${elapsed}`;
@@ -481,10 +580,10 @@
         score = 0;
         errors = 0;
         streak = 0;
-        scoreLabel.textContent = "Correct: 0";
-        errorLabel.textContent = "Errors: 0";
-        streakLabel.textContent = "Streak: 0";
-        timeLabel.textContent = "Time: 30:00";
+        scoreLabel.textContent = i18next.t('correct_label') + ": 0";
+        errorLabel.textContent = i18next.t('errors_label') + ": 0";
+        streakLabel.textContent = i18next.t('streak_label') + ": 0";
+        timeLabel.textContent = i18next.t('time_label') + ": 00:00";
         streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
         timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
         guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
@@ -495,7 +594,7 @@
           startTimer();
         }
         if (mode === 'navigation') {
-          targetText.textContent = "Click to identify a region";
+          targetText.textContent = i18next.t('click_to_identify');
         } else {
           selectNewTarget();
         }
@@ -503,16 +602,17 @@
 
       function validateGuess() {
         if (!selectedVoxel || !gameRunning || !currentTarget) {
+          console.warn('Cannot validate guess:', { selectedVoxel, gameRunning, currentTarget });
           return;
         }
         const clickedRegion = nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]);
-        const targetName = cmap.labels[currentTarget] || `Region ${currentTarget} (Unknown)`;
+        const targetName = cmap && cmap.labels[currentTarget] ? cmap.labels[currentTarget] : `Region ${currentTarget} (Unknown)`;
 
         if (clickedRegion === currentTarget) {
           score++;
-          scoreLabel.textContent = `Correct: ${score}`;
+          scoreLabel.textContent = i18next.t('correct_label') + `: ${score}`;
           streak = mode === 'streak' ? streak + 1 : streak;
-          streakLabel.textContent = `Streak: ${streak}`;
+          streakLabel.textContent = i18next.t('streak_label') + `: ${streak}`;
           highlightTarget(true);
           attempts = 0;
           if (clut && nv1) {
@@ -522,23 +622,26 @@
           selectNewTarget();
         } else {
           errors++;
-          errorLabel.textContent = `Errors: ${errors}`;
+          errorLabel.textContent = i18next.t('errors_label') + `: ${errors}`;
           if (mode === 'practice') {
             attempts++;
-            const incorrectRegionName = cmap.labels[clickedRegion] || `Region ${clickedRegion} (Unknown)`;
-            targetText.textContent = `It's ${incorrectRegionName} !`;
+            const incorrectRegionName = cmap && cmap.labels[clickedRegion] ? cmap.labels[clickedRegion] : `Region ${clickedRegion} (Unknown)`;
+            const prefix = i18next.language === 'fr' ? 'C\'est ' : 'It\'s ';
+            targetText.textContent = prefix + incorrectRegionName + ' !';
+            console.log(`Incorrect guess: ${incorrectRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
             if (attempts >= 3) {
               highlightRegionFluorescentYellow(currentTarget);
             }
             setTimeout(() => {
-              targetText.textContent = `Find: ${cmap.labels[currentTarget] || "Unknown"}`;
+              const findPrefix = i18next.language === 'fr' ? 'Trouver : ' : 'Find: ';
+              targetText.textContent = findPrefix + targetName;
               targetText.style.color = '#d9dddc';
               targetText.style.transition = '';
             }, 2000);
           }
           highlightTarget(false);
           if (mode === 'streak') {
-            targetText.textContent = `Streak Ended! You got ${streak} in a row.`;
+            targetText.textContent = i18next.t('streak_ended', { streak });
             highlightTarget(false);
             setTimeout(() => {
               window.location.href = `index.html?score=${streak}`;
@@ -604,7 +707,7 @@
           if (isFinite(idx) && idx in cmap.labels) {
             selectedVoxel = vox;
             if (mode === 'navigation') {
-              targetText.textContent = `Region: ${cmap.labels[idx] || "Unknown"}`;
+              targetText.textContent = cmap.labels[idx] || i18next.t('no_region_selected');
               highlightedRegion = idx;
               highlightRegionFluorescentYellow(idx);
               if (tooltip) {
@@ -622,7 +725,7 @@
           } else {
             selectedVoxel = null;
             if (mode === 'navigation') {
-              targetText.textContent = "No region selected";
+              targetText.textContent = i18next.t('no_region_selected');
               highlightedRegion = null;
               if (clut && nv1) {
                 nv1.volumes[1].colormapLabel.lut = clut.slice();
@@ -647,7 +750,7 @@
             nv1.updateGLVolume();
             nv1.drawScene();
           }
-          targetText.textContent = "Click to identify a region";
+          targetText.textContent = i18next.t('click_to_identify');
           selectedVoxel = null;
           highlightedRegion = null;
         }
@@ -657,5 +760,5 @@
 
       initNiivue();
     </script>
-  <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93baa5a91f852733',t:'MTc0NjU1NzI1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93c119224b54b01c',t:'MTc0NjYyNDkwMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+  </body>
 </html>

@@ -4,31 +4,28 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NeuroGlossaire - Region Viewer</title>
+    <title data-i18n="neuroglossaire_title">NeuroGlossaire - Region Viewer</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
   </head>
   <body>
     <header>
       <div class="header-container">
-        <!-- Left: NeuroTheka and Current Region -->
         <div class="logo-title-container">
-          <h1 onclick="window.location.href='index.html'">NeuroGlossaire</h1>
+          <h1 data-i18n="neuroglossaire_title" onclick="window.location.href='index.html'">NeuroGlossaire</h1>
           <p id="target-label"><span class="target-text">Region: Loading...</span></p>
         </div>
-        <!-- Center: Search Bar -->
         <div class="search-container">
           <input
             type="text"
             id="atlas-search"
-            placeholder="Search regions (e.g., Amygdala, Frontal Pole...)"
+            data-i18n="[placeholder]search_placeholder"
             class="search-input"
           />
           <div id="search-suggestions" class="search-suggestions"></div>
         </div>
-        <!-- Right: Dropdown Menu -->
         <div class="dropdown">
-          <button class="dropbtn">
+          <button class="dropbtn" data-i18n="view_options">
             View Options
             <span class="hamburger">
               <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -39,16 +36,16 @@
             </span>
           </button>
           <div class="dropdown-content">
-            <a href="#" class="viewBtn" id="|Axial">Axial</a>
-            <a class="viewBtn" id="|Sagittal">Sagittal</a>
-            <a class="viewBtn" id="|Coronal">Coronal</a>
-            <a class="viewBtn" id="|Render">Render</a>
-            <a class="viewBtn" id="|MultiPlanar">A+C+S</a>
-            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender">A+C+S+R</a>
-            <a class="viewBtn dropdown-item-checked" id="Radiological">Radiological</a>
-            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas">Colored Atlas</a>
+            <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
+            <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
+            <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
+            <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
+            <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
+            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
+            <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
+            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
             <div class="slider-container">
-              <label class="slider-label" for="alphaSlider">Atlas Opacity</label>
+              <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
               <input
                 type="range"
                 min="0"
@@ -60,16 +57,70 @@
             </div>
           </div>
         </div>
+        <div class="language-switcher">
+          <button class="lang-btn" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="fr">FR</button>
+        </div>
       </div>
     </header>
     <main>
       <canvas id="gl1"></canvas>
     </main>
     <div class="button-container">
-      <button id="return-button" class="return-button">Return</button>
+      <button id="return-button" class="return-button" data-i18n="return_button">Return</button>
     </div>
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
+
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+            elem.textContent = i18next.t(key);
+          }
+        });
+      }
+
+      // Language switcher
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            loadAtlasLabels().then(() => {
+              updateVisualization(currentRegionId, currentAtlas);
+            });
+          });
+        });
+      });
 
       const returnButton = document.getElementById("return-button");
       const targetLabel = document.getElementById("target-label");
@@ -88,21 +139,21 @@
 
       // Atlas configuration
       const atlasFiles = {
-        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', name: 'AAL' },
-        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', name: 'Harvard-Oxford' },
-        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', name: 'Tissue' },
-        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', name: 'Hemisphere' },
-        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', name: 'Glasser' },
-        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', name: 'Destrieux' },
-        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', name: 'Yeo7' },
-        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', name: 'Yeo17' },
-        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', name: 'Subcortical' },
-        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', name: 'Cerebellum' },
-        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', name: 'White Matter' },
-        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', name: 'Thalamus'},
-        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', name: 'Hippocampus & Amygdala' },
-        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', name: 'JHU' },
-        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', name: 'Territories' }
+        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
+        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
+        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser'},
+        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', name: 'Destrieux' },
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', name: 'White Matter' },
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus' },
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
+        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
       };
 
       returnButton.addEventListener('click', () => {
@@ -140,7 +191,7 @@
           if (buttons[i].id.charAt(0) !== char0) continue;
           buttons[i].classList.remove("dropdown-item-checked");
           if (buttons[i].id === id)
-            buttons[i].classList.add("dropdownrenderer-item-checked");
+            buttons[i].classList.add("dropdown-item-checked");
         }
       }
 
@@ -209,9 +260,11 @@
       // Load labels for all atlases
       async function loadAtlasLabels() {
         atlasRegions = [];
-        for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
+        const lang = i18next.language;
+        for (const [atlas, { json, json_fr, name }] of Object.entries(atlasFiles)) {
           try {
-            const response = await fetch(json);
+            const jsonFile = lang === 'fr' && json_fr ? json_fr : json;
+            const response = await fetch(jsonFile);
             if (!response.ok) throw new Error(`HTTP ${response.status} for ${atlas}`);
             const labels = await response.json();
             const regions = Object.entries(labels.labels)
@@ -226,12 +279,12 @@
             console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
           } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
-            targetText.textContent = `Error: Failed to load regions for ${name}`;
+            targetText.textContent = i18next.t('error_loading_atlas', { atlas: name });
           }
         }
         console.log('Total regions loaded:', atlasRegions.length);
         if (atlasRegions.length === 0) {
-          targetText.textContent = 'No atlas regions loaded. Search disabled.';
+          targetText.textContent = i18next.t('no_regions_loaded');
           searchInput.disabled = true;
         }
       }
@@ -251,7 +304,7 @@
             const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
             if (aIndex !== bIndex) return aIndex - bIndex;
             return a.name.length - b.name.length;
-          })
+          });
         if (matches.length === 0) {
           searchSuggestions.style.display = 'none';
           return;
@@ -315,7 +368,9 @@
           nv1.updateGLVolume();
 
           // Load colormap
-          cmap = await fetchJSON(selectedAtlasFiles.json);
+          const lang = i18next.language;
+          const jsonFile = lang === 'fr' && selectedAtlasFiles.json_fr ? selectedAtlasFiles.json_fr : selectedAtlasFiles.json;
+          cmap = await fetchJSON(jsonFile);
 
           // Reset volumes
           nv1.volumes = [];
@@ -323,11 +378,9 @@
           let tractographyLoaded = false;
 
           if (currentAtlas === 'xtract' && isFinite(regionId) && regionId in cmap.labels) {
-            // Check for tractography
             const tractLabel = cmap.labels[regionId].replace(/\s+/g, '_');
             const tractUrl = `/neuroguessr_web/data/TOM_trackings/${tractLabel}.tck`;
             try {
-              // Test if tractography file exists by fetching headers
               const response = await fetch(tractUrl, { method: 'HEAD' });
               if (response.ok) {
                 useTractography = true;
@@ -345,7 +398,6 @@
           await nv1.loadVolumes(volumeList);
 
           if (useTractography) {
-            // Load tractography
             const tractLabel = cmap.labels[regionId].replace(/\s+/g, '_');
             const tractUrl = `/neuroguessr_web/data/TOM_trackings/${tractLabel}.tck`;
             try {
@@ -363,23 +415,21 @@
               setupClipPlaneScroll();
             } catch (error) {
               console.error(`Failed to load tractography for ${tractLabel}:`, error);
-              targetText.textContent = `Error: Failed to load tractography for ${cmap.labels[regionId]} (${selectedAtlasFiles.name})`;
-              // Fallback to atlas volume
+              targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
               await nv1.loadVolumes([{ url: selectedAtlasFiles.nii, isApplyScaling: false }]);
               useTractography = false;
             }
           }
 
           if (!useTractography && nv1.volumes.length > 1) {
-            // Classic region highlighting for non-xtract or xtract without tractography
             nv1.volumes[1].setColormapLabel(cmap);
             const numRegions = Object.keys(cmap.labels).length;
             clut = new Uint8Array(numRegions * 4);
             for (let i = 0; i < numRegions; i++) {
               if (i === regionId && isFinite(regionId) && regionId in cmap.labels) {
-                clut[i * 4 + 0] = 255; // R
-                clut[i * 4 + 1] = 255; // G
-                clut[i * 4 + 2] = 0;   // B
+                clut[i * 4 + 0] = 152; // R
+                clut[i * 4 + 1] = 251; // G
+                clut[i * 4 + 2] = 152;   // B
                 clut[i * 4 + 3] = 255; // A
               } else {
                 clut[i * 4 + 3] = 0; // Transparent
@@ -398,7 +448,7 @@
                 .map(Number)
                 .filter(val => val > 0 && Number.isInteger(val));
               if (validRegions.length === 0) {
-                targetText.textContent = `Warning: No valid regions for ${selectedAtlasFiles.name}`;
+                targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
               }
             }
           }
@@ -411,16 +461,16 @@
           if (isFinite(regionId) && regionId in cmap.labels) {
             targetText.textContent = `${cmap.labels[regionId] || "Unknown"} (${selectedAtlasFiles.name})`;
           } else {
-            targetText.textContent = `Error: Invalid or unknown region (${selectedAtlasFiles.name})`;
+            targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
             console.error(`Invalid region ID: ${regionId}`);
           }
 
           nv1.drawScene();
         } catch (error) {
           console.error(`Failed to update visualization for ${selectedAtlasFiles.name}:`, error);
-          targetText.textContent = `Error: Failed to load ${selectedAtlasFiles.name} data`;
+          targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
           if (nv1.volumes.length > 0) {
-            nv1.drawScene(); // Render background if available
+            nv1.drawScene();
           }
         }
       }
@@ -444,7 +494,7 @@
           await updateVisualization(currentRegionId, currentAtlas);
         } catch (error) {
           console.error(`Failed to initialize Niivue:`, error);
-          targetText.textContent = `Error: Failed to initialize visualization`;
+          targetText.textContent = i18next.t('error_initializing');
         }
       }
 
@@ -453,6 +503,5 @@
         initNiivue();
       });
     </script>
-    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93ba7258ed71675e',t:'MTc0NjU1NTE1NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
   </body>
 </html>
