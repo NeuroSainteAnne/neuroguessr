@@ -173,7 +173,7 @@ main {
   min-width: 300px; /* Ensure a minimum width before wrapping */
   margin: 0 1rem; /* Add horizontal margins */
   text-align: left;
-  min-height: 50vh; /* Minimum height */
+  min-height: auto; /* Allow to shrink to content */
   display: flex;
   flex-direction: column; /* Stack title and layout vertically */
 }
@@ -467,7 +467,8 @@ h3 {
   width: 100%;
   border: 1px solid #808588;
   border-radius: 0.5rem;
-  min-height: 30vh;
+  min-height: auto; /* Allow to shrink to content */
+  max-height: 25vh; /* Limit max height to reduce wasted space */
   background: #2f2f2f;
   overflow: hidden;
   flex-grow: 1;
