@@ -151,6 +151,14 @@
         </section>
 
         <section class="mode-selection">
+          <h2 data-i18n="user_access_mode">User access</h2>
+          <div class="login-buttons">
+            <button id="login-button" class="login-button" data-mode="login">
+              <img src="/neuroguessr_web/data/login.png" alt="Login Icon" />
+              <span data-i18n="login_mode">Login</span>
+              <span class="mode-description" data-i18n="login_description">to access competitive mode</span>
+            </button>
+          </div>
           <h2 data-i18n="select_game_mode">Select Game Mode</h2>
           <div class="mode-buttons">
             <button class="mode-button" data-mode="navigation">
@@ -234,6 +242,7 @@
 
       // Get references to UI elements
       const modeButtons = document.querySelectorAll('.mode-button');
+      const loginButton = document.getElementById('login-button');
       const playButton = document.getElementById('play-button');
       const notification = document.getElementById('notification');
       const categoryButtons = document.querySelectorAll('.category-button');
@@ -442,6 +451,10 @@
             atlasChoicesDisplay.appendChild(clone);
           });
         });
+      });
+
+      loginButton.addEventListener('click', () => {
+        window.location.href = `login.html`;
       });
 
       modeButtons.forEach(button => {
