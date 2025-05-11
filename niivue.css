@@ -744,6 +744,23 @@ h3 {
   white-space: nowrap;
 }
 
+.login-box {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: #363636;
+  color: white;
+  font-size: 1rem;
+  font-weight: 300;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  transition: background 0.2s, border 0.2s, opacity 0.2s;
+  width: 90%;
+  max-width: 25rem;
+  box-sizing: border-box;
+}
+
 /* Media Queries for Responsive Design */
 @media (max-width: 1024px) {
   .selection-container {
@@ -904,3 +921,4 @@ h3 {
     margin-bottom: 1rem;
   }
 }
+

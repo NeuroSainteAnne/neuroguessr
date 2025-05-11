@@ -25,6 +25,9 @@ app.get("/", (req,res)=>{
 app.get("/index.html", (req,res)=>{
     res.sendFile("index.html", { root: htmlRoot })
 })
+app.get("/login.html", (req,res)=>{
+    res.sendFile("login.html", { root: htmlRoot })
+})
 app.get("/viewer.html", (req,res)=>{
     res.sendFile("viewer.html", { root: htmlRoot })
 })
