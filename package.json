@@ -1,6 +1,11 @@
 {
+  "type":"module",
   "dependencies": {
+    "@types/express": "^5.0.1",
     "express": "^5.1.0",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17"
   }
 }
