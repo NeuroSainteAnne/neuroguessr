@@ -13,7 +13,9 @@
       <div class="header-container">
         <div class="logo-title-container">
           <h1 data-i18n="neuroglossaire_title" onclick="window.location.href='index.html'">NeuroGlossaire</h1>
-          <p id="target-label"><span class="target-text">Region: Loading...</span></p>
+        </div>
+        <div class="target-label-container">
+           <p id="target-label"><span class="target-text">Region: Loading...</span></p>
         </div>
         <div class="search-container">
           <input
@@ -24,42 +26,48 @@
           />
           <div id="search-suggestions" class="search-suggestions"></div>
         </div>
-        <div class="dropdown">
-          <button class="dropbtn" data-i18n="view_options">
-            View Options
-            <span class="hamburger">
-              <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
-                <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
-                <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
-              </svg>
-            </span>
-          </button>
-          <div class="dropdown-content">
-            <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
-            <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
-            <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
-            <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
-            <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
-            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
-            <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
-            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
-            <div class="slider-container">
-              <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
-              <input
-                type="range"
-                min="0"
-                max="255"
-                value="255"
-                class="slider"
-                id="alphaSlider"
-              />
+        <div class="header-controls-right">
+          <div class="language-switcher">
+            <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+              <img src="/neuroguessr_web/data/fr.png" alt="FR">
+            </button>
+            <button class="lang-icon-btn" data-lang="en" aria-label="English">
+              <img src="/neuroguessr_web/data/en.png" alt="EN">
+            </button>
+          </div>
+          <div class="dropdown">
+            <button class="dropbtn" data-i18n="view_options">
+              View Options
+              <span class="hamburger">
+                <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
+                </svg>
+              </span>
+            </button>
+            <div class="dropdown-content">
+              <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
+              <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
+              <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
+              <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
+              <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
+              <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
+              <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
+              <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
+              <div class="slider-container">
+                <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value="255"
+                  class="slider"
+                  id="alphaSlider"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="language-switcher">
-          <button class="lang-btn" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="fr">FR</button>
         </div>
       </div>
     </header>
@@ -109,7 +117,7 @@
       }
 
       // Language switcher
-      document.querySelectorAll('.lang-btn').forEach(btn => {
+      document.querySelectorAll('.lang-icon-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lang = btn.dataset.lang;
           i18next.changeLanguage(lang, () => {
@@ -153,7 +161,7 @@
         'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus' },
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
-        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
       };
 
       returnButton.addEventListener('click', () => {
@@ -427,9 +435,9 @@
             clut = new Uint8Array(numRegions * 4);
             for (let i = 0; i < numRegions; i++) {
               if (i === regionId && isFinite(regionId) && regionId in cmap.labels) {
-                clut[i * 4 + 0] = 152; // R
-                clut[i * 4 + 1] = 251; // G
-                clut[i * 4 + 2] = 152;   // B
+                clut[i * 4 + 0] = 43; // R
+                clut[i * 4 + 1] = 111; // G
+                clut[i * 4 + 2] = 161;   // B
                 clut[i * 4 + 3] = 255; // A
               } else {
                 clut[i * 4 + 3] = 0; // Transparent
@@ -484,7 +492,7 @@
           });
           await nv1.attachTo("gl1");
           nv1.setInterpolation(true);
-          nv1.opts.crosshairGap = 12;
+          nv1.opts.crosshairGap = 0;
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
           nv1.opts.dragMode = nv1.dragModes.slicer3D;
           nv1.opts.yoke3Dto2DZoom = true;

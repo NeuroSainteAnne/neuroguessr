@@ -28,6 +28,8 @@
   "practice_mode": "Practice",
   "practice_description": "Learn with feedback",
   "streak_mode": "Streak",
+  "single_player_button" : "Singleplayer",
+  "multiplayer_button" : "Multiplayer",
   "streak_description": "Test consecutive accuracy",
   "time_attack_mode": "Time Attack",
   "time_attack_description": "Race against time",
