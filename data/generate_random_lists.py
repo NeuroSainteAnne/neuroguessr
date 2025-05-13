@@ -22,23 +22,23 @@ def generate_random_numbers(n):
         return combined
 
 # Example usage:
-random_numbers = generate_random_numbers(100)
+random_numbers = generate_random_numbers(152)
 print(random_numbers)
 
 
-df = pd.read_csv("/Users/francoisramon/Downloads/Destrieux.csv")
-column_list = df.iloc[:, 1].tolist()
+# df = pd.read_csv("/Users/francoisramon/Downloads/Destrieux.csv")
+# column_list = df.iloc[:, 1].tolist()
 
-print(column_list)
-print(len(column_list))
+# print(column_list)
+# print(len(column_list))
 
-import json
-def print_json_list_lengths(filepath):
-    with open(filepath, 'r') as f:
-        data = json.load(f)
+# import json
+# def print_json_list_lengths(filepath):
+#     with open(filepath, 'r') as f:
+#         data = json.load(f)
     
-    for key, value in data.items():
-        print(f'{key} : {len(value)}')
+#     for key, value in data.items():
+#         print(f'{key} : {len(value)}')
 
-# Example usage
-print_json_list_lengths('/Users/francoisramon/Desktop/These/neuroguessr_web/data/artery_territories.json')
+# # Example usage
+# print_json_list_lengths('/Users/francoisramon/Desktop/These/neuroguessr_web/data/artery_territories.json')

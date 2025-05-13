@@ -23,6 +23,8 @@
   "white_matter_tracts": "Faisceaux de Matière Blanche",
   "functional_networks": "Réseaux Fonctionnels",
   "cerebral_arteries": "Artères Cérébrales",
+  "single_player_button" : "Solo",
+  "multiplayer_button" : "Multi-joueur",
   "navigation_mode": "Navigation",
   "navigation_description": "Identifier les régions cérébrales",
   "practice_mode": "Pratique",
@@ -63,6 +65,7 @@
   "thalamus_info": "Thalamus <span class='atlas-description'>Noyaux thalamiques</span>",
   "hippo_amyg_info": "Amygdale/Hippocampe <span class='atlas-description'>Sous-champs de l'amygdale/hippocampe</span>",
   "jhu_info": "JHU <span class='atlas-description'>Faisceaux de matière blanche (JHU)</span>",
+  "territories_info" :"Territoires",
   "xtract_info": "Matière Blanche <span class='atlas-description'><Faisceaux de matière blanche (FSL)</span>",
   "select_language": "Sélectionner la Langue"
 }
