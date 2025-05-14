@@ -1,7 +1,7 @@
 {
   "app_title": "NeuroGuessr",
   "neuroglossaire_title": "NeuroGlossaire",
-  "search_placeholder": "Rechercher des régions (par ex., Amygdale, Pôle Frontal...)",
+  "search_placeholder": "Rechercher des régions (par ex., Thalamus, Pôle Frontal...)",
   "view_options": "Options",
   "axial": "Axial",
   "sagittal": "Sagittal",
@@ -16,8 +16,8 @@
   "restore_color": "Recolorer (Échap)",
   "confirm_guess": "Confirmer",
   "space_key": " (espace)",
-  "select_atlas": "Sélectionner un Atlas",
-  "select_game_mode": "Mode de Jeu",
+  "select_atlas": "Sélectionner un atlas",
+  "select_game_mode": "Sélectionner un mode de jeu",
   "cortical_regions": "Régions Corticales",
   "subcortical_regions": "Régions Sous-corticales",
   "white_matter_tracts": "Faisceaux de Matière Blanche",
@@ -65,7 +65,7 @@
   "thalamus_info": "Thalamus <span class='atlas-description'>Noyaux thalamiques</span>",
   "hippo_amyg_info": "Amygdale/Hippocampe <span class='atlas-description'>Sous-champs de l'amygdale/hippocampe</span>",
   "jhu_info": "JHU <span class='atlas-description'>Faisceaux de matière blanche (JHU)</span>",
-  "territories_info" :"Territoires",
+  "territories_info" :"Territoires <span class='atlas-description'>Territoires des artères cérébrales</span>",
   "xtract_info": "Matière Blanche <span class='atlas-description'><Faisceaux de matière blanche (FSL)</span>",
   "select_language": "Sélectionner la Langue"
 }
