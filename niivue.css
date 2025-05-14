@@ -383,13 +383,13 @@ main {
 
 /* New styles for Single/Multiplayer buttons */
 .player-mode-button {
-    background: #363636;
+    background: rgb(63, 109, 159);
     color: white;
     font-size: 1.5rem;
     font-weight: 600;
     padding: 1rem 2rem;
-    border: 1px solid #808588;
-    border-radius: 1.25rem;
+    border: 1px solid rgb(63, 109, 159);
+    border-radius: 50px; /* Full round edges */
     cursor: pointer;
     transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
     z-index: 1000;
@@ -399,25 +399,25 @@ main {
 }
 
 .player-mode-button:hover:not(:disabled) {
-    background: #7CB342; /* Green on hover */
+    background: #345a85; 
     color: white;
-    border-color: #689F38;
+    border-color: #345a85;
     backdrop-filter: blur(8px); /* Slightly more blur on hover */
     -webkit-backdrop-filter: blur(8px);
 }
 
 .player-mode-button:active:not(:disabled) {
-    background-color: #558B2F; /* Darker green on click */
-    border: 1.5px solid #9CCC65; /* Lighter border on click */
+    background-color: #345a85; /* Darker green on click */
+    border: 1.5px solid #345a85; /* Lighter border on click */
     color: white;
     backdrop-filter: blur(8px); /* Apply blur */
     -webkit-backdrop-filter: blur(8px);
 }
 
 .player-mode-button.selected {
-    background: #7CB342; /* Green when selected */
+    background: #345a85; /* rgb(63, 109, 159) when selected */
     color: white;
-    border-color: #689F38;
+    border-color: #345a85;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
@@ -462,6 +462,16 @@ main {
     display: flex;
     flex-direction: column;
 }
+
+/* Styles for icons next to h2 titles */
+.atlas-selection h2 img,
+.mode-selection h2 img {
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    height: 1.5em; /* Adjust size as needed */
+    width: auto;
+}
+
 
 /* Mode Selection Section Styles - Keep existing but adjust margins and min-width */
 .mode-selection {
@@ -603,6 +613,8 @@ h2 {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 1rem;
+    display: flex; /* Use flexbox for h2 and icon */
+    align-items: center;
 }
 .atlas-selection h2 {
     text-align: left;
@@ -611,6 +623,7 @@ h2 {
 }
 .mode-selection h2 {
     text-align: center;
+    justify-content: center; /* Center content for mode section h2 */
 }
 
 h3 {
@@ -715,17 +728,17 @@ h3 {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background-color: #7CB342;
-    border: 1px solid #689F38;
+    background-color: rgb(63, 109, 159); /* Updated color */
+    border: 1px solid rgb(63, 109, 159);
     opacity: 0.9; /* Added opacity */
 }
 .guess-button:hover:not(:disabled) {
-    background-color: #689F38;
-    border-color: #558B2F;
+    background-color: rgb(63, 109, 159);
+    border-color: #345a85;
 }
 .guess-button:active:not(:disabled) {
-    background-color: #558B2F;
-    border: 1.5px solid #9CCC65;
+    background-color: rgb(63, 109, 159);
+    border: 1.5px solid #345a85;
 }
 .guess-button:disabled {
     background: #363636;
@@ -1141,7 +1154,7 @@ h3 {
     font-weight: 600;
     padding: 1rem 2rem;
     border: 1px solid #808588;
-    border-radius: 1.25rem;
+    border-radius: 50px;
     cursor: pointer;
     transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
     z-index: 1000;
@@ -1156,21 +1169,21 @@ h3 {
     -webkit-backdrop-filter: blur(8px);
 }
 .play-button.enabled {
-    background-color: #7CB342;
+    background-color: rgb(63, 109, 159); /* Updated color */
     color: #ffffff;
-    border: 1px solid #689F38;
+    border: 1px solid #345a85;
     backdrop-filter: blur(5px); /* Apply blur */
     -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .play-button.enabled:hover {
-    background-color: #689F38;
-    border-color: #558B2F;
+    background-color: #345a85;
+    border-color: #345a85;
     backdrop-filter: blur(8px); /* Slightly more blur on hover */
     -webkit-backdrop-filter: blur(8px);
 }
 .play-button:active:not(:disabled) {
-    background-color: #558B2F; /* Darker green */
-    border: 1.5px solid #9CCC65; /* Lighter border */
+    background-color: #345a85; /* Darker green */
+    border: 1.5px solid #345a85; /* Lighter border */
     /* Add any other active styles if needed */
     backdrop-filter: blur(8px); /* Apply blur */
     -webkit-backdrop-filter: blur(8px);

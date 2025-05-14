@@ -1,7 +1,7 @@
 {
   "app_title": "NeuroGuessr",
   "neuroglossaire_title": "NeuroGlossaire",
-  "search_placeholder": "Search regions (e.g., Amygdala, Frontal Pole...)",
+  "search_placeholder": "Search regions (e.g., Thalamus, Frontal Pole...)",
   "view_options": "View Options",
   "axial": "Axial",
   "sagittal": "Sagittal",
@@ -65,6 +65,7 @@
   "thalamus_info": "Thalamus <span class='atlas-description'>Thalamic nuclei</span>",
   "hippo_amyg_info": "Amygdala/Hippocampus <span class='atlas-description'>Amygdala/Hippocampus subfields</span>",
   "jhu_info": "JHU <span class='atlas-description'>JHU's White matter tracts</span>",
+  "territories_info" :"Territories <span class='atlas-description'>Cerebral Arteries Territories</span>",
   "xtract_info": "White Matter <span class='atlas-description'>FSL's White matter tracts</span>",
   "select_language": "Select Language"
 }
