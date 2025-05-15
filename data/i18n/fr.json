@@ -54,7 +54,7 @@
   "error_loading_data": "Erreur : Échec du chargement des données de {atlas}",
   "error_initializing": "Erreur : Échec de l'initialisation de la visualisation",
   "tissues_info": "Tissus <span class='atlas-description'>Types de tissus (LCS, MB, MG)</span>",
-  "harvard_oxford_info": "Harvard-Oxford <span class='atlas-description'>Régions anatomiques probabilistes</span>",
+  "harvard_oxford_info": "Harvard-Oxford <span class='atlas-description'>Régions anatomiques</span>",
   "aal_info": "AAL <span class='atlas-description'>Étiquetage Anatomique Automatisé</span>",
   "destrieux_info": "Destrieux <span class='atlas-description'>Parcellation gyrale-sulcale</span>",
   "glasser_info": "Glasser <span class='atlas-description'>Parcellation corticale multimodale</span>",

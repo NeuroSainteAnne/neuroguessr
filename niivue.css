@@ -335,7 +335,7 @@ header:has(.game-status) .header-controls-right .dropdown {
     left: 0;
     z-index: 10000;
     background: rgba(42, 42, 42, 0.9); /* Add opacity */
-    border: 1px solid #808588;
+/*    border: 1px solid #808588;*/
     border-radius: 0.5rem;
     overflow-y: auto;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
@@ -904,7 +904,7 @@ h3 {
     border: 2px solid transparent;
     padding: 5px;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: 50px;
     transition: border-color 0.3s ease;
     margin: 0 3px;
      opacity: 0.9; /* Added opacity */
@@ -918,12 +918,12 @@ h3 {
 
 .lang-icon-btn:hover,
 .lang-icon-btn:focus {
-    border-color: #7CB342;
+    border-color: #808588;
     outline: none;
 }
 
 .lang-icon-btn:active {
-    border-color: #558B2F;
+    border-color: #808588;
 }
 
 /* Atlas Selection Two-Column Layout - Keep existing */

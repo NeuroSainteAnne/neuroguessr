@@ -574,10 +574,19 @@
         clearInterval(timerInterval);
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const accuracy = ((score / (score + errors)) * 100).toFixed(2);
-        targetText.textContent = i18next.t('game_over', { accuracy, minutes: Math.floor(elapsed / 60), seconds: elapsed % 60 });
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+
+        const gameOverMessage = i18next.t('game_over', {
+          accuracy: accuracy.toString(), // Explicitly convert to string
+          minutes: minutes.toString(),   // Explicitly convert to string
+          seconds: seconds.toString()    // Explicitly convert to string
+        });
+        console.log('Attempting to display game over message:', gameOverMessage, 'Accuracy:', accuracy, 'Minutes:', minutes, 'Seconds:', seconds); // Keep the log
+        targetText.textContent = gameOverMessage;
         highlightTarget(true);
         setTimeout(() => {
-          window.location.href = `index.html?score=${accuracy}&time=${elapsed}`;
+          window.location.href = `index.html?score=<span class="math-inline">\{accuracy\}&time\=</span>{elapsed}`;
         }, 2000);
       }
 
@@ -647,7 +656,9 @@
           }
           highlightTarget(false);
           if (mode === 'streak') {
-            targetText.textContent = i18next.t('streak_ended', { streak });
+            const streakEndMessage = i18next.t('streak_ended', { streak: streak.toString() }); // Explicitly convert streak to string
+            console.log('Attempting to display streak end message:', streakEndMessage, 'Streak value:', streak); // Keep the log for debugging
+            targetText.textContent = streakEndMessage;
             highlightTarget(false);
             setTimeout(() => {
               window.location.href = `index.html?score=${streak}`;
