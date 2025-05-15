@@ -1,8 +1,8 @@
 {
   "app_title": "NeuroGuessr",
-  "neuroglossaire_title": "NeuroGlossaire",
+  "neuroglossaire_title": "NeuroGlossary",
   "search_placeholder": "Search regions (e.g., Thalamus, Frontal Pole...)",
-  "view_options": "View Options",
+  "view_options": "Options",
   "axial": "Axial",
   "sagittal": "Sagittal",
   "coronal": "Coronal",
