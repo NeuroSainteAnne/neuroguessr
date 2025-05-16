@@ -82,14 +82,14 @@
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                 </span>
                             </button>
-                            <button class="panel-button" data-atlas="glasser">
+                            <!-- <button class="panel-button" data-atlas="glasser">
                                 <span class="atlas-info" data-i18n="[html]glasser_info">Glasser <span class="atlas-description">Multimodal cortical parcellation</span></span>
                                 <span class="difficulty-icons">
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                 </span>
-                            </button>
+                            </button> -->
                         </div>
                         <div id="atlas-buttons-functional">
                             <button class="panel-button" data-atlas="yeo7">
@@ -279,7 +279,7 @@
         'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', viewer: 'neurotheka.html', name: 'Tissue' },
         // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
         // 'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', viewer: 'neurotheka.html', name: 'Brodmann' },
-        'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', viewer: 'neurotheka.html', name: 'Glasser' },
+        // 'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', viewer: 'neurotheka.html', name: 'Glasser' },
         // 'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
         // 'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', viewer: 'neurotheka.html', name: 'Schaefer' },
         'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', viewer: 'neurotheka.html', name: 'Yeo7' },
@@ -290,7 +290,7 @@
         'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', viewer: 'neurotheka.html', name: 'Thalamus' },
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', viewer: 'neurotheka.html', name: 'JHU' },
-        // 'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', viewer: 'neurotheka.html', name: 'Territories' }
+        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', viewer: 'neurotheka.html', name: 'Territories' }
       };
 
       // Display notification
@@ -319,13 +319,13 @@
       function updateModeButtons() {
         modeButtons.forEach(button => {
           button.disabled = false;
-          if (selectedAtlas === 'glasser') {
-            button.disabled = button.dataset.mode !== 'navigation';
-            if (button.disabled) button.classList.remove('selected');
-          } else if (selectedAtlas === 'hemisphere') {
-            button.disabled = button.dataset.mode === 'navigation';
-            if (button.disabled) button.classList.remove('selected');
-          }
+          // if (selectedAtlas === 'glasser') {
+          //   button.disabled = button.dataset.mode !== 'navigation';
+          //   if (button.disabled) button.classList.remove('selected');
+          // } else if (selectedAtlas === 'hemisphere') {
+          //   button.disabled = button.dataset.mode === 'navigation';
+          //   if (button.disabled) button.classList.remove('selected');
+          // }
         });
         if (selectedAtlas === 'glasser' && selectedMode && selectedMode !== 'navigation') {
           selectedMode = null;

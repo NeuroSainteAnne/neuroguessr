@@ -237,7 +237,7 @@
         'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
-        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
       };
 
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
@@ -273,8 +273,9 @@
               clut[5] = Math.floor(Math.random() * 256);
               clut[6] = Math.floor(Math.random() * 256);
               clut[7] = 255;
-            } else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
-              console.log('Atlas cmap.labels:', cmap.labels);
+             
+            // else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
+            //   console.log('Atlas cmap.labels:', cmap.labels);
             } else {
               clut[0] = 0;
               clut[1] = 0;
