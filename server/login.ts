@@ -32,7 +32,12 @@ export const login = async (req, res) => {
         if (!user.verified) {
             return res.status(403).send({ message: "Please verify your e-mail." });
         };
-        const token = jwt.sign({ email: user.email, _id: user.id }, config.jwt_secret, { expiresIn: "1h" });
+        const token = jwt.sign({ 
+            email: user.email, 
+            firstname: user.firstname, 
+            lastname: user.lastname,
+            _id: user.id 
+        }, config.jwt_secret, { expiresIn: "1h" });
         res.status(200).send({ 
             token: token, 
             message: "user was successfully logged in" 

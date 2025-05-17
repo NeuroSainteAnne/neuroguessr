@@ -25,7 +25,9 @@
   "functional_networks": "Functional Networks",
   "cerebral_arteries": "Cerebral Arteries",
   "login_mode": "Login",
+  "logout_mode": "Logout",
   "login_description": "to access competitive mode",
+  "logout_description": "",
   "navigation_mode": "Navigation",
   "navigation_description": "Identify brain regions",
   "practice_mode": "Practice",
@@ -87,5 +89,8 @@
   "login_failed": "Login failed. Please check your credentials.",
   "register_success": "Registration successful! Please check your mailbox to confirm your email address...",
   "register_failed": "Registration failed. Please try again.",
-  "server_error": "Server error. Please try again later."
+  "server_error": "Server error. Please try again later.",
+  "welcome_message": "Welcome {{firstname}} !",
+  "default_user": "User",
+  "logout_success": "You have been logged out successfully."
 }

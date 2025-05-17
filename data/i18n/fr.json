@@ -25,7 +25,9 @@
   "functional_networks": "Réseaux Fonctionnels",
   "cerebral_arteries": "Artères Cérébrales",
   "login_mode": "S'identifier",
+  "logout_mode": "Se déconnecter",
   "login_description": "pour accéder au mode compétitif",
+  "logout_description": "",
   "navigation_mode": "Navigation",
   "navigation_description": "Identifier les régions cérébrales",
   "practice_mode": "Pratique",
@@ -87,5 +89,8 @@
   "login_failed": "Nom d'utilisateur ou mot de passe invalide.",
   "register_success": "Inscription réussie ! Merci de vérifier votre boite email pour confirmer votre inscription.",
   "register_failed": "Échec de l'inscription. Veuillez réessayer.",
-  "server_error": "Une erreur s'est produite. Veuillez réessayer plus tard."
+  "server_error": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+  "welcome_message": "Bienvenue {{firstname}} !",
+  "default_user": "Utilisateur",
+  "logout_success": "Vous avez été déconnecté avec succès."
 }

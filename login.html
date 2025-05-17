@@ -133,7 +133,7 @@
             // Handle successful login
             loginError.textContent = i18next.t('login_success');
             localStorage.setItem('authToken', result.token);
-            //window.location.href = '/index.html'; // Redirect to the viewer page
+            window.location.href = '/index.html'; // Redirect to the viewer page
           } else {
             // Handle login failure
             loginError.textContent = result.message || i18next.t('login_failed'); // Add this key in your translation files

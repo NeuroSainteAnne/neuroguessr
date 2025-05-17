@@ -151,14 +151,24 @@
         </section>
 
         <section class="mode-selection">
-          <h2 data-i18n="user_access_mode">User access</h2>
-          <div class="login-buttons">
-            <button id="login-button" class="login-button" data-mode="login">
+          <h2 data-i18n="user_access_mode" class="unlogged">User access</h2>
+          <div class="login-buttons" class="unlogged">
+            <button id="login-button" class="login-button unlogged" data-mode="login">
               <img src="/neuroguessr_web/data/login.png" alt="Login Icon" />
               <span data-i18n="login_mode">Login</span>
               <span class="mode-description" data-i18n="login_description">to access competitive mode</span>
             </button>
           </div>
+
+          <h2 class="logged" id="welcome_title" style="display: none;">Welcome</h2>
+          <div class="login-buttons" class="logged">
+            <button id="logout-button" class="login-button logged" data-mode="login">
+              <img src="/neuroguessr_web/data/logout.png" alt="Logout icon" />
+              <span data-i18n="logout_mode">Unlog</span>
+              <span class="mode-description" data-i18n="logout_description"></span>
+            </button>
+          </div>
+
           <h2 data-i18n="select_game_mode">Select Game Mode</h2>
           <div class="mode-buttons">
             <button class="mode-button" data-mode="navigation">
@@ -210,6 +220,7 @@
         i18next.addResourceBundle('en', 'translation', en);
         i18next.addResourceBundle('fr', 'translation', fr);
         updateContent();
+        checkLoginState(); 
       });
 
       function updateContent() {
@@ -488,6 +499,55 @@
           console.error('No category buttons found');
           atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
         }
+      });
+
+      function checkLoginState(){
+        // Logged-in user check
+        const unloggedElements = document.querySelectorAll('.unlogged');
+        const loggedElements = document.querySelectorAll('.logged');
+        const welcomeTitle = document.getElementById('welcome_title');
+        const token = localStorage.getItem('authToken');
+        function isTokenValid(token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1])); // Decode the payload
+            const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+            return payload.exp > currentTime; // Check if the token is still valid
+          } catch (error) {
+            console.error('Invalid token:', error);
+            return false;
+          }
+        }
+        if (token && isTokenValid(token)) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log(payload)
+          const firstname = payload.firstname || i18next.t('default_user'); // Default to localized 'User'
+          const lastname = payload.lastname || ''; // Default to an empty string if lastname is missing
+          welcomeTitle.textContent = i18next.t('welcome_message', { "firstname":firstname });
+          unloggedElements.forEach(el => el.style.display = 'none');
+          loggedElements.forEach(el => el.style.display = 'flex');
+        } else {
+          unloggedElements.forEach(el => el.style.display = 'flex');
+          loggedElements.forEach(el => el.style.display = 'none');
+        }
+      }
+
+      // Logout logic
+      const logoutButton = document.getElementById('logout-button');
+      logoutButton.addEventListener('click', () => {
+        // Remove the token from localStorage
+        localStorage.removeItem('authToken');
+
+        // Update the UI to reflect the logged-out state
+        const unloggedElements = document.querySelectorAll('.unlogged');
+        const loggedElements = document.querySelectorAll('.logged');
+        const welcomeTitle = document.getElementById('welcome_title');
+
+        unloggedElements.forEach(el => el.style.display = 'block');
+        loggedElements.forEach(el => el.style.display = 'none');
+        if (welcomeTitle) {
+          welcomeTitle.textContent = ''; // Clear the welcome message
+        }
+        showNotification('logout_success', true); // Add this key in your translation files
       });
     </script>
   </body>
