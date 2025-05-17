@@ -1,0 +1,8 @@
+{
+    "email":{
+        "gmail_adress": "xxx@gmail.com",
+        "gmail_password": "xxxx xxxx xxxx xxxx"
+    },
+    "salt": "xxx",
+    "jwt_secret": "xxx"
+}
