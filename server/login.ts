@@ -84,3 +84,42 @@ export const refreshToken = async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
+
+export const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ message: "No token provided" });
+    }
+
+    jwt.verify(token, config.jwt_secret, (err, user) => {
+        if (err) {
+            return res.status(403).send({ message: "Invalid or expired token" });
+        }
+
+        // Attach the user information to the request object
+        req.user = user;
+        next(); // Proceed to the next middleware or route handler
+    });
+};
+
+export const getUserInfo = async (req, res) => {
+    try {
+        // The user information is available in req.user (set by the middleware)
+        const userId = req.user._id;
+
+        // Fetch user information from the database
+        const stmt = db.prepare("SELECT id, username, firstname, lastname, email FROM users WHERE id = ?");
+        const user = stmt.get(userId);
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        res.status(200).send({ user });
+    } catch (error) {
+        console.error("Error fetching user info:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+}

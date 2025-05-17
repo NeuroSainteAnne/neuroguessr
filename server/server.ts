@@ -5,8 +5,9 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { __dirname, htmlRoot } from "./utils.ts";
 import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
-import { login, refreshToken } from "./login.ts";
+import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
+import { configUser } from "./config_user.ts";
 
 const app = express();
 const PORT = 3000;
@@ -28,6 +29,10 @@ app.get("/login.html", (req: express.Request, res: express.Response) => {
 
 app.get("/register.html", (req: express.Request, res: express.Response) => {
     res.sendFile("register.html", { root: htmlRoot });
+});
+
+app.get("/config_user.html", (req: express.Request, res: express.Response) => {
+    res.sendFile("config_user.html", { root: htmlRoot });
 });
 
 app.get("/reset_password.html", (req: express.Request, res: express.Response) => {
@@ -56,6 +61,8 @@ app.post('/api/register', register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
+app.get('/api/user-info', authenticateToken, getUserInfo);
+app.post('/api/config-user', authenticateToken, configUser);
 
 app.get("/verify/:id/:token", emailLink)
 

@@ -105,6 +105,12 @@
   "reset_password_button": "Réinitialiser le mot de passe",
   "error_invalid_token": "Le lien de réinitialisation est invalide ou a expiré.",
   "password_reset_success": "Votre mot de passe a été réinitialisé avec succès.",
-  "password_reset_failed": "Échec de la réinitialisation du mot de passe. Veuillez réessayer."
-
+  "password_reset_failed": "Échec de la réinitialisation du mot de passe. Veuillez réessayer.",
+  "config_mode": "Configuration",
+  "config_description": "Paramètres de votre compte",
+  "reconfigure_button": "Enregistrer",
+  "reconfigure_mode": "Configuration",
+  "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
+  "reconfigure_success": "Configuration réussie !",
+  "reconfigure_failed": "Échec de la configuration. Veuillez réessayer."
 }

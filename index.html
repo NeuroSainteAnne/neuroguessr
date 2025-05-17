@@ -167,6 +167,11 @@
               <span data-i18n="logout_mode">Unlog</span>
               <span class="mode-description" data-i18n="logout_description"></span>
             </button>
+            <button id="config-button" class="login-button logged" data-mode="login">
+              <img src="/neuroguessr_web/data/config.png" alt="Config icon" />
+              <span data-i18n="config_mode">Config</span>
+              <span class="mode-description" data-i18n="config_description"></span>
+            </button>
           </div>
 
           <h2 data-i18n="select_game_mode">Select Game Mode</h2>
@@ -255,6 +260,7 @@
       // Get references to UI elements
       const modeButtons = document.querySelectorAll('.mode-button');
       const loginButton = document.getElementById('login-button');
+      const configButton = document.getElementById('config-button');
       const playButton = document.getElementById('play-button');
       const notification = document.getElementById('notification');
       const categoryButtons = document.querySelectorAll('.category-button');
@@ -467,6 +473,9 @@
 
       loginButton.addEventListener('click', () => {
         window.location.href = `login.html`;
+      });
+      configButton.addEventListener('click', () => {
+        window.location.href = `config_user.html`;
       });
 
       modeButtons.forEach(button => {
