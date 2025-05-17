@@ -12,6 +12,8 @@ const app = express();
 const PORT = 3000;
 database_init()
 
+app.use(express.json());
+
 app.get("/", (req: express.Request, res: express.Response) => {
     res.sendFile("index.html", { root: htmlRoot });
 });
@@ -22,6 +24,10 @@ app.get("/index.html", (req: express.Request, res: express.Response) => {
 
 app.get("/login.html", (req: express.Request, res: express.Response) => {
     res.sendFile("login.html", { root: htmlRoot });
+});
+
+app.get("/register.html", (req: express.Request, res: express.Response) => {
+    res.sendFile("register.html", { root: htmlRoot });
 });
 
 app.get("/viewer.html", (req: express.Request, res: express.Response) => {

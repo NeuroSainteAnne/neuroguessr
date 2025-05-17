@@ -19,9 +19,38 @@
       </div>
     </header>
     <main>
+      <form id="register_form">
         <div class="login-box">
             <h2 data-i18n="login_mode">Login</h2>
+            <table class="login-element">
+              <tr>
+                  <td>
+                      <label id="username-label" for="username" data-i18n="login_username">Username</label>
+                  </td>
+                  <td>
+                      <input type="text" id="username" name="username" required />
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                      <label id="password-label" for="password" data-i18n="login_password">Password</label>
+                  </td>
+                  <td>
+                      <input type="password" id="password" name="password" required />
+                  </td>
+                  <tr>
+                      <td colspan="2" id="login_error">
+                      </td>
+                  </tr>
+              </tr>
+            </table>  
+            <button type="submit" data-i18n="login_button">Login</button>
+            <a id="registration_link" data-i18n="registration_link" 
+              onclick="window.location.href='register.html'">
+              Not yet registered ? Click here to register
+            </a>
         </div>
+      </form>
     </main>
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script>
@@ -69,6 +98,53 @@
             updateContent();
           });
         });
+      });
+
+      document.getElementById('register_form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const loginError = document.getElementById('login_error');
+
+        // Clear previous error messages
+        loginError.textContent = '';
+        loginError.classList.remove('error-label');
+
+        if (!username || !password) {
+          loginError.textContent = i18next.t('error_empty_fields'); 
+          loginError.classList.add('error-label');
+          return;
+        }
+
+        try {
+          // Send login request to the server
+          const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            // Handle successful login
+            loginError.textContent = i18next.t('login_success');
+            localStorage.setItem('authToken', result.token);
+            //window.location.href = '/index.html'; // Redirect to the viewer page
+          } else {
+            // Handle login failure
+            loginError.textContent = result.message || i18next.t('login_failed'); // Add this key in your translation files
+            loginError.classList.add('error-label');
+          }
+        } catch (error) {
+          // Handle network or server errors
+          console.error('Error during login:', error);
+          loginError.textContent = i18next.t('server_error'); // Add this key in your translation files
+          loginError.classList.add('error-label');
+        }
       });
     </script>
   </body>

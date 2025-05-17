@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import fs from 'fs'
 import path from "path";
+import { __dirname } from "./utils.ts";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 export const sendEmail = async (email, subject, message) => {

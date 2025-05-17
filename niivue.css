@@ -644,6 +644,15 @@ h3 {
 .mode-button:disabled img {
   opacity: 0.5;
 }
+.password-helper {
+  color: #808588;
+  font-size: 0.875rem;
+  font-weight: 300;
+}
+.error-label {
+  color: red;
+  font-weight: 800;
+}
 
 .mode-description {
   color: #808588;
@@ -744,8 +753,9 @@ h3 {
   white-space: nowrap;
 }
 
-.login-box {
+.login-box, .register-box {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   background: #363636;
@@ -756,9 +766,26 @@ h3 {
   border: 1px solid #808588;
   border-radius: 0.5rem;
   transition: background 0.2s, border 0.2s, opacity 0.2s;
-  width: 90%;
+  width: 100%;
   max-width: 25rem;
   box-sizing: border-box;
+}
+.login-element{
+  display: flex;
+  flex-direction: row;
+}
+#registration_link {
+  cursor: pointer;
+  margin-top: 20px;
+}
+#registration_link:hover {
+  background: #4a4a4a;
+  border-color: #aaa;
+  color: #fff;
+}
+#registration_link:active {
+  background: #5a5a5a;
+  font-weight: 600;
 }
 
 /* Media Queries for Responsive Design */

@@ -10,15 +10,18 @@ export const database_init = () => {
         db.exec(
             `CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                firstname TEXT NOT NULL,
+                lastname TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                 verified BOOLEAN NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS tokens (
-            userId INTEGER PRIMARY KEY UNIQUE,
-            token TEXT NOT NULL,
-            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                userId INTEGER PRIMARY KEY UNIQUE,
+                token TEXT NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
         `);
