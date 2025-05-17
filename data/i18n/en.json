@@ -71,6 +71,7 @@
   "xtract_info": "White Matter <span class='atlas-description'>FSL's White matter tracts</span>",
   "select_language": "Select Language",
   "registration_link": "Not yet registered? Click here to register",
+  "forgot_password_link": "Forgot your password? Click here to reset it",
   "register_mode": "Register",
   "login_button": "Login",
   "login_username": "Username",
@@ -92,5 +93,17 @@
   "server_error": "Server error. Please try again later.",
   "welcome_message": "Welcome {{firstname}} !",
   "default_user": "User",
-  "logout_success": "You have been logged out successfully."
+  "logout_success": "You have been logged out successfully.",
+  "password_recovery_title": "Password Recovery",
+  "password_recovery_instructions": "Enter your email address to receive a password reset link.",
+  "send_recovery_email": "Send Email",
+  "error_empty_email": "Please enter your email address.",
+  "recovery_email_sent": "A password reset link has been sent to your email.",
+  "recovery_failed": "Failed to send password reset email. Please try again.",
+  "reset_password_header": "Reset Password",
+  "new_password_label": "New Password",
+  "reset_password_button": "Reset Password",
+  "error_invalid_token": "The reset link is invalid or has expired.",
+  "password_reset_success": "Your password has been reset successfully.",
+  "password_reset_failed": "Failed to reset password. Please try again."
 }

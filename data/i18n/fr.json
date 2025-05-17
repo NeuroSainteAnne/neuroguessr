@@ -71,6 +71,7 @@
   "xtract_info": "Matière Blanche <span class='atlas-description'><Faisceaux de matière blanche (FSL)</span>",
   "select_language": "Sélectionner la Langue",
   "registration_link": "Pas encore de compte? Cliquez ici pour vous inscrire",
+  "forgot_password_link": "Mot de passe oublié? Cliquez ici pour le réinitialiser",
   "register_mode": "S'inscrire",
   "login_button": "S'identifier",
   "login_username": "Nom utilisateur",
@@ -92,5 +93,18 @@
   "server_error": "Une erreur s'est produite. Veuillez réessayer plus tard.",
   "welcome_message": "Bienvenue {{firstname}} !",
   "default_user": "Utilisateur",
-  "logout_success": "Vous avez été déconnecté avec succès."
+  "logout_success": "Vous avez été déconnecté avec succès.",
+  "password_recovery_title": "Récupération de mot de passe",
+  "password_recovery_instructions": "Entrez votre adresse e-mail pour recevoir un lien de réinitialisation.",
+  "send_recovery_email": "Envoyer un e-mail",
+  "error_empty_email": "Veuillez entrer votre adresse e-mail.",
+  "recovery_email_sent": "Un lien de réinitialisation a été envoyé à votre adresse e-mail.",
+  "recovery_failed": "Échec de l'envoi de l'e-mail de réinitialisation. Veuillez réessayer.",
+  "reset_password_header": "Réinitialiser le mot de passe",
+  "new_password_label": "Nouveau mot de passe",
+  "reset_password_button": "Réinitialiser le mot de passe",
+  "error_invalid_token": "Le lien de réinitialisation est invalide ou a expiré.",
+  "password_reset_success": "Votre mot de passe a été réinitialisé avec succès.",
+  "password_reset_failed": "Échec de la réinitialisation du mot de passe. Veuillez réessayer."
+
 }

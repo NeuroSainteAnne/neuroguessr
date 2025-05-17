@@ -19,7 +19,8 @@ export const database_init = () => {
                 verified BOOLEAN NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS tokens (
-                userId INTEGER PRIMARY KEY UNIQUE,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER KEY NOT NULL,
                 token TEXT NOT NULL,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
@@ -30,3 +31,18 @@ export const database_init = () => {
         console.error("Error initializing database schema:", err.message);
     }
 }
+
+export const cleanExpiredTokens = () => {
+    try {
+        const stmt = db.prepare(`
+            DELETE FROM tokens
+            WHERE createdAt <= datetime('now', '-1 hour')
+        `);
+        const result = stmt.run();
+        if(result.changes !== 0){
+            console.log(`Cleaned up ${result.changes} expired tokens.`);
+        }
+    } catch (err) {
+        console.error("Error cleaning expired tokens:", err.message);
+    }
+};

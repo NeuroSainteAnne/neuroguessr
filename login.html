@@ -49,8 +49,21 @@
               onclick="window.location.href='register.html'">
               Not yet registered ? Click here to register
             </a>
+            <a id="forgot_password_link" data-i18n="forgot_password_link">
+              Forgot passwork ? Click here to send a new password
+            </a>
         </div>
       </form>
+      <div id="password-recovery-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close-button" id="close-password-recovery">&times;</span>
+          <h2 data-i18n="password_recovery_title">Password Recovery</h2>
+          <p data-i18n="password_recovery_instructions">Enter your email address to receive a password reset link.</p>
+          <input type="email" id="recovery-email" placeholder="Enter your email" required />
+          <button id="send-recovery-email" data-i18n="send_recovery_email">Send Email</button>
+          <p id="recovery-message" class="recovery-message"></p>
+        </div>
+      </div>
     </main>
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script>
@@ -144,6 +157,57 @@
           console.error('Error during login:', error);
           loginError.textContent = i18next.t('server_error'); // Add this key in your translation files
           loginError.classList.add('error-label');
+        }
+      });
+
+      // Open the password recovery modal
+      document.getElementById('forgot_password_link').addEventListener('click', () => {
+        document.getElementById('password-recovery-modal').style.display = 'block';
+      });
+
+      // Close the password recovery modal
+      document.getElementById('close-password-recovery').addEventListener('click', () => {
+        document.getElementById('password-recovery-modal').style.display = 'none';
+      });
+
+      // Handle sending the recovery email
+      document.getElementById('send-recovery-email').addEventListener('click', async () => {
+        const email = document.getElementById('recovery-email').value.trim();
+        const recoveryMessage = document.getElementById('recovery-message');
+
+        // Clear previous messages
+        recoveryMessage.textContent = '';
+        recoveryMessage.classList.remove('error-label', 'success-label');
+
+        if (!email) {
+          recoveryMessage.textContent = i18next.t('error_empty_email'); // Add this key in your translation files
+          recoveryMessage.classList.add('error-label');
+          return;
+        }
+
+        try {
+          // Send recovery request to the server
+          const response = await fetch('/api/password-recovery', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            recoveryMessage.textContent = i18next.t('recovery_email_sent'); // Add this key in your translation files
+            recoveryMessage.classList.add('success-label');
+          } else {
+            recoveryMessage.textContent = result.message || i18next.t('recovery_failed'); // Add this key in your translation files
+            recoveryMessage.classList.add('error-label');
+          }
+        } catch (error) {
+          console.error('Error during password recovery:', error);
+          recoveryMessage.textContent = i18next.t('server_error'); // Add this key in your translation files
+          recoveryMessage.classList.add('error-label');
         }
       });
     </script>
