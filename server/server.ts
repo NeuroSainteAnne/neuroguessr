@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { __dirname, htmlRoot } from "./utils.ts";
 import { db, database_init } from "./database_init.ts";
-import { login } from "./login.ts";
+import { login, refreshToken } from "./login.ts";
 import { register, emailLink } from "./registration.ts";
 
 const app = express();
@@ -38,10 +38,12 @@ app.get("/niivue.css", (req: express.Request, res: express.Response) => {
     res.sendFile("niivue.css", { root: htmlRoot });
 });
 
+app.use("/neuroguessr_web/scripts", express.static(path.join(htmlRoot, "scripts")));
 app.use("/neuroguessr_web/data", express.static(path.join(htmlRoot, "data")));
 app.use("/neuroguessr_web/dist", express.static(path.join(htmlRoot, "dist")));
 
 app.post('/api/login', login);
+app.post('/api/refresh-token', refreshToken);
 app.post('/api/register', register);
 app.get("/verify/:id/:token", emailLink)
 

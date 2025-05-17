@@ -200,6 +200,7 @@
     <div id="notification"></div>
 
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script src="/neuroguessr_web/scripts/login.js"></script>
     <script>
       // Initialize i18next
       i18next.init({
@@ -519,7 +520,6 @@
         }
         if (token && isTokenValid(token)) {
           const payload = JSON.parse(atob(token.split('.')[1]));
-          console.log(payload)
           const firstname = payload.firstname || i18next.t('default_user'); // Default to localized 'User'
           const lastname = payload.lastname || ''; // Default to an empty string if lastname is missing
           welcomeTitle.textContent = i18next.t('welcome_message', { "firstname":firstname });
@@ -529,6 +529,7 @@
           unloggedElements.forEach(el => el.style.display = 'flex');
           loggedElements.forEach(el => el.style.display = 'none');
         }
+        refreshToken();
       }
 
       // Logout logic

@@ -46,3 +46,41 @@ export const login = async (req, res) => {
         res.status(500).send({ message: "Internal Server Error" })
     }
 }
+
+export const refreshToken = async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).send({ message: "No token provided" });
+        }
+
+        // Verify the existing token
+        jwt.verify(token, config.jwt_secret, (err, user) => {
+            if (err) {
+                return res.status(403).send({ message: "Invalid or expired token" });
+            }
+
+            // Generate a new token with a refreshed expiration time
+            const newToken = jwt.sign(
+                { 
+                    email: user.email, 
+                    firstname: user.firstname, 
+                    lastname: user.lastname, 
+                    _id: user._id 
+                },
+                config.jwt_secret,
+                { expiresIn: "1h" }
+            );
+
+            res.status(200).send({ 
+                token: newToken, 
+                message: "Token refreshed successfully" 
+            });
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+};
