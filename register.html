@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="fr">
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="app_title">NeuroGuessr Web - Register</title>
     <link rel="stylesheet" href="niivue.css" />
-  </head>
-  <body class="index-page">
-    <header>
-      <div class="logo-title-container">
-        <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
-        <h1 data-i18n="app_title" onclick="window.location.href='index.html'">NeuroGuessr</h1>
-      </div>
-      <div class="language-switcher">
-        <button class="lang-btn" data-lang="fr">FR</button>
-        <button class="lang-btn" data-lang="en">EN</button>
-      </div>
+</head>
+<body class="index-page">
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-left logo-title-container-navbar">
+                <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+                <h1 data-i18n="app_title" onclick="window.location.href='index.html'">NeuroGuessr</h1>
+            </div>
+            <div class="navbar-right">
+                <div class="language-switcher">
+                    <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+                        <img src="/neuroguessr_web/data/fr.png" alt="FR">
+                    </button>
+                    <button class="lang-icon-btn" data-lang="en" aria-label="English">
+                        <img src="/neuroguessr_web/data/en.png" alt="EN">
+                    </button>
+                </div>
+            </div>
+        </div>
     </header>
     <main>
         <form id="register_form">
