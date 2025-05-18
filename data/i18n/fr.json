@@ -28,7 +28,7 @@
   "multiplayer_button" : "Multi-joueur",
   "login_mode": "S'identifier",
   "logout_mode": "Se déconnecter",
-  "login_description": "pour accéder au mode compétitif",
+  "login_description": "pour accéder au mode multijoueur",
   "logout_description": "",
   "navigation_mode": "Navigation",
   "navigation_description": "Identifier les régions cérébrales",

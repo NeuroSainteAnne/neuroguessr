@@ -377,6 +377,8 @@ main {
 /* Player Selection Button Styles (Modified to match play-button) */
 .player-selection-buttons {
     display: flex;
+    flex-direction: row;
+    align-items: center;
     gap: 2rem;
     margin-bottom: 3rem; /* Increased margin below player selection buttons */
 }
@@ -1075,12 +1077,24 @@ h3 {
     text-align: center;
 }
 
-.mode-buttons, .login-buttons {
+.mode-buttons {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1rem;
     margin-bottom: 1rem;
+    width: 100%;
+}
+#login_box {
+    display:flex;
+    flex-direction: column;
+}
+.login-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    min-width: 20rem;
     width: 100%;
 }
 .mode-button, .login-button {
@@ -1553,7 +1567,9 @@ h3 {
          font-size: 2.5rem; /* Adjusted h1 size */
     }
     .player-selection-buttons {
+        display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 1rem;
     }
     /* Removed player-mode-button styles */
