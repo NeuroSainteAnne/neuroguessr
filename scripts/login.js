@@ -28,3 +28,14 @@ async function refreshToken() {
         return false;
     }
 }
+
+function isTokenValid(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1])); // Decode the payload
+        const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+        return payload.exp > currentTime; // Check if the token is still valid
+    } catch (error) {
+        console.error('Invalid token:', error);
+        return false;
+    }
+}
