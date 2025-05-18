@@ -3,6 +3,9 @@
         "gmail_adress": "xxx@gmail.com",
         "gmail_password": "xxxx xxxx xxxx xxxx"
     },
+    "server":{
+        "port": 3000
+    },
     "salt": "xxx",
     "jwt_secret": "xxx"
 }

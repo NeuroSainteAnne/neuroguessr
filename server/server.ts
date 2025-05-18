@@ -1,16 +1,15 @@
 import express from "express";
 import path from "path";
-import Joi from "joi";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import fs from "fs"
 import { __dirname, htmlRoot } from "./utils.ts";
 import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
 import { configUser } from "./config_user.ts";
+var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 const app = express();
-const PORT = 3000;
+const PORT = config.server.port;
 database_init()
 
 app.use(express.json());
