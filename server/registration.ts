@@ -69,7 +69,7 @@ export const register = async (req, res) => {
         const tokenStmt = db.prepare("INSERT INTO tokens (userId, token) VALUES (?, ?)");
         tokenStmt.run(lastID, tokenValue);
 
-        const url = `http://localhost:3000/verify/${lastID}/${tokenValue}`;
+        const url = `${config.server.external_address}/verify/${lastID}/${tokenValue}`;
 
         const subject = "Please Verify Email";
         const message = `
@@ -185,7 +185,7 @@ export const passwordLink = async (req, res) => {
             tokenValue = token.token;
         }
         console.log(token)
-        const url = `http://localhost:3000/resetPwd/${user.id}/${tokenValue}`
+        const url = `${config.server.external_address}/resetPwd/${user.id}/${tokenValue}`
         const subject = "Password Reset";
         const message = `
         <p>Here is a link to reset your password</p>
