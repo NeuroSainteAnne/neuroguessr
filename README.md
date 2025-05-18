@@ -37,6 +37,7 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 - Install modules with the command `npm install`
 - copy **server/config-example.json** to **server/config.json** and change parameters accordingly
+- Put your server certificates in **server/server.crt** and **server/server.key** 
 - launch server from main folder with `node --experimental-strip-types .\server\server.ts`
 
 ## License

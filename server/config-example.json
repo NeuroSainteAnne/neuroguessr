@@ -13,7 +13,9 @@
     },
     "server":{
         "port": 3000,
-        "external_address": "http://localhost:3000"
+        "external_address": "https://localhost:3000",
+        "serverKey": "server.key",
+        "serverCert": "server.crt"
     },
     "salt": "xxx",
     "jwt_secret": "xxx"

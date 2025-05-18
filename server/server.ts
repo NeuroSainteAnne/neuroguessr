@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs"
+import https from 'https';
 import { __dirname, htmlRoot } from "./utils.ts";
 import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
@@ -10,6 +11,13 @@ var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'ut
 
 const app = express();
 const PORT = config.server.port;
+var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
+var cert = fs.readFileSync(path.join(__dirname, config.server.serverCert));
+var httpOptions = {
+  key: key,
+  cert: cert
+};
+
 database_init()
 
 app.use(express.json());
@@ -69,6 +77,7 @@ app.get("/resetPwd/:id/:token", (req, res) => {
     res.redirect("/reset_password.html?id=" + req.params.id + "&token=" + req.params.token);
 })
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+var server = https.createServer(httpOptions, app);
+server.listen(PORT, () => {
+    console.log(`Server is running on https://localhost:${PORT}`);
 });
