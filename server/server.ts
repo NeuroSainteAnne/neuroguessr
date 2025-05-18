@@ -11,12 +11,6 @@ var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'ut
 
 const app = express();
 const PORT = config.server.port;
-var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
-var cert = fs.readFileSync(path.join(__dirname, config.server.serverCert));
-var httpOptions = {
-  key: key,
-  cert: cert
-};
 
 database_init()
 
@@ -77,7 +71,20 @@ app.get("/resetPwd/:id/:token", (req, res) => {
     res.redirect("/reset_password.html?id=" + req.params.id + "&token=" + req.params.token);
 })
 
-var server = https.createServer(httpOptions, app);
-server.listen(PORT, () => {
-    console.log(`Server is running on https://localhost:${PORT}`);
-});
+if(config.server.mode == "https"){
+    var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
+    var cert = fs.readFileSync(path.join(__dirname, config.server.serverCert));
+    var httpOptions = {
+      key: key,
+      cert: cert
+    };
+    
+    var server = https.createServer(httpOptions, app);
+    server.listen(PORT, () => {
+        console.log(`Server is running on https://localhost:${PORT}`);
+    });
+} else {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}

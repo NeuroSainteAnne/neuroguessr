@@ -12,6 +12,7 @@
         "scope": "https://mail.google.com/" // only if gmail_api
     },
     "server":{
+        "mode": "https",
         "port": 3000,
         "external_address": "https://localhost:3000",
         "serverKey": "server.key",
