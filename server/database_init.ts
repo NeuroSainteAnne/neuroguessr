@@ -24,6 +24,24 @@ export const database_init = () => {
                 token TEXT NOT NULL,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS gamesessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER KEY NOT NULL,
+                token TEXT NOT NULL,
+                mode TEXT NOT NULL,
+                atlas TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS gameprogress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessionId INTEGER NOT NULL,
+                sessionToken TEXT NOT NULL,
+                regionId INTEGER NOT NULL,
+                timeTaken INTEGER NOT NULL,
+                isActive BOOLEAN NOT NULL DEFAULT 1,
+                isCorrect BOOLEAN NOT NULL DEFAULT 0,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
+            );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
         `);
         console.log("Database schema initialized successfully.");

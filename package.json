@@ -1,6 +1,7 @@
 {
   "type": "module",
   "dependencies": {
+    "@niivue/niivue": "^0.57.0",
     "@types/express": "^5.0.1",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.10.0",

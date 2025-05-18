@@ -7,6 +7,7 @@ import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
 import { configUser } from "./config_user.ts";
+import { getNextRegion, startGameSession, validateRegion } from "./game.ts";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 const app = express();
@@ -70,6 +71,10 @@ app.get("/verify/:id/:token", emailLink)
 app.get("/resetPwd/:id/:token", (req, res) => {
     res.redirect("/reset_password.html?id=" + req.params.id + "&token=" + req.params.token);
 })
+
+app.post('/api/start-game-session', authenticateToken, startGameSession);
+app.post('/api/get-next-region', authenticateToken, getNextRegion);
+app.post('/api/validate-region', authenticateToken, validateRegion);
 
 if(config.server.mode == "https"){
     var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
