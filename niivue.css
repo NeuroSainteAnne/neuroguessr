@@ -3,646 +3,1140 @@
 
 /* Basic HTML and Body setup */
 html {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-size: 16px; /* Base font size */
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 16px; /* Base font size */
 }
 
 body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  width: 100vw;
-  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
-  user-select: none; /* Prevent text selection */
-  color: #d9dddc; /* Default text color */
-  background: #363636; /* Match game mode button background */
-  box-sizing: border-box;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    width: 100vw;
+    font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+    user-select: none; /* Prevent text selection */
+    color: #d9dddc; /* Default text color */
+    box-sizing: border-box;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    position: relative; /* For background pseudo-element */
 }
 
 /* Specific background for index page */
 body.index-page {
-  background: #363636; /* Match game mode button background */
+    /* Background image set here */
+    background: url('/neuroguessr_web/data/background.png') no-repeat center center fixed;
+    background-size: cover;
+    background-color: #363636; /* Fallback color */
+    position: relative; /* Needed for pseudo-element */
 }
 
-/* Header Styles */
+/* Add a pseudo-element for background opacity and blur */
+body.index-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(54, 54, 54, 0.8); /* Opacity 0.8 */
+    z-index: -1; /* Place behind content */
+    /* If backdrop-filter on buttons doesn't work, you could try blurring this pseudo-element,
+       but that would blur the entire background, not just behind the buttons.
+       backdrop-filter: blur(10px);
+       -webkit-backdrop-filter: blur(10px);
+    */
+}
+
+/* General Header Styles */
 header {
-  width: 100%;
-  max-width: 90vw; /* Limit header width */
-  padding: 2vh 2vw;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center; /* Center logo/title container */
-  align-items: center;
-  flex-shrink: 0; /* Prevent header from shrinking */
-}
-
-/* Specific header style when a canvas exists (for viewer page) */
-body:has(canvas#gl1) header {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 95vw;
-}
-/* Fallback for browsers without :has support */
-@media not all and (min-resolution: 0.001dpcm) {
-  body canvas#gl1 ~ header {
-    flex-direction: row;
-    justify-content: space-between;
+    width: 100%;
+    padding: 0.75rem 2vw;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
     align-items: center;
-    max-width: 95vw;
-  }
+    flex-shrink: 0;
+    position: relative;
+    top: 0;
+    z-index: 1000;
+    /* border-bottom: 1px solid #555; /* Removed border here */
 }
 
-/* Header layout for neurotheka.html and viewer.html */
+/* Header Container (Applies to both Neurotheka and Viewer) */
 .header-container {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0.5rem 1rem;
-  position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 95vw;
+    gap: 1rem;
+    padding: 0; /* Remove padding, handled by header */
+    box-sizing: border-box;
 }
 
-.logo-title-container {
-  display: flex;
-  flex-direction: row; /* Show logo and title side by side */
-  align-items: center; /* Vertically center items */
-  justify-content: flex-start;
-  gap: 1rem; /* Space between logo and title */
+/* Specific Header Background for Neurotheka and Viewer */
+header:has(.target-label-container),
+header:has(.game-status) {
+     background-color: #363636;
 }
+
+
+/* Neurotheka Header Layout (Desktop by default) */
+header:has(.target-label-container) .header-container {
+    flex-direction: row; /* Row layout for desktop */
+    align-items: center; /* Align items vertically in the center */
+    justify-content: space-between; /* Distribute items */
+}
+
+header:has(.target-label-container) .logo-title-container {
+    display: flex;
+    flex-direction: column; /* Stack title and potentially logo if present */
+    align-items: flex-start; /* Align items to the left */
+    justify-content: center;
+    flex-shrink: 0; /* Prevent shrinking */
+    text-align: left; /* Align text to the left */
+}
+
+header:has(.target-label-container) .logo-title-container h1 {
+    text-align: left; /* Ensure h1 is left-aligned */
+    margin-bottom: 0; /* Remove bottom margin */
+}
+
+
+header:has(.target-label-container) .target-label-container {
+    display: flex;
+    flex-direction: column; /* Stack region text */
+    align-items: flex-start; /* Align items to the left */
+    margin: 0;
+    padding: 0;
+    flex-basis: auto; /* Allow content width */
+    flex-shrink: 0;
+    align-self: flex-start; /* Align to the start of the cross axis */
+    margin-top: 0.2rem; /* Pull region text closer to the title */
+    margin-left: 0;
+    text-align: left; /* Align text to the left */
+}
+
+header:has(.target-label-container) .target-label-container p {
+    margin: 0; /* Remove extra margin */
+    text-align: left; /* Align text to the left */
+}
+
+header:has(.target-label-container) .target-label-container .target-text {
+    font-style: italic; /* Make the region text italic */
+    font-size: 1.2rem; /* Slightly smaller than h1, larger than body */
+    font-weight: 400; /* Adjust font weight */
+    background: none; /* Remove background */
+    padding: 0; /* Remove padding */
+    border-radius: 0; /* Remove border radius */
+    color: #d9dddc; /* Ensure correct color */
+    text-align: left; /* Align text to the left */
+}
+
+
+header:has(.target-label-container) .search-container {
+    flex-grow: 1; /* Allow search bar to grow */
+    max-width: 50%; /* Set max width for search bar */
+    margin: 0 auto; /* Center the search bar */
+}
+
+header:has(.target-label-container) .header-controls-right {
+    flex-shrink: 0; /* Prevent shrinking */
+    display: flex; /* Use flexbox to arrange language and options */
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Order language switcher before dropdown in Neurotheka header (Desktop) */
+header:has(.target-label-container) .header-controls-right .language-switcher {
+    order: -1; /* Place before dropdown */
+}
+
+header:has(.target-label-container) .header-controls-right .dropdown {
+    order: 0; /* Default order */
+}
+
+
+/* Viewer Header Layout */
+header:has(.game-status) .header-container {
+    justify-content: space-between; /* Distribute items */
+}
+
+header:has(.game-status) .logo-title-container {
+    display: flex; /* Keep flex for logo and title */
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+header:has(.game-status) .game-status {
+    display: flex;
+    flex-direction: column; /* Stack target label and scores */
+    align-items: center; /* Center content horizontally */
+    justify-content: center;
+    flex-grow: 1; /* Allow game status to grow */
+    margin: 0 auto; /* Center the game status */
+    text-align: center;
+}
+
+header:has(.game-status) .header-controls-right {
+    display: flex; /* Use flexbox to arrange language and options */
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Order language switcher before dropdown in Viewer header */
+header:has(.game-status) .header-controls-right .language-switcher {
+    order: -1; /* Place before other items */
+}
+
+header:has(.game-status) .header-controls-right .dropdown {
+    order: 0; /* Default order */
+}
+
+
+/* Existing Header Styles (Keep these for general header styling not specific to page layout) */
+.navbar {
+    /* This seems to be used for the index page header */
+    width: 100%;
+    background-color: rgba(54, 54, 54, 0.9);
+    padding: 0.75rem 2vw;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    top: 0;
+    z-index: 1000;
+    /* border-bottom: 1px solid #555; /* Removed border here */
+}
+
+.navbar-container {
+    /* Used in index page header */
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 95vw;
+    justify-content: space-between;
+}
+
+.navbar-left.logo-title-container-navbar {
+     /* Used in index page header */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-right {
+     /* Used in index page header */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 
 .logo-title-container h1 {
-  margin: 0;
-  cursor: pointer;
-  text-align: left;
+    margin: 0;
+    cursor: pointer;
+    text-align: center; /* Default for index page */
+    transition: transform 0.2s ease-in-out;
+}
+.logo-title-container h1:hover {
+    transform: scale(1.02);
+    cursor: pointer;
 }
 
-.logo-title-container #target-label {
-  margin: 0;
-  text-align: left;
-}
+/* Removed these as they were causing conflicts or are now handled by specific selectors */
+/* .logo-title-container #target-label {
+    margin: 0;
+    text-align: left;
+} */
+/* .logo-title-container .target-text {
+    font-style: italic;
+} */
 
-.logo-title-container .target-text {
-  font-style: italic; /* Make region text italic */
+/* Removed these as they are now handled by specific selectors */
+/* .game-status,
+.target-label-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    flex-grow: 1;
+    text-align: center;
+} */
+
+
+/* Search Container Styles (Modified for Main content placement and width) */
+.search-bar-container-main {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0; /* Increased padding below header */
 }
 
 .search-container {
-  width: 100%;
-  position: relative;
-  margin-bottom: 1rem; /* Space below search bar */
+    width: 100%;
+    position: relative;
+    margin-bottom: 0;
+    max-width: 50%; /* Increased max width for search bar in main */
+    transition: transform 0.3s ease, max-height 0.3s ease, background-color 0.2s ease;
+    overflow: visible; /* Allow suggestions to overlap */
+    z-index: 1001; /* Ensure search suggestions are above main */
+}
+
+/* Removed navbar-search specific styles as it's no longer in navbar */
+/* .navbar-search {
+    margin: 0 1rem;
+} */
+
+.search-container:hover {
+    transform: translateY(0); /* Remove previous translateY */
+    max-height: 500px; /* Example: Increase height for 5x effect, adjust as needed */
+    background-color: transparent; /* Background handled by main/body */
 }
 
 .search-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.75rem 1rem 0.75rem 2.5rem; /* Adjusted padding for icon */
-  background: #2f2f2f;
-  color: #d9dddc;
-  font-size: 1rem;
-  font-weight: 400;
-  border: 1px solid #555;
-  border-radius: 0.5rem;
-  transition: border-color 0.2s, background 0.2s;
-  background-image: url('/neuroguessr_web/data/search.png'); /* Search icon */
-  background-position: 0.75rem center; /* Position icon */
-  background-repeat: no-repeat;
-  background-size: 1.25rem; /* Icon size */
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    background: rgba(54, 54, 54, 0.9); /* Add opacity */
+    color: #d9dddc;
+    font-size: 1rem;
+    font-weight: 400;
+    border: 1px solid #555;
+    /* Change border-radius to make corners fully round */
+    border-radius: 50px; /* Or a very large pixel value like 50px or 50% */
+    transition: border-color 0.2s, background 0.2s;
+    background-image: url('/neuroguessr_web/data/search.png');
+    background-position: 0.75rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25rem;
 }
 
 .search-input:focus {
-  outline: none;
-  border-color: #e5e7eb;
-  background: #363636;
+    outline: none;
+    border-color: #e5e7eb;
+    background: rgba(74, 74, 74, 0.9); /* Add opacity */
 }
 
 .search-suggestions {
-  position: absolute; /* Position below search input */
-  width: 100%;
-  max-height: 300px;
-  top: calc(100% + 0.5rem); /* Position just below search input */
-  left: 0;
-  z-index: 10000; /* Higher than canvas */
-  background: #2a2a2a;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  overflow-y: auto;
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
+    position: absolute;
+    width: 100%;
+    max-height: 300px;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    z-index: 10000;
+    background: rgba(42, 42, 42, 0.9); /* Add opacity */
+/*    border: 1px solid #808588;*/
+    border-radius: 0.5rem;
+    overflow-y: auto;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
 }
 
 .logo {
-  height: 6rem; /* Logo height */
-  width: auto;
-  image-rendering: optimizeQuality; /* Improve image rendering */
+    height: 4rem;
+    width: auto;
+    image-rendering: optimizeQuality;
 }
 
-/* Main Content Area Styles */
+/* Main Content Area Styles - Keep existing */
 main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  padding: 2vh 2vw;
-  box-sizing: border-box;
-  flex-grow: 1; /* Allow main to fill available vertical space */
-  min-height: 60vh; /* Ensure minimum height */
-  position: relative; /* Needed for central separator */
-  background: #363636; /* Match light.css for canvas background */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0 2vw 2vh 2vw; /* Adjusted padding top */
+    box-sizing: border-box;
+    flex-grow: 1;
+    min-height: calc(100vh - 6rem); /* Adjust min-height as header is smaller */
+    position: relative;
+    background: transparent; /* Background handled by body pseudo-element */
 }
 
-/* Container for Atlas and Mode Selection Sections */
+/* Centered Container for Player Selection and Options */
+.centered-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Align to top after search bar */
+    flex-grow: 1;
+    width: 100%;
+    max-width: 1600px; /* Increased max width for content on large screens */
+    text-align: center;
+    padding-top: 4rem; /* Increased padding below search bar to move buttons lower */
+}
+
+/* Player Selection Button Styles (Modified to match play-button) */
+.player-selection-buttons {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 3rem; /* Increased margin below player selection buttons */
+}
+
+/* New styles for Single/Multiplayer buttons */
+.player-mode-button {
+    background: rgb(63, 109, 159);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border: 1px solid rgb(63, 109, 159);
+    border-radius: 50px; /* Full round edges */
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
+    z-index: 1000;
+    opacity: 0.9; /* Added opacity */
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
+}
+
+.player-mode-button:hover:not(:disabled) {
+    background: #345a85; 
+    color: white;
+    border-color: #345a85;
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.player-mode-button:active:not(:disabled) {
+    background-color: #345a85; /* Darker green on click */
+    border: 1.5px solid #345a85; /* Lighter border on click */
+    color: white;
+    backdrop-filter: blur(8px); /* Apply blur */
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.player-mode-button.selected {
+    background: #345a85; /* rgb(63, 109, 159) when selected */
+    color: white;
+    border-color: #345a85;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Container for Single Player Options (Atlas and Mode Selection) - Full Width */
+.single-player-options-container {
+    width: 100%; /* Make it full width */
+    max-width: none; /* Remove max-width constraint */
+    display: flex; /* Keep flex for inner sections */
+    flex-direction: row; /* Keep row for inner sections */
+    justify-content: center;
+    align-items: stretch;
+    gap: 3rem; /* Increased gap between atlas and mode sections */
+    flex-wrap: wrap;
+}
+
+
+/* Hide utility class */
+.hidden {
+    display: none;
+}
+
+/* Container for Atlas and Mode Selection Sections - Keep existing but ensure full width within its container */
 .selection-container {
-  display: flex;
-  flex-direction: row; /* Side-by-side layout */
-  justify-content: center; /* Center sections if space allows */
-  align-items: stretch; /* Ensure sections have equal height */
-  width: 100%;
-  max-width: 90vw; /* Limit overall width */
-  gap: 2rem; /* Space between atlas and mode sections */
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    width: 100%; /* Make it full width of its parent */
+    max-width: none; /* Remove max-width constraint */
+    gap: 2rem;
+    flex-wrap: wrap;
 }
 
-/* Atlas Selection Section Styles */
+/* Atlas Selection Section Styles - Keep existing but adjust margins and flex-basis */
 .atlas-selection {
-  flex: 1; /* Allows section to grow and shrink */
-  min-width: 300px; /* Ensure a minimum width before wrapping */
-  margin: 0 1rem; /* Add horizontal margins */
-  text-align: left;
-  min-height: auto; /* Allow to shrink to content */
-  display: flex;
-  flex-direction: column; /* Stack title and layout vertically */
+    flex: 1;
+    min-width: 350px; /* Increased min-width */
+    margin: 0;
+    text-align: left;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
 }
 
-/* Mode Selection Section Styles */
+/* Styles for icons next to h2 titles */
+.atlas-selection h2 img,
+.mode-selection h2 img {
+    vertical-align: middle;
+    margin-right: 0.5rem;
+    height: 1.5em; /* Adjust size as needed */
+    width: auto;
+}
+
+
+/* Mode Selection Section Styles - Keep existing but adjust margins and min-width */
 .mode-selection {
-  flex: 1; /* Allows section to grow and shrink */
-  min-width: 250px; /* Ensure a minimum width before wrapping */
-  text-align: center;
-  min-height: 50vh; /* Match height */
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center the mode buttons container */
-  margin: 0 1rem; /* Add horizontal margins for symmetry */
+    flex: 1;
+    min-width: 300px; /* Increased min-width */
+    text-align: center;
+    min-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
 }
 
-/* Canvas Styles */
+/* Canvas Styles - Keep existing */
 canvas {
-  cursor: crosshair;
-  display: block;
-  width: 100%;
-  max-width: 100vw; /* Allow full viewport width */
-  height: auto; /* Let height adjust based on aspect ratio */
-  max-height: 80vh; /* Limit max height to avoid overflow */
-  border: 2px solid transparent; /* For feedback animation */
-  transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
+    cursor: crosshair;
+    display: block;
+    width: 100%;
+    max-width: 100vw;
+    height: auto;
+    max-height: 80vh;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 
-/* Responsive canvas sizing for multiplanar layout */
+/* Responsive canvas sizing for multiplanar layout - Keep existing */
 @media (min-width: 1024px) {
-  canvas {
-    aspect-ratio: 2 / 1; /* Wide aspect for 4 views in a row */
-    max-width: 90vw;
-  }
-  .search-container {
-    max-width: 50%; /* Search bar half width on desktop */
-  }
+    canvas {
+        aspect-ratio: 2 / 1;
+        max-width: 90vw;
+    }
+    /* Removed search container max width for navbar */
+    /* .search-container {
+        max-width: calc(100% / 3);
+    } */
+     .search-container.main-search {
+        max-width: 50%; /* Set max width to 50% */
+    }
+    .atlas-selection {
+        min-width: 400px; /* Further increase min-width on larger screens */
+        flex-basis: calc(50% - 1.5rem); /* Half width minus gap */
+        padding: 0.75rem; /* Added padding */
+    }
+    .mode-selection {
+        min-width: 350px; /* Further increase min-width on larger screens */
+        flex-basis: calc(50% - 1.5rem); /* Half width minus gap */
+        padding: 0.75rem; /* Added padding */
+    }
+     .header-container {
+        max-width: 100%; /* Allow full width on larger screens */
+     }
 }
 
 @media (max-width: 1023px) and (min-width: 481px) {
-  canvas {
-    aspect-ratio: 1 / 1; /* Square for 2x2 grid */
-    max-width: 90vw;
-  }
+    canvas {
+        aspect-ratio: 1 / 1;
+        max-width: 90vw;
+    }
+     .search-container.main-search {
+        max-width: 60%; /* Adjust max width for tablets */
+    }
+     .search-bar-container-main {
+        padding: 1.5rem 0; /* Adjust padding */
+    }
+     .centered-container {
+        padding-top: 2rem; /* Increased padding below search bar */
+    }
+    .atlas-selection {
+        min-width: 300px; /* Adjust min-width for tablets */
+    }
+    .mode-selection {
+        min-width: 250px; /* Adjust min-width for tablets */
+    }
+     .single-player-options-container {
+        gap: 2rem; /* Adjust gap for tablets */
+     }
 }
 
 @media (max-width: 480px) {
-  canvas {
-    aspect-ratio: 1 / 1; /* Square for 2x2 grid */
-    max-width: 100vw; /* Full width on phones */
-    max-height: 60vh; /* Reduce height for mobile */
-  }
+    canvas {
+        aspect-ratio: 1 / 1;
+        max-width: 100vw;
+        max-height: 60vh;
+    }
+     .search-container.main-search {
+        max-width: 90%; /* Adjust max width for mobile */
+    }
+     .search-bar-container-main {
+        padding: 0.5rem 0; /* Adjust padding */
+    }
+     .centered-container {
+        padding-top: 1rem; /* Increased padding below search bar */
+    }
+     .atlas-selection {
+        min-width: auto; /* Remove min-width on mobile */
+    }
+    .mode-selection {
+        min-width: auto; /* Remove min-width on mobile */
+    }
+     .single-player-options-container {
+        gap: 1rem; /* Adjust gap for mobile */
+    }
+     .header-container {
+        max-width: 100%; /* Allow full width on mobile */
+     }
 }
 
 canvas:focus {
-  outline: 0; /* Remove focus outline */
+    outline: 0;
 }
 
-/* Footer Styles */
+/* Footer Styles - Keep existing */
 footer {
-  width: 100%;
-  padding: 2vh 0;
-  text-align: center;
-  flex-shrink: 0; /* Prevent footer from shrinking */
+    width: 100%;
+    padding: 2vh 0;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 /* Heading Styles */
 h1 {
-  font-size: 3rem;
-  font-weight: bold;
-  margin: 0;
-  text-align: center;
-  transition: transform 0.2s ease-in-out;
+    font-size: 3.5rem; /* Increased h1 size */
+    font-weight: bold;
+    margin: 0;
+    text-align: center;
+    transition: transform 0.2s ease-in-out;
 }
+.logo-title-container-navbar h1 {
+     font-size: 3.5rem; /* Increased h1 size for navbar */
+}
+
+
 h1:hover {
-  transform: scale(1.02); /* Slight zoom on hover */
-  cursor: pointer;
+    transform: scale(1.02);
+    cursor: pointer;
 }
 
 h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex; /* Use flexbox for h2 and icon */
+    align-items: center;
 }
 .atlas-selection h2 {
-  text-align: left; /* Align atlas title left */
-  padding-left: 0;
-  margin-bottom: 0.5rem;
+    text-align: left;
+    padding-left: 0;
+    margin-bottom: 0.5rem;
 }
 .mode-selection h2 {
-  text-align: center; /* Center mode title */
+    text-align: center;
+    justify-content: center; /* Center content for mode section h2 */
 }
 
 h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  text-align: left;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-align: left;
 }
 
-/* Styles for Game Status Display (viewer page) */
-.game-status { display: flex; flex-direction: column; align-items: center; margin: 0; }
-.target-label { text-align: center; margin: 0; }
+/* Styles for Game Status Display (viewer page) - Keep existing */
+.target-label {
+    text-align: center;
+    margin: 0;
+}
 .target-text {
-  font-size: 1.6875rem;
-  font-weight: 500;
-  color: #d9dddc;
-  background: #363636;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out, background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
+    font-size: 1.6875rem;
+    font-weight: 500;
+    color: #d9dddc;
+    background: #363636;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: color 0.1s ease-in-out, font-weight 0.1s ease-in-out, font-size 0.1s ease-in-out, background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 
-/* Style for Target Text during success flash */
+/* Style for Target Text during success flash - Keep existing */
 .target-text.flash-success {
-  background-color: #7CB342; /* Green background */
-  color: white; /* White text */
-  font-weight: bold;
-  box-shadow: 0 0 15px #7CB342; /* Green glow */
+    background-color: #7CB342;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 0 15px #7CB342;
 }
 
-/* Persistent success state */
+/* Persistent success state - Keep existing */
 .target-text.success {
-  color: #4ade80;
-  font-weight: bold;
+    color: #4ade80;
+    font-weight: bold;
 }
 
-/* Persistent error state */
+/* Persistent error state - Keep existing */
 .target-text.error {
-  color: #f87171;
-  font-weight: bold;
+    color: #f87171;
+    font-weight: bold;
 }
 
-/* Error shake animation */
+/* Error shake animation - Keep existing */
 @keyframes shake-error {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-3px); }
-  75% { transform: translateX(3px); }
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-3px);
+    }
+    75% {
+        transform: translateX(3px);
+    }
 }
 .target-text.flash-error {
-  animation: shake-error 0.2s linear;
-  color: #f87171;
+    animation: shake-error 0.2s linear;
+    color: #f87171;
 }
 
-.score-error-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
-.score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1.125rem; font-weight: 600; margin: 0.25rem 0; }
+.score-error-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+.score-error-label,
+#score-label,
+#error-label,
+#streak-label,
+#time-label {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0.25rem 0;
+}
 
-/* Styles for Buttons Below Canvas (viewer page) */
-.button-container { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 1rem; z-index: 1000; justify-content: center; }
+/* Styles for Buttons Below Canvas (viewer page) - Keep existing */
+.button-container {
+    position: fixed;
+    bottom: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    z-index: 1000;
+    justify-content: center;
+}
 
-/* Guess Button */
+/* Guess Button - Keep existing */
 .guess-button {
-  color: white;
-  font-size: 1.125rem;
-  font-weight: 600;
-  padding: 1rem 2rem;
-  border-radius: 1rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background-color: #7CB342;
-  border: 1px solid #689F38;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: rgb(63, 109, 159); /* Updated color */
+    border: 1px solid rgb(63, 109, 159);
+    opacity: 0.9; /* Added opacity */
 }
 .guess-button:hover:not(:disabled) {
-  background-color: #689F38;
-  border-color: #558B2F;
+    background-color: rgb(63, 109, 159);
+    border-color: #345a85;
 }
 .guess-button:active:not(:disabled) {
-  background-color: #558B2F;
-  border: 1.5px solid #9CCC65;
+    background-color: rgb(63, 109, 159);
+    border: 1.5px solid #345a85;
 }
 .guess-button:disabled {
-  background: #363636;
-  border: 1px solid #4a4a4a;
-  cursor: not-allowed;
-  opacity: 0.7;
-  color: #aaa;
+    background: #363636;
+    border: 1px solid #4a4a4a;
+    cursor: not-allowed;
+    opacity: 0.7;
+    color: #aaa;
 }
 
-/* Styles for text inside Guess Button */
+/* Styles for text inside Guess Button - Keep existing */
 .confirm-text {
-  font-weight: bold;
-  font-style: italic;
-  text-transform: uppercase;
+    font-weight: bold;
+    font-style: italic;
+    text-transform: uppercase;
 }
 .space-text {
-  font-size: 0.85em;
-  color: #c0c0c0;
-  font-weight: normal;
-  font-style: normal;
-  text-transform: lowercase;
+    font-size: 0.85em;
+    color: #c0c0c0;
+    font-weight: normal;
+    font-style: normal;
+    text-transform: lowercase;
 }
 
-/* Return button style */
+/* Return button style - Keep existing */
 .return-button {
-  background: #363636;
-  color: white;
-  font-size: 1.125rem;
-  font-weight: 600;
-  padding: 1rem 2rem;
-  border: 1px solid #808588;
-  border-radius: 1rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    background: #363636;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border: 1px solid #808588;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+     opacity: 0.9; /* Added opacity */
 }
-.return-button:hover { background: #2a2a2a; }
-.return-button:active { background: #2a2a2a; border: 1.5px solid #e5e7eb; }
+.return-button:hover {
+    background: #2a2a2a;
+}
+.return-button:active {
+    background: #2a2a2a;
+    border: 1.5px solid #e5e7eb;
+}
 
-/* Canvas Flash Animation */
+/* Canvas Flash Animation - Keep existing */
 @keyframes correct-guess-flash-anim {
-  0% { border-color: transparent; box-shadow: none; }
-  50% { border-color: #7CB342; box-shadow: 0 0 20px 5px #7CB342; }
-  100% { border-color: transparent; box-shadow: none; }
+    0% {
+        border-color: transparent;
+        box-shadow: none;
+    }
+    50% {
+        border-color: #7CB342;
+        box-shadow: 0 0 20px 5px #7CB342;
+    }
+    100% {
+        border-color: transparent;
+        box-shadow: none;
+    }
 }
 
 .canvas-flash {
-  animation: correct-guess-flash-anim 0.6s ease-out;
+    animation: correct-guess-flash-anim 0.6s ease-out;
 }
 
-/* Dropdown Menu Styles */
-.dropdown { position: relative; display: inline-block; }
-.dropbtn { background: #363636; color: #d9dddc; font-weight: 500; padding: 0.75rem 1.25rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; }
-.dropbtn:hover, .dropbtn:active { background: #363636; border: none; }
-.hamburger svg { width: 1.5rem; height: 1.125rem; }
-.dropdown-content { display: none; position: absolute; background-color: #2a2a2a; width: auto; min-width: 12rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2); z-index: 1000; border-radius: 0.5rem; border: 1px solid #808588; }
-.dropdown:hover .dropdown-content { display: block; }
-.dropdown-content a { color: #d9dddc; font-weight: 500; font-size: 0.875rem; padding: 0.75rem 1rem; text-decoration: none; display: block; white-space: nowrap; }
-.dropdown-content a:hover { background-color: #363636; }
-.dropdown-content .dropdown-item-checked::before { content: '✓ '; color: #4ade80; }
-.dropdown-content .divider { border-top: 1px solid #808588; margin: 0.5rem 0; }
-.slider-container { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; }
-.slider { width: 6rem; margin: 0; }
-.slider-label { color: white; font-size: 0.875rem; font-weight: 500; white-space: nowrap; }
+/* Dropdown Menu Styles - Keep existing */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropbtn {
+    color: #d9dddc;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+     opacity: 0.9; /* Added opacity */
+}
+.dropbtn:hover,
+.dropbtn:active {
+    background: transparent;
+}
 
+.hamburger {
+    display: inline-flex;
+    align-items: center;
+}
+
+.hamburger svg {
+    width: 1.5rem;
+    height: 1.125rem;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: rgba(42, 42, 42, 0.9); /* Add opacity */
+    width: auto;
+    min-width: 12rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border-radius: 0.5rem;
+    border: 1px solid #808588;
+    right: 0;
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+.dropdown-content a {
+    color: #d9dddc;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+}
+.dropdown-content a:hover {
+    background-color: rgba(54, 54, 54, 0.9); /* Add opacity */
+}
+.dropdown-content .dropdown-item-checked::before {
+    content: '✓ ';
+    color: #4ade80;
+}
+.dropdown-content .divider {
+    border-top: 1px solid #808588;
+    margin: 0.5rem 0;
+}
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+.slider {
+    width: 6rem;
+    margin: 0;
+}
+.slider-label {
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Language Switcher - Keep existing */
 .language-switcher {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  display: flex;
-  align-items: center;
-  z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.lang-btn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  background: #363636;
-  color: #d9dddc;
-  font-size: 1rem;
-  font-weight: 300;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s, opacity 0.2s;
-  margin-right: 0.5rem;
+.lang-icon-btn {
+    background-color: transparent;
+    border: 2px solid transparent;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 50px;
+    transition: border-color 0.3s ease;
+    margin: 0 3px;
+     opacity: 0.9; /* Added opacity */
 }
 
-.lang-btn:hover:not(:disabled) {
-  background: #4a4a4a;
+.lang-icon-btn img {
+    display: block;
+    width: 3rem;
+    height: 3rem;
 }
 
-.lang-btn.active {
-  background: #5a5a5a;
-  border: 1.5px solid #e5e7eb;
-  font-weight: 600;
-  color: #fff;
+.lang-icon-btn:hover,
+.lang-icon-btn:focus {
+    border-color: #808588;
+    outline: none;
 }
 
-.lang-btn:disabled {
-  background: #303030;
-  border-color: #4a4a4a;
-  color: #777;
-  cursor: not-allowed;
-  opacity: 0.6;
+.lang-icon-btn:active {
+    border-color: #808588;
 }
 
-
-/* Atlas Selection Two-Column Layout */
+/* Atlas Selection Two-Column Layout - Keep existing */
 .atlas-layout {
-  display: flex;
-  flex-direction: row;
-  gap: 0;
-  width: 100%;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  min-height: auto; /* Allow to shrink to content */
-  max-height: 25vh; /* Limit max height to reduce wasted space */
-  background: #2f2f2f;
-  overflow: hidden;
-  flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    width: 100%;
+    border: 1px solid #808588;
+    border-radius: 0.5rem;
+    min-height: auto;
+    max-height: 25vh;
+    background: rgba(47, 47, 47, 0.9); /* Add opacity */
+    overflow: hidden;
+    flex-grow: 1;
 }
 
-/* Column 1: Category List */
+/* Column 1: Category List - Keep existing */
 .category-list {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex-basis: 200px;
-  flex-shrink: 0;
-  padding: 0.5rem;
-  overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    flex-basis: 200px;
+    flex-shrink: 0;
+    padding: 0.5rem;
+    overflow-y: auto;
 }
 
-/* Column 2: Atlas Choices Display Area */
+/* Column 2: Atlas Choices Display Area - Keep existing */
 .atlas-choices-display {
-  flex-grow: 1;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow-y: auto;
-  background: #363636;
+    flex-grow: 1;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    background: rgba(54, 54, 54, 0.9); /* Add opacity */
 }
 
-/* Button Styles (Index Page) */
+/* Button Styles (Index Page) - Updated with backdrop-filter */
 .panel-button {
-  background: #363636;
-  color: #d9dddc;
-  font-size: 1rem;
-  font-weight: 400;
-  padding: 0.75rem 1rem;
-  border: 1px solid #555;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  box-sizing: border-box;
-  text-align: left;
+    background: rgba(54, 54, 54, 0.9); /* Semi-transparent background */
+    color: #d9dddc;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 0.75rem 1rem;
+    border: 1px solid #555;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    margin-bottom: 0.25rem;
+    opacity: 0.9; /* Added opacity */
+    backdrop-filter: blur(5px); /* Apply blur to the background behind the button */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .panel-button:hover {
-  background: #4a4a4a;
-  border-color: #aaa;
-  color: #fff;
+    background: rgba(74, 74, 74, 0.9);
+    border-color: #aaa;
+    color: #fff;
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
 }
 .atlas-choices-display .panel-button.selected {
-  background: #5a5a5a;
-  font-weight: 600;
-  border-color: #e5e7eb;
-  color: #fff;
+    background: rgba(90, 90, 90, 0.9);
+    font-weight: 600;
+    border-color: #e5e7eb;
+    color: #fff;
+     backdrop-filter: blur(8px); /* Blur on selected state */
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .atlas-info {
-  display: inline;
-  margin-right: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    display: inline;
+    margin-right: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .atlas-description {
-  color: #808588;
-  font-size: 0.875rem;
-  margin-left: 0.25rem;
-  padding: 0;
-  display: inline;
+    color: #808588;
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+    padding: 0;
+    display: inline;
 }
 
+
 .category-button {
-  background: #363636;
-  color: #d9dddc;
-  font-size: 1rem;
-  font-weight: 400;
-  padding: 0.75rem 1rem;
-  border: 1px solid #555;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  box-sizing: border-box;
-  text-align: left;
-  margin-bottom: 0.25rem;
+    background: rgba(54, 54, 54, 0.9); /* Semi-transparent background */
+    color: #d9dddc;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 0.75rem 1rem;
+    border: 1px solid #555;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    margin-bottom: 0.25rem;
+    opacity: 0.9; /* Added opacity */
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .category-button:hover {
-  background: #4a4a4a;
-  border-color: #aaa;
-  color: #fff;
+    background: rgba(74, 74, 74, 0.9);
+    border-color: #aaa;
+    color: #fff;
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
 }
 .category-button.selected {
-  background: #5a5a5a;
-  font-weight: 600;
-  border-color: #e5e7eb;
-  color: #fff;
+    background: rgba(90, 90, 90, 0.9);
+    font-weight: 600;
+    border-color: #e5e7eb;
+    color: #fff;
+    backdrop-filter: blur(8px); /* Blur on selected state */
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .difficulty-icons {
-  display: flex;
-  gap: 0.25rem;
-  margin-left: 0.5rem;
-  flex-shrink: 0;
+    display: flex;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
 }
 .star-icon {
-  width: 1rem;
-  height: 1rem;
-  image-rendering: optimizeQuality;
-  flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+    image-rendering: optimizeQuality;
+    flex-shrink: 0;
 }
 
 .no-atlas-message {
-  color: #aaa;
-  font-style: italic;
-  padding: 1rem;
-  text-align: center;
+    color: #aaa;
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
 }
 
 .mode-buttons, .login-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
 }
 .mode-button, .login-button {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  background: #363636;
-  color: white;
-  font-size: 1rem;
-  font-weight: 300;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s, opacity 0.2s;
-  width: 90%;
-  max-width: 25rem;
-  box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: rgba(54, 54, 54, 0.9); /* Semi-transparent background */
+    color: white;
+    font-size: 1rem;
+    font-weight: 300;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid #808588;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s, opacity 0.2s;
+    width: 90%;
+    max-width: 25rem;
+    box-sizing: border-box;
+    opacity: 0.9; /* Added opacity */
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .mode-button img, .login-button img {
-  height: 1.25rem;
-  width: auto;
-  margin-right: 0.75rem;
-  image-rendering: optimizeQuality;
+    height: 1.25rem;
+    width: auto;
+    margin-right: 0.75rem;
+    image-rendering: optimizeQuality;
 }
 .mode-button:hover:not(:disabled), .login-button:hover {
-  background: #4a4a4a;
+    background: rgba(74, 74, 74, 0.9);
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
 }
 .mode-button.selected {
-  background: #5a5a5a;
-  border: 1.5px solid #e5e7eb;
-  font-weight: 600;
+    background: rgba(90, 90, 90, 0.9);
+    border: 1.5px solid #e5e7eb;
+    font-weight: 600;
+    backdrop-filter: blur(8px); /* Blur on selected state */
+    -webkit-backdrop-filter: blur(8px);
 }
 .mode-button.selected:hover {
-  background: #5a5a5a;
+    background: rgba(90, 90, 90, 0.9);
+    backdrop-filter: blur(8px); /* Blur on selected state */
+    -webkit-backdrop-filter: blur(8px);
 }
 .mode-button:disabled {
-  background: #303030;
-  border-color: #4a4a4a;
-  color: #777;
-  cursor: not-allowed;
-  opacity: 0.6;
+    background: rgba(48, 48, 48, 0.9);
+    border-color: #4a4a4a;
+    color: #777;
+    cursor: not-allowed;
+    opacity: 0.6;
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .mode-button:disabled img {
-  opacity: 0.5;
+    opacity: 0.5;
 }
 .password-helper {
   color: #808588;
@@ -655,102 +1149,103 @@ h3 {
 }
 
 .mode-description {
-  color: #808588;
-  font-size: 0.875rem;
-  margin-left: 0.5rem;
-  font-weight: 300;
-  white-space: nowrap;
+    color: #808588;
+    font-size: 0.875rem;
+    margin-left: 0.25rem;
+    padding: 0;
+    display: inline;
 }
 
 .play-button {
-  background: #363636;
-  color: white;
-  font-size: 1.5rem;
-  font-weight: 600;
-  padding: 1rem 2rem;
-  border: 1px solid #808588;
-  border-radius: 1.25rem;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
-  z-index: 1000;
-  margin-top: 1rem;
+    background: #363636;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border: 1px solid #808588;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
+    z-index: 1000;
+    margin-top: 1rem;
+    opacity: 0.9; /* Added opacity */
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .play-button:hover:not(:disabled) {
-  background: #4a4a4a;
+    background: #4a4a4a;
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
 }
-.play-button:active:not(:disabled) {
-  border: 1.5px solid #e5e7eb;
-}
-.play-button:disabled {
-  background: #363636;
-  border: 1px solid #4a4a4a;
-  cursor: not-allowed;
-  opacity: 0.7;
-  color: #aaa;
-}
-
 .play-button.enabled {
-  background-color: #7CB342;
-  color: #ffffff;
-  border: 1px solid #689F38;
+    background-color: rgb(63, 109, 159); /* Updated color */
+    color: #ffffff;
+    border: 1px solid #345a85;
+    backdrop-filter: blur(5px); /* Apply blur */
+    -webkit-backdrop-filter: blur(5px); /* For Safari support */
 }
 .play-button.enabled:hover {
-  background-color: #689F38;
-  border-color: #558B2F;
+    background-color: #345a85;
+    border-color: #345a85;
+    backdrop-filter: blur(8px); /* Slightly more blur on hover */
+    -webkit-backdrop-filter: blur(8px);
 }
-.play-button.enabled:active {
-  background-color: #558B2F;
-  border: 1.5px solid #9CCC65;
+.play-button:active:not(:disabled) {
+    background-color: #345a85; /* Darker green */
+    border: 1.5px solid #345a85; /* Lighter border */
+    /* Add any other active styles if needed */
+    backdrop-filter: blur(8px); /* Apply blur */
+    -webkit-backdrop-filter: blur(8px);
 }
 
 #notification {
-  position: fixed;
-  top: 2vh;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  z-index: 1000;
-  display: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    position: fixed;
+    top: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 #notification.success {
-  background: #4ade80;
-  color: #1a3c1f;
+    background: #4ade80;
+    color: #1a3c1f;
 }
 #notification.error {
-  background: #f87171;
-  color: #3c1a1a;
+    background: #f87171;
+    color: #3c1a1a;
 }
 
 .search-suggestion {
-  padding: 0.75rem 1rem;
-  color: #d9dddc;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
+    padding: 0.75rem 1rem;
+    color: #d9dddc;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 .search-suggestion:hover {
-  background: #363636;
+    background: rgba(54, 54, 54, 0.9); /* Add opacity */
 }
 
-/* Region Tooltip */
+/* Region Tooltip - Keep existing */
 .region-tooltip {
-  position: absolute;
-  background: #2a2a2a;
-  color: #d9dddc;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #808588;
-  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.2);
-  z-index: 2000;
-  pointer-events: none;
-  white-space: nowrap;
+    position: absolute;
+    background: rgba(42, 42, 42, 0.9); /* Add opacity */
+    color: #d9dddc;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #808588;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .login-box, .register-box {
@@ -834,164 +1329,559 @@ h3 {
   font-size: 14px;
 }
 
-/* Media Queries for Responsive Design */
-@media (max-width: 1024px) {
-  .selection-container {
-    flex-direction: column;
-    align-items: center;
-  }
-  .atlas-selection,
-  .mode-selection {
-    flex: none;
-    width: 100%;
-    max-width: 90vw;
-    min-height: auto;
-    margin: 0;
-    padding: 0;
-  }
-  .atlas-selection {
-    border-bottom: 1px solid #808588;
-    margin-bottom: 2rem;
-  }
-  .atlas-layout {
-    min-height: 20vh;
-  }
-  .mode-selection h2 {
-    margin-top: 1.5rem;
-  }
-  .target-text { font-size: 1.5rem; }
-  .dropbtn { font-size: 1rem; padding: 0.6rem 1rem; }
-  .hamburger svg { width: 1.2rem; height: 0.9rem; }
-  .slider-label { font-size: 0.875rem; }
+.login-box, .register-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: #363636;
+  color: white;
+  font-size: 1rem;
+  font-weight: 300;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  transition: background 0.2s, border 0.2s, opacity 0.2s;
+  width: 100%;
+  max-width: 25rem;
+  box-sizing: border-box;
+}
+.login-element{
+  display: flex;
+  flex-direction: row;
+}
+#registration_link {
+  cursor: pointer;
+  margin-top: 20px;
+}
+#forgot_password_link {
+  cursor: pointer;
+  margin-top: 5px;
+}
+#registration_link:hover, #forgot_password_link:hover {
+  background: #4a4a4a;
+  border-color: #aaa;
+  color: #fff;
+}
+#registration_link:active, #forgot_password_link:active {
+  background: #5a5a5a;
+  font-weight: 600;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  background-color: #3f3f3f;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #d0d0d0;
+  width: 30%;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.recovery-message {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
+@media (min-width: 1024px) {
+    .navbar-container {
+        flex-direction: row; /* Changed back to row for wider screens */
+        gap: 1rem; 
+    }
+    .navbar-left,
+    .navbar-right {
+        width: auto; /* Allow width to be determined by content */
+        justify-content: flex-start; /* Align to start */
+    }
+     .navbar-left.logo-title-container-navbar {
+        justify-content: flex-start; /* Align to start */
+    }
+    /* Removed navbar-center */
+    /* .navbar-center {
+        flex-grow: 1;
+        display: flex;
+        justify-content: center;
+    } */
+    /* Removed navbar-search specific styles */
+    /* .search-container.navbar-search {
+        margin: 0;
+        max-width: 80%;
+    } */
+    .search-bar-container-main {
+        padding: 2rem 0; /* Adjust padding */
+    }
+    .search-container.main-search {
+        max-width: 50%; /* Set max width to 50% */
+    }
+
+    .single-player-options-container {
+        flex-direction: row; /* Changed back to row for wider screens */
+        align-items: stretch; /* Stretch items to fill height */
+        gap: 3rem; /* Increased gap */
+    }
+
+    .atlas-selection,
+    .mode-selection {
+        flex: 1; /* Allow sections to grow */
+        min-width: 350px; /* Increased min-width */
+        margin: 0;
+        text-align: left;
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .atlas-selection {
+        border-bottom: none; /* Remove border on wider screens */
+        margin-bottom: 0;
+    }
+     .mode-selection {
+        margin-top: 0;
+    }
+
+    .atlas-layout {
+        min-height: 20vh;
+        max-height: none; /* Remove max height constraint on wider screens */
+    }
+    .mode-selection h2 {
+        margin-top: 0; /* Remove top margin on wider screens */
+    }
+    .target-text {
+        font-size: 1.5rem;
+    }
+    .dropbtn {
+        font-size: 1.25rem; /* Revert to original size */
+        padding: 0.5rem 0;
+    }
+    .hamburger svg {
+        width: 1.5rem; /* Revert to original size */
+        height: 1.125rem; /* Revert to original size */
+    }
+    .slider-label {
+        font-size: 0.875rem; /* Revert to original size */
+    }
+     h1 {
+        font-size: 3.5rem; /* Increased h1 size */
+    }
+     .logo-title-container-navbar h1 {
+         font-size: 3.5rem; /* Increased h1 size for navbar */
+    }
+     .logo {
+        height: 4rem; /* Revert to original size */
+    }
+     .centered-container {
+        padding-top: 4rem; /* Increased padding below search bar */
+     }
+     .category-list {
+        border-right: 1px solid #808588; /* Add border between columns */
+        border-bottom: none; /* Remove bottom border */
+        max-height: none; /* Remove max height constraint */
+    }
+     .atlas-choices-display {
+        max-height: none; /* Remove max height constraint */
+    }
+}
+
+/* Media Query for very large screens (e.g., 4K) */
+@media (min-width: 1601px) {
+    .centered-container {
+        max-width: 100%; /* Allow full width of the viewport */
+    }
+}
+
+
+@media (max-width: 1023px) and (min-width: 481px) {
+    canvas {
+        aspect-ratio: 1 / 1;
+        max-width: 90vw;
+    }
+     .search-container.main-search {
+        max-width: 60%; /* Adjust max width for tablets */
+    }
+     .search-bar-container-main {
+        padding: 1.5rem 0; /* Adjust padding */
+    }
+     .centered-container {
+        padding-top: 2rem; /* Increased padding below search bar */
+    }
+    .atlas-selection {
+        min-width: 300px; /* Adjust min-width for tablets */
+    }
+    .mode-selection {
+        min-width: 250px; /* Adjust min-width for tablets */
+    }
+     .single-player-options-container {
+        gap: 2rem; /* Adjust gap for tablets */
+     }
 }
 
 @media (max-width: 768px) {
-  .atlas-layout {
-    min-height: auto;
-    border: 1px solid #555;
-    margin: 0.5rem;
-    border-radius: 0.5rem;
-    padding: 0.75rem 1rem;
-  }
-  .atlas-layout {
-    min-height: auto;
-    max-height: 60vh;
-  }
-  .mode-buttons {
-    align-items: center;
-  }
-  .mode-button {
-    width: 90%;
-  }
-  .target-text { font-size: 1.3rem; padding: 0.6rem 1.2rem; }
-  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 1rem; }
-  .dropbtn { font-size: 0.9rem; padding: 0.5rem 0.8rem; gap: 0.5rem; }
-  .hamburger svg { width: 1.1rem; height: 0.8rem; }
-  .slider-label { font-size: 0.8rem; }
-  .dropdown-content a { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
-  .guess-button, .return-button { font-size: 1rem; padding: 0.8rem 1.5rem; }
-  .lang-btn {
-    font-size: 0.9rem;
-    padding: 0.6rem 1rem;
-  }
+     .navbar {
+        padding: 0.5rem 1vw;
+    }
+    .logo {
+        height: 2.5rem; /* Further reduce logo size */
+    }
+    .logo-title-container-navbar h1 {
+         font-size: 2.5rem; /* Adjusted h1 size */
+    }
+    .player-selection-buttons {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    /* Removed player-mode-button styles */
+    /* .player-mode-button {
+        font-size: 1.2rem;
+        padding: 0.8rem 1.5rem;
+    } */
+    .atlas-layout {
+        min-height: auto;
+        border: 1px solid #555;
+        margin: 0.5rem;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    .atlas-layout {
+        min-height: auto;
+        max-height: 60vh;
+    }
+    .mode-buttons {
+        align-items: center;
+    }
+    .mode-button {
+        width: 90%;
+    }
+    .target-text {
+        font-size: 1.3rem;
+        padding: 0.6rem 1.2rem;
+    }
+    .score-error-container,
+    #score-label,
+    #error-label,
+    #streak-label,
+    #time-label {
+        font-size: 1rem;
+    }
+    .dropbtn {
+        font-size: 0.9rem;
+        padding: 0.5rem 0;
+        gap: 0.5rem;
+    }
+    .hamburger svg {
+        width: 1.1rem;
+        height: 0.8rem;
+    }
+    .slider-label {
+        font-size: 0.8rem;
+    }
+    .dropdown-content a {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+    }
+    .guess-button,
+    .return-button {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+    }
+    .confirm-text {
+        font-size: 0.9rem;
+    }
+    .space-text {
+        font-size: 0.8em;
+    }
+    .search-input {
+        font-size: 0.875rem;
+        padding: 0.6rem 0.8rem 0.6rem 2.25rem;
+        background-size: 1.1rem;
+        background-position: 0.6rem center;
+    }
+    .search-suggestion {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+    }
+
+    .header-controls-right {
+        gap: 0.5rem;
+    }
+    .search-bar-container-main {
+        padding: 1rem 0; /* Adjust padding */
+    }
+    .search-container.main-search {
+        max-width: 90%; /* Adjust max width */
+    }
+     .centered-container {
+        padding-top: 1.5rem; /* Increased padding below search bar */
+    }
 }
 
+/* Mobile Layout (max-width 480px) */
 @media (max-width: 480px) {
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.25rem; }
-  h3 { font-size: 1.1rem; }
-  .logo { display: none; }
-  .play-button { font-size: 1.1rem; padding: 0.8rem 1.5rem; }
-  .category-button, .panel-button {
-    font-size: 0.875rem;
-    padding: 0.6rem 0.8rem;
-  }
-  .atlas-info {
-    white-space: normal;
-  }
-  .mode-button {
-    font-size: 0.9rem;
-    padding: 0.6rem 1rem;
-  }
-  .mode-button img { height: 1.1rem; }
-  .atlas-layout {
-    max-height: 70vh;
-    flex-direction: column;
-  }
-  .category-list {
-    flex-basis: auto;
-    border-right: none;
-    border-bottom: 1px solid #808588;
-    max-height: 30vh;
-  }
-  .atlas-choices-display {
-    max-height: 40vh;
-    padding: 0.5rem;
-  }
-  .target-text { font-size: 0.9rem; padding: 0.5rem 1rem; }
-  .score-error-label, #score-label, #error-label, #streak-label, #time-label { font-size: 0.9rem; gap: 0.5rem; }
-  .dropbtn { font-size: 0.8rem; padding: 0.4rem 0.6rem; gap: 0.3rem; }
-  .hamburger svg { width: 1rem; height: 0.7rem; }
-  .slider-label { font-size: 0.75rem; }
-  .dropdown-content { min-width: 10rem; }
-  .dropdown-content a { font-size: 0.75rem; padding: 0.5rem 0.7rem; }
-  .guess-button, .return-button { font-size: 0.9rem; padding: 0.7rem 1.2rem; }
-  .confirm-text { font-size: 0.9rem; }
-  .space-text { font-size: 0.8em; }
-  .search-input { font-size: 0.875rem; padding: 0.6rem 0.8rem 0.6rem 2.25rem; background-size: 1.1rem; background-position: 0.6rem center; }
-  .search-suggestion { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
-  .header-container {
-    flex-direction: column;
-    align-items: center;
-    padding: 0.5rem;
-  }
-  .logo-title-container {
-    align-items: center;
-    text-align: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.5rem;
-  }
-  .logo-title-container h1 {
-    text-align: center;
-  }
-  .game-status {
-    align-items: center;
-    margin-top: 0.5rem;
-  }
-  .game-status .target-label {
-    text-align: center;
-  }
-  .search-container {
-    position: static;
-    transform: none;
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-  .search-suggestions {
-    position: absolute;
-    top: calc(100% + 0.2rem);
-    width: 100%;
-    max-width: none;
-  }
-  .dropdown {
-    margin-top: 1rem;
-  }
-  .language-switcher {
-    position: static;
-    margin-top: 0.5rem;
-    margin-left: 0.5rem;
-  }
-  .lang-btn {
-    font-size: 0.9rem;
-    padding: 0.6rem 1rem;
-  }
+    h1 {
+        font-size: 2rem; /* Adjusted h1 size */
+    }
+     .logo-title-container-navbar h1 {
+         font-size: 2rem; /* Adjusted h1 size */
+    }
+    h2 {
+        font-size: 1.25rem;
+    }
+    h3 {
+        font-size: 1.1rem;
+    }
+     .logo {
+        display: none; /* Hide logo completely on smallest screens */
+    }
+    .play-button {
+        font-size: 1.1rem;
+        padding: 0.8rem 1.5rem;
+    }
+    .category-button,
+    .panel-button {
+        font-size: 0.875rem;
+        padding: 0.6rem 0.8rem;
+    }
+    .atlas-info {
+        white-space: normal;
+    }
+    .atlas-layout {
+        max-height: 70vh;
+        flex-direction: column;
+    }
+    .category-list {
+        flex-basis: auto;
+        border-right: none;
+        border-bottom: 1px solid #808588;
+        max-height: 30vh;
+    }
+    .atlas-choices-display {
+        max-height: 40vh;
+        padding: 0.5rem;
+    }
+    /* Mobile specific target-text styles */
+    header:has(.target-label-container) .target-label-container .target-text {
+        font-size: 0.9rem; /* Smaller font size for mobile */
+    }
+    .score-error-container,
+    #score-label,
+    #error-label,
+    #streak-label,
+    #time-label {
+        font-size: 0.9rem;
+        gap: 0.5rem;
+    }
+    .dropbtn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0;
+        gap: 0.3rem;
+    }
+    .hamburger svg {
+        width: 1rem;
+        height: 0.7rem;
+    }
+    .slider-label {
+        font-size: 0.75rem;
+    }
+    .dropdown-content {
+        min-width: 10rem;
+    }
+    .dropdown-content a {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.7rem;
+    }
+    .guess-button,
+    .return-button {
+        font-size: 0.9rem;
+        padding: 0.7rem 1.2rem;
+    }
+    .confirm-text {
+        font-size: 0.9rem;
+    }
+    .space-text {
+        font-size: 0.8em;
+    }
+    .search-input {
+        font-size: 0.875rem;
+        padding: 0.6rem 0.8rem 0.6rem 2.25rem;
+        background-size: 1.1rem;
+        background-position: 0.6rem center;
+    }
+    .search-suggestion {
+        font-size: 0.8rem;
+        padding: 0.6rem 0.8rem;
+    }
+
+    /* Neurotheka Header Layout (Mobile) */
+    header:has(.target-label-container) .header-container {
+        flex-direction: column; /* Column layout for mobile */
+        align-items: center; /* Center items */
+        gap: 0.5rem;
+    }
+
+    header:has(.target-label-container) .logo-title-container {
+        flex-direction: column; /* Stack title */
+        align-items: center; /* Center items */
+        width: 100%; /* Take full width */
+        text-align: center; /* Center text */
+    }
+
+    header:has(.target-label-container) .logo-title-container h1 {
+        text-align: center; /* Ensure h1 is centered */
+    }
+
+    header:has(.target-label-container) .target-label-container {
+        width: 100%; /* Take full width */
+        text-align: center; /* Center text */
+        margin-top: 0.25rem; /* Adjust margin */
+        position: static; /* Remove any non-static positioning */
+        align-items: center; /* Center items */
+        justify-content: center; /* Center content */
+    }
+
+    header:has(.target-label-container) .search-container {
+        max-width: 90%; /* Adjust max width */
+        margin: 0 auto 1rem auto; /* Center with bottom margin */
+    }
+
+    header:has(.target-label-container) .header-controls-right {
+        width: 100%; /* Take full width */
+        justify-content: center; /* Center controls */
+        margin-top: 0.5rem; /* Add space */
+    }
+
+    /* Viewer Header Layout (Mobile) */
+    header:has(.game-status) .header-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    header:has(.game-status) .logo-title-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        width: 100%;
+    }
+
+    header:has(.game-status) .logo-title-container h1 {
+        text-align: center;
+    }
+
+    header:has(.game-status) .game-status {
+        flex-grow: 0;
+        width: 100%;
+        margin: 0; /* Remove auto margin on smaller screens */
+    }
+
+    header:has(.game-status) .header-controls-right {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+    }
+
+    /* Order language switcher before dropdown in Viewer header on mobile */
+    header:has(.game-status) .header-controls-right .language-switcher {
+        order: -1; /* Place before other items */
+    }
+
+    header:has(.game-status) .header-controls-right .dropdown {
+        order: 0; /* Default order */
+    }
+}
+
+/* Tablet Layout (min-width 481px and max-width 1023px) */
+@media (min-width: 481px) and (max-width: 1023px) {
+    /* Tablet specific layout adjustments */
+    header:has(.target-label-container) .header-container,
+    header:has(.game-status) .header-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    header:has(.target-label-container) .logo-title-container,
+    header:has(.game-status) .logo-title-container {
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        width: 100%;
+    }
+
+     header:has(.target-label-container) .logo-title-container h1,
+     header:has(.game-status) .logo-title-container h1 {
+        text-align: center;
+     }
+
+    header:has(.target-label-container) .target-label-container {
+        text-align: center; /* Center text */
+        width: 100%;
+        margin-top: 0.25rem; /* Adjust margin */
+        position: static; /* Remove non-static positioning */
+        align-items: center; /* Center items */
+        justify-content: center; /* Center content */
+    }
+
+
+    header:has(.target-label-container) .search-container {
+        max-width: 80%; /* Adjust max width */
+        margin: 0 auto 1rem auto; /* Center with bottom margin */
+    }
+
+     header:has(.game-status) .game-status {
+        flex-grow: 0; /* Do not grow */
+        width: 100%;
+        margin: 0; /* Remove auto margin */
+     }
+
+    header:has(.target-label-container) .header-controls-right,
+    header:has(.game-status) .header-controls-right {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+    }
+
+    /* Order language switcher before dropdown in Viewer header on tablet */
+    header:has(.game-status) .header-controls-right .language-switcher {
+        order: -1; /* Place before other items */
+    }
+
+    header:has(.game-status) .header-controls-right .dropdown {
+        order: 0; /* Default order */
+    }
 }
 
 @media (min-width: 481px) {
-  .search-container {
-    width: 100%;
-    margin-bottom: 1rem;
-  }
+    /* Removed search-container flex-grow */
+    /* .search-container {
+        flex-grow: 1;
+        margin-left: 1rem;
+        margin-right: 1rem;
+    } */
 }
-

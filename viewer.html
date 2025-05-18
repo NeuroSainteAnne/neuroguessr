@@ -24,42 +24,48 @@
             <p id="time-label" style="display: none;" data-i18n="time_label">Time: 00:00</p>
           </div>
         </div>
-        <div class="dropdown">
-          <button class="dropbtn" data-i18n="view_options">
-            View Options
-            <span class="hamburger">
-              <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
-                <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
-                <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
-              </svg>
-            </span>
-          </button>
-          <div class="dropdown-content">
-            <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
-            <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
-            <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
-            <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
-            <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
-            <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
-            <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
-            <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
-            <div class="slider-container">
-              <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
-              <input
-                type="range"
-                min="0"
-                max="255"
-                value="255"
-                class="slider"
-                id="alphaSlider"
-              />
+        <div class="header-controls-right">
+          <div class="dropdown">
+            <button class="dropbtn" data-i18n="view_options">
+              View Options
+              <span class="hamburger">
+                <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
+                </svg>
+              </span>
+            </button>
+            <div class="dropdown-content">
+              <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
+              <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
+              <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
+              <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
+              <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
+              <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
+              <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
+              <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
+              <div class="slider-container">
+                <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value="255"
+                  class="slider"
+                  id="alphaSlider"
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="language-switcher">
-          <button class="lang-btn" data-lang="en">EN</button>
-          <button class="lang-btn" data-lang="fr">FR</button>
+          <div class="language-switcher">
+            <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+              <img src="/neuroguessr_web/data/fr.png" alt="FR">
+            </button>
+            <button class="lang-icon-btn" data-lang="en" aria-label="English">
+              <img src="/neuroguessr_web/data/en.png" alt="EN">
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -138,7 +144,7 @@
       }
 
       // Language switcher
-      document.querySelectorAll('.lang-btn').forEach(btn => {
+      document.querySelectorAll('.lang-icon-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lang = btn.dataset.lang;
           i18next.changeLanguage(lang, () => {
@@ -218,10 +224,10 @@
         'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
         'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
-        'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
+        // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
         'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', name: 'Brodmann' },
         'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser' },
-        'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', name: 'Destrieux' },
+        // 'destrieux': { nii: '/neuroguessr_web/data/aparc.a2009s+aseg_stride.nii.gz', json: '/neuroguessr_web/data/destrieux_labs.json', json_fr: '/neuroguessr_web/data/destrieux_labs_fr.json', name: 'Destrieux' },
         'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', name: 'Schaefer' },     
         'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
         'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
@@ -231,7 +237,7 @@
         'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
         'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
         'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
-        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
       };
 
       const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
@@ -267,8 +273,9 @@
               clut[5] = Math.floor(Math.random() * 256);
               clut[6] = Math.floor(Math.random() * 256);
               clut[7] = 255;
-            } else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
-              console.log('Atlas cmap.labels:', cmap.labels);
+             
+            // else if (atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer') {
+            //   console.log('Atlas cmap.labels:', cmap.labels);
             } else {
               clut[0] = 0;
               clut[1] = 0;
@@ -346,7 +353,7 @@
           });
           await nv1.attachTo("gl1");
           nv1.setInterpolation(true);
-          nv1.opts.crosshairGap = 12;
+          nv1.opts.crosshairGap = 0;
           nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
           nv1.opts.multiplanarForceRender = true;
           nv1.setSliceType(nv1.sliceTypeMultiplanar);
@@ -507,9 +514,9 @@
           for (let i = 3; i < lut.length; i += 4) {
             lut[i] = 0;
           }
-          lut[regionId * 4 + 0] = 255;
-          lut[regionId * 4 + 1] = 255;
-          lut[regionId * 4 + 2] = 0;
+          // lut[regionId * 4 + 0] = 255;
+          // lut[regionId * 4 + 1] = 255;
+          // lut[regionId * 4 + 2] = 0;
           lut[regionId * 4 + 3] = 255;
           nv1.volumes[1].colormapLabel.lut = lut;
           nv1.updateGLVolume();
@@ -568,10 +575,19 @@
         clearInterval(timerInterval);
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const accuracy = ((score / (score + errors)) * 100).toFixed(2);
-        targetText.textContent = i18next.t('game_over', { accuracy, minutes: Math.floor(elapsed / 60), seconds: elapsed % 60 });
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+
+        const gameOverMessage = i18next.t('game_over', {
+          accuracy: accuracy.toString(), // Explicitly convert to string
+          minutes: minutes.toString(),   // Explicitly convert to string
+          seconds: seconds.toString()    // Explicitly convert to string
+        });
+        console.log('Attempting to display game over message:', gameOverMessage, 'Accuracy:', accuracy, 'Minutes:', minutes, 'Seconds:', seconds); // Keep the log
+        targetText.textContent = gameOverMessage;
         highlightTarget(true);
         setTimeout(() => {
-          window.location.href = `index.html?score=${accuracy}&time=${elapsed}`;
+          window.location.href = `index.html?score=<span class="math-inline">\{accuracy\}&time\=</span>{elapsed}`;
         }, 2000);
       }
 
@@ -641,7 +657,9 @@
           }
           highlightTarget(false);
           if (mode === 'streak') {
-            targetText.textContent = i18next.t('streak_ended', { streak });
+            const streakEndMessage = i18next.t('streak_ended', { streak: streak.toString() }); // Explicitly convert streak to string
+            console.log('Attempting to display streak end message:', streakEndMessage, 'Streak value:', streak); // Keep the log for debugging
+            targetText.textContent = streakEndMessage;
             highlightTarget(false);
             setTimeout(() => {
               window.location.href = `index.html?score=${streak}`;
