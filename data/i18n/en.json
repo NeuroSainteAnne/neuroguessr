@@ -58,6 +58,7 @@
   "streak_ended_your_guess" : "You clicked on : ",
   "time_attack_ended_title" : "Time Attack Over !",
   "time_attack_ended_time" : "Time : ",
+  "time_attack_ended_score" : "Score : ",
   "no_atlas_message": "No atlases available for this category.",
   "error_loading_atlas": "Failed to load regions for {atlas}.",
   "no_regions_loaded": "No atlas regions loaded. Search disabled.",

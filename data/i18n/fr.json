@@ -59,6 +59,7 @@
   "streak_ended_your_guess" : "Vous avez cliqué sur : ",
   "time_attack_ended_title" : "Contre la montre Terminé !",
   "time_attack_ended_time" : "Temps : ",
+  "time_attack_ended_score" : "Score : ",
   "no_atlas_message": "Aucun atlas disponible pour cette catégorie.",
   "error_loading_atlas": "Échec du chargement des régions pour {atlas}.",
   "no_regions_loaded": "Aucune région d'atlas chargée. Recherche désactivée.",
