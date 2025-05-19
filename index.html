@@ -42,10 +42,36 @@
         </div>
 
         <div class="centered-container">
+          <h2 class="logged" id="welcome_title" style="display: none;">Welcome</h2>
             <div class="player-selection-buttons">
                 <button id="single-player-button" class="player-mode-button" data-i18n="single_player_button">Single Player</button>
-                <button id="multiplayer-button" class="player-mode-button" data-i18n="multiplayer_button">Multiplayer</button>
+                <button id="multiplayer-button" class="player-mode-button" data-i18n="multiplayer_button" style="display: none;">Multiplayer</button>
+
+                <div id="login_box">
+                  <!--<h2 data-i18n="user_access_mode" class="unlogged">User access</h2>-->
+                  <div class="login-buttons" class="unlogged">
+                    <button id="login-button" class="login-button unlogged" data-mode="login">
+                      <img src="/neuroguessr_web/data/login.png" alt="Login Icon" />
+                      <span data-i18n="login_mode">Login</span>
+                      <span class="mode-description" data-i18n="login_description">to access multiplayer mode</span>
+                    </button>
+                  </div>
+    
+                  <div class="login-buttons" class="logged">
+                    <button id="logout-button" class="login-button logged" data-mode="login">
+                      <img src="/neuroguessr_web/data/logout.png" alt="Logout icon" />
+                      <span data-i18n="logout_mode">Unlog</span>
+                      <span class="mode-description" data-i18n="logout_description"></span>
+                    </button>
+                    <button id="config-button" class="login-button logged" data-mode="login">
+                      <img src="/neuroguessr_web/data/config.png" alt="Config icon" />
+                      <span data-i18n="config_mode">Config</span>
+                      <span class="mode-description" data-i18n="config_description"></span>
+                    </button>
+                  </div>
+                </div>
             </div>
+
 
             <div id="single-player-options" class="single-player-options-container hidden">
                 <section class="atlas-selection">
@@ -167,6 +193,7 @@
                 </section>
 
                 <section class="mode-selection">
+
                     <h2><img src="/neuroguessr_web/data/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
                     <div class="mode-buttons">
                         <button class="mode-button" data-mode="navigation">
@@ -203,6 +230,7 @@
     <div id="notification"></div>
 
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script src="/neuroguessr_web/scripts/login.js"></script>
     <script>
       // Initialize i18next
       i18next.init({
@@ -223,6 +251,7 @@
         i18next.addResourceBundle('en', 'translation', en);
         i18next.addResourceBundle('fr', 'translation', fr);
         updateContent();
+        checkLoginState(); 
       });
 
       function updateContent() {
@@ -259,6 +288,8 @@
       const singlePlayerOptions = document.getElementById('single-player-options');
       const multiplayerMessage = document.getElementById('multiplayer-message');
       const modeButtons = document.querySelectorAll('.mode-button');
+      const loginButton = document.getElementById('login-button');
+      const configButton = document.getElementById('config-button');
       const playButton = document.getElementById('play-button');
       const notification = document.getElementById('notification');
       const categoryButtons = document.querySelectorAll('.category-button');
@@ -469,6 +500,13 @@
         });
       });
 
+      loginButton.addEventListener('click', () => {
+        window.location.href = `login.html`;
+      });
+      configButton.addEventListener('click', () => {
+        window.location.href = `config_user.html`;
+      });
+
       modeButtons.forEach(button => {
         button.addEventListener('click', () => {
           if (!button.disabled) {
@@ -524,6 +562,47 @@
       singlePlayerOptions.classList.add('hidden');
       multiplayerMessage.classList.add('hidden');
 
+
+      function checkLoginState(){
+        // Logged-in user check
+        const unloggedElements = document.querySelectorAll('.unlogged');
+        const loggedElements = document.querySelectorAll('.logged');
+        const welcomeTitle = document.getElementById('welcome_title');
+        const token = localStorage.getItem('authToken');
+        if (token && isTokenValid(token)) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const firstname = payload.firstname || i18next.t('default_user'); // Default to localized 'User'
+          const lastname = payload.lastname || ''; // Default to an empty string if lastname is missing
+          welcomeTitle.textContent = i18next.t('welcome_message', { "firstname":firstname });
+          unloggedElements.forEach(el => el.style.display = 'none');
+          loggedElements.forEach(el => el.style.display = 'flex');
+          multiplayerButton.style.display = "flex"
+        } else {
+          unloggedElements.forEach(el => el.style.display = 'flex');
+          loggedElements.forEach(el => el.style.display = 'none');
+          multiplayerButton.style.display = "none"
+        }
+        refreshToken();
+      }
+
+      // Logout logic
+      const logoutButton = document.getElementById('logout-button');
+      logoutButton.addEventListener('click', () => {
+        // Remove the token from localStorage
+        localStorage.removeItem('authToken');
+
+        // Update the UI to reflect the logged-out state
+        const unloggedElements = document.querySelectorAll('.unlogged');
+        const loggedElements = document.querySelectorAll('.logged');
+        const welcomeTitle = document.getElementById('welcome_title');
+
+        unloggedElements.forEach(el => el.style.display = 'block');
+        loggedElements.forEach(el => el.style.display = 'none');
+        if (welcomeTitle) {
+          welcomeTitle.textContent = ''; // Clear the welcome message
+        }
+        showNotification('logout_success', true); // Add this key in your translation files
+      });
     </script>
   </body>
 </html>

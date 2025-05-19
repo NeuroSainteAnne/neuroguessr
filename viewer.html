@@ -103,6 +103,7 @@
       <button id="guess-button" class="guess-button" disabled><span class="confirm-text" data-i18n="confirm_guess">CONFIRM GUESS</span><span class="space-text" data-i18n="space_key">(space)</span></button>
     </div>
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script src="/neuroguessr_web/scripts/login.js"></script>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
 
@@ -176,6 +177,9 @@
       let usedRegions = [];
       let highlightedRegion = null;
       let tooltip = null;
+      let isMultiplayer = false;
+      let multiplayerSessionToken = null;
+      let multiplayerSessionId = null;
 
       const guessButton = document.getElementById("guess-button");
       const returnButton = document.getElementById("return-button");
@@ -466,7 +470,7 @@
         }
       }
 
-      function selectNewTarget() {
+      async function selectNewTarget() {
         if (validRegions.length === 0) {
           console.warn('No valid regions available for target selection');
           resetGameState();
@@ -484,7 +488,36 @@
           resetGameState();
           return;
         }
-        currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        if(isMultiplayer){
+          try{
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/get-next-region', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId: multiplayerSessionId, sessionToken: multiplayerSessionToken }),
+              });
+            if (!response.ok) {
+              const result = await response.json();
+              console.error("Failed to get next region:", result.message || "Unknown error");
+              return false;
+            }
+            const result = await response.json();
+            if(result.regionId >= 0){
+              currentTarget = result.regionId;
+            } else {
+              console.warn("No valid region ID received from server.");
+              return false;
+            }
+          } catch (error) {
+            console.error("Error occured during next region fetching:", error);
+            return false;
+          }
+        } else {
+          currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        }
         if (mode === 'time-attack') {
           usedRegions.push(currentTarget);
         }
@@ -606,25 +639,56 @@
         restoreColorButton.style.display = mode === 'navigation' ? 'inline-block' : 'none';
         scoreLabel.style.display = mode === 'navigation' ? 'none' : 'block';
         errorLabel.style.display = mode === 'navigation' ? 'none' : 'block';
-        if (mode === 'time-attack') {
-          startTimer();
-        }
-        if (mode === 'navigation') {
-          targetText.textContent = i18next.t('click_to_identify');
-        } else {
-          selectNewTarget();
-        }
+        startOnlineSession().then((ans)=>{
+          isMultiplayer = ans;
+          if (mode === 'time-attack') {
+            startTimer();
+          }
+          if (mode === 'navigation') {
+            targetText.textContent = i18next.t('click_to_identify');
+          } else {
+            selectNewTarget();
+          }
+        });
       }
 
-      function validateGuess() {
+      async function validateGuess() {
         if (!selectedVoxel || !gameRunning || !currentTarget) {
           console.warn('Cannot validate guess:', { selectedVoxel, gameRunning, currentTarget });
           return;
         }
-        const clickedRegion = nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]);
-        const targetName = cmap && cmap.labels[currentTarget] ? cmap.labels[currentTarget] : `Region ${currentTarget} (Unknown)`;
+        let guessSuccess = null;
+        let isEndgame = false;
 
-        if (clickedRegion === currentTarget) {
+        if(isMultiplayer){
+          try{
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/validate-region', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                  sessionId: multiplayerSessionId, 
+                  sessionToken: multiplayerSessionToken,
+                  coordinates: selectedVoxel
+                 }),
+              });
+            const result = await response.json();
+            guessSuccess = result.isCorrect;
+            isEndgame = result.endgame
+          } catch (error) {
+            console.error("Error occured during region validation:", error);
+            return false;
+          }
+        } else {
+          const clickedRegion = nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]);
+          const targetName = cmap && cmap.labels[currentTarget] ? cmap.labels[currentTarget] : `Region ${currentTarget} (Unknown)`;
+          guessSuccess = clickedRegion === currentTarget
+        }
+
+        if (guessSuccess) {
           score++;
           scoreLabel.textContent = i18next.t('correct_label') + `: ${score}`;
           streak = mode === 'streak' ? streak + 1 : streak;
@@ -635,7 +699,7 @@
             nv1.volumes[1].colormapLabel.lut = clut.slice();
             nv1.updateGLVolume();
           }
-          selectNewTarget();
+          await selectNewTarget();
         } else {
           errors++;
           errorLabel.textContent = i18next.t('errors_label') + `: ${errors}`;
@@ -755,6 +819,54 @@
             console.log(`Clicked voxel: ${vox}, Invalid region ID: ${idx}`);
           }
         }
+      }
+
+      async function startOnlineSession(){
+          // Check if "multiplayer" is set to 1 in the URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const isMultiplayer = urlParams.get('multiplayer') == 'true';
+          if (!isMultiplayer) {
+            return false; // Exit the function if multiplayer is not enabled
+          }
+          // Check if the player is logged in
+          const token = localStorage.getItem('authToken');
+          if (!token) {
+            return false;
+          }
+          if(!await isTokenValid(token)){
+            if(!refreshToken()){
+              return false;
+            }
+          }
+          try {
+            // Send a request to the backend to start a session
+            const response = await fetch('/api/start-game-session', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ mode, atlas }),
+            });
+
+            if (!response.ok) {
+              console.error("Failed to start session on the backend.");
+              const result = await response.json();
+              alert(result.message || "Failed to start multiplayer session.");
+              return false;
+            }
+
+            const result = await response.json();
+            console.log("Multiplayer session started");
+            multiplayerSessionToken = result.sessionToken; // Save the session token for further communication
+            multiplayerSessionId = result.sessionId; // Save the session ID for further communication
+            return true;
+          } catch (error) {
+            console.error("Error starting multiplayer session:", error);
+            alert("An error occurred while starting the multiplayer session. Please try again later.");
+            return false;
+          }
+          return true
       }
 
       document.getElementById("gl1").addEventListener("click", handleCanvasInteraction);

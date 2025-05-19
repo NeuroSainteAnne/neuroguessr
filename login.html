@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="app_title">NeuroGuessr Web - Login</title>
+    <link rel="stylesheet" href="niivue.css" />
+</head>
+<body class="index-page">
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-left logo-title-container-navbar">
+                <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+                <h1 data-i18n="app_title"  onclick="window.location.href='index.html'">NeuroGuessr</h1>
+            </div>
+            <div class="navbar-right">
+                <div class="language-switcher">
+                    <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+                        <img src="/neuroguessr_web/data/fr.png" alt="FR">
+                    </button>
+                    <button class="lang-icon-btn" data-lang="en" aria-label="English">
+                        <img src="/neuroguessr_web/data/en.png" alt="EN">
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main>
+      <form id="register_form">
+        <div class="login-box">
+            <h2 data-i18n="login_mode">Login</h2>
+            <table class="login-element">
+              <tr>
+                  <td>
+                      <label id="username-label" for="username" data-i18n="login_username">Username</label>
+                  </td>
+                  <td>
+                      <input type="text" id="username" name="username" required />
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                      <label id="password-label" for="password" data-i18n="login_password">Password</label>
+                  </td>
+                  <td>
+                      <input type="password" id="password" name="password" required />
+                  </td>
+                  <tr>
+                      <td colspan="2" id="login_error">
+                      </td>
+                  </tr>
+              </tr>
+            </table>  
+            <button type="submit" data-i18n="login_button">Login</button>
+            <a id="registration_link" data-i18n="registration_link" 
+              onclick="window.location.href='register.html'">
+              Not yet registered ? Click here to register
+            </a>
+            <a id="forgot_password_link" data-i18n="forgot_password_link">
+              Forgot passwork ? Click here to send a new password
+            </a>
+        </div>
+      </form>
+      <div id="password-recovery-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <span class="close-button" id="close-password-recovery">&times;</span>
+          <h2 data-i18n="password_recovery_title">Password Recovery</h2>
+          <p data-i18n="password_recovery_instructions">Enter your email address to receive a password reset link.</p>
+          <input type="email" id="recovery-email" placeholder="Enter your email" required />
+          <button id="send-recovery-email" data-i18n="send_recovery_email">Send Email</button>
+          <p id="recovery-message" class="recovery-message"></p>
+        </div>
+      </div>
+    </main>
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script>
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+            elem.textContent = i18next.t(key);
+          }
+        });
+      }
+
+      // Language switcher
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+          });
+        });
+      });
+
+      document.getElementById('register_form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const loginError = document.getElementById('login_error');
+
+        // Clear previous error messages
+        loginError.textContent = '';
+        loginError.classList.remove('error-label');
+
+        if (!username || !password) {
+          loginError.textContent = i18next.t('error_empty_fields'); 
+          loginError.classList.add('error-label');
+          return;
+        }
+
+        try {
+          // Send login request to the server
+          const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            // Handle successful login
+            loginError.textContent = i18next.t('login_success');
+            localStorage.setItem('authToken', result.token);
+            window.location.href = '/index.html'; // Redirect to the viewer page
+          } else {
+            // Handle login failure
+            loginError.textContent = result.message || i18next.t('login_failed'); // Add this key in your translation files
+            loginError.classList.add('error-label');
+          }
+        } catch (error) {
+          // Handle network or server errors
+          console.error('Error during login:', error);
+          loginError.textContent = i18next.t('server_error'); // Add this key in your translation files
+          loginError.classList.add('error-label');
+        }
+      });
+
+      // Open the password recovery modal
+      document.getElementById('forgot_password_link').addEventListener('click', () => {
+        document.getElementById('password-recovery-modal').style.display = 'block';
+      });
+
+      // Close the password recovery modal
+      document.getElementById('close-password-recovery').addEventListener('click', () => {
+        document.getElementById('password-recovery-modal').style.display = 'none';
+      });
+
+      // Handle sending the recovery email
+      document.getElementById('send-recovery-email').addEventListener('click', async () => {
+        const email = document.getElementById('recovery-email').value.trim();
+        const recoveryMessage = document.getElementById('recovery-message');
+
+        // Clear previous messages
+        recoveryMessage.textContent = '';
+        recoveryMessage.classList.remove('error-label', 'success-label');
+
+        if (!email) {
+          recoveryMessage.textContent = i18next.t('error_empty_email'); // Add this key in your translation files
+          recoveryMessage.classList.add('error-label');
+          return;
+        }
+
+        try {
+          // Send recovery request to the server
+          const response = await fetch('/api/password-recovery', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            recoveryMessage.textContent = i18next.t('recovery_email_sent'); // Add this key in your translation files
+            recoveryMessage.classList.add('success-label');
+          } else {
+            recoveryMessage.textContent = result.message || i18next.t('recovery_failed'); // Add this key in your translation files
+            recoveryMessage.classList.add('error-label');
+          }
+        } catch (error) {
+          console.error('Error during password recovery:', error);
+          recoveryMessage.textContent = i18next.t('server_error'); // Add this key in your translation files
+          recoveryMessage.classList.add('error-label');
+        }
+      });
+    </script>
+  </body>
+</html>

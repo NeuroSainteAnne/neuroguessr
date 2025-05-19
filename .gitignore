@@ -1,0 +1,7 @@
+node_modules/*
+package-lock.json
+
+server/database.db
+server/config.json
+server/*.crt
+server/*.key
