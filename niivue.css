@@ -335,7 +335,7 @@ header:has(.game-status) .header-controls-right .dropdown {
     left: 0;
     z-index: 10000;
     background: rgba(42, 42, 42, 0.9); /* Add opacity */
-/*    border: 1px solid #808588;*/
+/* border: 1px solid #808588;*/
     border-radius: 0.5rem;
     overflow-y: auto;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
@@ -401,7 +401,7 @@ main {
 }
 
 .player-mode-button:hover:not(:disabled) {
-    background: #345a85; 
+    background: #345a85;
     color: white;
     border-color: #345a85;
     backdrop-filter: blur(8px); /* Slightly more blur on hover */
@@ -853,6 +853,8 @@ h3 {
     border-radius: 0.5rem;
     border: 1px solid #808588;
     right: 0;
+    opacity: 1; /* Start with opacity 1 */
+    transition: opacity 0.1s ease-in-out; /* Smooth transition */
 }
 .dropdown:hover .dropdown-content {
     display: block;
@@ -1428,7 +1430,7 @@ h3 {
 @media (min-width: 1024px) {
     .navbar-container {
         flex-direction: row; /* Changed back to row for wider screens */
-        gap: 1rem; 
+        gap: 1rem;
     }
     .navbar-left,
     .navbar-right {
@@ -1484,9 +1486,7 @@ h3 {
         min-height: 20vh;
         max-height: none; /* Remove max height constraint on wider screens */
     }
-    .mode-selection h2 {
-        margin-top: 0; /* Remove top margin on wider screens */
-    }
+
     .target-text {
         font-size: 1.5rem;
     }
@@ -1900,4 +1900,381 @@ h3 {
         margin-left: 1rem;
         margin-right: 1rem;
     } */
+}
+
+/* --- Help Button and Overlay Styles --- */
+
+.help-button {
+    position: fixed;
+    bottom: 20px; /* Distance from bottom */
+    right: 20px; /* Distance from right */
+    width: 50px; /* Button size */
+    height: 50px;
+    border-radius: 50%; /* Make it round */
+    background-color: rgb(63, 109, 159); /* Button background color */
+    color: white; /* Icon color */
+    font-size: 1.5rem; /* Icon size */
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    z-index: 1000; /* Ensure it's above other content */
+    transition: background-color 0.2s ease-in-out;
+}
+
+.help-button:hover {
+    background-color: #345a85; /* Darker shade on hover */
+}
+
+.help-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+    z-index: 2000; /* Ensure it's above everything else */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1; /* Start with opacity 1 */
+    transition: opacity 0.3s ease-in-out; /* Smooth transition */
+    backdrop-filter: blur(10px); /* Apply blur effect */
+    -webkit-backdrop-filter: blur(10px); /* For Safari */
+}
+
+.help-overlay.hidden {
+    opacity: 0; /* Fade out when hidden */
+    pointer-events: none; /* Disable interactions when hidden */
+}
+
+.help-content {
+    background: rgba(54, 54, 54, 0.95); /* Slightly transparent dark background */
+    color: #d9dddc;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    max-width: 800px; /* Max width of the help content */
+    max-height: 90vh; /* Max height of the help content */
+    overflow-y: auto; /* Add scroll if content exceeds height */
+    position: relative; /* Needed for close button positioning */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    width: 90%; /* Responsive width */
+    box-sizing: border-box; /* Include padding in width */
+    text-align: left; /* Justify elements to the left */
+}
+
+.help-content h2 {
+    margin-top: 0;
+    text-align: left; /* Justify h2 to the left */
+    color: #ffffff; /* White color for the main title */
+}
+
+
+.help-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #b0c4de; /* Lighter color for section titles */
+    border-bottom: 1px solid #808588; /* Separator line */
+    padding-bottom: 0.5rem;
+    text-align: left; /* Justify h3 to the left */
+}
+
+.help-content p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    color: #c0c0c0; /* Lighter color for paragraph text */
+    text-align: left; /* Justify paragraphs to the left */
+}
+
+.help-content a {
+    color: inherit; /* Links will inherit the text color of their parent element */
+    text-decoration: underline; /* Ensure links are underlined */
+    font-weight: bold; /* Make links bold */
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #d9dddc;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease-in-out;
+}
+
+.close-button:hover {
+    color: #ffffff; /* White color on hover */
+}
+
+/* Responsive adjustments for help content */
+@media (max-width: 768px) {
+    .help-content {
+        padding: 1.5rem;
+        max-width: 95%;
+    }
+    .help-content h2 {
+        font-size: 1.8rem;
+    }
+    .help-content h3 {
+        font-size: 1.1rem;
+    }
+    .help-content p {
+        font-size: 0.9rem;
+    }
+    .close-button {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .help-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+        bottom: 15px;
+        right: 15px;
+    }
+    .help-content {
+        padding: 1rem;
+    }
+    .help-content h2 {
+        font-size: 1.5rem;
+    }
+    .help-content h3 {
+        font-size: 1rem;
+    }
+    .help-content p {
+        font-size: 0.85rem;
+    }
+    .close-button {
+        font-size: 1.5rem;
+        top: 5px;
+        right: 5px;
+    }
+}
+
+/* Basic styling for overlays */
+.streak-overlay,
+.time-attack-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(54, 54, 54, 0.90); /* Increased transparency */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1; /* Start with opacity 1 */
+    transition: opacity 0.3s ease-in-out; /* Smooth transition */
+    backdrop-filter: blur(10px); /* Apply blur effect */
+    -webkit-backdrop-filter: blur(10px); /* For Safari */
+}
+
+.streak-overlay.hidden,
+.time-attack-overlay.hidden {
+    opacity: 0; /* Fade out when hidden */
+    pointer-events: none; /* Disable interactions when hidden */
+}
+
+.large-time-display {
+    font-size: 8rem; /* Apply a large font size */
+    font-weight: bold; /* Make it bold */
+    color: #eeeeee; /* Match the streak number color or choose another */
+    display: block; /* Ensure it takes its own line */
+    margin: 20px 0; /* Add some vertical margin */
+    /* You can add more styles here like text-shadow if desired */
+}
+
+
+.overlay-content {
+    background: rgba(54, 54, 54, 0.95);
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center; /* Keep centered for streak and time attack */
+    max-width: 500px;
+    position: relative; /* Needed for close button positioning */
+    width: 90%; /* Make content responsive */
+    box-sizing: border-box; /* Include padding in width */
+}
+
+ .overlay-content h2 {
+    margin-top: 0;
+    color: #d9dddc;
+    text-align: center; /* Keep centered for streak and time attack */
+}
+
+.overlay-content p {
+    margin: 15px 0; /* Increased vertical margin */
+    text-align: center; /* Keep centered for streak and time attack */
+}
+
+/* Container for multiple buttons in overlays */
+.overlay-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Space between buttons */
+    margin-top: 20px;
+}
+
+/* Shared button style for menu/home/restart */
+.menu-button,
+.home-button,
+.restart-button {
+    padding: 10px 20px;
+    background-color: #007bff; /* Default blue, will override for home button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    text-decoration: none; /* Remove underline from anchor-like buttons */
+    display: inline-flex; /* Use flexbox to center icon and text */
+    justify-content: center;
+    align-items: center;
+}
+
+.menu-button:hover,
+.home-button:hover,
+.restart-button:hover {
+    background-color: #0056b3;
+}
+
+/* Specific style for the round home button */
+.home-button {
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    border-radius: 50%; /* Make it round */
+    padding: 0; /* Remove padding */
+    font-size: 1.5em; /* Adjust icon size */
+    background-color: rgb(63, 109, 159); /* Match confirm guess button blue */
+}
+
+.home-button i {
+    /* Style for the Font Awesome icon inside the button */
+    color: white;
+}
+
+/* Specific style for the restart button */
+.restart-button {
+     width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    border-radius: 50%; /* Make it round */
+    padding: 0; /* Remove padding */
+    font-size: 1.5em; /* Adjust icon size */
+    background-color: #ffc107; /* Example color: yellow */
+    color: #333; /* Dark text color for contrast */
+}
+
+.restart-button:hover {
+    background-color: #e0a800; /* Darker yellow on hover */
+}
+
+.restart-button i {
+     color: #333; /* Dark icon color */
+}
+
+
+.hidden {
+    display: none;
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #d9dddc;
+    cursor: pointer;
+    z-index: 1; /* Ensure close button is above content */
+}
+ .close-button:hover {
+      color: #fff;
+ }
+
+/* Progress Bar Styling */
+.score-progress-bar {
+    width: 90%; /* Increased width */
+    margin: 15px auto;
+    height: 35px; /* Increased height */
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.score-progress-bar .w3-container {
+    height: 100%;
+    text-align: center;
+    line-height: 35px; /* Match the new height */
+    color: white;
+    background-color: #007bff;
+    border-radius: 8px;
+    transition: width 0.5s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Style for the text displaying the score value inside the progress bar container */
+/* Removed the ::after pseudo-element */
+
+
+/* Style for the oversized streak number */
+.streak-number {
+    font-size: 8em; /* Doubled size */
+    font-weight: bold;
+    color: #eeeeee; /* Example color, can be adjusted */
+    display: block; /* Ensure it takes its own line */
+    margin: 10px 0; /* Add some margin around the number */
+}
+
+.streak-flame-icon {
+    height: 4em; /* Half the size of the parent font */
+    vertical-align: middle; /* Align vertically with text */
+    margin-right: 0.2em; /* Small space between icon and number */
+}
+
+
+/* Basic responsive adjustment for overlay content */
+@media (max-width: 600px) {
+    .overlay-content {
+        padding: 15px;
+    }
+    .overlay-content h2 {
+        font-size: 1.2em;
+    }
+    .overlay-content p {
+        font-size: 0.9em;
+    }
+    .menu-button,
+    .home-button,
+    .restart-button {
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+     .home-button,
+     .restart-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2em;
+     }
+     .score-progress-bar {
+        width: 95%;
+     }
+     .score-progress-bar .w3-container {
+        line-height: 20px;
+     }
+      .streak-number {
+           font-size: 4em; /* Adjust for smaller screens */
+       }
 }
