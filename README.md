@@ -21,11 +21,13 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 - **Data**:
   - **Brain Atlases**:
-    - AAL3 : automated anatomical parcellation of the spatially normalized single-subject high-resolution T1 volume provided by the Montreal Neurological Institute (MNI). doi:10.1109/42.712135, doi:10.1006/nimg.2001.0978
+    - Tissue classes
     - Harvard-Oxford : Probabilistic atlases covering 48 cortical and 21 subcortical structural areas, derived from structural data and segmentation (doi:10.1016/j.schres.2005.11.020, 10.1016/j.neuroimage.2006.01.021, 10.1176/appi.ajp.162.7.1256, 10.1016/j.biopsych.2006.06.027)
-    - Subcortical Registration of  basal ganglia, red nucleus, amygdala, and hippocampus (https://www.nature.com/articles/s41597-019-0217-0)
+    - Destrieux Atlas, Sulcal-gyral parcellation (Ref : doi:10.1016/j.neuroimage.2010.06.010)
+    - Allen Humain Brain Reference : 141 manually delineated regions per hemisphere (Ref : 10.1002/cne.24080)
+    - Subcortical Registration of  basal ganglia, red nucleus, amygdala, and hippocampus (Ref : https://www.nature.com/articles/s41597-019-0217-0)
     - Cerebellum Cerebellar Atlas in MNI152 space after normalization with FNIRT (FSL)
-    - Thalamus nuclei (
+    - Thalamus nuclei 
     - Hippocampus & amygdala subfields
     - Resting state functional networks : (Thomas Yeo, 7 and 17 networks)
     - White matter tracts (Xtract, FSL)
@@ -44,6 +46,8 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 This project is licensed under the MIT License - see the [LICENSE] file for details.
 
-## Author 
+## Authors 
 François Ramon
 francois.ramon@ghu-paris.fr 
+Joseph Ben Zakoun 
+j.benzakoun@ghu-paris.fr

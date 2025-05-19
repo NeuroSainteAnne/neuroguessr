@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="app_title">NeuroGuessr</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+      /* Basic styling for the overlay - can be moved to niivue.css */
+      .streak-end-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.7);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+      }
+
+      .streak-end-content {
+          background-color: #333;
+          color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          max-width: 500px;
+          position: relative; /* Needed for close button positioning */
+      }
+
+       .streak-end-content h2 {
+          margin-top: 0;
+          color: #d9dddc;
+      }
+
+      .streak-end-content p {
+          margin: 10px 0;
+      }
+
+      .streak-end-content button {
+          margin-top: 20px;
+          padding: 10px 20px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 1em;
+      }
+
+      .streak-end-content button:hover {
+          background-color: #0056b3;
+      }
+
+      .hidden {
+          display: none;
+      }
+
+      .close-button {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          font-size: 1.5em;
+          color: #d9dddc;
+          cursor: pointer;
+      }
+       .close-button:hover {
+            color: #fff;
+       }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-container">
+        <div class="logo-title-container">
+          <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+          <h1 data-i18n="app_title" onclick="window.location.href='index.html'">NeuroGuessr</h1>
+        </div>
+        <div class="game-status">
+          <p id="target-label"><span class="target-text" data-i18n="not_started">Target: Not Started</span></p>
+          <div class="score-error-container">
+            <p id="score-label" data-i18n="score_label">Score: 0</p> <p id="error-label" data-i18n="errors_label">Errors: 0</p>
+            <p id="streak-label" style="display: none;" data-i18n="streak_label">Streak: 0</p>
+            <p id="time-label" style="display: none;" data-i18n="time_label">Time: 00:00</p>
+          </div>
+        </div>
+        <div class="header-controls-right">
+          <div class="dropdown">
+            <button class="dropbtn" data-i18n="view_options">
+              View Options
+              <span class="hamburger">
+                <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 1H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 9H24" stroke="white" stroke-width="1.5"/>
+                  <path d="M0 17H24" stroke="white" stroke-width="1.5"/>
+                </svg>
+              </span>
+            </button>
+            <div class="dropdown-content">
+              <a href="#" class="viewBtn" id="|Axial" data-i18n="axial">Axial</a>
+              <a class="viewBtn" id="|Coronal" data-i18n="coronal">Coronal</a>
+              <a class="viewBtn" id="|Sagittal" data-i18n="sagittal">Sagittal</a>
+              <a class="viewBtn" id="|Render" data-i18n="render">Render</a>
+              <a class="viewBtn" id="|MultiPlanar" data-i18n="multiplanar">A+C+S</a>
+              <a class="viewBtn dropdown-item-checked" id="|MultiPlanarRender" data-i18n="multiplanar_render">A+C+S+R</a>
+              <a class="viewBtn dropdown-item-checked" id="Radiological" data-i18n="radiological">Radiological</a>
+              <a class="viewBtn dropdown-item-checked" id="ColoredAtlas" data-i18n="colored_atlas">Colored Atlas</a>
+              <div class="slider-container">
+                <label class="slider-label" for="alphaSlider" data-i18n="atlas_opacity">Atlas Opacity</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value="255"
+                  class="slider"
+                  id="alphaSlider"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="language-switcher">
+            <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+              <img src="/neuroguessr_web/data/fr.png" alt="FR">
+            </button>
+            <button class="lang-icon-btn" data-lang="en" aria-label="English">
+              <img src="/neuroguessr_web/data/en.png" alt="EN">
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+      <script>
+        const canvas = document.getElementById("gl1");
+
+        function setCanvasSize() {
+          const dpr = window.devicePixelRatio || 1;
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          const mainElement = document.querySelector("main");
+          const containerWidth = mainElement ? mainElement.clientWidth : viewportWidth;
+          const canvasWidth = containerWidth;
+          const canvasHeight = Math.min(viewportHeight * 0.5, viewportHeight - 100); // Adjust height as needed
+          canvas.width = canvasWidth * dpr;
+          canvas.height = canvasHeight * dpr;
+          canvas.style.width = `${canvasWidth}px`;
+          canvas.style.height = `${canvasHeight}px`;
+          if (window.nv1) {
+            window.nv1.resizeListener();
+            window.nv1.drawScene();
+          }
+        }
+
+        setCanvasSize();
+        window.addEventListener("resize", setCanvasSize);
+        window.addEventListener("orientationchange", setCanvasSize);
+      </script>
+    </main>
+    <div class="button-container">
+      <button id="return-button" class="return-button" data-i18n="return_button">Return</button>
+      <button id="restore-color-button" class="return-button" style="display: none;" data-i18n="restore_color">Restore Color (Esc)</button>
+      <button id="guess-button" class="guess-button" disabled><span class="confirm-text" data-i18n="confirm_guess">CONFIRM GUESS</span><span class="space-text" data-i18n="space_key">(space)</span></button>
+    </div>
+
+    <div id="help-overlay" class="help-overlay hidden">
+        <div class="help-content">
+            <button id="close-help" class="close-button">&times;</button>
+            <h2 data-i18n="viewer_help_title">Viewer Help</h2>
+            <div id="help-mode-description">
+                </div>
+            <section>
+                <h3 data-i18n="viewer_controls_title">Controls</h3>
+                <p data-i18n="viewer_controls_text"></p>
+            </section>
+        </div>
+    </div>
+
+    <button id="help-button" class="help-button">
+        <i class="fas fa-question"></i>
+    </button>
+
+    <div id="streak-end-overlay" class="streak-end-overlay hidden">
+        <div class="streak-end-content">
+            <button id="close-streak-end" class="close-button">&times;</button>
+            <h2 data-i18n="streak_ended_title">Streak Ended</h2>
+            <p data-i18n="streak_ended_score">Your Streak: <span id="final-streak">0</span></p>
+            <p data-i18n="streak_ended_correct_region">Correct Region: <span id="correct-region"></span></p>
+            <p data-i18n="streak_ended_your_guess">Your Guess: <span id="guessed-region"></span></p>
+            <button id="go-back-menu-button" data-i18n="return_button">Return to Menu</button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script type="module" async>
+      import * as niivue from "/neuroguessr_web/dist/index.js";
+
+      // Get mode from URL parameters early
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode') || 'practice'; // Declare mode here
+
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+        updateHelpContent(); // Update help content after i18next is ready
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+        updateHelpContent(); // Update help content after translations are loaded
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      }).catch(err => {
+        console.error('Failed to load translation files:', err);
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+            // Check if the element is within the help overlay or streak end overlay
+            const isOverlayText = elem.closest('#help-overlay') || elem.closest('#streak-end-overlay');
+            if (isOverlayText) {
+              elem.innerHTML = i18next.t(key); // Use innerHTML for overlay text to render HTML tags
+            } else {
+              elem.textContent = i18next.t(key); // Use textContent for other elements
+            }
+          }
+        });
+      }
+
+      // Function to update help content based on the current mode
+      function updateHelpContent() {
+          const helpModeDescriptionDiv = document.getElementById('help-mode-description');
+          let modeHelpKey = '';
+          switch (mode) {
+              case 'navigation':
+                  modeHelpKey = 'viewer_help_navigation';
+                  break;
+              case 'practice':
+                  modeHelpKey = 'viewer_help_practice';
+                  break;
+              case 'streak':
+                  modeHelpKey = 'viewer_help_streak';
+                  break;
+              case 'time-attack':
+                  modeHelpKey = 'viewer_help_time_attack';
+                  break;
+              default:
+                  modeHelpKey = 'viewer_help_general'; // Fallback for other modes
+          }
+          helpModeDescriptionDiv.innerHTML = `<p data-i18n="${modeHelpKey}">${i18next.t(modeHelpKey)}</p>`;
+          // Re-run updateContent to apply translation to the newly added paragraph
+          updateContent();
+      }
+
+      // Function to update streak end overlay content - moved inside displayStreakEndWindow
+      // function updateStreakEndContent() {
+      //   document.querySelectorAll('#streak-end-overlay [data-i18n]').forEach(elem => {
+      //       const key = elem.getAttribute('data-i18n');
+      //       elem.textContent = i18next.t(key);
+      //   });
+      // }
+
+
+      // Language switcher
+      document.querySelectorAll('.lang-icon-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            updateHelpContent(); // Update help content on language change
+            // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+            // Reload atlas labels for the new language
+            loadAtlasData().then(() => {
+              if (gameRunning) {
+                // Update display for current game state if labels changed
+                updateGameDisplay();
+              }
+            });
+          });
+        });
+      });
+
+      let gameRunning = false;
+      let score = 0; // Initialize score for Time Attack (total points)
+      let correctCount = 0; // Initialize correct count for Practice/Streak
+      let errors = 0;
+      let streak = 0;
+      let currentTarget = null;
+      let selectedVoxel = null;
+      let validRegions = [];
+      let cmap = null;
+      let nv1 = null;
+      let clut = null;
+      let attempts = 0; // Attempts for the current target in Practice mode
+      let startTime = null;
+      let timerInterval = null;
+      let usedRegions = []; // Regions used in Time Attack
+
+      let highlightedRegion = null;
+      let tooltip = null;
+
+      const guessButton = document.getElementById("guess-button");
+      const returnButton = document.getElementById("return-button");
+      const restoreColorButton = document.getElementById("restore-color-button");
+      const targetLabel = document.getElementById("target-label");
+      const scoreLabel = document.getElementById("score-label");
+      const errorLabel = document.getElementById("error-label");
+      const streakLabel = document.getElementById("streak-label");
+      const timeLabel = document.getElementById("time-label");
+      const targetText = targetLabel.querySelector('.target-text');
+      const alphaSlider = document.getElementById("alphaSlider");
+
+      // Help button and overlay elements
+      const helpButton = document.getElementById('help-button');
+      const helpOverlay = document.getElementById('help-overlay');
+      const closeHelpButton = document.getElementById('close-help');
+
+      // Streak End Overlay elements - References moved inside the function
+      const streakEndOverlay = document.getElementById('streak-end-overlay');
+
+
+      // Time Attack specific constants
+      const TOTAL_REGIONS_TIME_ATTACK = 20;
+      const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
+      const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
+
+
+      returnButton.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      restoreColorButton.addEventListener('click', () => {
+        if (gameRunning && mode === 'navigation') {
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+            nv1.drawScene();
+          }
+          targetText.textContent = i18next.t('click_to_identify');
+          selectedVoxel = null;
+          highlightedRegion = null;
+          if (tooltip) {
+            tooltip.remove();
+            tooltip = null;
+          }
+          nv1.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
+          nv1.drawScene();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !guessButton.disabled && gameRunning && mode !== 'navigation') {
+          e.preventDefault();
+          validateGuess();
+        }
+      });
+
+      alphaSlider.oninput = function () {
+        nv1.setOpacity(1, this.value / 255);
+        nv1.updateGLVolume();
+      };
+
+      const atlas = urlParams.get('atlas') || 'aal';
+      const atlasFiles = {
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
+        'destrieux': { nii: '/neuroguessr_web/data/remapped_destrieux_stride_uint.nii.gz', json: '/neuroguessr_web/data/destrieux_new.json', json_fr: '/neuroguessr_web/data/destrieux_new_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'desikan': { nii: '/neuroguessr_web/data/remapped_dk_stride.nii.gz', json: '/neuroguessr_web/data/desikan_new.json', json_fr: '/neuroguessr_web/data/desikan_new_fr.json', viewer: 'neurotheka.html', name: 'Desikan' },
+        'allen': { nii: '/neuroguessr_web/data/reconstructed_allen_05mm_uint.nii.gz', json: '/neuroguessr_web/data/allen.json', json_fr: '/neuroguessr_web/data/allen_fr.json', viewer: 'neurotheka.html', name: 'Allen' },
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', name: 'White Matter'},
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/web/data/JHU_web.nii.gz', json: '/neuroguessr_web/web/data/JHU_labels.json', json_fr: '/neuroguessr_web/web/data/JHU_labels_fr.json', name: 'JHU' },
+        'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
+      };
+
+      const selectedAtlasFiles = atlasFiles[atlas] || atlasFiles['aal'];
+
+      async function fetchJSON(fnm) {
+        try {
+          const response = await fetch(fnm);
+          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          return await response.json();
+        } catch (e) {
+          console.error(`Workspace failed for ${fnm}:`, e);
+          throw new Error(`${e.message}`);
+        }
+      }
+
+      async function loadAtlasData() {
+        try {
+          const lang = i18next.language;
+          const jsonFile = lang === 'fr' && selectedAtlasFiles.json_fr ? selectedAtlasFiles.json_fr : selectedAtlasFiles.json;
+          cmap = await fetchJSON(jsonFile);
+          console.log(`Loaded atlas JSON (${jsonFile}):`, cmap);
+          if (nv1 && nv1.volumes.length > 1) {
+            nv1.volumes[1].setColormapLabel(cmap);
+            const numRegions = Object.keys(cmap.labels).length;
+            console.log(`num regions : ${numRegions}`)
+            clut = new Uint8Array(numRegions * 4);
+
+            if (atlas === 'aal'  ) {
+              clut[0] = Math.floor(Math.random() * 256);
+              clut[1] = Math.floor(Math.random() * 256);
+              clut[2] = Math.floor(Math.random() * 256);
+              clut[3] = 255;
+              clut[4] = Math.floor(Math.random() * 256);
+              clut[5] = Math.floor(Math.random() * 256);
+              clut[6] = Math.floor(Math.random() * 256);
+              clut[7] = 255;
+            }
+
+            else if (atlas === 'glasser') {
+            //   console.log('Atlas cmap.labels:', cmap.labels);
+            } else {
+              clut[0] = 0;
+              clut[1] = 0;
+              clut[2] = 0;
+              clut[3] = 0;
+              clut[4] = Math.floor(Math.random() * 256);
+              clut[5] = Math.floor(Math.random() * 256);
+              clut[6] = Math.floor(Math.random() * 256);
+              clut[7] = 255;
+            }
+
+            for (let i = 2; i < numRegions; i++) {
+              clut[i * 4 + 0] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 1] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 2] = Math.floor(Math.random() * 256);
+              clut[i * 4 + 3] = 255;
+            }
+
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.setOpacity(1, 0.6);
+            nv1.updateGLVolume();
+
+            const atlasData = await nv1.volumes[1].getVolumeData();
+            const dataRegions = [...new Set(atlasData.filter(val => val > 0).map(val => Math.round(val)))];
+            validRegions = dataRegions.filter(val => cmap.labels[val] !== undefined && Number.isInteger(val));
+
+            console.log(`Atlas: ${selectedAtlasFiles.name}`);
+            console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
+            console.log(`Data Regions (rounded):`, dataRegions);
+            console.log(`Valid Regions:`, validRegions);
+            console.log(`Valid Region Labels:`, validRegions.map(id => cmap.labels[id]));
+
+            if (validRegions.length === 0) {
+              console.error(`No valid regions found in ${selectedAtlasFiles.name} data.`);
+              console.log(`cmap.labels keys:`, Object.keys(cmap.labels));
+              validRegions = Object.keys(cmap.labels)
+                .map(Number)
+                .filter(val => val > 0 && Number.isInteger(val));
+              if (validRegions.length === 0) {
+                throw new Error(`No valid regions available for ${selectedAtlasFiles.name}`);
+              }
+              console.warn(`Fallback to cmap.labels keys:`, validRegions);
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load atlas data for ${selectedAtlasFiles.name}:`, error);
+          targetText.textContent = i18next.t('error_loading_data', { atlas: selectedAtlasFiles.name });
+        }
+      }
+
+      function updateGameDisplay() {
+        // Update labels based on mode
+        if (mode === 'time-attack') {
+            scoreLabel.textContent = i18next.t('score_label') + `: ${Math.round(score)}`; // Display rounded score for Time Attack
+        } else {
+            scoreLabel.textContent = i18next.t('correct_label') + `: ${correctCount}`; // Display correct count for other modes
+        }
+
+        errorLabel.textContent = i18next.t('errors_label') + `: ${errors}`;
+        streakLabel.textContent = i18next.t('streak_label') + `: ${streak}`;
+
+        if (mode === 'navigation') {
+          targetText.textContent = highlightedRegion
+            ? cmap.labels[highlightedRegion] || i18next.t('no_region_selected')
+            : i18next.t('click_to_identify');
+        } else if (currentTarget !== null && cmap && cmap.labels[currentTarget]) {
+          const prefix = i18next.t('find_prefix') || 'Find: '; // Assuming 'find_prefix' key exists in en.json
+          // For time attack, display the current question number
+          if (mode === 'time-attack') {
+             targetText.textContent = `${usedRegions.length}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${cmap.labels[currentTarget]}`;
+          } else {
+             targetText.textContent = prefix + cmap.labels[currentTarget];
+          }
+          console.log(`Displaying target: ${cmap.labels[currentTarget]} (ID: ${currentTarget})`);
+        } else {
+          targetText.textContent = i18next.t('find_prefix') + i18next.t('unknown_region'); // Use translated "Find:" and "Unknown"
+          console.error(`No label for currentTarget ${currentTarget}`, cmap);
+        }
+        targetText.style.color = '#d9dddc';
+        targetText.style.transition = '';
+        targetText.style.fontWeight = 'normal';
+      }
+
+      async function initNiivue() {
+        try {
+          nv1 = new niivue.Niivue({
+            show3Dcrosshair: true,
+            backColor: [0, 0, 0, 1],
+            crosshairColor: [1, 1, 1, 1]
+          });
+          await nv1.attachTo("gl1");
+          nv1.setInterpolation(true);
+          nv1.opts.crosshairGap = 0;
+          nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+          nv1.opts.multiplanarForceRender = true;
+          nv1.setSliceType(nv1.sliceTypeMultiplanar);
+          nv1.opts.dragMode = nv1.dragModes.slicer3D;
+          nv1.opts.yoke3Dto2DZoom = true;
+          nv1.opts.isRadiologicalConvention = true;
+
+          const volumeList1 = [
+            { url: '/neuroguessr_web/data/mni152.nii.gz' },
+            { url: selectedAtlasFiles.nii, isApplyScaling: false }
+          ];
+          await nv1.loadVolumes(volumeList1);
+
+          await loadAtlasData();
+
+          nv1.setClipPlane([2, 270, 0]);
+          nv1.opts.isSliceMM = true;
+
+          setupViewMenu();
+          startGame();
+        } catch (error) {
+          console.error(`Failed to initialize Niivue for ${selectedAtlasFiles.name}:`, error);
+          targetText.textContent = i18next.t('error_initializing');
+        }
+      }
+
+      function toggleGroup(id) {
+        let buttons = document.getElementsByClassName("viewBtn");
+        let char0 = id.charAt(0);
+        for (let i = 0; i < buttons.length; i++) {
+          if (buttons[i].id.charAt(0) !== char0) continue;
+          buttons[i].classList.remove("dropdown-item-checked");
+          if (buttons[i].id === id)
+            buttons[i].classList.add("dropdown-item-checked");
+        }
+      }
+
+      function setupViewMenu() {
+        async function onViewButtonClick(event) {
+          event.preventDefault();
+          if (event.target.id.charAt(0) === "|") {
+            if (event.target.id === "|Axial") nv1.setSliceType(nv1.sliceTypeAxial);
+            if (event.target.id === "|Coronal") nv1.setSliceType(nv1.sliceTypeCoronal);
+            if (event.target.id === "|Sagittal") nv1.setSliceType(nv1.sliceTypeSagittal);
+            if (event.target.id === "|Render") {
+              nv1.setSliceType(nv1.sliceTypeRender);
+              nv1.setClipPlane([2, 270, 0]);
+            }
+            if (event.target.id === "|MultiPlanar") {
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.NEVER;
+              nv1.setSliceType(nv1.sliceTypeMultiplanar);
+            }
+            if (event.target.id === "|MultiPlanarRender") {
+              nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+              nv1.setSliceType(nv1.sliceTypeMultiplanar);
+            }
+            toggleGroup(event.target.id);
+          }
+          if (event.target.id === "Radiological") {
+            nv1.opts.isRadiologicalConvention = !nv1.opts.isRadiologicalConvention;
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.drawScene();
+            return;
+          }
+          if (event.target.id === "ColoredAtlas") {
+            const isChecked = event.srcElement.classList.contains("dropdown-item-checked");
+            nv1.setOpacity(1, isChecked ? 0.0 : alphaSlider.value / 255);
+            event.srcElement.classList.toggle("dropdown-item-checked");
+            nv1.updateGLVolume();
+            return;
+          }
+        }
+
+        var buttons = document.getElementsByClassName("viewBtn");
+        for (let i = 0; i < buttons.length; i++)
+          buttons[i].addEventListener("click", onViewButtonClick, false);
+      }
+
+      function highlightTarget(isSuccess) {
+        targetText.style.transition = 'all 0.1s ease-in-out';
+        targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
+        targetText.style.fontWeight = 'bold';
+        setTimeout(() => {
+          targetText.style.color = '#d9dddc';
+          targetText.style.transition = '';
+          targetText.style.fontWeight = 'normal';
+        }, 200);
+      }
+
+      function resetGameState() {
+        currentTarget = null;
+        selectedVoxel = null;
+        attempts = 0; // Reset attempts for practice mode
+        usedRegions = []; // Reset used regions for time attack
+        highlightedRegion = null;
+        score = 0; // Reset score for Time Attack
+        correctCount = 0; // Reset correct count for Practice/Streak
+        errors = 0; // Reset errors
+        streak = 0; // Reset streak
+        updateGameDisplay(); // Update display to show reset score/errors
+        targetText.textContent = mode === 'navigation' ? i18next.t('click_to_identify') : i18next.t('not_started');
+        targetText.style.color = '#d9dddc';
+        targetText.style.transition = '';
+        targetText.style.fontWeight = 'normal';
+        guessButton.disabled = true;
+        if (clut && nv1) {
+          nv1.volumes[1].colormapLabel.lut = clut.slice();
+          nv1.updateGLVolume();
+        }
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        if (tooltip) {
+          tooltip.remove();
+          tooltip = null;
+        }
+        // Hide overlays
+        helpOverlay.classList.add('hidden');
+        streakEndOverlay.classList.add('hidden');
+         // Reset Niivue view if needed
+         if(nv1) {
+             nv1.setSliceType(nv1.sliceTypeMultiplanar); // Or preferred default view
+             nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS;
+             nv1.opts.isRadiologicalConvention = true; // Or preferred default
+             nv1.setOpacity(1, 0.6); // Or preferred default opacity
+             nv1.drawScene();
+         }
+      }
+
+      function selectNewTarget() {
+        // *** MODIFIED FOR TIME ATTACK: End game after 20 regions ***
+        if (mode === 'time-attack' && usedRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
+             endTimeAttack();
+             return;
+        }
+        // ********************************************************
+
+
+        if (validRegions.length === 0) {
+          console.warn('No valid regions available for target selection');
+          resetGameState();
+          return;
+        }
+
+
+        let availableRegions = validRegions.filter(r => !usedRegions.includes(r));
+
+
+        if (availableRegions.length === 0) {
+           // This case should ideally not be reached if validRegions had enough regions initially
+           console.warn('No available regions for target selection in the remaining set.');
+           // As a fallback, you could end the game here if somehow it didn't end after 20
+           if (mode === 'time-attack') {
+               endTimeAttack();
+               return;
+           } else {
+               // If no more regions in Practice/Streak, end the game
+               resetGameState(); // Or handle as an error in other modes
+               return;
+           }
+        }
+
+        currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+
+        if (mode === 'time-attack' || mode === 'streak') { // Add streak mode here to track used regions
+          usedRegions.push(currentTarget);
+        }
+
+        updateGameDisplay(); // Update display with the new target label
+
+        targetText.style.color = '#d9dddc';
+        targetText.style.transition = '';
+        targetText.style.fontWeight = 'normal';
+        guessButton.disabled = true;
+        selectedVoxel = null; // Reset selected voxel for the new target
+        attempts = 0; // Reset attempts for the new target in Practice mode
+        if (clut && nv1) {
+          nv1.volumes[1].colormapLabel.lut = clut.slice();
+          nv1.updateGLVolume();
+           nv1.drawScene(); // Redraw scene to ensure color reset is visible
+        }
+      }
+
+
+      function highlightRegionFluorescentYellow(regionId) {
+        if (mode === 'navigation' && regionId === 0) return;
+        console.log('highlightRegionFluorescentYellow called with regionId:', regionId);
+        if (clut && nv1 && regionId * 4 < clut.length) {
+          const lut = clut.slice();
+          // Make all regions transparent initially except region 0 if needed
+          for (let i = 0; i < lut.length / 4; i++) {
+               if (i !== 0 || (atlas === 'aal' || atlas === 'glasser' || atlas === 'destrieux' || atlas === 'schaefer')) {
+                    lut[i * 4 + 3] = 0; // Make transparent
+               }
+          }
+          // Highlight the specific region in yellow
+          lut[regionId * 4 + 0] = 255; // R
+          lut[regionId * 4 + 1] = 255; // G
+          lut[regionId * 4 + 2] = 0;   // B (Yellow)
+          lut[regionId * 4 + 3] = 255; // A (Fully Opaque)
+
+          nv1.volumes[1].colormapLabel.lut = lut;
+          nv1.updateGLVolume();
+          nv1.drawScene();
+        } else {
+          console.error('Cannot highlight region:', {
+            clut: !!clut,
+            nv1: !!nv1,
+            regionId,
+            lutLength: clut?.length
+          });
+        }
+      }
+
+
+      function highlightRegionOpacity(regionId) {
+        if (clut && nv1 && regionId * 4 < clut.length) {
+          const lut = clut.slice();
+          for (let i = 0; i < lut.length / 4; i++) {
+            if (i === regionId) {
+              if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
+                lut[i * 4 + 3] = 0;
+              } else {
+                lut[i * 4 + 3] = Math.round(0.9 * 255);
+              }
+            } else if (highlightedRegion && i === highlightedRegion) {
+              lut[i * 4 + 0] = 255;
+              lut[i * 4 + 1] = 255;
+              lut[i * 4 + 2] = 0;
+              lut[i * 4 + 3] = 255;
+            } else {
+              if (i === 0 && atlas !== 'aal' && atlas !== 'glasser' && atlas !== 'destrieux' && atlas !== 'schaefer') {
+                lut[i * 4 + 3] = 0;
+              } else {
+                lut[i * 4 + 3] = Math.round(0.6 * 255);
+              }
+            }
+          }
+          nv1.volumes[1].colormapLabel.lut = lut;
+          nv1.updateGLVolume();
+          nv1.drawScene();
+        }
+      }
+
+      function startTimer() {
+        startTime = Date.now();
+        timeLabel.style.display = 'block';
+        timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+          const seconds = (elapsed % 60).toString().padStart(2, '0');
+          timeLabel.textContent = i18next.t('time_label') + `: ${minutes}:${seconds}`;
+        }, 1000);
+      }
+
+      function endTimeAttack() {
+        clearInterval(timerInterval);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+
+        // *** MODIFIED FOR TIME ATTACK END SCORE DISPLAY ***
+        // Final score is the accumulated score during the game
+        const finalScore = Math.round(score);
+
+        const gameOverMessage = i18next.t('game_over', { // Use existing 'game_over' key and map score to accuracy
+          accuracy: finalScore.toString(), // Display rounded final score as accuracy
+          minutes: minutes.toString(),
+          seconds: seconds.toString()
+        });
+        console.log('Attempting to display game over message:', gameOverMessage, 'Score:', finalScore, 'Minutes:', minutes, 'Seconds:', seconds);
+        targetText.textContent = gameOverMessage;
+        highlightTarget(true); // Indicate game over with green color
+
+        // Pass the final score (rounded) back to the index page - Removed redirect for streak, keep for time attack?
+         setTimeout(() => {
+             window.location.href = `index.html?score=${finalScore}&time=${elapsed}`;
+         }, 2000); // Redirect after a delay
+         // ******************************************************
+      }
+
+      // Function to display the streak end overlay
+      function displayStreakEndWindow(finalStreak, correctRegionName, guessedRegionName) {
+          // Get references to the elements INSIDE the function
+          const finalStreakSpan = document.getElementById('final-streak');
+          const correctRegionSpan = document.getElementById('correct-region');
+          const guessedRegionSpan = document.getElementById('guessed-region');
+          const goBackMenuButton = document.getElementById('go-back-menu-button');
+           const closeStreakEndButton = document.getElementById('close-streak-end'); // Get close button
+
+          // Update content using translated strings and values
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_title"]').textContent = i18next.t('streak_ended_title');
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_score"]').innerHTML = i18next.t('streak_ended_score', { streak: finalStreak });
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_correct_region"]').innerHTML = i18next.t('streak_ended_correct_region', { region: correctRegionName });
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_your_guess"]').innerHTML = i18next.t('streak_ended_your_guess', { region: guessedRegionName });
+          goBackMenuButton.textContent = i18next.t('return_button');
+
+
+          // Set the text content for the spans directly after getting references
+          // finalStreakSpan.textContent = finalStreak; // This is now handled by the i18next interpolation in the line above
+          // correctRegionSpan.textContent = correctRegionName; // This is now handled by the i18next interpolation in the line above
+          // guessedRegionSpan.textContent = guessedRegionName; // This is now handled by the i18next interpolation in the line above
+
+
+          streakEndOverlay.classList.remove('hidden');
+          gameRunning = false; // Stop the game
+
+          // Add event listener for the "Go back to Menu" button
+          goBackMenuButton.addEventListener('click', () => {
+              window.location.href = 'index.html';
+          });
+
+          // Add event listener for the close button
+           closeStreakEndButton.addEventListener('click', () => {
+               streakEndOverlay.classList.add('hidden');
+                // Optionally redirect to menu on closing the window
+               // window.location.href = 'index.html';
+           });
+
+          // Add event listener to close overlay when clicking outside content
+           streakEndOverlay.addEventListener('click', (e) => {
+               if (e.target === streakEndOverlay) {
+                   streakEndOverlay.classList.add('hidden');
+                    // Optionally redirect to menu on closing the window
+                   // window.location.href = 'index.html';
+               }
+           });
+      }
+
+
+      function startGame() {
+        gameRunning = true;
+        score = 0; // Initialize score for Time Attack (total points)
+        correctCount = 0; // Initialize correct count for Practice/Streak
+        errors = 0; // Reset errors
+        streak = 0; // Reset streak
+        attempts = 0; // Reset attempts for practice mode
+        usedRegions = []; // Reset used regions
+
+        // Update display based on mode
+        scoreLabel.style.display = (mode === 'navigation') ? 'none' : 'block';
+        errorLabel.style.display = (mode === 'navigation') ? 'none' : 'block';
+        streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
+        timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
+
+        if (mode === 'time-attack') {
+             scoreLabel.textContent = i18next.t('score_label') + ": 0"; // Use score label for Time Attack
+
+            // Shuffle validRegions and take the first 20 for Time Attack
+            if (validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
+                 validRegions.sort(() => 0.5 - Math.random());
+                 validRegions = validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
+                 console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
+            } else if (validRegions.length > 0) {
+                 console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${validRegions.length} available regions.`);
+                 validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
+            } else {
+                 console.error("No valid regions available for Time Attack!");
+                 targetText.textContent = i18next.t('no_regions_available') || 'No regions available.'; // Add translation key if needed
+                 return; // Stop game initialization if no regions
+            }
+             startTimer(); // Start timer for Time Attack
+        } else {
+             scoreLabel.textContent = i18next.t('correct_label') + ": 0"; // Use correct label for other modes
+        }
+        // ************************************************************
+
+
+        guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
+        restoreColorButton.style.display = mode === 'navigation' ? 'inline-block' : 'none';
+
+
+        // Start the first round
+        selectNewTarget();
+      }
+
+      function validateGuess() {
+        if (!selectedVoxel || !gameRunning || !currentTarget) {
+          console.warn('Cannot validate guess:', { selectedVoxel, gameRunning, currentTarget });
+          return;
+        }
+        const clickedRegion = Math.round(nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]));
+        const targetName = cmap && cmap.labels[currentTarget] ? cmap.labels[currentTarget] : i18next.t('unknown_region'); // Use translated "Unknown"
+        const clickedRegionName = cmap && cmap.labels[clickedRegion] ? cmap.labels[clickedRegion] : i18next.t('unknown_region'); // Use translated "Unknown"
+
+
+        if (clickedRegion === currentTarget) {
+           // Correct Guess
+           if (mode === 'time-attack') {
+               score += MAX_POINTS_PER_REGION; // Add full points for correct guess
+           } else {
+                correctCount++; // Increment correct count for other modes
+                streak++; // Increment streak for Streak mode
+           }
+
+          highlightTarget(true); // Indicate correct guess visually
+          attempts = 0; // Reset attempts for Practice mode
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+             nv1.drawScene(); // Redraw scene to ensure color reset is visible
+          }
+          selectedVoxel = null; // Reset selected voxel after guess
+          guessButton.disabled = true; // Disable guess button until next target
+
+          updateGameDisplay(); // Update display immediately after correct guess
+
+          // Move to the next target after a short delay to show feedback
+          setTimeout(() => {
+             selectNewTarget();
+          }, 1000);
+
+
+        } else { // Incorrect Guess
+          errors++;
+
+          if (mode === 'practice') {
+            attempts++;
+
+            const prefix = i18next.t('incorrect_prefix') || 'It\'s '; // Assuming 'incorrect_prefix' key exists
+            targetText.textContent = prefix + clickedRegionName + ' !';
+            console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
+
+            if (attempts >= 3) {
+              highlightRegionFluorescentYellow(currentTarget);
+            }
+            setTimeout(() => {
+              const findPrefix = i18next.t('find_prefix') || 'Find: ';
+              targetText.textContent = findPrefix + targetName;
+              targetText.style.color = '#d9dddc';
+              targetText.style.transition = '';
+              targetText.style.fontWeight = 'normal';
+            }, 2000);
+
+          } else if (mode === 'time-attack') {
+              // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
+
+              let pointsEarned = 0;
+              const correctCenter = cmap.centers ? cmap.centers[currentTarget] : null;
+              const clickedCenter = cmap.centers ? cmap.centers[clickedRegion] : null;
+
+              if (correctCenter && clickedCenter) {
+                  // Calculate Euclidean distance between centers
+                  const distance = Math.sqrt(
+                      Math.pow(correctCenter[0] - clickedCenter[0], 2) +
+                      Math.pow(correctCenter[1] - clickedCenter[1], 2) +
+                      Math.pow(correctCenter[2] - clickedCenter[2], 2)
+                  );
+
+                   // Calculate points earned based on distance
+                   // Points = MAX_POINTS_PER_REGION * (1 - distance / MAX_PENALTY_DISTANCE)
+                   // Ensure points are not negative and cap at MAX_POINTS_PER_REGION
+                   const normalizedDistance = Math.min(distance, MAX_PENALTY_DISTANCE); // Cap distance at max penalty distance
+                   pointsEarned = MAX_POINTS_PER_REGION * (1 - normalizedDistance / MAX_PENALTY_DISTANCE);
+                   pointsEarned = Math.max(0, pointsEarned); // Ensure points are not negative
+
+
+                   console.log(`Time Attack Error:`);
+                   console.log(`  Target Region ID: ${currentTarget} (${targetName}), Clicked Region ID: ${clickedRegion} (${clickedRegionName})`);
+                   console.log(`  Correct Center: ${correctCenter}`);
+                   console.log(`  Clicked Center: ${clickedCenter}`);
+                   console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
+                   console.log(`  Points earned for this error: ${pointsEarned.toFixed(2)}`);
+                  // ***************************************************************************
+
+              } else {
+                  console.warn(`Center data missing for region ${currentTarget} or ${clickedRegion}. Cannot calculate distance-based score.`);
+                  // Option: award minimal points or 0 if center data is missing
+                  pointsEarned = 0; // Award 0 points if centers are missing
+              }
+
+              score += pointsEarned; // Add points earned for this attempt to the total score
+
+              // Display temporary incorrect message and points earned
+              const incorrectMsgPrefix = i18next.t('incorrect_prefix') || 'Incorrect! It\'s ';
+              const pointsMsg = pointsEarned.toFixed(1) > 0 ? ` (+${pointsEarned.toFixed(1)} pts)` : ' (+0 pts)';
+              targetText.textContent = incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg;
+              highlightTarget(false); // Indicate incorrect guess visually
+
+               selectedVoxel = null; // Reset selected voxel after guess
+               guessButton.disabled = true; // Disable guess button until next target
+
+                updateGameDisplay(); // Update display immediately after incorrect guess
+
+              // Automatically move to the next target after a short delay
+              setTimeout(() => {
+                  selectNewTarget();
+              }, 1500); // Adjust delay as needed
+
+
+          } else if (mode === 'streak') {
+            // Streak ends on incorrect guess
+            const finalStreak = streak; // Store the final streak before resetting
+            streak = 0; // Reset streak on incorrect guess in streak mode
+            // The streak label will be updated by updateGameDisplay called below
+
+            // Display Streak End Overlay instead of redirecting
+            displayStreakEndWindow(finalStreak, targetName, clickedRegionName);
+
+            highlightTarget(false); // Indicate streak ended visually
+
+            // Stop the game
+            gameRunning = false;
+
+             selectedVoxel = null; // Reset selected voxel after guess
+             guessButton.disabled = true; // Disable guess button
+
+            // Do not call selectNewTarget or redirect automatically here
+          }
+
+           // For modes other than time-attack and streak, handle selected voxel and guess button
+           if (mode !== 'time-attack' && mode !== 'streak') {
+              selectedVoxel = null;
+              guessButton.disabled = true;
+           }
+            updateGameDisplay(); // Update display after incorrect guess
+        }
+      }
+
+      function createTooltip(text, x, y) {
+        if (tooltip) {
+          tooltip.remove();
+        }
+        tooltip = document.createElement('div');
+        tooltip.className = 'region-tooltip';
+        tooltip.textContent = text;
+        tooltip.style.position = 'absolute';
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+        document.body.appendChild(tooltip);
+      }
+
+      document.getElementById("gl1").addEventListener("mousemove", (e) => {
+        if (!gameRunning || !nv1 || mode !== 'navigation' || highlightedRegion !== null) return;
+        const rect = nv1.gl.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Check if mouse is within canvas bounds
+        if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
+             const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition(e, nv1.gl.canvas);
+            const frac = nv1.canvasPos2frac([pos.x * nv1.uiData.dpr, pos.y * nv1.uiData.dpr]);
+            if (frac[0] >= 0) {
+                const mm = nv1.frac2mm(frac);
+                const vox = nv1.volumes[1].mm2vox(mm);
+                const idx = Math.round(nv1.volumes[1].getValue(vox[0], vox[1], vox[2]));
+                if (isFinite(idx) && idx > 0 && idx in cmap.labels) { // Ensure valid region ID > 0
+                    createTooltip(cmap.labels[idx] || i18next.t('unknown_region'), e.clientX + 10, e.clientY + 10); // Use translated "Unknown", add offset
+                } else {
+                    if (tooltip) {
+                        tooltip.remove();
+                        tooltip = null;
+                    }
+                }
+            }
+        } else {
+             // Mouse is outside canvas, remove tooltip
+             if (tooltip) {
+                tooltip.remove();
+                tooltip = null;
+            }
+        }
+      });
+
+      document.getElementById("gl1").addEventListener("mouseleave", () => {
+        if (!gameRunning || !nv1 || mode !== 'navigation' || highlightedRegion !== null) return;
+        if (tooltip) {
+          tooltip.remove();
+          tooltip = null;
+        }
+      });
+
+      function handleCanvasInteraction(e) {
+        if (!gameRunning || !nv1) return;
+        e.preventDefault();
+        const isTouch = e.type === 'touchstart';
+        const touch = isTouch ? e.touches[0] : e;
+         const rect = nv1.gl.canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        // Check if touch/click is within canvas bounds
+        if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
+            const pos = nv1.getNoPaddingNoBorderCanvasRelativeMousePosition({ clientX: touch.clientX, clientY: touch.clientY }, nv1.gl.canvas);
+            const frac = nv1.canvasPos2frac([pos.x * nv1.uiData.dpr, pos.y * nv1.uiData.dpr]);
+            if (frac[0] >= 0) {
+                const mm = nv1.frac2mm(frac);
+                const vox = nv1.volumes[1].mm2vox(mm);
+                const idx = Math.round(nv1.volumes[1].getValue(vox[0], vox[1], vox[2]));
+                if (isFinite(idx) && idx > 0 && idx in cmap.labels) { // Ensure valid region ID > 0
+                    selectedVoxel = vox;
+                    if (mode === 'navigation') {
+                        targetText.textContent = cmap.labels[idx] || i18next.t('no_region_selected');
+                        highlightedRegion = idx;
+                        highlightRegionFluorescentYellow(idx);
+                         if (tooltip) {
+                           tooltip.remove();
+                           tooltip = null;
+                         }
+                        nv1.opts.crosshairColor = [1, 1, 1, 1];
+                        nv1.drawScene();
+                    } else {
+                        guessButton.disabled = false;
+                        nv1.opts.crosshairColor = [1, 1, 1, 1];
+                        nv1.drawScene();
+                    }
+                    console.log(`Clicked voxel: ${vox}, Region ID: ${idx}, Region Name: ${cmap.labels[idx] || i18next.t('unknown_region')}`);
+                } else {
+                    selectedVoxel = null;
+                    if (mode === 'navigation') {
+                        targetText.textContent = i18next.t('no_region_selected');
+                        highlightedRegion = null;
+                        if (clut && nv1) {
+                            nv1.volumes[1].colormapLabel.lut = clut.slice();
+                            nv1.updateGLVolume();
+                             nv1.drawScene();
+                        }
+                    } else {
+                        guessButton.disabled = true;
+                    }
+                    console.log(`Clicked voxel: ${vox}, Invalid or background region ID: ${idx}`);
+                }
+            }
+        }
+      }
+
+
+      document.getElementById("gl1").addEventListener("click", handleCanvasInteraction);
+      document.getElementById("gl1").addEventListener("touchstart", handleCanvasInteraction);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.code === 'Escape' && gameRunning && mode === 'navigation') {
+          e.preventDefault();
+          if (clut && nv1) {
+            nv1.volumes[1].colormapLabel.lut = clut.slice();
+            nv1.updateGLVolume();
+            nv1.drawScene();
+          }
+          targetText.textContent = i18next.t('click_to_identify');
+          selectedVoxel = null;
+          highlightedRegion = null;
+           if (tooltip) {
+              tooltip.remove();
+              tooltip = null;
+            }
+           nv1.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
+           nv1.drawScene();
+        }
+         // Close help overlay with Escape key
+        if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+            e.preventDefault();
+            helpOverlay.classList.add('hidden');
+        }
+         // Close streak end overlay with Escape key
+        if (e.key === 'Escape' && !streakEndOverlay.classList.contains('hidden')) {
+            e.preventDefault();
+            streakEndOverlay.classList.add('hidden');
+             // Optionally redirect to menu on Escape from end screen
+             // window.location.href = 'index.html';
+        }
+      });
+
+      guessButton.onclick = validateGuess;
+
+      // Help button event listeners
+      helpButton.addEventListener('click', () => {
+          helpOverlay.classList.remove('hidden');
+      });
+
+      closeHelpButton.addEventListener('click', () => {
+          helpOverlay.classList.add('hidden');
+      });
+
+      // Close help overlay when clicking outside the content
+      helpOverlay.addEventListener('click', (e) => {
+          if (e.target === helpOverlay) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
+
+      initNiivue();
+    </script>
+  </body>
+</html>
