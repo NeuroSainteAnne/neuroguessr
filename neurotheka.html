@@ -7,6 +7,7 @@
     <title data-i18n="neuroglossaire_title">NeuroGlossaire - Region Viewer</title>
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   </head>
   <body>
     <header>
@@ -77,6 +78,30 @@
     <div class="button-container">
       <button id="return-button" class="return-button" data-i18n="return_button">Return</button>
     </div>
+
+    <div id="help-overlay" class="help-overlay hidden">
+        <div class="help-content">
+            <button id="close-help" class="close-button">&times;</button>
+            <h2 data-i18n="help_title">Help & Information</h2>
+             <section>
+                <h3 data-i18n="neurotheka_principle_title">Principle of NeuroGlossary</h3>
+                <p data-i18n="neurotheka_principle_text"></p>
+            </section>
+            <section>
+                <h3 data-i18n="neurotheka_navigation_title">Navigation in NeuroGlossary</h3>
+                <p data-i18n="neurotheka_navigation_text"></p>
+            </section>
+             <section>
+                <h3 data-i18n="viewer_controls_title">Navigation Controls</h3>
+                <p data-i18n="viewer_controls_text"></p>
+            </section>
+        </div>
+    </div>
+
+    <button id="help-button" class="help-button">
+        <i class="fas fa-question"></i>
+    </button>
+
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
@@ -111,7 +136,12 @@
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-            elem.textContent = i18next.t(key);
+            const isHelpText = elem.closest('#help-overlay');
+            if (isHelpText) {
+              elem.innerHTML = i18next.t(key);
+            } else {
+              elem.textContent = i18next.t(key);
+            }
           }
         });
       }
@@ -137,6 +167,11 @@
       const searchInput = document.getElementById("atlas-search");
       const searchSuggestions = document.getElementById("search-suggestions");
 
+      // Help button and overlay elements
+      const helpButton = document.getElementById('help-button');
+      const helpOverlay = document.getElementById('help-overlay');
+      const closeHelpButton = document.getElementById('close-help');
+
       let nv1 = null;
       let cmap = null;
       let clut = null;
@@ -147,12 +182,11 @@
 
       // Atlas configuration
       const atlasFiles = {
-        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
         'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
-        // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
-        // 'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser'},
-        // 'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', name: 'Destrieux' },
+        'destrieux': { nii: '/neuroguessr_web/data/remapped_destrieux_stride_uint.nii.gz', json: '/neuroguessr_web/data/destrieux_new.json', json_fr: '/neuroguessr_web/data/destrieux_new_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'desikan': { nii: '/neuroguessr_web/data/remapped_dk_stride.nii.gz', json: '/neuroguessr_web/data/desikan_new.json', json_fr: '/neuroguessr_web/data/desikan_new_fr.json', viewer: 'neurotheka.html', name: 'Desikan' },
+        'allen': { nii: '/neuroguessr_web/data/reconstructed_allen_05mm_uint.nii.gz', json: '/neuroguessr_web/data/allen.json', json_fr: '/neuroguessr_web/data/allen_fr.json', viewer: 'neurotheka.html', name: 'Allen' },
         'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
         'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
@@ -505,6 +539,29 @@
           targetText.textContent = i18next.t('error_initializing');
         }
       }
+
+      // Help button event listeners
+      helpButton.addEventListener('click', () => {
+          helpOverlay.classList.remove('hidden');
+      });
+
+      closeHelpButton.addEventListener('click', () => {
+          helpOverlay.classList.add('hidden');
+      });
+
+      // Close help overlay when clicking outside the content
+      helpOverlay.addEventListener('click', (e) => {
+          if (e.target === helpOverlay) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
+
+      // Close help overlay with Escape key
+      document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
 
       // Initialize
       loadAtlasLabels().then(() => {

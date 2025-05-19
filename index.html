@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="app_title">NeuroGuessr Web - Welcome</title>
     <link rel="stylesheet" href="niivue.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="index-page">
     <header class="navbar">
@@ -90,32 +91,37 @@
                         <div id="atlas-buttons-cortex">
                             <button class="panel-button" data-atlas="tissues">
                                 <span class="atlas-info" data-i18n="[html]tissues_info">Tissue classes <span class="atlas-description">Tissue types (CSF, WM, GM)</span></span>
-                                <span class="difficulty-icons">
-                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                                </span>
                             </button>
                             <button class="panel-button" data-atlas="harvard-oxford">
                                 <span class="atlas-info" data-i18n="[html]harvard_oxford_info">Harvard-Oxford <span class="atlas-description">Probabilistic anatomical regions</span></span>
                                 <span class="difficulty-icons">
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
-                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                 </span>
                             </button>
-                            <button class="panel-button" data-atlas="aal">
-                                <span class="atlas-info" data-i18n="[html]aal_info">AAL <span class="atlas-description">Automated Anatomical Labeling</span></span>
+                            <button class="panel-button" data-atlas="desikan">
+                                <span class="atlas-info" data-i18n="[html]desikan_info">Neuromorph <span class="atlas-description">Gyral Parcellation</span></span>
                                 <span class="difficulty-icons">
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                 </span>
                             </button>
-                            <!-- <button class="panel-button" data-atlas="glasser">
-                                <span class="atlas-info" data-i18n="[html]glasser_info">Glasser <span class="atlas-description">Multimodal cortical parcellation</span></span>
+                            <button class="panel-button" data-atlas="destrieux">
+                                <span class="atlas-info" data-i18n="[html]destrieux_info">Destrieux <span class="atlas-description">Sulcal-Gyral parcellation</span></span>
                                 <span class="difficulty-icons">
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                     <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
                                 </span>
-                            </button> -->
+                            </button>
+                            <button class="panel-button" data-atlas="allen">
+                                <span class="atlas-info" data-i18n="[html]allen_info">Allen Adult <span class="atlas-description">Cyto etc</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
                         </div>
                         <div id="atlas-buttons-functional">
                             <button class="panel-button" data-atlas="yeo7">
@@ -229,6 +235,32 @@
 
     <div id="notification"></div>
 
+    <div id="help-overlay" class="help-overlay hidden">
+        <div class="help-content">
+            <button id="close-help" class="close-button">&times;</button>
+            <h2 data-i18n="help_title">Help</h2>
+            <section>
+                <h3 data-i18n="help_presentation_title">Game Presentation</h3>
+                <p data-i18n="help_presentation_text"></p>
+            </section>
+            <section>
+                <h3 data-i18n="help_atlases_title">Atlases References</h3>
+                <p data-i18n="help_atlases_text"></p>
+            </section>
+            <section>
+                <h3 data-i18n="help_modes_title">Game Modes</h3>
+                <p data-i18n="help_modes_navigation"></p>
+                <p data-i18n="help_modes_practice"></p>
+                <p data-i18n="help_modes_streak"></p>
+                <p data-i18n="help_modes_time_attack"></p>
+            </section>
+        </div>
+    </div>
+
+    <button id="help-button" class="help-button">
+        <i class="fas fa-question"></i>
+    </button>
+
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script src="/neuroguessr_web/scripts/login.js"></script>
     <script>
@@ -263,7 +295,12 @@
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-            elem.textContent = i18next.t(key);
+            const isHelpText = elem.closest('#help-overlay');
+            if (isHelpText) {
+              elem.innerHTML = i18next.t(key); // Use innerHTML for help text to render HTML tags
+            } else {
+              elem.textContent = i18next.t(key); // Use textContent for other elements
+            }
           }
         });
       }
@@ -297,6 +334,11 @@
       const searchInput = document.getElementById('atlas-search');
       const searchSuggestions = document.getElementById('search-suggestions');
 
+      // Help button and overlay elements
+      const helpButton = document.getElementById('help-button');
+      const helpOverlay = document.getElementById('help-overlay');
+      const closeHelpButton = document.getElementById('close-help');
+
       // Variables to store user selections
       let selectedAtlas = null;
       let selectedMode = null;
@@ -305,14 +347,11 @@
 
       // Atlas configuration
       const atlasFiles = {
-        'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', viewer: 'neurotheka.html', name: 'AAL' },
         'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
         'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', viewer: 'neurotheka.html', name: 'Tissue' },
-        // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', viewer: 'neurotheka.html', name: 'Hemisphere' },
-        // 'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', viewer: 'neurotheka.html', name: 'Brodmann' },
-        // 'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', viewer: 'neurotheka.html', name: 'Glasser' },
-        // 'destrieux': { nii: '/neuroguessr_web/data/Destrieux_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/destrieux.json', json_fr: '/neuroguessr_web/data/destrieux_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
-        // 'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', viewer: 'neurotheka.html', name: 'Schaefer' },
+        'destrieux': { nii: '/neuroguessr_web/data/remapped_destrieux_stride_uint.nii.gz', json: '/neuroguessr_web/data/destrieux_new.json', json_fr: '/neuroguessr_web/data/destrieux_new_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'desikan': { nii: '/neuroguessr_web/data/remapped_dk_stride.nii.gz', json: '/neuroguessr_web/data/desikan_new.json', json_fr: '/neuroguessr_web/data/desikan_new_fr.json', viewer: 'neurotheka.html', name: 'Desikan' },
+        'allen': { nii: '/neuroguessr_web/data/reconstructed_allen_05mm_uint.nii.gz', json: '/neuroguessr_web/data/allen.json', json_fr: '/neuroguessr_web/data/allen_fr.json', viewer: 'neurotheka.html', name: 'Allen' },
         'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', viewer: 'neurotheka.html', name: 'Yeo7' },
         'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', viewer: 'neurotheka.html', name: 'Yeo17' },
         'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', viewer: 'neurotheka.html', name: 'Subcortical' },
@@ -505,6 +544,29 @@
       });
       configButton.addEventListener('click', () => {
         window.location.href = `config_user.html`;
+      });
+
+      // Help button event listeners
+      helpButton.addEventListener('click', () => {
+          helpOverlay.classList.remove('hidden');
+      });
+
+      closeHelpButton.addEventListener('click', () => {
+          helpOverlay.classList.add('hidden');
+      });
+
+      // Close help overlay when clicking outside the content
+      helpOverlay.addEventListener('click', (e) => {
+          if (e.target === helpOverlay) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
+
+      // Close help overlay with Escape key
+      document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+              helpOverlay.classList.add('hidden');
+          }
       });
 
       modeButtons.forEach(button => {
