@@ -8,7 +8,74 @@
     <link rel="stylesheet" href="niivue.css" />
     <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    </head>
+    <style>
+      /* Basic styling for the overlay - can be moved to niivue.css */
+      .streak-end-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.7);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+      }
+
+      .streak-end-content {
+          background-color: #333;
+          color: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          text-align: center;
+          max-width: 500px;
+          position: relative; /* Needed for close button positioning */
+      }
+
+       .streak-end-content h2 {
+          margin-top: 0;
+          color: #d9dddc;
+      }
+
+      .streak-end-content p {
+          margin: 10px 0;
+      }
+
+      .streak-end-content button {
+          margin-top: 20px;
+          padding: 10px 20px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 1em;
+      }
+
+      .streak-end-content button:hover {
+          background-color: #0056b3;
+      }
+
+      .hidden {
+          display: none;
+      }
+
+      .close-button {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          font-size: 1.5em;
+          color: #d9dddc;
+          cursor: pointer;
+      }
+       .close-button:hover {
+            color: #fff;
+       }
+    </style>
+  </head>
   <body>
     <header>
       <div class="header-container">
@@ -20,11 +87,7 @@
           <p id="target-label"><span class="target-text" data-i18n="not_started">Target: Not Started</span></p>
           <div class="score-error-container">
             <p id="score-label" data-i18n="score_label">Score: 0</p> <p id="error-label" data-i18n="errors_label">Errors: 0</p>
-            <p id="streak-label" style="display: none;">
-                <span data-i18n="streak_label">Streak: </span>
-                <img src="/neuroguessr_web/data/flame.png" alt="Streak Flame" class="streak-flame-icon">
-                <span id="streak-value">0</span>
-            </p>
+            <p id="streak-label" style="display: none;" data-i18n="streak_label">Streak: 0</p>
             <p id="time-label" style="display: none;" data-i18n="time_label">Time: 00:00</p>
           </div>
         </div>
@@ -108,7 +171,7 @@
     </div>
 
     <div id="help-overlay" class="help-overlay hidden">
-        <div class="overlay-content">
+        <div class="help-content">
             <button id="close-help" class="close-button">&times;</button>
             <h2 data-i18n="viewer_help_title">Viewer Help</h2>
             <div id="help-mode-description">
@@ -124,37 +187,14 @@
         <i class="fas fa-question"></i>
     </button>
 
-    <div id="streak-end-overlay" class="streak-overlay hidden">
-        <div class="overlay-content">
+    <div id="streak-end-overlay" class="streak-end-overlay hidden">
+        <div class="streak-end-content">
+            <button id="close-streak-end" class="close-button">&times;</button>
             <h2 data-i18n="streak_ended_title">Streak Ended</h2>
-            <p><span data-i18n="streak_ended_score">Your Streak: </span><span id="final-streak" class="streak-number">0</span></p>
-            <div class="overlay-buttons">
-                <button id="go-back-menu-button-streak" class="home-button">
-                     <i class="fas fa-home"></i>
-                </button>
-                 <button id="restart-button-streak" class="restart-button">
-                     <i class="fas fa-sync-alt"></i>
-                 </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="time-attack-end-overlay" class="time-attack-overlay hidden">
-        <div class="overlay-content">
-            <h2 data-i18n="time_attack_ended_title">Time Attack Ended</h2>
-            <p><span data-i18n="time_attack_ended_time">Time: </span><span id="final-time-attack-time">00:00</span></p>
-             <p><span data-i18n="time_attack_ended_score">Your Score: </span><span id="final-time-attack-score-text">0</span> / 1000</p>
-            <div class="score-progress-bar w3-light-grey w3-round">
-                <div id="time-attack-score-bar" class="w3-container w3-round w3-blue" style="width:0%"></div>
-            </div>
-             <div class="overlay-buttons">
-                <button id="go-back-menu-button-time-attack" class="home-button">
-                    <i class="fas fa-home"></i>
-                </button>
-                 <button id="restart-button-time-attack" class="restart-button">
-                     <i class="fas fa-sync-alt"></i>
-                 </button>
-            </div>
+            <p data-i18n="streak_ended_score">Your Streak: <span id="final-streak">0</span></p>
+            <p data-i18n="streak_ended_correct_region">Correct Region: <span id="correct-region"></span></p>
+            <p data-i18n="streak_ended_your_guess">Your Guess: <span id="guessed-region"></span></p>
+            <button id="go-back-menu-button" data-i18n="return_button">Return to Menu</button>
         </div>
     </div>
 
@@ -197,35 +237,21 @@
       function updateContent() {
         document.querySelectorAll('[data-i18n]').forEach(elem => {
           const key = elem.getAttribute('data-i18n');
-          // Exclude elements within the overlays from this general update
-          if (elem.closest('.streak-overlay') || elem.closest('.time-attack-overlay') || elem.closest('.help-overlay')) { // Use specific classes
-              return;
-          }
           if (key.startsWith('[html]')) {
             elem.innerHTML = i18next.t(key.replace('[html]', ''));
           } else if (key.startsWith('[')) {
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-             elem.textContent = i18next.t(key); // Use textContent for all other elements
+            // Check if the element is within the help overlay or streak end overlay
+            const isOverlayText = elem.closest('#help-overlay') || elem.closest('#streak-end-overlay');
+            if (isOverlayText) {
+              elem.innerHTML = i18next.t(key); // Use innerHTML for overlay text to render HTML tags
+            } else {
+              elem.textContent = i18next.t(key); // Use textContent for other elements
+            }
           }
         });
-         // Explicitly update the titles and specific text within the overlays
-         const streakEndTitle = document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_title"]');
-         if (streakEndTitle) {
-             streakEndTitle.textContent = i18next.t('streak_ended_title');
-         }
-         const timeAttackEndTitle = document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_title"]');
-          if (timeAttackEndTitle) {
-              timeAttackEndTitle.textContent = i18next.t('time_attack_ended_title');
-          }
-          // Update specific text within overlays that are not handled by the general loop
-          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_score"]').textContent = i18next.t('streak_ended_score') + ' ';
-          // Removed updates for correct/guessed region spans
-
-          document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_score"]').textContent = i18next.t('time_attack_ended_score') + ' ';
-          document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_time"]').textContent = i18next.t('time_attack_ended_time') + ' ';
-          // The time attack return button is now an icon, so its textContent is not set here
       }
 
       // Function to update help content based on the current mode
@@ -317,9 +343,8 @@
       const helpOverlay = document.getElementById('help-overlay');
       const closeHelpButton = document.getElementById('close-help');
 
-      // Overlay elements
+      // Streak End Overlay elements - References moved inside the function
       const streakEndOverlay = document.getElementById('streak-end-overlay');
-      const timeAttackEndOverlay = document.getElementById('time-attack-end-overlay');
 
 
       // Time Attack specific constants
@@ -485,8 +510,7 @@
             ? cmap.labels[highlightedRegion] || i18next.t('no_region_selected')
             : i18next.t('click_to_identify');
         } else if (currentTarget !== null && cmap && cmap.labels[currentTarget]) {
-          // Use 'find' translation key directly
-          const prefix = i18next.t('find') || 'Find: ';
+          const prefix = i18next.t('find_prefix') || 'Find: '; // Assuming 'find_prefix' key exists in en.json
           // For time attack, display the current question number
           if (mode === 'time-attack') {
              targetText.textContent = `${usedRegions.length}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${cmap.labels[currentTarget]}`;
@@ -495,8 +519,7 @@
           }
           console.log(`Displaying target: ${cmap.labels[currentTarget]} (ID: ${currentTarget})`);
         } else {
-          // Use 'find' translation key directly
-          targetText.textContent = i18next.t('find') + i18next.t('unknown_region'); // Use translated "Find:" and "Unknown"
+          targetText.textContent = i18next.t('find_prefix') + i18next.t('unknown_region'); // Use translated "Find:" and "Unknown"
           console.error(`No label for currentTarget ${currentTarget}`, cmap);
         }
         targetText.style.color = '#d9dddc';
@@ -596,7 +619,11 @@
         targetText.style.transition = 'all 0.1s ease-in-out';
         targetText.style.color = isSuccess ? '#4ade80' : '#f87171';
         targetText.style.fontWeight = 'bold';
-        // Do not reset color/font here, let the timeout handle it
+        setTimeout(() => {
+          targetText.style.color = '#d9dddc';
+          targetText.style.transition = '';
+          targetText.style.fontWeight = 'normal';
+        }, 200);
       }
 
       function resetGameState() {
@@ -630,7 +657,6 @@
         // Hide overlays
         helpOverlay.classList.add('hidden');
         streakEndOverlay.classList.add('hidden');
-        timeAttackEndOverlay.classList.add('hidden'); // Hide time attack overlay
          // Reset Niivue view if needed
          if(nv1) {
              nv1.setSliceType(nv1.sliceTypeMultiplanar); // Or preferred default view
@@ -644,7 +670,7 @@
       function selectNewTarget() {
         // *** MODIFIED FOR TIME ATTACK: End game after 20 regions ***
         if (mode === 'time-attack' && usedRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
-             endTimeAttack(); // Call endTimeAttack to show the window
+             endTimeAttack();
              return;
         }
         // ********************************************************
@@ -773,113 +799,69 @@
         const minutes = Math.floor(elapsed / 60);
         const seconds = (elapsed % 60).toString().padStart(2, '0');
 
+        // *** MODIFIED FOR TIME ATTACK END SCORE DISPLAY ***
+        // Final score is the accumulated score during the game
         const finalScore = Math.round(score);
 
-        // Display Time Attack End Overlay
-        displayTimeAttackEndWindow(finalScore, minutes, seconds);
-
+        const gameOverMessage = i18next.t('game_over', { // Use existing 'game_over' key and map score to accuracy
+          accuracy: finalScore.toString(), // Display rounded final score as accuracy
+          minutes: minutes.toString(),
+          seconds: seconds.toString()
+        });
+        console.log('Attempting to display game over message:', gameOverMessage, 'Score:', finalScore, 'Minutes:', minutes, 'Seconds:', seconds);
+        targetText.textContent = gameOverMessage;
         highlightTarget(true); // Indicate game over with green color
 
-        // Stop the game
-        gameRunning = false;
-        selectedVoxel = null;
-        guessButton.disabled = true;
-
-         // Do not redirect automatically here
+        // Pass the final score (rounded) back to the index page - Removed redirect for streak, keep for time attack?
+         setTimeout(() => {
+             window.location.href = `index.html?score=${finalScore}&time=${elapsed}`;
+         }, 2000); // Redirect after a delay
+         // ******************************************************
       }
 
       // Function to display the streak end overlay
       function displayStreakEndWindow(finalStreak, correctRegionName, guessedRegionName) {
           // Get references to the elements INSIDE the function
           const finalStreakSpan = document.getElementById('final-streak');
-          const goBackMenuButton = document.getElementById('go-back-menu-button-streak'); // Updated ID
-          const restartButton = document.getElementById('restart-button-streak'); // New Restart button ID
+          const correctRegionSpan = document.getElementById('correct-region');
+          const guessedRegionSpan = document.getElementById('guessed-region');
+          const goBackMenuButton = document.getElementById('go-back-menu-button');
+           const closeStreakEndButton = document.getElementById('close-streak-end'); // Get close button
 
           // Update content using translated strings and values
           document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_title"]').textContent = i18next.t('streak_ended_title');
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_score"]').innerHTML = i18next.t('streak_ended_score', { streak: finalStreak });
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_correct_region"]').innerHTML = i18next.t('streak_ended_correct_region', { region: correctRegionName });
+          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_your_guess"]').innerHTML = i18next.t('streak_ended_your_guess', { region: guessedRegionName });
+          goBackMenuButton.textContent = i18next.t('return_button');
 
-          // Update the text of the parent elements and the spans separately
-          document.getElementById('streak-end-overlay').querySelector('[data-i18n="streak_ended_score"]').textContent = i18next.t('streak_ended_score') + ' '; // Add space after label
-          finalStreakSpan.textContent = finalStreak; // Set the score value
 
-          // Removed updates for correct/guessed region spans
-
-          // Add event listener for the Home button
-          goBackMenuButton.addEventListener('click', () => {
-              window.location.href = 'index.html';
-          });
-
-           // Add event listener for the Restart button
-           restartButton.addEventListener('click', () => {
-               streakEndOverlay.classList.add('hidden'); // Hide overlay
-               resetGameState(); // Reset game state
-               startGame(); // Start a new game (in streak mode)
-           });
+          // Set the text content for the spans directly after getting references
+          // finalStreakSpan.textContent = finalStreak; // This is now handled by the i18next interpolation in the line above
+          // correctRegionSpan.textContent = correctRegionName; // This is now handled by the i18next interpolation in the line above
+          // guessedRegionSpan.textContent = guessedRegionName; // This is now handled by the i18next interpolation in the line above
 
 
           streakEndOverlay.classList.remove('hidden');
           gameRunning = false; // Stop the game
 
-
-          // Add event listener to close overlay when clicking outside content
-           streakEndOverlay.addEventListener('click', (e) => {
-               // Check if the click target is inside the overlay content
-               const overlayContent = streakEndOverlay.querySelector('.overlay-content');
-               if (overlayContent && !overlayContent.contains(e.target)) {
-                   streakEndOverlay.classList.add('hidden');
-                    // Optionally redirect to menu on closing the window
-                   // window.location.href = 'index.html';
-               }
-           });
-      }
-
-      // Function to display the time attack end overlay
-      function displayTimeAttackEndWindow(finalScore, minutes, seconds) {
-          // Get references to the elements INSIDE the function
-          // const finalScoreTextSpan = document.getElementById('final-time-attack-score-text');
-          const finalTimeSpan = document.getElementById('final-time-attack-time');
-          const goBackMenuButton = document.getElementById('go-back-menu-button-time-attack');
-          const restartButton = document.getElementById('restart-button-time-attack'); // New Restart button ID
-          const scoreBar = document.getElementById('time-attack-score-bar');
-
-          // Update content using translated strings and values
-          document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_title"]').textContent = i18next.t('time_attack_ended_title');
-
-          // Update the text of the parent elements and the spans separately
-          // document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_score"]').textContent = i18next.t('time_attack_ended_score') + ' '; // Add space after label
-          // finalScoreTextSpan.textContent = finalScore; // Set the score value
-
-          document.getElementById('time-attack-end-overlay').querySelector('[data-i18n="time_attack_ended_time"]').textContent = i18next.t('time_attack_ended_time') + ' '; // Add space after label
-          finalTimeSpan.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`; // Set the time value
-
-          // Calculate and set the progress bar width and text (displaying value)
-          const scorePercentage = (finalScore / 1000) * 100;
-          scoreBar.style.width = `${scorePercentage}%`;
-          scoreBar.textContent = `${finalScore}`; // Display the actual score value
-
-
-          // Add event listener for the Home button
+          // Add event listener for the "Go back to Menu" button
           goBackMenuButton.addEventListener('click', () => {
               window.location.href = 'index.html';
           });
 
-           // Add event listener for the Restart button
-           restartButton.addEventListener('click', () => {
-               timeAttackEndOverlay.classList.add('hidden'); // Hide overlay
-               resetGameState(); // Reset game state
-               startGame(); // Start a new game (in time-attack mode)
+          // Add event listener for the close button
+           closeStreakEndButton.addEventListener('click', () => {
+               streakEndOverlay.classList.add('hidden');
+                // Optionally redirect to menu on closing the window
+               // window.location.href = 'index.html';
            });
 
-          timeAttackEndOverlay.classList.remove('hidden');
-          gameRunning = false; // Stop the game
-
           // Add event listener to close overlay when clicking outside content
-           timeAttackEndOverlay.addEventListener('click', (e) => {
-               // Check if the click target is inside the overlay content
-               const overlayContent = timeAttackEndOverlay.querySelector('.overlay-content');
-               if (overlayContent && !overlayContent.contains(e.target)) {
-                   timeAttackEndOverlay.classList.add('hidden');
-                   // Optionally redirect to menu on closing the window
+           streakEndOverlay.addEventListener('click', (e) => {
+               if (e.target === streakEndOverlay) {
+                   streakEndOverlay.classList.add('hidden');
+                    // Optionally redirect to menu on closing the window
                    // window.location.href = 'index.html';
                }
            });
@@ -966,7 +948,7 @@
           // Move to the next target after a short delay to show feedback
           setTimeout(() => {
              selectNewTarget();
-          }, 100);
+          }, 1000);
 
 
         } else { // Incorrect Guess
@@ -975,31 +957,20 @@
           if (mode === 'practice') {
             attempts++;
 
-            // Use i18next interpolation for the incorrect message
-            const incorrectMessage = i18next.t('incorrect', { region: clickedRegionName });
-            console.log("Setting incorrect message:", incorrectMessage); // Add console log
-            targetText.textContent = incorrectMessage;
-            highlightTarget(false); // Indicate incorrect guess visually
-
-
+            const prefix = i18next.t('incorrect_prefix') || 'It\'s '; // Assuming 'incorrect_prefix' key exists
+            targetText.textContent = prefix + clickedRegionName + ' !';
             console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
-
 
             if (attempts >= 3) {
               highlightRegionFluorescentYellow(currentTarget);
             }
-            // Increased timeout duration to make the incorrect message visible longer
             setTimeout(() => {
-              // Restore the "Find: [Target Region]" message using the 'find' key
-              const findPrefix = i18next.t('find') || 'Find: ';
+              const findPrefix = i18next.t('find_prefix') || 'Find: ';
               targetText.textContent = findPrefix + targetName;
               targetText.style.color = '#d9dddc';
               targetText.style.transition = '';
               targetText.style.fontWeight = 'normal';
-            }, 3000); // Increased delay to 3 seconds
-
-            // Removed updateGameDisplay() call here as it was immediately overwriting the message
-            // updateGameDisplay();
+            }, 2000);
 
           } else if (mode === 'time-attack') {
               // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
@@ -1054,7 +1025,7 @@
               // Automatically move to the next target after a short delay
               setTimeout(() => {
                   selectNewTarget();
-              }, 100); // Adjust delay as needed
+              }, 1500); // Adjust delay as needed
 
 
           } else if (mode === 'streak') {
@@ -1082,10 +1053,7 @@
               selectedVoxel = null;
               guessButton.disabled = true;
            }
-            // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
-            if (mode !== 'practice') {
-                 updateGameDisplay();
-            }
+            updateGameDisplay(); // Update display after incorrect guess
         }
       }
 
@@ -1227,14 +1195,7 @@
         if (e.key === 'Escape' && !streakEndOverlay.classList.contains('hidden')) {
             e.preventDefault();
             streakEndOverlay.classList.add('hidden');
-             // Optionally redirect to menu on closing the window
-             // window.location.href = 'index.html';
-        }
-         // Close time attack end overlay with Escape key
-        if (e.key === 'Escape' && !timeAttackEndOverlay.classList.contains('hidden')) {
-            e.preventDefault();
-            timeAttackEndOverlay.classList.add('hidden');
-             // Optionally redirect to menu on closing the window
+             // Optionally redirect to menu on Escape from end screen
              // window.location.href = 'index.html';
         }
       });
