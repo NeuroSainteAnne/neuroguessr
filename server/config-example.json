@@ -16,7 +16,12 @@
         "port": 3000,
         "external_address": "https://localhost:3000",
         "serverKey": "server.key",
-        "serverCert": "server.crt"
+        "serverCert": "server.crt",
+        "globalAuthentication": {
+            "enabled": false,
+            "username": "test",
+            "password": "test"
+        }
     },
     "salt": "xxx",
     "jwt_secret": "xxx"
