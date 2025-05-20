@@ -170,10 +170,10 @@ export const validateRegion = async (req, res) => {
     let endgame = false
     if(!isCorrect && session.mode == "streak"){
         endgame = true
-    } else if(isCorrect && session.mode == "time-attack"){
+    } else if(session.mode == "time-attack"){
         const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
-        if(answeredRegions.count >= validRegions[session.atlas].length){
+        if(answeredRegions.count >= 20){
             endgame = true
         }
     }
