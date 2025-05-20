@@ -42,6 +42,17 @@ export const database_init = () => {
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
             );
+            CREATE TABLE IF NOT EXISTS finishedsessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER NOT NULL,
+                mode TEXT NOT NULL,
+                atlas TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                accuracy REAL NOT NULL,
+                duration INTEGER NOT NULL,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (userId) REFERENCES users (id)
+            );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
         `);
         console.log("Database schema initialized successfully.");

@@ -8,6 +8,7 @@ import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts"
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
 import { configUser } from "./config_user.ts";
 import { getNextRegion, startGameSession, validateRegion } from "./game.ts";
+import { globalAuthentication } from "./global_auth.ts";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 const app = express();
@@ -16,6 +17,10 @@ const PORT = config.server.port;
 database_init()
 
 app.use(express.json());
+
+if(config.server.globalAuthentication.enabled){
+    app.use(globalAuthentication);
+}
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.sendFile("index.html", { root: htmlRoot });

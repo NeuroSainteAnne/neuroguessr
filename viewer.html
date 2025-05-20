@@ -160,6 +160,7 @@
 
 
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script src="/neuroguessr_web/scripts/login.js"></script>
     <script type="module" async>
       import * as niivue from "/neuroguessr_web/dist/index.js";
 
@@ -300,6 +301,10 @@
 
       let highlightedRegion = null;
       let tooltip = null;
+
+      let isMultiplayer = false;
+      let multiplayerSessionToken = null;
+      let multiplayerSessionId = null;
 
       const guessButton = document.getElementById("guess-button");
       const returnButton = document.getElementById("return-button");
@@ -641,7 +646,7 @@
          }
       }
 
-      function selectNewTarget() {
+      async function selectNewTarget() {
         // *** MODIFIED FOR TIME ATTACK: End game after 20 regions ***
         if (mode === 'time-attack' && usedRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
              endTimeAttack(); // Call endTimeAttack to show the window
@@ -649,32 +654,61 @@
         }
         // ********************************************************
 
+        if(isMultiplayer){
+          try{
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/get-next-region', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId: multiplayerSessionId, sessionToken: multiplayerSessionToken }),
+              });
+            if (!response.ok) {
+              const result = await response.json();
+              console.error("Failed to get next region:", result.message || "Unknown error");
+              return false;
+            }
+            const result = await response.json();
+            if(result.regionId >= 0){
+              currentTarget = result.regionId;
+            } else {
+              console.warn("No valid region ID received from server.");
+              return false;
+            }
+          } catch (error) {
+            console.error("Error occured during next region fetching:", error);
+            return false;
+          }
+        } else {
+          // Local target selection logic
+            if (validRegions.length === 0) {
+              console.warn('No valid regions available for target selection');
+              resetGameState();
+              return;
+            }
 
-        if (validRegions.length === 0) {
-          console.warn('No valid regions available for target selection');
-          resetGameState();
-          return;
+
+            let availableRegions = validRegions.filter(r => !usedRegions.includes(r));
+
+
+            if (availableRegions.length === 0) {
+              // This case should ideally not be reached if validRegions had enough regions initially
+              console.warn('No available regions for target selection in the remaining set.');
+              // As a fallback, you could end the game here if somehow it didn't end after 20
+              if (mode === 'time-attack') {
+                  endTimeAttack();
+                  return;
+              } else {
+                  // If no more regions in Practice/Streak, end the game
+                  resetGameState(); // Or handle as an error in other modes
+                  return;
+              }
+            }
+
+            currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         }
-
-
-        let availableRegions = validRegions.filter(r => !usedRegions.includes(r));
-
-
-        if (availableRegions.length === 0) {
-           // This case should ideally not be reached if validRegions had enough regions initially
-           console.warn('No available regions for target selection in the remaining set.');
-           // As a fallback, you could end the game here if somehow it didn't end after 20
-           if (mode === 'time-attack') {
-               endTimeAttack();
-               return;
-           } else {
-               // If no more regions in Practice/Streak, end the game
-               resetGameState(); // Or handle as an error in other modes
-               return;
-           }
-        }
-
-        currentTarget = availableRegions[Math.floor(Math.random() * availableRegions.length)];
 
         if (mode === 'time-attack' || mode === 'streak') { // Add streak mode here to track used regions
           usedRegions.push(currentTarget);
@@ -901,48 +935,82 @@
         streakLabel.style.display = mode === 'streak' ? 'block' : 'none';
         timeLabel.style.display = mode === 'time-attack' ? 'block' : 'none';
 
-        if (mode === 'time-attack') {
-             scoreLabel.textContent = i18next.t('score_label') + ": 0"; // Use score label for Time Attack
+        startOnlineSession().then((ans)=>{
+          isMultiplayer = ans;
+          if (mode === 'time-attack') {
+              scoreLabel.textContent = i18next.t('score_label') + ": 0"; // Use score label for Time Attack
+              if(!isMultiplayer){ // logic for local game
+                // Shuffle validRegions and take the first 20 for Time Attack
+                if (validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
+                    validRegions.sort(() => 0.5 - Math.random());
+                    validRegions = validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
+                    console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
+                } else if (validRegions.length > 0) {
+                    console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${validRegions.length} available regions.`);
+                    validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
+                } else {
+                    console.error("No valid regions available for Time Attack!");
+                    targetText.textContent = i18next.t('no_regions_available') || 'No regions available.'; // Add translation key if needed
+                    return; // Stop game initialization if no regions
+                }
+              }
+              startTimer(); // Start timer for Time Attack
+          } else {
+              scoreLabel.textContent = i18next.t('correct_label') + ": 0"; // Use correct label for other modes
+          }
+          // ************************************************************
 
-            // Shuffle validRegions and take the first 20 for Time Attack
-            if (validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
-                 validRegions.sort(() => 0.5 - Math.random());
-                 validRegions = validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
-                 console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
-            } else if (validRegions.length > 0) {
-                 console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${validRegions.length} available regions.`);
-                 validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
-            } else {
-                 console.error("No valid regions available for Time Attack!");
-                 targetText.textContent = i18next.t('no_regions_available') || 'No regions available.'; // Add translation key if needed
-                 return; // Stop game initialization if no regions
-            }
-             startTimer(); // Start timer for Time Attack
-        } else {
-             scoreLabel.textContent = i18next.t('correct_label') + ": 0"; // Use correct label for other modes
-        }
-        // ************************************************************
+
+          guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
+          restoreColorButton.style.display = mode === 'navigation' ? 'inline-block' : 'none';
 
 
-        guessButton.style.display = mode === 'navigation' ? 'none' : 'inline-block';
-        restoreColorButton.style.display = mode === 'navigation' ? 'inline-block' : 'none';
-
-
-        // Start the first round
-        selectNewTarget();
+          // Start the first round
+          selectNewTarget();
+        });
       }
 
-      function validateGuess() {
+      async function validateGuess() {
         if (!selectedVoxel || !gameRunning || !currentTarget) {
           console.warn('Cannot validate guess:', { selectedVoxel, gameRunning, currentTarget });
           return;
         }
-        const clickedRegion = Math.round(nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]));
+        let guessSuccess = null;
+        let isEndgame = false;
+        let clickedRegion = null;
+        if(isMultiplayer){
+          try{
+            const token = localStorage.getItem('authToken');
+            const response = await fetch('/api/validate-region', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                  sessionId: multiplayerSessionId, 
+                  sessionToken: multiplayerSessionToken,
+                  coordinates: selectedVoxel
+                 }),
+              });
+            const result = await response.json();
+            guessSuccess = result.isCorrect;
+            isEndgame = result.endgame;
+            clickedRegion = result.voxelValue;
+          } catch (error) {
+            console.error("Error occured during region validation:", error);
+            return false;
+          }
+        } else {
+          clickedRegion = Math.round(nv1.volumes[1].getValue(selectedVoxel[0], selectedVoxel[1], selectedVoxel[2]));
+          guessSuccess = clickedRegion === currentTarget;
+        }
+        
         const targetName = cmap && cmap.labels[currentTarget] ? cmap.labels[currentTarget] : i18next.t('unknown_region'); // Use translated "Unknown"
         const clickedRegionName = cmap && cmap.labels[clickedRegion] ? cmap.labels[clickedRegion] : i18next.t('unknown_region'); // Use translated "Unknown"
 
 
-        if (clickedRegion === currentTarget) {
+        if (guessSuccess) {
            // Correct Guess
            if (mode === 'time-attack') {
                score += MAX_POINTS_PER_REGION; // Add full points for correct guess
@@ -1196,6 +1264,53 @@
         }
       }
 
+      async function startOnlineSession(){
+          // Check if "multiplayer" is set to 1 in the URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const isMultiplayer = urlParams.get('multiplayer') == 'true';
+          if (!isMultiplayer) {
+            return false; // Exit the function if multiplayer is not enabled
+          }
+          // Check if the player is logged in
+          const token = localStorage.getItem('authToken');
+          if (!token) {
+            return false;
+          }
+          if(!await isTokenValid(token)){
+            if(!refreshToken()){
+              return false;
+            }
+          }
+          try {
+            // Send a request to the backend to start a session
+            const response = await fetch('/api/start-game-session', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ mode, atlas }),
+            });
+
+            if (!response.ok) {
+              console.error("Failed to start session on the backend.");
+              const result = await response.json();
+              alert(result.message || "Failed to start multiplayer session.");
+              return false;
+            }
+
+            const result = await response.json();
+            console.log("Multiplayer session started");
+            multiplayerSessionToken = result.sessionToken; // Save the session token for further communication
+            multiplayerSessionId = result.sessionId; // Save the session ID for further communication
+            return true;
+          } catch (error) {
+            console.error("Error starting multiplayer session:", error);
+            alert("An error occurred while starting the multiplayer session. Please try again later.");
+            return false;
+          }
+          return true
+      }
 
       document.getElementById("gl1").addEventListener("click", handleCanvasInteraction);
       document.getElementById("gl1").addEventListener("touchstart", handleCanvasInteraction);

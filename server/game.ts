@@ -170,19 +170,80 @@ export const validateRegion = async (req, res) => {
     let endgame = false
     if(!isCorrect && session.mode == "streak"){
         endgame = true
-    } else if(isCorrect && session.mode == "time-attack"){
+    } else if(session.mode == "time-attack"){
         const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
-        if(answeredRegions.count >= validRegions[session.atlas].length){
+        if(answeredRegions.count >= 20){
             endgame = true
         }
+    }
+
+    let accuracy = 0;
+    let finalScore = 0;
+    let duration = 0;
+
+    // If the game is over, update the session status
+    if (endgame) {
+        // Calculate final score and duration
+        // TEMPORARY CALCULATION ALGORITHM
+        // For streak mode, score = number of correct answers before failure
+        // For time-attack, score = number of correct answers, duration = sum of timeTaken for correct answers
+
+
+        if (session.mode === "streak") {
+            // Count correct answers before the first incorrect
+            const getStreakStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const streakResult = getStreakStmt.get(sessionId);
+            finalScore = streakResult.count;
+            // Duration: sum of timeTaken for correct answers
+            const getDurationStmt = db.prepare(`
+                SELECT SUM(timeTaken) as total FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const durationResult = getDurationStmt.get(sessionId);
+            duration = durationResult.total || 0;
+        } else if (session.mode === "time-attack") {
+            // All correct answers
+            const getScoreStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const scoreResult = getScoreStmt.get(sessionId);
+            finalScore = scoreResult.count;
+            // Accuracy: correct / total attempts
+            const getTotalStmt = db.prepare(`
+                SELECT COUNT(*) as total FROM gameprogress
+                WHERE sessionId = ?
+            `);
+            const totalResult = getTotalStmt.get(sessionId);
+            accuracy = totalResult.total > 0 ? finalScore / totalResult.total : 0;
+            // Duration: sum of timeTaken for correct answers
+            const getDurationStmt = db.prepare(`
+                SELECT SUM(timeTaken) as total FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const durationResult = getDurationStmt.get(sessionId);
+            duration = durationResult.total || 0;
+        }
+
+        // Insert into finishedsessions
+        const insertFinishedStmt = db.prepare(`
+            INSERT INTO finishedsessions (userId, mode, atlas, score, accuracy, duration)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, accuracy, duration);
     }
     // Respond with the result
     res.status(200).send({
         message: isCorrect ? "Correct guess!" : "Incorrect guess.",
         isCorrect,
-        endgame,
         regionId,
         voxelValue,
+        endgame,
+        accuracy,
+        finalScore,
     });
 }
