@@ -124,6 +124,7 @@
   "login_success": "Login successful! Redirecting...",
   "login_failed": "Login failed. Please check your credentials.",
   "register_success": "Registration successful! Please check your mailbox to confirm your email address...",
+  "register_success_no_verification": "Registration successful! You can now log in.",
   "register_failed": "Registration failed. Please try again.",
   "server_error": "Server error. Please try again later.",
   "welcome_message": "Welcome {{firstname}} !",

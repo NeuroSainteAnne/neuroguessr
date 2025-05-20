@@ -206,7 +206,11 @@
           const result = await response.json();
 
           if (response.ok) {
-            recoveryMessage.textContent = i18next.t('recovery_email_sent'); // Add this key in your translation files
+            if(result.preverified){
+                window.location.href = result.redirect_url;
+            } else {
+              recoveryMessage.textContent = i18next.t('recovery_email_sent'); // Add this key in your translation files
+            }
             recoveryMessage.classList.add('success-label');
           } else {
             recoveryMessage.textContent = result.message || i18next.t('recovery_failed'); // Add this key in your translation files

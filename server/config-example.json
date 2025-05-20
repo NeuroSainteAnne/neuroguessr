@@ -1,6 +1,6 @@
 {
     "email":{
-        "type": "gmail_api", // gmail_api or nodemailer
+        "type": "gmail_api", // gmail_api or nodemailer or none (development only)
         "server": "smtp.gmail.com", // only if nodemailer
         "port": 465, // only if nodemailer
         "mail_address": "xxx@gmail.com",

@@ -229,7 +229,11 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    registerError.textContent = i18next.t('register_success');
+                    if(result.preverified){
+                        registerError.textContent = i18next.t('register_success_no_verification');
+                    } else {
+                        registerError.textContent = i18next.t('register_success');
+                    }
                 } else {
                     registerError.textContent = result.message || i18next.t('register_failed'); 
                     registerError.classList.add('error-label');
