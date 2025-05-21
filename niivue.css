@@ -1264,7 +1264,326 @@ h3 {
     white-space: nowrap;
 }
 
-.login-box, .register-box {
+/*.login-box, .register-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: #363636;
+  color: white;
+  font-size: 1rem;
+  font-weight: 300;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  transition: background 0.2s, border 0.2s, opacity 0.2s;
+  width: 100%;
+  max-width: 25rem;
+  box-sizing: border-box;
+}
+.login-element{
+  display: flex;
+  flex-direction: row;
+}
+#registration_link {
+  cursor: pointer;
+  margin-top: 20px;
+}
+#forgot_password_link {
+  cursor: pointer;
+  margin-top: 5px;
+}
+#registration_link:hover, #forgot_password_link:hover {
+  background: #4a4a4a;
+  border-color: #aaa;
+  color: #fff;
+}
+#registration_link:active, #forgot_password_link:active {
+  background: #5a5a5a;
+  font-weight: 600;
+}*/
+
+/* --- Login Box Styles --- */
+.login-box {
+    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    padding: 40px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-sizing: border-box;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+}
+
+.login-box h2 {
+    margin-bottom: 30px;
+    color: #E0E0E0; /* Light heading color for contrast */
+    font-size: 2.2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#login_error {
+    color: #FF7070; /* Brighter red for error messages on dark background */
+    font-size: 0.9em;
+    height: 20px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+#registration_link {
+    margin-top: 30px;
+}
+
+/* --- Registration Box Styles --- */
+.register-box { /* Changed from .login-box */
+    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    padding: 40px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px; /* Slightly wider for more input fields */
+    text-align: center;
+    box-sizing: border-box;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+}
+
+.register-box h2 { /* Changed from .login-box h2 */
+    margin-bottom: 30px;
+    color: #E0E0E0; /* Light heading color for contrast */
+    font-size: 2.2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#register_error { /* Specific ID for register error */
+    color: #FF7070; /* Brighter red for error messages on dark background */
+    font-size: 0.9em;
+    height: 20px; /* Reserve space for error messages */
+    text-align: center;
+    margin-top: 10px;
+}
+
+.password-helper { /* New style for the password helper text */
+    color: #A2B9F0; /* Use a similar color to links for helper text */
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: center;
+    padding: 5px 0;
+    margin-top: -10px; /* Adjust margin to bring it closer to password input */
+    margin-bottom: 15px; /* Space below helper text */
+}
+
+/* --- Common Styles (Login and Register) --- */
+.login-element { /* This class is reused for the table structure */
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+}
+
+.login-element td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+
+.login-element td:first-child {
+    text-align: left;
+    width: 35%;
+}
+
+.login-element td:last-child {
+    text-align: right;
+    width: 65%;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #C0C0C0; /* Slightly softer light label color */
+    font-size: 1em;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+input[type="text"],
+input[type="email"], /* Added email input type */
+input[type="password"] {
+    width: calc(100% - 20px);
+    padding: 12px 10px;
+    background-color: #3B3B3B; /* Darker input background */
+    border: 1px solid rgba(255, 255, 255, 0); /* Slightly lighter border for inputs */
+    border-radius: 50px;
+    font-size: 1em;
+    color: #E0E0E0; /* Light text color inside inputs */
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Added for registration input */
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus, /* Added email input type focus */
+input[type="password"]:focus {
+    border-color: #8A9CEE; /* A vibrant, yet subtle, light blue/purple for focus */
+    box-shadow: 0 0 0 3px rgba(138, 156, 238, 0.25); /* Soft glow on focus (from register) */
+}
+
+button[type="submit"] {
+    background-color: rgb(63, 109, 159); /* Your primary button color (light blue/purple) */
+    color: #d9dddc; /* Dark text for button for contrast */
+    padding: 14px 25px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1em;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+button[type="submit"]:hover {
+    background-color: #728AD2; /* Darker shade on hover */
+}
+
+a {
+    display: block;
+    margin-top: 15px;
+    color: #A2B9F0; /* Lighter, more visible link color */
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #8A9CEE; /* Changed to match register hover */
+}
+
+/* --- Keyframes for Animations --- */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0); 
+}
+
+.modal-content {
+  background-color: #3f3f3f;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0);
+  width: 30%;
+  border-radius: 8px;
+  text-align: center;
+}
+
+
+
+.form-field { /* New class for all input fields you want styled identically */
+    width: 100%;
+    padding: 12px 10px;
+    background-color: #3B3B3B; /* Darker input background */
+    border: 1px solid rgba(0, 0, 0, 0); /* Transparent border */
+    border-radius: 50px; /* Fully rounded corners */
+    font-size: 1em;
+    color: #E0E0E0; /* Light text color inside inputs */
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-field:focus {
+    border-color: rgb(63, 109, 159); /* Your specific blue on focus */
+}
+.form-button { /* New class for all buttons you want styled identically */
+    background-color: rgb(63, 109, 159); /* Your specific blue button color */
+    color: #d9dddc; /* Light text for button for contrast */
+    padding: 14px 25px;
+    border: none;
+    border-radius: 50px; /* Fully rounded corners */
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+.form-button:hover {
+    background-color: #728AD2; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #E0E0E0;
+    font-size: 2em; /* Slightly smaller for modal heading */
+    font-weight: 600;
+    text-align: left;
+
+}
+
+.modal-content p {
+    color: #C0C0C0;
+    margin-bottom: 25px;
+    line-height: 1.5;
+    text-align: left;
+
+}
+
+/* Input specific to the modal (already covered by input[type="email"] above, but for clarity) */
+#recovery-email {
+    margin-bottom: 15px; /* Space between input and button */
+}
+
+/* Button specific to the modal (already covered by #send-recovery-email above) */
+#send-recovery-email {
+    margin-top: 10px; /* Adjust as needed for spacing */
+}
+
+
+
+.close-button {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  position: absolute;
+  top: 10px; /* Distance from the top edge of .modal-content */
+  right: 20px;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.recovery-message {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/*.login-box, .register-box {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1325,106 +1644,8 @@ h3 {
   text-align: center;
 }
 
-.close-button {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
 
-.close-button:hover,
-.close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
 
-.recovery-message {
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-.login-box, .register-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  background: #363636;
-  color: white;
-  font-size: 1rem;
-  font-weight: 300;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  transition: background 0.2s, border 0.2s, opacity 0.2s;
-  width: 100%;
-  max-width: 25rem;
-  box-sizing: border-box;
-}
-.login-element{
-  display: flex;
-  flex-direction: row;
-}
-#registration_link {
-  cursor: pointer;
-  margin-top: 20px;
-}
-#forgot_password_link {
-  cursor: pointer;
-  margin-top: 5px;
-}
-#registration_link:hover, #forgot_password_link:hover {
-  background: #4a4a4a;
-  border-color: #aaa;
-  color: #fff;
-}
-#registration_link:active, #forgot_password_link:active {
-  background: #5a5a5a;
-  font-weight: 600;
-}
-
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  background-color: #3f3f3f;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #d0d0d0;
-  width: 30%;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.close-button {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close-button:hover,
-.close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.recovery-message {
-  margin-top: 10px;
-  font-size: 14px;
-}
 
 /* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
 @media (min-width: 1024px) {

@@ -1,3 +1,4 @@
+
 {
   "app_title": "NeuroGuessr",
   "neuroglossaire_title": "NeuroGlossary",
@@ -106,6 +107,11 @@
   "search_to_visualize": "Search for a region to visualize",
   "no_search_results": "No matching regions found",
   "unknown_region": "Unknown Region",
+  "welcome_unlogged" : "Welcome !",
+  "welcome_text_unlogged" : "Sign in or Register to start playing NeuroGuessr",
+  "sign_in" : "Sign in",
+  "sign_up" : "No account ? Sign up",
+  "no_sign_in" : "Continue without signing in",
   "registration_link": "Not yet registered? Click here to register",
   "forgot_password_link": "Forgot your password? Click here to reset it",
   "register_mode": "Register",

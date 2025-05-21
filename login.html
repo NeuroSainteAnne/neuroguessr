@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="app_title">NeuroGuessr Web - Login</title>
     <link rel="stylesheet" href="niivue.css" />
+
 </head>
 <body class="index-page">
     <header class="navbar">
@@ -64,12 +65,15 @@
       </form>
       <div id="password-recovery-modal" class="modal" style="display: none;">
         <div class="modal-content">
-          <span class="close-button" id="close-password-recovery">&times;</span>
-          <h2 data-i18n="password_recovery_title">Password Recovery</h2>
-          <p data-i18n="password_recovery_instructions">Enter your email address to receive a password reset link.</p>
-          <input type="email" id="recovery-email" placeholder="Enter your email" required />
-          <button id="send-recovery-email" data-i18n="send_recovery_email">Send Email</button>
-          <p id="recovery-message" class="recovery-message"></p>
+            <span class="close-button" id="close-password-recovery">&times;</span>
+            <h2 data-i18n="password_recovery_title">Password Recovery</h2>
+            <p data-i18n="password_recovery_instructions">Enter your email address to receive a password reset link.</p>
+            
+            <input type="email" id="recovery-email" class="form-field" placeholder="Enter your email" required /> 
+            
+            <button id="send-recovery-email" class="form-button" data-i18n="send_recovery_email">Send Email</button>
+            
+            <p id="recovery-message" class="recovery-message"></p>
         </div>
       </div>
     </main>
@@ -84,6 +88,7 @@
         }
       }, function(err, t) {
         updateContent();
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
       });
 
       // Load translation files
@@ -94,32 +99,38 @@
         i18next.addResourceBundle('en', 'translation', en);
         i18next.addResourceBundle('fr', 'translation', fr);
         updateContent();
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      }).catch(err => {
+        console.error('Failed to load translation files:', err);
       });
 
       function updateContent() {
         document.querySelectorAll('[data-i18n]').forEach(elem => {
           const key = elem.getAttribute('data-i18n');
+          // Exclude elements within the overlays from this general update
+
           if (key.startsWith('[html]')) {
             elem.innerHTML = i18next.t(key.replace('[html]', ''));
           } else if (key.startsWith('[')) {
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-            elem.textContent = i18next.t(key);
+             elem.textContent = i18next.t(key); // Use textContent for all other elements
           }
         });
-      }
 
-      // Language switcher
-      document.querySelectorAll('.lang-btn').forEach(btn => {
+      }
+    document.querySelectorAll('.lang-icon-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lang = btn.dataset.lang;
           i18next.changeLanguage(lang, () => {
             localStorage.setItem('language', lang);
             updateContent();
+            // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+            // Reload atlas labels for the new language
+            });
           });
         });
-      });
 
       document.getElementById('register_form').addEventListener('submit', async (e) => {
         e.preventDefault();
