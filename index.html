@@ -8,112 +8,136 @@
     <link rel="stylesheet" href="niivue.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Custom styles for the new landing page elements, integrating with niivue.css */
-
-        /* Centralize main content */
-        .landing-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
+        /* User Dropdown Container */
+        .user-dropdown-container {
+            position: relative;
+            display: flex; /* Or inline-flex */
             align-items: center;
-            padding: 20px;
-            text-align: center;
-            width: 100%; /* Ensure it takes full width to center its children */
-            max-width: 1200px; /* Limit content width like original navbar */
-            margin: 0 auto; /* Center the content area */
-            box-sizing: border-box; /* Include padding in width */
+            margin-left: auto; /* Pushes it to the right */
         }
 
-        .welcome-section {
-            margin-bottom: 40px;
-            color: #d9dddc; /* Using text color from niivue.css body */
-            align-items: left;
-        }
-
-        .welcome-message {
-            font-size: 5em;
-            color: white; /* Make welcome message stand out */
-            margin-bottom: 10px;
-        }
-
-        .welcome-section p {
-            font-size: 1.3em;
-            color: #d9dddc;
-        }
-
-        /* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
-        .sign-in-panel {
-            background-color: rgba(0,0,0, 0); /* Slightly transparent dark background */
-            padding: 30px;
-            border-radius: 8px;
-            width: 70%;
-            max-width: 1000px;
-            box-sizing: border-box;
-            color: #d9dddc;
-        }
-
-        .panel-title {
-            font-size: 1.8em;
-            color: white;
-            margin-top: 0;
-            margin-bottom: 25px;
-        }
-
-        /* New CSS object for the container of sign-in options */
-        .sign-in-options-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px; /* Space between buttons */
-        }
-
-        .option-button {
-            display: block;
-            width: 100%;
-            padding: 15px 20px;
+        /* User Menu Button (the clickable button to open the dropdown) */
+        .user-menu-button {
+            background: none;
             border: none;
-            border-radius: 50px;
-            font-size: 1.3em;
+            color: var(--navbar-text-color, #ffffff); /* Assuming a CSS variable for text color */
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-            font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Consistent font */
-            font-weight: 400; /* Make buttons a bit bolder */
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
         }
 
-        /* Button specific colors, trying to fit the existing theme */
-        .sign-in-button {
-            background-color: rgb(63, 109, 159); /* A standard blue, common in modern UIs */
-            color: white;
+        .user-menu-button:hover {
+            background-color: var(--navbar-hover-bg, rgba(255, 255, 255, 0.1));
         }
 
-        .sign-up-button {
-            background-color: #545454; /* A standard green for success/register */
-            color: white;
+        .user-menu-button .user-icon {
+            width: 24px; /* Adjust size as needed */
+            height: 24px;
+            margin-right: 8px;
+            vertical-align: middle;
         }
 
-        .continue-button {
-            background-color: #545454; /* A standard grey for neutral actions */
-            color: white;
+        .user-menu-button .dropdown-arrow {
+            margin-left: 8px;
+            transition: transform 0.3s ease;
         }
 
-        .option-button:hover {
-/*            transform: translateY(-2px);*/
-            opacity: 0.85; /* Slightly reduce opacity on hover */
+        /* Rotate arrow when dropdown is open */
+        .user-menu-button.active .dropdown-arrow {
+            transform: rotate(180deg);
         }
 
-        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
-        @media (max-width: 600px) {
-            .welcome-message {
-                font-size: 2em;
-            }
+        /* User Dropdown Menu */
+        .user-dropdown-menu {
+            position: absolute;
+            top: 100%; /* Position below the button */
+            right: 0; /* Align to the right of the button */
+            background-color: var(--dropdown-bg, #333); /* Dark background for dropdown */
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            min-width: 220px; /* Adjust width as needed */
+            z-index: 1000; /* Ensure it's above other content */
+            overflow: hidden; /* For rounded corners on items */
+        }
 
-            .sign-in-panel {
-                padding: 20px;
-            }
+        .user-dropdown-menu.hidden {
+            display: none;
+        }
 
-            .option-button {
-                padding: 12px 15px;
-                font-size: 1em;
-            }
+        .user-dropdown-menu .dropdown-header {
+            padding: 12px 15px;
+            font-weight: bold;
+            color: var(--dropdown-header-color, #aaa);
+            border-bottom: 1px solid var(--dropdown-border-color, #444);
+            font-size: 0.9em;
+        }
+
+        .user-dropdown-menu .dropdown-item {
+            background: none;
+            border: none;
+            color: var(--dropdown-text-color, #eee);
+            padding: 12px 15px;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            font-size: 1em;
+        }
+
+        .user-dropdown-menu .dropdown-item:hover {
+            background-color: var(--dropdown-hover-bg, #555);
+            color: #fff;
+        }
+
+        .user-dropdown-menu .dropdown-item img {
+            width: 20px; /* Icon size */
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .user-dropdown-menu .logout-item {
+            border-top: 1px solid var(--dropdown-border-color, #444);
+            color: var(--logout-text-color, #ff6b6b); /* Reddish color for logout */
+        }
+
+        .user-dropdown-menu .logout-item:hover {
+            background-color: var(--logout-hover-bg, #a03f3f);
+            color: #fff;
+        }
+
+        /* Language Switcher inside dropdown */
+        .language-switcher-dropdown {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            color: var(--dropdown-text-color, #eee);
+            font-size: 1em;
+        }
+
+        .lang-icon-btn-dropdown {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            margin: 0 3px;
+            border-radius: 3px;
+            transition: background-color 0.2s ease;
+        }
+
+        .lang-icon-btn-dropdown:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-icon-btn-dropdown img {
+            width: 24px;
+            height: 16px;
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -126,40 +150,269 @@
             </div>
             <div class="navbar-right">
                 <div class="language-switcher">
-                    <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+                    <button class="lang-icon-btn unlogged" data-lang="fr" aria-label="Français">
                         <img src="/neuroguessr_web/data/fr.png" alt="FR">
                     </button>
-                    <button class="lang-icon-btn" data-lang="en" aria-label="English">
+                    <button class="lang-icon-btn unlogged" data-lang="en" aria-label="English">
                         <img src="/neuroguessr_web/data/en.png" alt="EN">
                     </button>
                 </div>
-                <div class="logged-in-status">
-                    <div class="unlogged" style="display: none;"></div> <div class="logged" style="display: none;"></div> </div>
+
+                <div id="login_box">
+                    <div class="login-buttons unlogged">
+                        <button id="login-button" class="login-button unlogged" data-mode="login">
+                            <img src="/neuroguessr_web/data/login.png" alt="Login Icon" />
+                            <span data-i18n="login_mode">Login</span>
+                            <span class="mode-description" data-i18n="login_description">to access multiplayer mode</span>
+                        </button>
+                    </div>
+
+                    <div class="user-dropdown-container logged">
+                        <button id="user-menu-button" class="user-menu-button">
+                            <img src="/neuroguessr_web/data/user_icon.png" alt="User Icon" class="user-icon" />
+                            <span id="welcome-username"></span>
+                            <i class="fas fa-caret-down dropdown-arrow"></i>
+                        </button>
+                        <div id="user-dropdown-menu" class="user-dropdown-menu hidden">
+                            <div class="dropdown-header">
+                                <span data-i18n="account_settings">Account Settings</span>
+                            </div>
+                            <div class="dropdown-item language-switcher-dropdown">
+                                <span data-i18n="language_setting">Language:</span>
+                                <button class="lang-icon-btn-dropdown" data-lang="fr" aria-label="Français">
+                                    <img src="/neuroguessr_web/data/fr.png" alt="FR">
+                                </button>
+                                <button class="lang-icon-btn-dropdown" data-lang="en" aria-label="English">
+                                    <img src="/neuroguessr_web/data/en.png" alt="EN">
+                                </button>
+                            </div>
+                            <button id="config-button-dropdown" class="dropdown-item">
+                                <img src="/neuroguessr_web/data/config.png" alt="Config icon" />
+                                <span data-i18n="config_mode">Configuration</span>
+                            </button>
+                            <button id="logout-button-dropdown" class="dropdown-item logout-item">
+                                <img src="/neuroguessr_web/data/logout.png" alt="Logout icon" />
+                                <span data-i18n="logout_mode">Unlog</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="search-bar-container-main">
+            <div class="search-container main-search">
+                <input
+                    type="text"
+                    id="atlas-search"
+                    data-i18n="[placeholder]search_placeholder"
+                    class="search-input"
+                    placeholder="Search for a brain region"
+                />
+                <div id="search-suggestions" class="search-suggestions"></div>
             </div>
         </div>
 
-    </header>
+        <div class="centered-container">
+          <h2 class="logged" id="welcome_title" style="display: none;">Welcome</h2>
+            <div class="player-selection-buttons">
+                <button id="single-player-button" class="player-mode-button" data-i18n="single_player_button">Single Player</button>
+                <button id="multiplayer-button" class="player-mode-button" data-i18n="multiplayer_button" style="display: none;">Multiplayer</button>
+            </div>
 
-    <main class="landing-content">
-        <div class="welcome-section">
-            <h2 class="welcome-message" data-i18n="welcome_unlogged"> Welcome!</h2>
-            <p data-i18n="welcome_text_unlogged"> Sign in or register now to start playing Neuroguessr</p>
-        </div>
 
-        <div class="sign-in-panel">
-            <div class="sign-in-options-container">
-                <button class="option-button sign-in-button" data-i18n="sign_in">Sign In</button>
-                <button class="option-button sign-up-button" data-i18n="sign_up"> Sign Up</button>
-                <button class="option-button continue-button"data-i18n="no_sign_in"> Continue without signing in</button>
+            <div id="single-player-options" class="single-player-options-container hidden">
+                <section class="atlas-selection">
+                    <h2><img src="/neuroguessr_web/data/numero-1.png" alt="Atlas Icon" /> <span data-i18n="select_atlas">Select Atlas</span></h2>
+                    <div class="atlas-layout">
+                        <div class="category-list">
+                            <button class="category-button" data-category="cortex" data-i18n="cortical_regions">Cortical Regions</button>
+                            <button class="category-button" data-category="subcortical" data-i18n="subcortical_regions">Subcortical Regions</button>
+                            <button class="category-button" data-category="white-matter" data-i18n="white_matter_tracts">White Matter Tracts</button>
+                            <button class="category-button" data-category="functional" data-i18n="functional_networks">Functional Networks</button>
+                            <button class="category-button" data-category="cerebral-arteries" data-category="cerebral-arteries" data-i18n="cerebral_arteries">Cerebral Arteries</button>
+                        </div>
+                        <div class="atlas-choices-display"></div>
+                    </div>
+                    <div style="display: none;">
+                        <div id="atlas-buttons-cortex">
+                            <button class="panel-button" data-atlas="tissues">
+                                <span class="atlas-info" data-i18n="[html]tissues_info">Tissue classes <span class="atlas-description">Tissue types (CSF, WM, GM)</span></span>
+                            </button>
+                            <button class="panel-button" data-atlas="harvard-oxford">
+                                <span class="atlas-info" data-i18n="[html]harvard_oxford_info">Harvard-Oxford <span class="atlas-description">Probabilistic anatomical regions</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="desikan">
+                                <span class="atlas-info" data-i18n="[html]desikan_info">Neuromorph <span class="atlas-description">Gyral Parcellation</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="destrieux">
+                                <span class="atlas-info" data-i18n="[html]destrieux_info">Destrieux <span class="atlas-description">Sulcal-Gyral parcellation</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="allen">
+                                <span class="atlas-info" data-i18n="[html]allen_info">Allen Adult <span class="atlas-description">Cyto etc</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                        </div>
+                        <div id="atlas-buttons-functional">
+                            <button class="panel-button" data-atlas="yeo7">
+                                <span class="atlas-info" data-i18n="[html]yeo7_info">Yeo's 7 networks <span class="atlas-description">7 resting-state functional networks</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="yeo17">
+                                <span class="atlas-info" data-i18n="[html]yeo17_info">Yeo's 17 networks <span class="atlas-description">17 resting-state functional networks</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                        </div>
+                        <div id="atlas-buttons-subcortical">
+                            <button class="panel-button" data-atlas="subcortical">
+                                <span class="atlas-info" data-i18n="[html]subcortical_info">Subcortical <span class="atlas-description">Deep brain structures</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="cerebellum">
+                                <span class="atlas-info" data-i18n="[html]cerebellum_info">Cerebellum <span class="atlas-description">Cerebellar regions</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="thalamus">
+                                <span class="atlas-info" data-i18n="[html]thalamus_info">Thalamus <span class="atlas-description">Thalamic nuclei</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="HippoAmyg">
+                                <span class="atlas-info" data-i18n="[html]hippo_amyg_info">Amygdala/Hippocampus <span class="atlas-description">Amygdala/Hippocampus subfields</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                        </div>
+                        <div id="atlas-buttons-white-matter">
+                            <button class="panel-button" data-atlas="JHU">
+                                <span class="atlas-info" data-i18n="[html]jhu_info">JHU <span class="atlas-description">JHU's White matter tracts</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                            <button class="panel-button" data-atlas="xtract">
+                                <span class="atlas-info" data-i18n="[html]xtract_info">White Matter <span class="atlas-description">FSL's White matter tracts</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                        </div>
+                        <div id="atlas-buttons-cerebral-arteries">
+                            <button class="panel-button" data-atlas="territories">
+                                <span class="atlas-info" data-i18n="[html]territories_info">Territories <span class="atlas-description">Cerebral Artery territories</span></span>
+                                <span class="difficulty-icons">
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                    <img src="/neuroguessr_web/data/star.png" alt="Star" class="star-icon" />
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mode-selection">
+
+                    <h2><img src="/neuroguessr_web/data/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
+                    <div class="mode-buttons">
+                        <button class="mode-button" data-mode="navigation">
+                            <img src="/neuroguessr_web/data/boussole.png" alt="Boussole Icon" />
+                            <span data-i18n="navigation_mode">Navigation </span>
+                            <span class="mode-description" data-i18n="navigation_description">Identify brain regions</span>
+                        </button>
+                        <button class="mode-button" data-mode="practice">
+                            <img src="/neuroguessr_web/data/practice.png" alt="Practice Icon" />
+                            <span data-i18n="practice_mode">Practice </span>
+                            <span class="mode-description" data-i18n="practice_description">Learn with feedback</span>
+                        </button>
+                        <button class="mode-button" data-mode="streak">
+                            <img src="/neuroguessr_web/data/flame.png" alt="Flame Icon" />
+                            <span data-i18n="streak_mode">Streak </span>
+                            <span class="mode-description" data-i18n="streak_description">Test consecutive accuracy</span>
+                        </button>
+                        <button class="mode-button" data-mode="time-attack">
+                            <img src="/neuroguessr_web/data/chronometer.png" alt="Chronometer Icon" />
+                            <span data-i18n="time_attack_mode">Time Attack </span>
+                            <span class="mode-description" data-i18n="time_attack_description">Race against time</span>
+                        </button>
+                    </div>
+                    <button id="play-button" class="play-button" disabled data-i18n="play_button">Play</button>
+                </section>
+            </div>
+
+            <div id="multiplayer-message" class="hidden">
+                <p data-i18n="multiplayer_not_available">Multiplayer not available for now</p>
             </div>
         </div>
     </main>
+
+    <div id="notification"></div>
+
+    <div id="help-overlay" class="help-overlay hidden">
+        <div class="help-content">
+            <button id="close-help" class="close-button">&times;</button>
+            <h2 data-i18n="help_title">Help</h2>
+            <section>
+                <h3 data-i18n="help_presentation_title">Game Presentation</h3>
+                <p data-i18n="help_presentation_text"></p>
+            </section>
+            <section>
+                <h3 data-i18n="help_atlases_title">Atlases References</h3>
+                <p data-i18n="help_atlases_text"></p>
+            </section>
+            <section>
+                <h3 data-i18n="help_modes_title">Game Modes</h3>
+                <p data-i18n="help_modes_navigation"></p>
+                <p data-i18n="help_modes_practice"></p>
+                <p data-i18n="help_modes_streak"></p>
+                <p data-i18n="help_modes_time_attack"></p>
+            </section>
+        </div>
+    </div>
+
+    <button id="help-button" class="help-button">
+        <i class="fas fa-question"></i>
+    </button>
+
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script src="/neuroguessr_web/scripts/login.js"></script>
     <script>
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const mode = urlParams.get('mode') || 'practice'; // Declare mode here
-
       // Initialize i18next
       i18next.init({
         lng: localStorage.getItem('language') || 'en',
@@ -169,7 +422,6 @@
         }
       }, function(err, t) {
         updateContent();
-        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
       });
 
       // Load translation files
@@ -180,54 +432,437 @@
         i18next.addResourceBundle('en', 'translation', en);
         i18next.addResourceBundle('fr', 'translation', fr);
         updateContent();
-        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
-      }).catch(err => {
-        console.error('Failed to load translation files:', err);
+        checkLoginState();
       });
 
       function updateContent() {
         document.querySelectorAll('[data-i18n]').forEach(elem => {
           const key = elem.getAttribute('data-i18n');
-          // Exclude elements within the overlays from this general update
-
           if (key.startsWith('[html]')) {
             elem.innerHTML = i18next.t(key.replace('[html]', ''));
           } else if (key.startsWith('[')) {
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-             elem.textContent = i18next.t(key); // Use textContent for all other elements
+            const isHelpText = elem.closest('#help-overlay');
+            if (isHelpText) {
+              elem.innerHTML = i18next.t(key); // Use innerHTML for help text to render HTML tags
+            } else {
+              elem.textContent = i18next.t(key); // Use textContent for other elements
+            }
           }
         });
-
       }
-    document.querySelectorAll('.lang-icon-btn').forEach(btn => {
+
+      // Language switcher (for unlogged state, original buttons)
+      document.querySelectorAll('.lang-icon-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lang = btn.dataset.lang;
           i18next.changeLanguage(lang, () => {
             localStorage.setItem('language', lang);
             updateContent();
-            // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
-            // Reload atlas labels for the new language
+            loadAtlasLabels().then(() => {
+              searchAtlasRegions(searchInput.value);
             });
           });
         });
+      });
 
-        
-     
+      // Get references to UI elements
+      const singlePlayerButton = document.getElementById('single-player-button');
+      const multiplayerButton = document.getElementById('multiplayer-button');
+      const singlePlayerOptions = document.getElementById('single-player-options');
+      const multiplayerMessage = document.getElementById('multiplayer-message');
+      const modeButtons = document.querySelectorAll('.mode-button');
+      const loginButton = document.getElementById('login-button');
+      // Removed configButton and logoutButton as they are replaced by dropdown versions
+      const playButton = document.getElementById('play-button');
+      const notification = document.getElementById('notification');
+      const categoryButtons = document.querySelectorAll('.category-button');
+      const atlasChoicesDisplay = document.querySelector('.atlas-choices-display');
+      const searchInput = document.getElementById('atlas-search');
+      const searchSuggestions = document.getElementById('search-suggestions');
 
-        // Add event listeners for the option buttons for redirection
-        document.querySelector('.sign-in-button').addEventListener('click', () => {
-            window.location.href = 'login.html';
+      // Help button and overlay elements
+      const helpButton = document.getElementById('help-button');
+      const helpOverlay = document.getElementById('help-overlay');
+      const closeHelpButton = document.getElementById('close-help');
+
+      // New dropdown elements
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdownMenu = document.getElementById('user-dropdown-menu');
+      const welcomeUsername = document.getElementById('welcome-username');
+      const logoutButtonDropdown = document.getElementById('logout-button-dropdown');
+      const configButtonDropdown = document.getElementById('config-button-dropdown');
+      const langIconBtnsDropdown = document.querySelectorAll('.lang-icon-btn-dropdown');
+
+
+      // Variables to store user selections
+      let selectedAtlas = null;
+      let selectedMode = null;
+      let selectedCategoryButton = null;
+      let atlasRegions = [];
+
+      // Atlas configuration
+      const atlasFiles = {
+        'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', viewer: 'neurotheka.html', name: 'Harvard-Oxford' },
+        'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', viewer: 'neurotheka.html', name: 'Tissue' },
+        'destrieux': { nii: '/neuroguessr_web/data/remapped_destrieux_stride_uint.nii.gz', json: '/neuroguessr_web/data/destrieux_new.json', json_fr: '/neuroguessr_web/data/destrieux_new_fr.json', viewer: 'neurotheka.html', name: 'Destrieux' },
+        'desikan': { nii: '/neuroguessr_web/data/remapped_dk_stride.nii.gz', json: '/neuroguessr_web/data/desikan_new.json', json_fr: '/neuroguessr_web/data/desikan_new_fr.json', viewer: 'neurotheka.html', name: 'Desikan' },
+        'allen': { nii: '/neuroguessr_web/data/reconstructed_allen_05mm_uint.nii.gz', json: '/neuroguessr_web/data/allen.json', json_fr: '/neuroguessr_web/data/allen_fr.json', viewer: 'neurotheka.html', name: 'Allen' },
+        'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', viewer: 'neurotheka.html', name: 'Yeo7' },
+        'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', viewer: 'neurotheka.html', name: 'Yeo17' },
+        'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', viewer: 'neurotheka.html', name: 'Subcortical' },
+        'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', viewer: 'neurotheka.html', name: 'Cerebellum' },
+        'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', viewer: 'neurotheka.html', name: 'White Matter' },
+        'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', viewer: 'neurotheka.html', name: 'Thalamus' },
+        'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', viewer: 'neurotheka.html', name: 'Hippocampus & Amygdala' },
+        'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', viewer: 'neurotheka.html', name: 'JHU' },
+        'territories': { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', viewer: 'neurotheka.html', name: 'Territories' }
+      };
+
+      // Display notification
+      function showNotification(messageKey, isSuccess, params = {}) {
+        notification.textContent = i18next.t(messageKey, params);
+        notification.className = isSuccess ? 'success' : 'error';
+        notification.style.display = 'block';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 3000);
+      }
+
+      // Show previous game score if available
+      const urlParams = new URLSearchParams(window.location.search);
+      const score = urlParams.get('score');
+      const time = urlParams.get('time');
+      if (score && time) {
+        const minutes = Math.floor(time / 60);
+        const seconds = (time % 60).toString().padStart(2, '0');
+        showNotification('previous_game', true, { accuracy: score, minutes, seconds });
+      } else if (score) {
+        showNotification('previous_streak', true, { streak: score });
+      }
+
+      // Update mode buttons based on selected atlas
+      function updateModeButtons() {
+        modeButtons.forEach(button => {
+          button.disabled = false;
+          // if (selectedAtlas === 'glasser') {
+          //   button.disabled = button.dataset.mode !== 'navigation';
+          //   if (button.disabled) button.classList.remove('selected');
+          // } else if (selectedAtlas === 'hemisphere') {
+          //   button.disabled = button.dataset.mode === 'navigation';
+          //   if (button.disabled) button.classList.remove('selected');
+          // }
         });
+        if (selectedAtlas === 'glasser' && selectedMode && selectedMode !== 'navigation') {
+          selectedMode = null;
+          modeButtons.forEach(btn => btn.classList.remove('selected'));
+        }
+        if (selectedAtlas === 'hemisphere' && selectedMode === 'navigation') {
+          selectedMode = null;
+          modeButtons.forEach(btn => {
+            if (btn.dataset.mode === 'navigation') btn.classList.remove('selected');
+          });
+        }
+      }
 
-        document.querySelector('.sign-up-button').addEventListener('click', () => {
-            window.location.href = 'register.html';
-        });
+      // Update play button state
+      function updatePlayButton() {
+        playButton.disabled = !(selectedAtlas && selectedMode);
+        playButton.classList.toggle('enabled', !playButton.disabled);
+      }
 
-        document.querySelector('.continue-button').addEventListener('click', () => {
-            window.location.href = 'freeplay.html';
+      // Load labels for all atlases
+      async function loadAtlasLabels() {
+        atlasRegions = [];
+        const lang = i18next.language;
+        for (const [atlas, { json, json_fr, name }] of Object.entries(atlasFiles)) {
+          try {
+            const jsonFile = lang === 'fr' && json_fr ? json_fr : json;
+            const response = await fetch(jsonFile);
+            if (!response.ok) throw new Error(`HTTP ${response.status} for ${atlas}`);
+            const labels = await response.json();
+            const regions = Object.entries(labels.labels)
+              .filter(([id]) => Number(id) > 0 && Number.isInteger(Number(id)))
+              .map(([id, label]) => ({
+                id: Number(id),
+                name: label || `Region ${id}`,
+                atlas,
+                atlasName: name
+              }));
+            atlasRegions.push(...regions);
+            console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+          } catch (error) {
+            console.error(`Failed to load labels for ${atlas}:`, error);
+            showNotification('error_loading_atlas', false, { atlas: name });
+          }
+        }
+        console.log('Total regions loaded:', atlasRegions.length);
+        if (atlasRegions.length === 0) {
+          showNotification('no_regions_loaded', false);
+          searchInput.disabled = true;
+        }
+      }
+
+      // Search across all atlas regions
+      function searchAtlasRegions(query) {
+        searchSuggestions.innerHTML = '';
+        if (!query.trim()) {
+          searchSuggestions.style.display = 'none';
+          return;
+        }
+        const lowerQuery = query.toLowerCase();
+        const matches = atlasRegions
+          .filter(region => region.name.toLowerCase().includes(lowerQuery))
+          .sort((a, b) => {
+            const aIndex = a.name.toLowerCase().indexOf(lowerQuery);
+            const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
+            if (aIndex !== bIndex) return aIndex - bIndex;
+            return a.name.length - b.name.length;
+          });
+        if (matches.length === 0) {
+          searchSuggestions.style.display = 'none';
+          return;
+        }
+        matches.forEach(region => {
+          const suggestion = document.createElement('div');
+          suggestion.className = 'search-suggestion';
+          suggestion.innerHTML = `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`;
+          suggestion.dataset.regionId = region.id;
+          suggestion.dataset.atlas = region.atlas;
+          suggestion.addEventListener('click', () => {
+            const viewerUrl = `${atlasFiles[region.atlas].viewer}?region=${region.id}&atlas=${region.atlas}`;
+            console.log(`Navigating to: ${viewerUrl}`);
+            window.location.href = viewerUrl;
+          });
+          searchSuggestions.appendChild(suggestion);
         });
+        searchSuggestions.style.display = 'block';
+      }
+
+      // Event listeners
+      searchInput.addEventListener('input', () => {
+        console.log('Search input:', searchInput.value);
+        searchAtlasRegions(searchInput.value);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+          searchSuggestions.style.display = 'none';
+        }
+      });
+
+      categoryButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          console.log('Category button clicked:', button.dataset.category);
+          if (selectedCategoryButton) {
+            selectedCategoryButton.classList.remove('selected');
+          }
+          button.classList.add('selected');
+          selectedCategoryButton = button;
+
+          atlasChoicesDisplay.innerHTML = '';
+          selectedAtlas = null;
+          updateModeButtons();
+          updatePlayButton();
+
+          const category = button.dataset.category;
+          const atlasButtonsContainer = document.getElementById(`atlas-buttons-${category}`);
+          if (!atlasButtonsContainer) {
+            console.error(`No container found for category: ${category}`);
+            atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
+            return;
+          }
+
+          const atlasButtons = atlasButtonsContainer.querySelectorAll('.panel-button');
+          if (atlasButtons.length === 0) {
+            console.error(`No atlas buttons found for category: ${category}`);
+            atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
+            return;
+          }
+
+          atlasButtons.forEach(template => {
+            const clone = template.cloneNode(true);
+            clone.addEventListener('click', () => {
+              console.log('Atlas button clicked:', clone.dataset.atlas);
+              atlasChoicesDisplay.querySelectorAll('.panel-button').forEach(btn => btn.classList.remove('selected'));
+              clone.classList.add('selected');
+              selectedAtlas = clone.dataset.atlas;
+              updateModeButtons();
+              updatePlayButton();
+            });
+            atlasChoicesDisplay.appendChild(clone);
+          });
+        });
+      });
+
+      loginButton.addEventListener('click', () => {
+        window.location.href = `login.html`;
+      });
+      // Removed old configButton and logoutButton event listeners here
+
+      // Help button event listeners
+      helpButton.addEventListener('click', () => {
+          helpOverlay.classList.remove('hidden');
+      });
+
+      closeHelpButton.addEventListener('click', () => {
+          helpOverlay.classList.add('hidden');
+      });
+
+      // Close help overlay when clicking outside the content
+      helpOverlay.addEventListener('click', (e) => {
+          if (e.target === helpOverlay) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
+
+      // Close help overlay with Escape key
+      document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+              helpOverlay.classList.add('hidden');
+          }
+      });
+
+      modeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          if (!button.disabled) {
+            console.log('Mode button clicked:', button.dataset.mode);
+            modeButtons.forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+            selectedMode = button.dataset.mode;
+            updatePlayButton();
+          }
+        });
+      });
+
+      playButton.addEventListener('click', () => {
+        if (!playButton.disabled) {
+          console.log('Play button clicked:', selectedAtlas, selectedMode);
+          window.location.href = `viewer.html?atlas=${selectedAtlas}&mode=${selectedMode}`;
+        } else {
+          showNotification('Please select an atlas and game mode first!', false);
+        }
+      });
+
+      singlePlayerButton.addEventListener('click', () => {
+        // Add 'selected' class to single player button and remove from multiplayer
+        singlePlayerButton.classList.add('selected');
+        multiplayerButton.classList.remove('selected');
+
+        singlePlayerOptions.classList.remove('hidden');
+        multiplayerMessage.classList.add('hidden');
+            // Trigger the click on the first category button to display atlases
+        if (categoryButtons.length > 0) {
+            categoryButtons[0].click();
+        } else {
+            atlasChoicesDisplay.innerHTML = `<p class="no-atlas-message">${i18next.t('no_atlas_message')}</p>`;
+        }
+      });
+
+      multiplayerButton.addEventListener('click', () => {
+        // Add 'selected' class to multiplayer button and remove from single player
+        multiplayerButton.classList.add('selected');
+        singlePlayerButton.classList.remove('selected');
+
+        singlePlayerOptions.classList.add('hidden');
+        multiplayerMessage.classList.remove('hidden');
+        selectedAtlas = null; // Reset selections
+        selectedMode = null;
+        updatePlayButton(); // Disable play button
+      });
+
+      // Initialize
+      console.log('Initializing page');
+      loadAtlasLabels(); // Load labels on page load
+      // Initially hide single player options and multiplayer message
+      singlePlayerOptions.classList.add('hidden');
+      multiplayerMessage.classList.add('hidden');
+
+
+      function checkLoginState(){
+        // Logged-in user check
+        const unloggedElements = document.querySelectorAll('.unlogged');
+        const loggedElements = document.querySelectorAll('.logged');
+        const welcomeTitle = document.getElementById('welcome_title');
+        const token = localStorage.getItem('authToken');
+        if (token && isTokenValid(token)) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const firstname = payload.firstname || i18next.t('default_user'); // Default to localized 'User'
+          const lastname = payload.lastname || ''; // Default to an empty string if lastname is missing
+          
+          welcomeTitle.textContent = i18next.t('welcome_message', { "firstname":firstname });
+          welcomeTitle.style.display = 'block'; // Make sure it's visible
+
+          welcomeUsername.textContent = `${firstname} ${lastname}`.trim(); // Set username in dropdown button
+
+          unloggedElements.forEach(el => el.style.display = 'none');
+          loggedElements.forEach(el => el.style.display = 'flex'); // Ensure the dropdown container is displayed
+          multiplayerButton.style.display = "flex";
+        } else {
+          unloggedElements.forEach(el => el.style.display = 'flex');
+          loggedElements.forEach(el => el.style.display = 'none'); // Hide the dropdown container
+          welcomeTitle.style.display = 'none'; // Hide the welcome message
+          multiplayerButton.style.display = "none";
+        }
+        refreshToken();
+      }
+
+      // Dropdown toggle logic
+      if (userMenuButton) { // Check if element exists before adding listener
+        userMenuButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent the document click from closing it immediately
+            userDropdownMenu.classList.toggle('hidden');
+            userMenuButton.classList.toggle('active'); // Add active class for arrow rotation
+        });
+      }
+
+      // Close the dropdown if clicked outside
+      document.addEventListener('click', (event) => {
+          if (userDropdownMenu && userMenuButton && !userDropdownMenu.contains(event.target) && !userMenuButton.contains(event.target)) {
+              userDropdownMenu.classList.add('hidden');
+              userMenuButton.classList.remove('active');
+          }
+      });
+
+      // Language switcher inside dropdown
+      langIconBtnsDropdown.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            loadAtlasLabels().then(() => {
+              searchAtlasRegions(searchInput.value);
+            });
+            userDropdownMenu.classList.add('hidden'); // Close dropdown after selection
+            userMenuButton.classList.remove('active');
+          });
+        });
+      });
+
+      // Logout logic (for new dropdown button)
+      if (logoutButtonDropdown) { // Check if element exists before adding listener
+        logoutButtonDropdown.addEventListener('click', () => {
+          localStorage.removeItem('authToken');
+          checkLoginState(); // Re-check login state to update UI
+          showNotification('logout_success', true); // Add this key in your translation files
+          userDropdownMenu.classList.add('hidden'); // Close dropdown after action
+          userMenuButton.classList.remove('active');
+        });
+      }
+
+      // Config logic (for new dropdown button)
+      if (configButtonDropdown) { // Check if element exists before adding listener
+        configButtonDropdown.addEventListener('click', () => {
+          window.location.href = `config_user.html`;
+          userDropdownMenu.classList.add('hidden'); // Close dropdown after action
+          userMenuButton.classList.remove('active');
+        });
+      }
+
+      checkLoginState(); // Ensure this is called to set initial visibility of elements
     </script>
-</body>
+  </body>
 </html>
