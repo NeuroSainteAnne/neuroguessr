@@ -1,0 +1,98 @@
+html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 16px; /* Base font size */
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    width: 100vw;
+    font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+    user-select: none; /* Prevent text selection */
+    color: #d9dddc; /* Default text color */
+    box-sizing: border-box;
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    position: relative; /* For background pseudo-element */
+    background: url('/neuroguessr_web/data/background.png') no-repeat center center fixed;
+    background-size: cover;
+    background-color: #363636; /* Fallback color */
+}
+
+/* Specific background for index page */
+#root {
+    /* Background image set here */
+    width: 100%;
+    height: 100vh;
+    position: relative; /* Needed for pseudo-element */
+}
+
+
+/* Add a pseudo-element for background opacity and blur */
+#root::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(54, 54, 54, 0.8); /* Opacity 0.8 */
+    z-index: -1; /* Place behind content */
+    /* If backdrop-filter on buttons doesn't work, you could try blurring this pseudo-element,
+       but that would blur the entire background, not just behind the buttons.
+       backdrop-filter: blur(10px);
+       -webkit-backdrop-filter: blur(10px);
+    */
+}
+
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}

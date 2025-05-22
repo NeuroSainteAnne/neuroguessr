@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs"
 import https from 'https';
-import { __dirname, htmlRoot } from "./utils.ts";
+import { __dirname, htmlRoot, reactRoot } from "./utils.ts";
 import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
@@ -23,11 +23,11 @@ if(config.server.globalAuthentication.enabled){
 }
 
 app.get("/", (req: express.Request, res: express.Response) => {
-    res.sendFile("index.html", { root: htmlRoot });
+    res.sendFile("index.html", { root: reactRoot });
 });
 
 app.get("/index.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("index.html", { root: htmlRoot });
+    res.sendFile("index.html", { root: reactRoot });
 });
 
 app.get("/login.html", (req: express.Request, res: express.Response) => {
@@ -54,6 +54,7 @@ app.get("/niivue.css", (req: express.Request, res: express.Response) => {
     res.sendFile("niivue.css", { root: htmlRoot });
 });
 
+app.use("/assets", express.static(path.join(reactRoot, "assets")));
 app.use("/neuroguessr_web/scripts", express.static(path.join(htmlRoot, "scripts")));
 app.use("/neuroguessr_web/data", express.static(path.join(htmlRoot, "data")));
 app.use("/neuroguessr_web/dist", express.static(path.join(htmlRoot, "dist")));
