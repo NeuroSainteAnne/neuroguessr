@@ -16,7 +16,7 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 ## Website
 
-  - HTML5, CSS3, JavaScript (ES6): Core logic for game mechanics, UI interactions, and atlas loading.
+  - HTML, CSS, JavaScript 
   - **Niivue**: web-based visualization tool for neuroimaging [https://github.com/niivue/niivue]
 
 - **Data**:
@@ -49,5 +49,5 @@ This project is licensed under the MIT License - see the [LICENSE] file for deta
 ## Authors 
 François Ramon
 francois.ramon@ghu-paris.fr 
-Joseph Ben Zakoun 
+Joseph Benzakoun 
 j.benzakoun@ghu-paris.fr
