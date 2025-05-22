@@ -45,6 +45,14 @@ app.get("/viewer.html", (req: express.Request, res: express.Response) => {
     res.sendFile("viewer.html", { root: htmlRoot });
 });
 
+app.get("/neurotheka.html", (req: express.Request, res: express.Response) => {
+    res.sendFile("neurotheka.html", { root: htmlRoot });
+});
+
+app.get("/stats.html", (req: express.Request, res: express.Response) => {
+    res.sendFile("stats.html", { root: htmlRoot });
+});
+
 app.get("/niivue.css", (req: express.Request, res: express.Response) => {
     res.sendFile("niivue.css", { root: htmlRoot });
 });

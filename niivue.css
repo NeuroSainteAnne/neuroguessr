@@ -1303,7 +1303,303 @@ h3 {
   font-weight: 600;
 }*/
 
+.landing-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            width: 100%; /* Ensure it takes full width to center its children */
+            max-width: 1200px; /* Limit content width like original navbar */
+            margin: 0 auto; /* Center the content area */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .welcome-section {
+            margin-bottom: 40px;
+            color: #d9dddc; /* Using text color from niivue.css body */
+            align-items: left;
+        }
+
+        .welcome-message {
+            font-size: 5em;
+            color: white; /* Make welcome message stand out */
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            font-size: 1.3em;
+            color: #d9dddc;
+        }
+
+        /* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
+        .sign-in-panel {
+            background-color: rgba(0,0,0, 0); /* Slightly transparent dark background */
+            padding: 30px;
+            border-radius: 8px;
+            width: 70%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            color: #d9dddc;
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: white;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        /* New CSS object for the container of sign-in options */
+        .sign-in-options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between buttons */
+        }
+
+        .option-button {
+            display: block;
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Consistent font */
+            font-weight: 400; /* Make buttons a bit bolder */
+        }
+
+        /* Button specific colors, trying to fit the existing theme */
+        .sign-in-button {
+            background-color: rgb(63, 109, 159); /* A standard blue, common in modern UIs */
+            color: white;
+        }
+
+        .sign-up-button {
+            background-color: #545454; /* A standard green for success/register */
+            color: white;
+        }
+
+        .continue-button {
+            background-color: #545454; /* A standard grey for neutral actions */
+            color: white;
+        }
+
+        .option-button:hover {
+/*            transform: translateY(-2px);*/
+            opacity: 0.85; /* Slightly reduce opacity on hover */
+        }
+
+        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+        @media (max-width: 600px) {
+            .welcome-message {
+                font-size: 2em;
+            }
+
+            .sign-in-panel {
+                padding: 20px;
+            }
+
+            .option-button {
+                padding: 12px 15px;
+                font-size: 1em;
+            }
+        }
+
+.user-dropdown-container {
+    position: relative;
+    display: flex; /* Or inline-flex */
+    align-items: center;
+    margin-left: auto; /* Pushes it to the right */
+}
+
+        /* User Menu Button (the clickable button to open the dropdown) */
+.user-menu-button {
+    background: none;
+    border: none;
+    color: var(--navbar-text-color, #ffffff); /* Assuming a CSS variable for text color */
+    cursor: pointer;
+    display: flex; /* Use flex to align children */
+    align-items: center; /* Vertically center items */
+    padding: 10px 10px;
+    border-radius: 50px;
+    transition: background-color 0.3s ease;
+            /* Remove default padding to let the icon's size dictate the click area more */
+    padding: 0; /* Important: reset padding here */
+}
+
+.user-menu-button:hover {
+    background-color: var(--navbar-hover-bg, rgba(255, 255, 255, 0.1));
+}
+
+.user-menu-button .user-icon {
+    width: 48px; /* Adjust size as needed */
+    height: 48px;
+    margin-right: 8px; /* Add margin to separate icon from text */
+    vertical-align: middle;
+    /* Make the icon itself the primary click target within the button */
+    cursor: pointer;
+    display: block; /* Ensure it takes up its own space */
+    padding: 10px; /* Add padding around the icon to make it a larger click target */
+}
+
+        /* Show the username next to the icon */
+#welcome-username {
+    display: inline; /* This will show the username */
+    margin-right: 8px; /* Space between username and arrow */
+    font-weight: bold;
+}
+
+        /* You might want to adjust the arrow position if it's still there and now looks odd */
+.user-menu-button .dropdown-arrow {
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+            /* Keep arrow visible for dropdown */
+}
+
+        /* Rotate arrow when dropdown is open */
+.user-menu-button.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+        /* Sign-in button for guest mode */
+.guest-sign-in-button {
+    background-color: rgb(63, 109, 159); /* A prominent blue */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-left: 15px; /* Spacing from language switcher */
+}
+
+.guest-sign-in-button:hover {
+    opacity: 0.85;
+}
+
+
+        /* User Dropdown Menu */
+.user-dropdown-menu {
+    position: absolute;
+    top: 100%; /* Position below the button */
+    right: 0; /* Align to the right of the button */
+    background-color: #545454; /* Dark background for dropdown */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 220px; /* Adjust width as needed */
+    z-index: 1000; /* Ensure it's above other content */
+    overflow: hidden; /* For rounded corners on items */
+}
+
+.user-dropdown-menu.hidden {
+    display: none;
+}
+
+.user-dropdown-menu .dropdown-header {
+    padding: 12px 15px;
+    font-weight: bold;
+    color: var(--dropdown-header-color, #aaa);
+    border-bottom: 1px solid var(--dropdown-border-color, #444);
+    font-size: 0.9em;
+}
+
+.user-dropdown-menu .dropdown-item {
+    background: none;
+    border: none;
+    color: var(--dropdown-text-color, #eee);
+    padding: 12px 15px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 1em;
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+    opacity: 0.75;
+    color: #fff;
+}
+
+.user-dropdown-menu .dropdown-item img {
+    width: 20px; /* Icon size */
+    height: 20px;
+    margin-right: 10px;
+}
+
+.user-dropdown-menu .logout-item {
+    border-top: 1px solid var(--dropdown-border-color, #444);
+    color: var(--logout-text-color, #ff6b6b); /* Reddish color for logout */
+}
+
+.user-dropdown-menu .logout-item:hover {
+    background-color: var(--logout-hover-bg, #a03f3f);
+    color: #fff;
+}
+
+/* Language Switcher inside dropdown */
+.language-switcher-dropdown {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center the flag buttons */
+    padding: 10px 15px;
+    color: var(--dropdown-text-color, #eee);
+    font-size: 1em;
+    border-top: 1px solid var(--dropdown-border-color, #444); /* Separator */
+    margin-top: 5px; /* Space above the language section */
+    flex-wrap: wrap; /* Allow buttons to wrap if container is too small */
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    margin: 0 5px; /* Adjust margin between flag buttons */
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown img {
+    width: 30px; /* Slightly larger flags in dropdown */
+    height: 20px;
+    vertical-align: middle;
+}
+
+/* Hide elements dynamically */
+.hidden {
+    display: none !important;
+}
+
+
+        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+@media (max-width: 600px) {
+    .welcome-message {
+        font-size: 2em;
+    }
+
+    .sign-in-panel {
+        padding: 20px;
+    }
+
+    .option-button {
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+}
+
+
 /* --- Login Box Styles --- */
+
 .login-box {
     background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
     padding: 40px;
@@ -1660,16 +1956,16 @@ a:hover {
         justify-content: flex-start; /* Align to start */
     }
     /* Removed navbar-center */
-    /* .navbar-center {
+    .navbar-center {
         flex-grow: 1;
         display: flex;
         justify-content: center;
-    } */
+    } 
     /* Removed navbar-search specific styles */
-    /* .search-container.navbar-search {
+    .search-container.navbar-search {
         margin: 0;
         max-width: 80%;
-    } */
+    }
     .search-bar-container-main {
         padding: 2rem 0; /* Adjust padding */
     }
