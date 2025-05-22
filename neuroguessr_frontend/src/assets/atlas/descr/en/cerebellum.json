@@ -1,0 +1,11 @@
+{
+  "R": [0, 255, 255, 255, 255, 255, 255, 204, 153, 102, 51, 0, 0, 0, 0, 0, 0, 0,
+    51, 102, 153, 204, 255, 255, 255, 255, 255, 255, 255
+  ],
+  "G": [0, 0, 38, 77, 115, 153, 191, 204, 204, 204, 204, 204, 166, 128, 89, 51,
+    13, 0, 0, 0, 0, 0, 0, 13, 51, 89, 128, 166, 204
+  ],
+  "B": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 77, 115, 153, 191, 204, 204, 204,
+    204, 204, 204, 191, 153, 115, 77, 38, 0],
+      "labels": ["Background","Left-I-IV","Right-I-IV","Left-V","Right-V","Left-VI","Vermis-VI","Right-VI","Left-Crus-I","Vermis-Crus-I","Right-Crus-I","Left-Crus-II","Vermis-Crus-II","Right-Crus-II","Left-VIIb","Vermis-VIIb","Right-VIIb","Left-VIIIa","Vermis-VIIIa","Right-VIIIa","Left-VIIIb","Vermis-VIIIb","Right-VIIIb","Left-IX","Vermis-IX","Right-IX","Left-X","Vermis-X","Right-X"]
+}
