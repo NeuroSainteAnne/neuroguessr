@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="app_title">NeuroGuessr Web - Welcome</title>
+    <link rel="stylesheet" href="niivue.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Custom styles for the new landing page elements, integrating with niivue.css */
+
+        /* Centralize main content */
+        .landing-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            width: 100%; /* Ensure it takes full width to center its children */
+            max-width: 1200px; /* Limit content width like original navbar */
+            margin: 0 auto; /* Center the content area */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .welcome-section {
+            margin-bottom: 40px;
+            color: #d9dddc; /* Using text color from niivue.css body */
+            align-items: left;
+        }
+
+        .welcome-message {
+            font-size: 5em;
+            color: white; /* Make welcome message stand out */
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            font-size: 1.3em;
+            color: #d9dddc;
+        }
+
+        /* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
+        .sign-in-panel {
+            background-color: rgba(0,0,0, 0); /* Slightly transparent dark background */
+            padding: 30px;
+            border-radius: 8px;
+            width: 70%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            color: #d9dddc;
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: white;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        /* New CSS object for the container of sign-in options */
+        .sign-in-options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between buttons */
+        }
+
+        .option-button {
+            display: block;
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Consistent font */
+            font-weight: 400; /* Make buttons a bit bolder */
+        }
+
+        /* Button specific colors, trying to fit the existing theme */
+        .sign-in-button {
+            background-color: rgb(63, 109, 159); /* A standard blue, common in modern UIs */
+            color: white;
+        }
+
+        .sign-up-button {
+            background-color: #545454; /* A standard green for success/register */
+            color: white;
+        }
+
+        .continue-button {
+            background-color: #545454; /* A standard grey for neutral actions */
+            color: white;
+        }
+
+        .option-button:hover {
+/*            transform: translateY(-2px);*/
+            opacity: 0.85; /* Slightly reduce opacity on hover */
+        }
+
+        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+        @media (max-width: 600px) {
+            .welcome-message {
+                font-size: 2em;
+            }
+
+            .sign-in-panel {
+                padding: 20px;
+            }
+
+            .option-button {
+                padding: 12px 15px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body class="index-page">
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-left logo-title-container-navbar">
+                <img src="/neuroguessr_web/data/neuroguessr.png" alt="NeuroGuessr Logo" class="logo" />
+                <h1 data-i18n="app_title">NeuroGuessr</h1>
+            </div>
+            <div class="navbar-right">
+                <div class="language-switcher">
+                    <button class="lang-icon-btn" data-lang="fr" aria-label="Français">
+                        <img src="/neuroguessr_web/data/fr.png" alt="FR">
+                    </button>
+                    <button class="lang-icon-btn" data-lang="en" aria-label="English">
+                        <img src="/neuroguessr_web/data/en.png" alt="EN">
+                    </button>
+                </div>
+                <div class="logged-in-status">
+                    <div class="unlogged" style="display: none;"></div> <div class="logged" style="display: none;"></div> </div>
+            </div>
+        </div>
+
+    </header>
+
+    <main class="landing-content">
+        <div class="welcome-section">
+            <h2 class="welcome-message" data-i18n="welcome_unlogged"> Welcome!</h2>
+            <p data-i18n="welcome_text_unlogged"> Sign in or register now to start playing Neuroguessr</p>
+        </div>
+
+        <div class="sign-in-panel">
+            <div class="sign-in-options-container">
+                <button class="option-button sign-in-button" data-i18n="sign_in">Sign In</button>
+                <button class="option-button sign-up-button" data-i18n="sign_up"> Sign Up</button>
+                <button class="option-button continue-button"data-i18n="no_sign_in"> Continue without signing in</button>
+            </div>
+        </div>
+    </main>
+    <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
+    <script>
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode') || 'practice'; // Declare mode here
+
+      // Initialize i18next
+      i18next.init({
+        lng: localStorage.getItem('language') || 'en',
+        resources: {
+          en: { translation: {} },
+          fr: { translation: {} }
+        }
+      }, function(err, t) {
+        updateContent();
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      });
+
+      // Load translation files
+      Promise.all([
+        fetch('/neuroguessr_web/data/i18n/en.json').then(res => res.json()),
+        fetch('/neuroguessr_web/data/i18n/fr.json').then(res => res.json())
+      ]).then(([en, fr]) => {
+        i18next.addResourceBundle('en', 'translation', en);
+        i18next.addResourceBundle('fr', 'translation', fr);
+        updateContent();
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      }).catch(err => {
+        console.error('Failed to load translation files:', err);
+      });
+
+      function updateContent() {
+        document.querySelectorAll('[data-i18n]').forEach(elem => {
+          const key = elem.getAttribute('data-i18n');
+          // Exclude elements within the overlays from this general update
+
+          if (key.startsWith('[html]')) {
+            elem.innerHTML = i18next.t(key.replace('[html]', ''));
+          } else if (key.startsWith('[')) {
+            const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
+            elem.setAttribute(attr, i18next.t(k));
+          } else {
+             elem.textContent = i18next.t(key); // Use textContent for all other elements
+          }
+        });
+
+      }
+    document.querySelectorAll('.lang-icon-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          i18next.changeLanguage(lang, () => {
+            localStorage.setItem('language', lang);
+            updateContent();
+            // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+            // Reload atlas labels for the new language
+            });
+          });
+        });
+
+        
+     
+
+        // Add event listeners for the option buttons for redirection
+        document.querySelector('.sign-in-button').addEventListener('click', () => {
+            window.location.href = 'login.html';
+        });
+
+        document.querySelector('.sign-up-button').addEventListener('click', () => {
+            window.location.href = 'register.html';
+        });
+
+        document.querySelector('.continue-button').addEventListener('click', () => {
+            window.location.href = 'freeplay.html';
+        });
+    </script>
+</body>
+</html>

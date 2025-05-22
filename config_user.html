@@ -104,7 +104,6 @@
     </main>
     <script src="https://unpkg.com/i18next@23.15.1/dist/umd/i18next.min.js"></script>
     <script>
-      // Initialize i18next
       i18next.init({
         lng: localStorage.getItem('language') || 'en',
         resources: {
@@ -113,6 +112,7 @@
         }
       }, function(err, t) {
         updateContent();
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
       });
 
       // Load translation files
@@ -123,33 +123,38 @@
         i18next.addResourceBundle('en', 'translation', en);
         i18next.addResourceBundle('fr', 'translation', fr);
         updateContent();
-        postLoad()
+        // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+      }).catch(err => {
+        console.error('Failed to load translation files:', err);
       });
 
       function updateContent() {
         document.querySelectorAll('[data-i18n]').forEach(elem => {
           const key = elem.getAttribute('data-i18n');
+          // Exclude elements within the overlays from this general update
+
           if (key.startsWith('[html]')) {
             elem.innerHTML = i18next.t(key.replace('[html]', ''));
           } else if (key.startsWith('[')) {
             const [attr, k] = key.match(/\[(.+)\](.+)/).slice(1);
             elem.setAttribute(attr, i18next.t(k));
           } else {
-            elem.textContent = i18next.t(key);
+             elem.textContent = i18next.t(key); // Use textContent for all other elements
           }
         });
-      }
 
-      // Language switcher
-      document.querySelectorAll('.lang-btn').forEach(btn => {
+      }
+    document.querySelectorAll('.lang-icon-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lang = btn.dataset.lang;
           i18next.changeLanguage(lang, () => {
             localStorage.setItem('language', lang);
             updateContent();
+            // updateStreakEndContent(); // This is now handled inside displayStreakEndWindow
+            // Reload atlas labels for the new language
+            });
           });
         });
-      });
 
       async function postLoad() {
         const usernameField = document.getElementById('username');

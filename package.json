@@ -2,7 +2,6 @@
   "type": "module",
   "dependencies": {
     "@niivue/niivue": "^0.57.0",
-    "@types/express": "^5.0.1",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
@@ -19,6 +18,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "@types/express": "^5.0.2",
     "@types/node": "^22.15.17",
     "@types/nodemailer": "^6.4.17"
   }

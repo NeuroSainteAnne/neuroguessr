@@ -1264,7 +1264,620 @@ h3 {
     white-space: nowrap;
 }
 
-.login-box, .register-box {
+/*.login-box, .register-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: #363636;
+  color: white;
+  font-size: 1rem;
+  font-weight: 300;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid #808588;
+  border-radius: 0.5rem;
+  transition: background 0.2s, border 0.2s, opacity 0.2s;
+  width: 100%;
+  max-width: 25rem;
+  box-sizing: border-box;
+}
+.login-element{
+  display: flex;
+  flex-direction: row;
+}
+#registration_link {
+  cursor: pointer;
+  margin-top: 20px;
+}
+#forgot_password_link {
+  cursor: pointer;
+  margin-top: 5px;
+}
+#registration_link:hover, #forgot_password_link:hover {
+  background: #4a4a4a;
+  border-color: #aaa;
+  color: #fff;
+}
+#registration_link:active, #forgot_password_link:active {
+  background: #5a5a5a;
+  font-weight: 600;
+}*/
+
+.landing-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            width: 100%; /* Ensure it takes full width to center its children */
+            max-width: 1200px; /* Limit content width like original navbar */
+            margin: 0 auto; /* Center the content area */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .welcome-section {
+            margin-bottom: 40px;
+            color: #d9dddc; /* Using text color from niivue.css body */
+            align-items: left;
+        }
+
+        .welcome-message {
+            font-size: 5em;
+            color: white; /* Make welcome message stand out */
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            font-size: 1.3em;
+            color: #d9dddc;
+        }
+
+        /* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
+        .sign-in-panel {
+            background-color: rgba(0,0,0, 0); /* Slightly transparent dark background */
+            padding: 30px;
+            border-radius: 8px;
+            width: 70%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            color: #d9dddc;
+        }
+
+        .panel-title {
+            font-size: 1.8em;
+            color: white;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        /* New CSS object for the container of sign-in options */
+        .sign-in-options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Space between buttons */
+        }
+
+        .option-button {
+            display: block;
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Consistent font */
+            font-weight: 400; /* Make buttons a bit bolder */
+        }
+
+        /* Button specific colors, trying to fit the existing theme */
+        .sign-in-button {
+            background-color: rgb(63, 109, 159); /* A standard blue, common in modern UIs */
+            color: white;
+        }
+
+        .sign-up-button {
+            background-color: #545454; /* A standard green for success/register */
+            color: white;
+        }
+
+        .continue-button {
+            background-color: #545454; /* A standard grey for neutral actions */
+            color: white;
+        }
+
+        .option-button:hover {
+/*            transform: translateY(-2px);*/
+            opacity: 0.85; /* Slightly reduce opacity on hover */
+        }
+
+        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+        @media (max-width: 600px) {
+            .welcome-message {
+                font-size: 2em;
+            }
+
+            .sign-in-panel {
+                padding: 20px;
+            }
+
+            .option-button {
+                padding: 12px 15px;
+                font-size: 1em;
+            }
+        }
+
+.user-dropdown-container {
+    position: relative;
+    display: flex; /* Or inline-flex */
+    align-items: center;
+    margin-left: auto; /* Pushes it to the right */
+}
+
+        /* User Menu Button (the clickable button to open the dropdown) */
+.user-menu-button {
+    background: none;
+    border: none;
+    color: var(--navbar-text-color, #ffffff); /* Assuming a CSS variable for text color */
+    cursor: pointer;
+    display: flex; /* Use flex to align children */
+    align-items: center; /* Vertically center items */
+    padding: 10px 10px;
+    border-radius: 50px;
+    transition: background-color 0.3s ease;
+            /* Remove default padding to let the icon's size dictate the click area more */
+    padding: 0; /* Important: reset padding here */
+}
+
+.user-menu-button:hover {
+    background-color: var(--navbar-hover-bg, rgba(255, 255, 255, 0.1));
+}
+
+.user-menu-button .user-icon {
+    width: 48px; /* Adjust size as needed */
+    height: 48px;
+    margin-right: 8px; /* Add margin to separate icon from text */
+    vertical-align: middle;
+    /* Make the icon itself the primary click target within the button */
+    cursor: pointer;
+    display: block; /* Ensure it takes up its own space */
+    padding: 10px; /* Add padding around the icon to make it a larger click target */
+}
+
+        /* Show the username next to the icon */
+#welcome-username {
+    display: inline; /* This will show the username */
+    margin-right: 8px; /* Space between username and arrow */
+    font-weight: bold;
+}
+
+        /* You might want to adjust the arrow position if it's still there and now looks odd */
+.user-menu-button .dropdown-arrow {
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+            /* Keep arrow visible for dropdown */
+}
+
+        /* Rotate arrow when dropdown is open */
+.user-menu-button.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+        /* Sign-in button for guest mode */
+.guest-sign-in-button {
+    background-color: rgb(63, 109, 159); /* A prominent blue */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-left: 15px; /* Spacing from language switcher */
+}
+
+.guest-sign-in-button:hover {
+    opacity: 0.85;
+}
+
+
+        /* User Dropdown Menu */
+.user-dropdown-menu {
+    position: absolute;
+    top: 100%; /* Position below the button */
+    right: 0; /* Align to the right of the button */
+    background-color: #545454; /* Dark background for dropdown */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 220px; /* Adjust width as needed */
+    z-index: 1000; /* Ensure it's above other content */
+    overflow: hidden; /* For rounded corners on items */
+}
+
+.user-dropdown-menu.hidden {
+    display: none;
+}
+
+.user-dropdown-menu .dropdown-header {
+    padding: 12px 15px;
+    font-weight: bold;
+    color: var(--dropdown-header-color, #aaa);
+    border-bottom: 1px solid var(--dropdown-border-color, #444);
+    font-size: 0.9em;
+}
+
+.user-dropdown-menu .dropdown-item {
+    background: none;
+    border: none;
+    color: var(--dropdown-text-color, #eee);
+    padding: 12px 15px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-size: 1em;
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+    opacity: 0.75;
+    color: #fff;
+}
+
+.user-dropdown-menu .dropdown-item img {
+    width: 20px; /* Icon size */
+    height: 20px;
+    margin-right: 10px;
+}
+
+.user-dropdown-menu .logout-item {
+    border-top: 1px solid var(--dropdown-border-color, #444);
+    color: var(--logout-text-color, #ff6b6b); /* Reddish color for logout */
+}
+
+.user-dropdown-menu .logout-item:hover {
+    background-color: var(--logout-hover-bg, #a03f3f);
+    color: #fff;
+}
+
+/* Language Switcher inside dropdown */
+.language-switcher-dropdown {
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center the flag buttons */
+    padding: 10px 15px;
+    color: var(--dropdown-text-color, #eee);
+    font-size: 1em;
+    border-top: 1px solid var(--dropdown-border-color, #444); /* Separator */
+    margin-top: 5px; /* Space above the language section */
+    flex-wrap: wrap; /* Allow buttons to wrap if container is too small */
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    margin: 0 5px; /* Adjust margin between flag buttons */
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown img {
+    width: 30px; /* Slightly larger flags in dropdown */
+    height: 20px;
+    vertical-align: middle;
+}
+
+/* Hide elements dynamically */
+.hidden {
+    display: none !important;
+}
+
+
+        /* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+@media (max-width: 600px) {
+    .welcome-message {
+        font-size: 2em;
+    }
+
+    .sign-in-panel {
+        padding: 20px;
+    }
+
+    .option-button {
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+}
+
+
+/* --- Login Box Styles --- */
+
+.login-box {
+    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    padding: 40px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-sizing: border-box;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+}
+
+.login-box h2 {
+    margin-bottom: 30px;
+    color: #E0E0E0; /* Light heading color for contrast */
+    font-size: 2.2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#login_error {
+    color: #FF7070; /* Brighter red for error messages on dark background */
+    font-size: 0.9em;
+    height: 20px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+#registration_link {
+    margin-top: 30px;
+}
+
+/* --- Registration Box Styles --- */
+.register-box { /* Changed from .login-box */
+    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    padding: 40px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px; /* Slightly wider for more input fields */
+    text-align: center;
+    box-sizing: border-box;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+}
+
+.register-box h2 { /* Changed from .login-box h2 */
+    margin-bottom: 30px;
+    color: #E0E0E0; /* Light heading color for contrast */
+    font-size: 2.2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#register_error { /* Specific ID for register error */
+    color: #FF7070; /* Brighter red for error messages on dark background */
+    font-size: 0.9em;
+    height: 20px; /* Reserve space for error messages */
+    text-align: center;
+    margin-top: 10px;
+}
+
+.password-helper { /* New style for the password helper text */
+    color: #A2B9F0; /* Use a similar color to links for helper text */
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: center;
+    padding: 5px 0;
+    margin-top: -10px; /* Adjust margin to bring it closer to password input */
+    margin-bottom: 15px; /* Space below helper text */
+}
+
+/* --- Common Styles (Login and Register) --- */
+.login-element { /* This class is reused for the table structure */
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+}
+
+.login-element td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+
+.login-element td:first-child {
+    text-align: left;
+    width: 35%;
+}
+
+.login-element td:last-child {
+    text-align: right;
+    width: 65%;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #C0C0C0; /* Slightly softer light label color */
+    font-size: 1em;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+input[type="text"],
+input[type="email"], /* Added email input type */
+input[type="password"] {
+    width: calc(100% - 20px);
+    padding: 12px 10px;
+    background-color: #3B3B3B; /* Darker input background */
+    border: 1px solid rgba(255, 255, 255, 0); /* Slightly lighter border for inputs */
+    border-radius: 50px;
+    font-size: 1em;
+    color: #E0E0E0; /* Light text color inside inputs */
+    outline: none;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus, /* Added email input type focus */
+input[type="password"]:focus {
+    border-color: #8A9CEE; 
+}
+
+button[type="submit"] {
+    background-color: rgb(63, 109, 159); /* Your primary button color (light blue/purple) */
+    color: #d9dddc; /* Dark text for button for contrast */
+    padding: 14px 25px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1em;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+button[type="submit"]:hover {
+    background-color: #728AD2; /* Darker shade on hover */
+}
+
+a {
+    display: block;
+    margin-top: 15px;
+    color: #A2B9F0; /* Lighter, more visible link color */
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #8A9CEE; /* Changed to match register hover */
+}
+
+/* --- Keyframes for Animations --- */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0); 
+}
+
+.modal-content {
+  background-color: #3f3f3f;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0);
+  width: 30%;
+  border-radius: 8px;
+  text-align: center;
+}
+
+
+
+.form-field { /* New class for all input fields you want styled identically */
+    width: 100%;
+    padding: 12px 10px;
+    background-color: #3B3B3B; /* Darker input background */
+    border: 1px solid rgba(0, 0, 0, 0); /* Transparent border */
+    border-radius: 50px; /* Fully rounded corners */
+    font-size: 1em;
+    color: #E0E0E0; /* Light text color inside inputs */
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-field:focus {
+    border-color: rgb(63, 109, 159); /* Your specific blue on focus */
+}
+.form-button { /* New class for all buttons you want styled identically */
+    background-color: rgb(63, 109, 159); /* Your specific blue button color */
+    color: #d9dddc; /* Light text for button for contrast */
+    padding: 14px 25px;
+    border: none;
+    border-radius: 50px; /* Fully rounded corners */
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 100%;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+.form-button:hover {
+    background-color: #728AD2; /* Darker shade on hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+}
+
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #E0E0E0;
+    font-size: 2em; /* Slightly smaller for modal heading */
+    font-weight: 600;
+    text-align: left;
+
+}
+
+.modal-content p {
+    color: #C0C0C0;
+    margin-bottom: 25px;
+    line-height: 1.5;
+    text-align: left;
+
+}
+
+/* Input specific to the modal (already covered by input[type="email"] above, but for clarity) */
+#recovery-email {
+    margin-bottom: 15px; /* Space between input and button */
+}
+
+/* Button specific to the modal (already covered by #send-recovery-email above) */
+#send-recovery-email {
+    margin-top: 10px; /* Adjust as needed for spacing */
+}
+
+
+
+.close-button {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  position: absolute;
+  top: 10px; /* Distance from the top edge of .modal-content */
+  right: 20px;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.recovery-message {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/*.login-box, .register-box {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1325,106 +1938,8 @@ h3 {
   text-align: center;
 }
 
-.close-button {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
 
-.close-button:hover,
-.close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
 
-.recovery-message {
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-.login-box, .register-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  background: #363636;
-  color: white;
-  font-size: 1rem;
-  font-weight: 300;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #808588;
-  border-radius: 0.5rem;
-  transition: background 0.2s, border 0.2s, opacity 0.2s;
-  width: 100%;
-  max-width: 25rem;
-  box-sizing: border-box;
-}
-.login-element{
-  display: flex;
-  flex-direction: row;
-}
-#registration_link {
-  cursor: pointer;
-  margin-top: 20px;
-}
-#forgot_password_link {
-  cursor: pointer;
-  margin-top: 5px;
-}
-#registration_link:hover, #forgot_password_link:hover {
-  background: #4a4a4a;
-  border-color: #aaa;
-  color: #fff;
-}
-#registration_link:active, #forgot_password_link:active {
-  background: #5a5a5a;
-  font-weight: 600;
-}
-
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  background-color: #3f3f3f;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid #d0d0d0;
-  width: 30%;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.close-button {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close-button:hover,
-.close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.recovery-message {
-  margin-top: 10px;
-  font-size: 14px;
-}
 
 /* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
 @media (min-width: 1024px) {
@@ -1441,16 +1956,16 @@ h3 {
         justify-content: flex-start; /* Align to start */
     }
     /* Removed navbar-center */
-    /* .navbar-center {
+    .navbar-center {
         flex-grow: 1;
         display: flex;
         justify-content: center;
-    } */
+    } 
     /* Removed navbar-search specific styles */
-    /* .search-container.navbar-search {
+    .search-container.navbar-search {
         margin: 0;
         max-width: 80%;
-    } */
+    }
     .search-bar-container-main {
         padding: 2rem 0; /* Adjust padding */
     }
@@ -1937,8 +2452,8 @@ h3 {
     background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
     z-index: 2000; /* Ensure it's above everything else */
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: left;
+    align-items: left;
     opacity: 1; /* Start with opacity 1 */
     transition: opacity 0.3s ease-in-out; /* Smooth transition */
     backdrop-filter: blur(10px); /* Apply blur effect */
@@ -2066,7 +2581,7 @@ h3 {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(54, 54, 54, 0.90); /* Increased transparency */
+    background-color: rgba(0, 0, 0, 0.6); /* Increased transparency */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -2099,9 +2614,9 @@ h3 {
     padding: 20px;
     border-radius: 8px;
     text-align: center; /* Keep centered for streak and time attack */
-    max-width: 500px;
+    max-width: 1000px;
     position: relative; /* Needed for close button positioning */
-    width: 90%; /* Make content responsive */
+    width: 70%; /* Make content responsive */
     box-sizing: border-box; /* Include padding in width */
 }
 
@@ -2109,11 +2624,14 @@ h3 {
     margin-top: 0;
     color: #d9dddc;
     text-align: center; /* Keep centered for streak and time attack */
+
 }
 
 .overlay-content p {
     margin: 15px 0; /* Increased vertical margin */
     text-align: center; /* Keep centered for streak and time attack */
+    font-size: 1rem; /* Set font size to 1rem */
+
 }
 
 /* Container for multiple buttons in overlays */
@@ -2203,28 +2721,90 @@ h3 {
 
 /* Progress Bar Styling */
 .score-progress-bar {
-    width: 90%; /* Increased width */
+    width: 90%;
     margin: 15px auto;
-    height: 35px; /* Increased height */
+    height: 50px; /* Increased height for a thicker bar */
     background-color: #e0e0e0;
-    border-radius: 8px;
+    border-radius: 50px;
     overflow: hidden;
     position: relative;
 }
 
+/* Update the main progress bar container */
+.score-progress-bar {
+    width: 90%;
+    margin: 15px auto;
+    height: 50px; /* Increased height for a thicker bar */
+    background-color: #e0e0e0; /* Light grey background for the empty part */
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative; /* Essential for positioning inner bar and labels */
+}
+
+/* Style for the filling progress bar itself */
 .score-progress-bar .w3-container {
     height: 100%;
     text-align: center;
-    line-height: 35px; /* Match the new height */
+    line-height: 50px; /* Match the new height to vertically center text */
     color: white;
-    background-color: #007bff;
+    background-color: rgb(63, 109, 159); /* Color same as return button */
     border-radius: 8px;
-    transition: width 0.5s ease-in-out;
+    transition: width 1s ease-out; /* Smooth transition for filling animation */
     position: absolute;
     top: 0;
     left: 0;
+    width: 0%; /* Start with 0% width for animation */
+    font-size: 2em; /* Increased text size */
+    font-weight: bold; /* Made text bold */
+    display: flex; /* Use flexbox to center content */
+    align-items: center; /* Center vertically */
+    justify-content: center; /* Center horizontally */
 }
 
+/* Styles for the new labels (750, 1000) */
+/* Styles for the new labels (750, 1000) */
+/* Styles for the new labels (750, 1000) */
+.progress-label {
+    position: absolute;
+    top: -25px; /* Position above the bar */
+    color: white; /* Changed to white for better visibility against a dark background */
+    font-size: 0.9em;
+    font-weight: bold;
+    transform: translateX(-50%); /* Adjust to center the text above its position */
+    pointer-events: none; /* Allow clicks to pass through to elements below */
+    z-index: 10000; /* Ensure labels are above the bar and ticks */
+}
+
+.progress-label-750 {
+    left: 75%; /* Position for 750 (75% of 1000) */
+}
+
+.progress-label-1000 {
+    left: 100%; /* Position for 1000 (end of the bar) */
+}
+
+/* Add vertical ticks below the labels */
+/* Add vertical ticks that span the height of the bar */
+.score-progress-bar::before,
+.score-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; /* Position at the top of the progress bar */
+    height: 100%; /* Make ticks span the full height of the bar */
+    width: 2px; /* Thickness of the tick */
+    background-color: rgba(0, 0, 0, 0.7); /* Darker color for better visibility */
+    z-index: 1; /* Below labels, above the bar content */
+}
+
+.score-progress-bar::before { /* For 750 mark's tick */
+    left: 75%;
+    transform: translateX(-50%); /* Centering the tick visually */
+}
+
+.score-progress-bar::after { /* For 1000 mark's tick */
+    left: 100%;
+    transform: translateX(-50%); /* Centering the tick visually */
+}
 /* Style for the text displaying the score value inside the progress bar container */
 /* Removed the ::after pseudo-element */
 
