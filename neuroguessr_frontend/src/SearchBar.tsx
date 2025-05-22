@@ -1,6 +1,7 @@
+import type { TFunction } from 'i18next'
 import './Searchbar.css'
 
-function Searchbar() {
+function Searchbar({t, callback}:{ t: TFunction<"translation", undefined>, callback: AppCallback }) {
   return (
     <>
         <div className="search-bar-container-main">
@@ -10,7 +11,7 @@ function Searchbar() {
                     id="atlas-search"
                     data-i18n="[placeholder]search_placeholder"
                     className="search-input"
-                    placeholder="Search for a brain region"
+                    placeholder={t("search_placeholder")}
                 />
                 <div id="search-suggestions" className="search-suggestions"></div>
             </div>

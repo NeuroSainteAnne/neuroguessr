@@ -6,7 +6,7 @@ import GameSelector from './GameSelector';
 function WelcomeScreen({t, callback}:{ t: TFunction<"translation", undefined>, callback: AppCallback }) {
    return (
     <>
-      <SearchBar />
+      <SearchBar t={t} callback={callback} />
       <GameSelector t={t} callback={callback} />
     </>
   )

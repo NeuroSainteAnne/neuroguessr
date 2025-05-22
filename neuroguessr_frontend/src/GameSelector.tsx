@@ -5,7 +5,7 @@ function GameSelector({t, callback}:{ t: TFunction<"translation", undefined>, ca
   return (
     <>
         <div>Placeholder for mode selection</div>
-        <div>Placeholder for login</div>
+        <div>Placeholder for <a onClick={(e)=>callback.gotoPage("login")}>login</a></div>
         <div>Placeholder for game selection</div>
         <button onClick={()=>{callback.startGame("game")}}>{t("play_button")}</button>
     </>
