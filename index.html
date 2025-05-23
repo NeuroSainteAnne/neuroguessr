@@ -470,6 +470,7 @@
               }));
             atlasRegions.push(...regions);
             console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+            console.log(atlasRegions)
           } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
             showNotification('error_loading_atlas', false, { atlas: name });

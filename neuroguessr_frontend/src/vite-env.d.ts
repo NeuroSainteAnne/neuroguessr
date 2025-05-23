@@ -10,3 +10,10 @@ type AppCallback = {
   loginWithToken: (token: string) => void;
   logout: () => void;
 };
+
+type AtlasRegion = {
+  id: number;
+  name: string;
+  atlas: string;
+  atlasName: string;
+}

@@ -41,11 +41,13 @@ function LoginDropdownMenu({currentLanguage, t, callback, userFirstName, userLas
                 <div className="dropdown-header">
                     <span id="dropdown-username-header">{userFirstName} {userLastName}</span>
                 </div>
-                <button id="config-button-dropdown" className="dropdown-item" onClick={()=>callback.gotoPage("config")}>
+                <button id="config-button-dropdown" className="dropdown-item" 
+                    onClick={()=>{ callback.gotoPage("config"); setIsVisibleDropdown(false) }}>
                     <img src="assets/interface/config.png" alt="Config icon" />
                     <span>{t("config_mode")}</span>
                 </button>
-                <button id="stats-button-dropdown" className="dropdown-item">
+                <button id="stats-button-dropdown" className="dropdown-item"
+                    onClick={()=>{ callback.gotoPage("stats"); setIsVisibleDropdown(false) }}>
                     <img src="assets/interface/statistics.png" alt="Stats icon" /> <span>{t("my_stats")}</span>
                 </button>
                 <div className="language-switcher-dropdown">

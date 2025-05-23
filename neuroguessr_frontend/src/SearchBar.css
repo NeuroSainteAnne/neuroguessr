@@ -65,6 +65,20 @@
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
 }
 
+.search-suggestion {
+    padding: 0.75rem 1rem;
+    color: #d9dddc;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-suggestion:hover {
+    background: rgba(54, 54, 54, 0.9); /* Add opacity */
+}
+
+
 @media (max-width: 1023px) and (min-width: 481px) {
      .search-container.main-search {
         max-width: 60%; /* Adjust max width for tablets */
