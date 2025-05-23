@@ -5,9 +5,12 @@ import { useRef, useState } from 'react';
 function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
+    const recoveryEmailInput = useRef<HTMLInputElement>(null);
     const [recoveryModalDisplay, setRecoveryModalDisplay] = useState<boolean>(false);
     const [loginErrorText, setLoginErrorText] = useState<string>("");
     const [loginSuccessText, setLoginSuccessText] = useState<string>("");
+    const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
+    const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
 
     const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -50,6 +53,48 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
           setLoginErrorText(t('server_error'));
         }
     }
+
+    const handleRecovery = async () => {
+        const email = recoveryEmailInput.current?.value.trim();
+        const recoveryMessage = document.getElementById('recovery-message');
+
+        // Clear previous messages
+        setRecoveryErrorText("");
+
+        if (!email) {
+          setRecoveryErrorText(t('error_empty_email'));
+          return;
+        }
+
+        try {
+          // Send recovery request to the server
+          const response = await fetch('/api/password-recovery', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            if(result.preverified){
+                alert(result.redirect_url)
+                window.location.href = result.redirect_url;
+            } else {
+              setRecoverySuccessText(t('recovery_email_sent'));
+            }
+          } else {
+            setRecoveryErrorText(result.message || t('recovery_failed'));
+          }
+        } catch (error) {
+          console.error('Error during password recovery:', error);
+          setRecoveryErrorText(t('server_error'));
+        }
+
+    }
+
     return (
         <>
         <div className="page-container">
@@ -99,11 +144,12 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                         <p>{t("password_recovery_instructions")}</p>
 
                         <input type="email" id="recovery-email" className="form-field" 
-                            placeholder={t("enter_your_email")} required />
+                            placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
 
-                        <button id="send-recovery-email" className="form-button">{t("send_recovery_email")}</button>
+                        <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>
 
-                        <p id="recovery-message" className="recovery-message"></p>
+                        {recoveryErrorText && <p id="recovery_error" className="recovery-message">{recoveryErrorText}</p>}
+                        {recoverySuccessText && <p id="recovery_success" className="recovery-message">{recoverySuccessText}</p>}
                     </div>
                 </div>
             }

@@ -8,14 +8,19 @@ import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
 import ValidateEmailScreen from './ValidateEmailScreen';
 import LandingPage from './LandingPage';
+import { getTokenPayload, isTokenValid } from './helper_login';
+import ResetPasswordScreen from './ResetPasswordScreen';
 
 function App() {
- const queryParameters = new URLSearchParams(window.location.search)
- const validateEmail = queryParameters.get("validate")
  const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
  const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
- const [currentPage, setCurrentPage] = useState<string>(validateEmail?"validate":"welcome")
+ const [currentPage, setCurrentPage] = useState<string>(()=>{
+    const queryParameters = new URLSearchParams(window.location.search)
+    if(queryParameters.get("validate")) return "validate"
+    if(queryParameters.get("resetpwd")) return "resetpwd"
+    return "welcome"
+ })
  const [userFirstName, setUserFirstName] = useState<string>("")
  const [userLastName, setUserLastName] = useState<string>("")
  const { t, i18n } = useTranslation();
@@ -39,7 +44,7 @@ function App() {
  }
 
  useEffect(()=>{
-  if (authToken) {
+  if (authToken && isTokenValid(authToken)) {
     setIsGuest(false);
     setIsLoggedIn(true);
   }
@@ -51,10 +56,19 @@ function App() {
     setIsLoggedIn(true);
  }
 
+ const logout = () => {
+    localStorage.removeItem('authToken');
+    setAuthToken("");
+    setIsLoggedIn(false);
+ }
+
  useEffect(()=>{
     if(isLoggedIn){
       setIsGuest(false);
       localStorage.setItem('guestMode', 'false');
+      const payload = getTokenPayload(authToken)
+      setUserFirstName(payload.firstname || t('default_user'))
+      setUserLastName(payload.lastname || "")
     }
  }, [isLoggedIn])
 
@@ -65,12 +79,14 @@ function App() {
     setCurrentPage: setCurrentPage,
     activateGuestMode: activateGuestMode,
     setIsLoggedIn: setIsLoggedIn,
-    loginWithToken: loginWithToken
+    loginWithToken: loginWithToken,
+    logout: logout
  }
  
   return (
     <>
-      <Header currentLanguage={currentLanguage} isLoggedIn={isLoggedIn} t={t} callback={callback} />
+      <Header currentLanguage={currentLanguage} isLoggedIn={isLoggedIn} t={t} callback={callback}
+              userFirstName={userFirstName} userLastName={userLastName} />
       {currentPage === "welcome" && <>
         { !isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} /> }
         { (isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} /> }
@@ -79,6 +95,7 @@ function App() {
       {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
       {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
       {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}
+      {currentPage === "resetpwd" && <ResetPasswordScreen t={t} callback={callback} />}
     </>
   )
 }

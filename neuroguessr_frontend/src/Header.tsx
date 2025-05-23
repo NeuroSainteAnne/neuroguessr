@@ -3,9 +3,9 @@ import './Header.css'
 import type { TFunction } from 'i18next';
 import LoginDropdownMenu from './LoginDropdownMenu';
 
-function Header({currentLanguage, t, callback, isLoggedIn}: 
+function Header({currentLanguage, t, callback, isLoggedIn, userFirstName, userLastName}: 
     { currentLanguage: string,
-    t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean }) {
+    t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, userFirstName: string, userLastName: string }) {
 
     return (
         <>
@@ -24,8 +24,8 @@ function Header({currentLanguage, t, callback, isLoggedIn}:
                     {isLoggedIn && 
                         <LoginDropdownMenu 
                             currentLanguage={currentLanguage}
-                            t={t}
-                            callback={callback} />
+                            t={t} callback={callback}
+                            userFirstName={userFirstName} userLastName={userLastName} />
                     }
                 </div>
             </div>

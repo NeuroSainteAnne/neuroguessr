@@ -8,4 +8,5 @@ type AppCallback = {
   activateGuestMode: () => void;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
   loginWithToken: (token: string) => void;
+  logout: () => void;
 };
