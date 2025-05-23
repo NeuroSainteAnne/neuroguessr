@@ -29,6 +29,9 @@ app.get("/", (req: express.Request, res: express.Response) => {
 app.get("/index.html", (req: express.Request, res: express.Response) => {
     res.sendFile("index.html", { root: reactRoot });
 });
+app.get("/oldindex.html", (req: express.Request, res: express.Response) => {
+    res.sendFile("index.html", { root: htmlRoot });
+});
 
 app.get("/login.html", (req: express.Request, res: express.Response) => {
     res.sendFile("login.html", { root: htmlRoot });
