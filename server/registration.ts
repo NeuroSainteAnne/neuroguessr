@@ -263,6 +263,7 @@ export const resetPassword = async (req, res) => {
         deleteTokenStmt.run(user.id, req.body.token);
 
         const new_token = jwt.sign({ 
+            username: user.username,
             email: user.email, 
             firstname: user.firstname, 
             lastname: user.lastname,
