@@ -92,6 +92,24 @@
     border-color: #808588;
 }
 
+/* Sign-in button for guest mode */
+.guest-sign-in-button {
+    background-color: rgb(63, 109, 159); /* A prominent blue */
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-left: 15px; /* Spacing from language switcher */
+}
+
+.guest-sign-in-button:hover {
+    opacity: 0.85;
+}
+
+
 /* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
 @media (min-width: 1024px) {
     .navbar-container {

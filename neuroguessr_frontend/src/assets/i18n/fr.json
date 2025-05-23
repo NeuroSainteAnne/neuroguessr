@@ -143,6 +143,7 @@
   "password_recovery_instructions": "Entrez votre adresse e-mail pour recevoir un lien de réinitialisation.",
   "send_recovery_email": "Envoyer un e-mail",
   "error_empty_email": "Veuillez entrer votre adresse e-mail.",
+  "enter_your_email": "Entrez votre adresse e-mail",
   "recovery_email_sent": "Un lien de réinitialisation a été envoyé à votre adresse e-mail.",
   "recovery_failed": "Échec de l'envoi de l'e-mail de réinitialisation. Veuillez réessayer.",
   "reset_password_header": "Réinitialiser le mot de passe",

@@ -1,0 +1,67 @@
+/* --- Registration Box Styles --- */
+.register-box { /* Changed from .login-box */
+    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    padding: 40px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 450px; /* Slightly wider for more input fields */
+    text-align: center;
+    box-sizing: border-box;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+}
+
+.register-box h2 { /* Changed from .login-box h2 */
+    margin-bottom: 30px;
+    color: #E0E0E0; /* Light heading color for contrast */
+    font-size: 2.2em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+#register_error { /* Specific ID for register error */
+    font-size: 0.9em;
+    height: 20px; /* Reserve space for error messages */
+    text-align: center;
+    margin-top: 10px;
+    color: #FF7070; /* Brighter red for error messages on dark background */
+}
+
+#register_success { /* Specific ID for register error */
+    font-size: 0.9em;
+    height: 20px; /* Reserve space for error messages */
+    text-align: center;
+    margin-top: 10px;
+}
+
+.password-helper { /* New style for the password helper text */
+    color: #A2B9F0; /* Use a similar color to links for helper text */
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: center;
+    padding: 5px 0;
+    margin-top: -10px; /* Adjust margin to bring it closer to password input */
+    margin-bottom: 15px; /* Space below helper text */
+}
+
+/* --- Common Styles (Login and Register) --- */
+.login-element { /* This class is reused for the table structure */
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+}
+
+.login-element td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+
+.login-element td:first-child {
+    text-align: left;
+    width: 35%;
+}
+
+.login-element td:last-child {
+    text-align: right;
+    width: 65%;
+}

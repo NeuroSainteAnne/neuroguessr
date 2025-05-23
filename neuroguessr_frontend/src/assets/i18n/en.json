@@ -143,6 +143,7 @@
   "password_recovery_instructions": "Enter your email address to receive a password reset link.",
   "send_recovery_email": "Send Email",
   "error_empty_email": "Please enter your email address.",
+  "enter_your_email": "Enter your email address",
   "recovery_email_sent": "A password reset link has been sent to your email.",
   "recovery_failed": "Failed to send password reset email. Please try again.",
   "reset_password_header": "Reset Password",

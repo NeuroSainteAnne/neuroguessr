@@ -50,15 +50,32 @@ body {
     */
 }
 
+.page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0 2vw 2vh 2vw; /* Adjusted padding top */
+    box-sizing: border-box;
+    flex-grow: 1;
+    min-height: calc(100vh - 6rem); /* Adjust min-height as header is smaller */
+    position: relative;
+    background: transparent; /* Background handled by body pseudo-element */
+}
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-  cursor: pointer;
+    display: block;
+    margin-top: 15px;
+    color: #A2B9F0; /* Lighter, more visible link color */
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+    cursor: pointer;
 }
+
 a:hover {
-  color: #535bf2;
+    text-decoration: underline;
+    color: #8A9CEE; /* Changed to match register hover */
 }
 
 h1 {
@@ -83,6 +100,53 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+input[type="text"],
+input[type="email"], /* Added email input type */
+input[type="password"] {
+    width: calc(100% - 20px);
+    padding: 12px 10px;
+    background-color: #3B3B3B; /* Darker input background */
+    border: 1px solid rgba(255, 255, 255, 0); /* Slightly lighter border for inputs */
+    border-radius: 50px;
+    font-size: 1em;
+    color: #E0E0E0; /* Light text color inside inputs */
+    outline: none;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus, /* Added email input type focus */
+input[type="password"]:focus {
+    border-color: #8A9CEE; 
+}
+
+
+button[type="submit"] {
+    background-color: rgb(63, 109, 159); /* Your primary button color (light blue/purple) */
+    color: #d9dddc; /* Dark text for button for contrast */
+    padding: 14px 25px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1em;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+button[type="submit"]:hover {
+    background-color: #728AD2; /* Darker shade on hover */
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #C0C0C0; /* Slightly softer light label color */
+    font-size: 1em;
+    font-weight: 500;
+    transition: color 0.3s ease;
 }
 
 @media (prefers-color-scheme: light) {
