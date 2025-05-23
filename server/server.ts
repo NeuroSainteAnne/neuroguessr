@@ -86,7 +86,7 @@ app.post('/api/config-user', authenticateToken, configUser);
 app.get("/verify/:id/:token", emailLink)
 
 app.get("/resetPwd/:id/:token", (req, res) => {
-    res.redirect("/reset_password.html?id=" + req.params.id + "&token=" + req.params.token);
+    res.redirect("/index.html?resetpwd=true&id=" + req.params.id + "&token=" + req.params.token);
 })
 
 app.post('/api/start-game-session', authenticateToken, startGameSession);
