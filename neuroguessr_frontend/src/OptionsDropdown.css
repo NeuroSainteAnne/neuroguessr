@@ -1,0 +1,87 @@
+/* Dropdown Menu Styles - Keep existing */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropbtn {
+    color: #d9dddc;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 0.5rem 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+     opacity: 0.9; /* Added opacity */
+}
+.dropbtn:hover,
+.dropbtn:active {
+    background: transparent;
+}
+
+.hamburger {
+    display: inline-flex;
+    align-items: center;
+}
+
+.hamburger svg {
+    width: 1.5rem;
+    height: 1.125rem;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: rgba(42, 42, 42, 0.9); /* Add opacity */
+    width: auto;
+    min-width: 12rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    border-radius: 0.5rem;
+    border: 1px solid #808588;
+    right: 0;
+    opacity: 1; /* Start with opacity 1 */
+    transition: opacity 0.1s ease-in-out; /* Smooth transition */
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+.dropdown-content a {
+    color: #d9dddc;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    display: block;
+    white-space: nowrap;
+}
+.dropdown-content a:hover {
+    background-color: rgba(54, 54, 54, 0.9); /* Add opacity */
+}
+.dropdown-content .dropdown-item-checked::before {
+    content: '✓ ';
+    color: #4ade80;
+}
+.dropdown-content .divider {
+    border-top: 1px solid #808588;
+    margin: 0.5rem 0;
+}
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+.slider {
+    width: 6rem;
+    margin: 0;
+}
+.slider-label {
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}

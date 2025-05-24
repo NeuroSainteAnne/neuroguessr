@@ -2,6 +2,7 @@
 {
   "app_title": "NeuroGuessr",
   "neuroglossaire_title": "NeuroGlossary",
+  "loading": "Loading...",
   "search_placeholder": "Search regions (e.g., Thalamus, Frontal Pole...)",
   "view_options": "Options",
   "axial": "Axial",

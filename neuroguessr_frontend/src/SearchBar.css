@@ -3,7 +3,6 @@
     width: 100%;
     display: flex;
     justify-content: center;
-    padding: 2rem 0; /* Increased padding below header */
 }
 
 .search-container {
@@ -83,24 +82,24 @@
      .search-container.main-search {
         max-width: 60%; /* Adjust max width for tablets */
     }
-     .search-bar-container-main {
-        padding: 1.5rem 0; /* Adjust padding */
-    }
+    /*.search-bar-container-main {
+        padding: 1.5rem 0; 
+    }*/
 }
 @media (max-width: 480px) {
      .search-container.main-search {
         max-width: 90%; /* Adjust max width for mobile */
     }
-     .search-bar-container-main {
-        padding: 0.5rem 0; /* Adjust padding */
-    }
+    /*.search-bar-container-main {
+        padding: 0.5rem 0;
+    } */
 }
 
 /* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
 @media (min-width: 1024px) {
-    .search-bar-container-main {
-        padding: 2rem 0; /* Adjust padding */
-    }
+    /*.search-bar-container-main {
+        padding: 2rem 0; 
+    } */
     .search-container.main-search {
         max-width: 50%; /* Set max width to 50% */
     }
@@ -110,15 +109,15 @@
      .search-container.main-search {
         max-width: 60%; /* Adjust max width for tablets */
     }
-     .search-bar-container-main {
-        padding: 1.5rem 0; /* Adjust padding */
-    }
+    /* .search-bar-container-main {
+        padding: 1.5rem 0;
+    } */
 }
 
 @media (max-width: 768px) {
-    .search-bar-container-main {
-        padding: 1rem 0; /* Adjust padding */
-    }
+    /* .search-bar-container-main {
+        padding: 1rem 0;
+    } */
     .search-container.main-search {
         max-width: 90%; /* Adjust max width */
     }

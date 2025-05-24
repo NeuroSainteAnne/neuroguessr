@@ -13,8 +13,11 @@ import { getTokenPayload, isTokenValid } from './helper_login';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
+import {Niivue, NVImage} from '@niivue/niivue';
+import Neurotheka from './Neurotheka';
 
 function App() {
+   const niivue = new Niivue();
    const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
@@ -36,12 +39,26 @@ function App() {
    const notificationRef = useRef<HTMLInputElement>(null);
    const [notificationMessage, setNotificationMessage] = useState<string|null>(null)
    const [notificationStatus, setNotificationStatus] = useState<"error"|"success">("success")
+   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null)
+   const [askedAtlas, setAskedAtlas] = useState<string|null>(null)
+   const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null)
+   const [askedRegion, setAskedRegion] = useState<number|null>(null)
+   const targetPage = useRef<string>("");
+   const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
+   const [headerText, setHeaderText] = useState<string>("")
+   const [viewerOptions, setViewerOption] = useState<DisplayOptions>({
+      displayType: "MultiPlanarRender",
+      radiologicalOrientation: true,
+      displayAtlas: true,
+      displayOpacity: 1,
+   })
 
    const startGame = (game: string) => {
       setCurrentPage(game);
    }
    const gotoPage = (game: string) => {
       setCurrentPage(game);
+      setHeaderText("");
    }
 
    const activateGuestMode = () => {
@@ -55,6 +72,14 @@ function App() {
          setIsGuest(false);
          setIsLoggedIn(true);
       }
+      const niiFile = "assets/atlas/mni152.nii.gz";
+      niivue.loadFromUrl(niiFile).then((nvImage) => {
+         setPreloadedBackgroundMNI(nvImage);
+      }).catch((error) => {
+         console.error("Error loading NIfTI file:", error);
+         showNotification('error_loading_atlas', false, { atlas: askedAtlas });
+         setPreloadedBackgroundMNI(null)
+      });
    }, [])
 
    useEffect(() => {
@@ -112,6 +137,35 @@ function App() {
       setIsLoggedIn(false);
    }
 
+   const openNeurotheka = (region: AtlasRegion) => {
+      targetPage.current  ="neurotheka"
+      setHeaderText(t("loading"));
+      setAskedAtlas(region.atlas);
+      setAskedRegion(region.id);
+      setLoadEnforcer(prev => prev + 1);
+   }
+   useEffect(() => {
+      if (askedAtlas && askedRegion !== null) {
+         gotoPage(targetPage.current);
+      }
+   }, [askedAtlas, askedRegion, loadEnforcer]);
+
+   useEffect(() => {
+      if (askedAtlas) {
+         const atlas = atlasFiles[askedAtlas];
+         if (atlas) {
+            const niiFile = "assets/atlas/nii/" + atlas.nii;
+            NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
+               setPreloadedAtlas(nvImage);
+            }).catch((error) => {
+               console.error("Error loading NIfTI file:", error);
+               showNotification('error_loading_atlas', false, { atlas: askedAtlas });
+               setPreloadedAtlas(null)
+            });
+         }
+      }
+   }, [askedAtlas])
+
    useEffect(() => {
       if (isLoggedIn) {
          setIsGuest(false);
@@ -130,13 +184,18 @@ function App() {
       activateGuestMode: activateGuestMode,
       setIsLoggedIn: setIsLoggedIn,
       loginWithToken: loginWithToken,
-      logout: logout
+      logout: logout,
+      openNeurotheka: openNeurotheka,
+      setHeaderText: setHeaderText,
+      setViewerOption: setViewerOption,
    }
 
    return (
       <>
-         <Header currentLanguage={currentLanguage} isLoggedIn={isLoggedIn} t={t} callback={callback}
-            userFirstName={userFirstName} userLastName={userLastName} />
+         <Header currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
+            isLoggedIn={isLoggedIn} t={t} callback={callback}
+            userFirstName={userFirstName} userLastName={userLastName} headerText={headerText} 
+            viewerOptions={viewerOptions} />
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
             {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} />}
@@ -150,6 +209,14 @@ function App() {
          {currentPage === "stats" && <Stats t={t} callback={callback} authToken={authToken} />}
          {notificationMessage && 
             <div id="notification" ref={notificationRef} className={notificationStatus}>{notificationMessage}</div>}
+         {currentPage === "neurotheka" && 
+            <Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
+               atlasRegions={atlasRegions} 
+               askedAtlas={askedAtlas} askedRegion={askedRegion}
+               preloadedAtlas={preloadedAtlas}
+               preloadedBackgroundMNI={preloadedBackgroundMNI} 
+               viewerOptions={viewerOptions}
+               loadEnforcer={loadEnforcer} />}
       </>
    )
 }

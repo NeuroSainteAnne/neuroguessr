@@ -8,7 +8,10 @@ type AppCallback = {
   activateGuestMode: () => void;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
   loginWithToken: (token: string) => void;
+  openNeurotheka: (region: AtlasRegion) => void;
   logout: () => void;
+  setHeaderText: (text: string) => void;
+  setViewerOption: (option: DisplayOptions) => void;
 };
 
 type AtlasRegion = {
@@ -16,4 +19,11 @@ type AtlasRegion = {
   name: string;
   atlas: string;
   atlasName: string;
+}
+
+type DisplayOptions = {
+  displayType: "MultiPlanarRender" | "Axial" | "Sagittal" | "Coronal" | "Render" | "MultiPlanar";
+  radiologicalOrientation: boolean;
+  displayAtlas: boolean;
+  displayOpacity: number;
 }

@@ -1,6 +1,7 @@
 {
   "app_title": "NeuroGuessr",
   "neuroglossaire_title": "NeuroGlossaire",
+  "loading": "Chargement...",
   "search_placeholder": "Rechercher des régions (par ex., Thalamus, Pôle Frontal...)",
   "view_options": "Options",
   "axial": "Axial",

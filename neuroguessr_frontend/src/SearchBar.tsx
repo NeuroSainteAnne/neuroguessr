@@ -41,13 +41,9 @@ function Searchbar({ t, callback, atlasRegions }:
             <div id="search-suggestions" className="search-suggestions">
             {suggestionList.map((region) => (
               <div
-                key={region.id}
+                key={region.atlasName+"_"+region.name+"_"+region.id}
                 className="search-suggestion"
-                onClick={() => {
-                  const viewerUrl = `${atlasFiles[region.atlas].viewer}?region=${region.id}&atlas=${region.atlas}`;
-                  window.location.href = viewerUrl;
-                  // TODO CHANGE
-                }}
+                onClick={() => { callback.openNeurotheka(region); setSuggestionList([]); }}
                 dangerouslySetInnerHTML={{
                   __html: `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`
                 }}
