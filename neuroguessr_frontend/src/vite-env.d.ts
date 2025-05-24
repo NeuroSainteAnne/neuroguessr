@@ -12,6 +12,7 @@ type AppCallback = {
   logout: () => void;
   setHeaderText: (text: string) => void;
   setViewerOption: (option: DisplayOptions) => void;
+  launchSinglePlayerGame: (atlas: string, mode: string) => void;
 };
 
 type AtlasRegion = {

@@ -43,6 +43,7 @@ function App() {
    const [askedAtlas, setAskedAtlas] = useState<string|null>(null)
    const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null)
    const [askedRegion, setAskedRegion] = useState<number|null>(null)
+   const [gameMode, setGameMode] = useState<string|null>(null)
    const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
@@ -145,10 +146,19 @@ function App() {
       setLoadEnforcer(prev => prev + 1);
    }
    useEffect(() => {
-      if (askedAtlas && askedRegion !== null) {
+      if (askedAtlas) {
          gotoPage(targetPage.current);
       }
-   }, [askedAtlas, askedRegion, loadEnforcer]);
+   }, [askedAtlas, askedRegion, loadEnforcer, gameMode]);
+
+   const launchSinglePlayerGame = (atlas: string, mode: string) => {
+      targetPage.current = "game"
+      setHeaderText(t("loading"));
+      setAskedAtlas(atlas);
+      setGameMode(mode);
+      setLoadEnforcer(prev => prev + 1);
+   }
+
 
    useEffect(() => {
       if (askedAtlas) {
@@ -188,6 +198,7 @@ function App() {
       openNeurotheka: openNeurotheka,
       setHeaderText: setHeaderText,
       setViewerOption: setViewerOption,
+      launchSinglePlayerGame: launchSinglePlayerGame,
    }
 
    return (
