@@ -16,7 +16,7 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
         <header className="navbar">
             <div className="navbar-container">
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
-                    onClick={()=>{callback.setCurrentPage("welcome")}}>
+                    onClick={()=>{callback.gotoPage("welcome")}}>
                     <img src="assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
                     <h1>{currentPage=="neurotheka" ? t("neuroglossaire_title") : t("app_title")}</h1>
                 </div>

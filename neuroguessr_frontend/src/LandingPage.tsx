@@ -13,9 +13,9 @@ function LandingPage({t, callback}:
             <div className="sign-in-panel">
                 <div className="sign-in-options-container">
                     <button className="option-button sign-in-button" 
-                            onClick={()=>callback.setCurrentPage("login")}>{t("sign_in")}</button>
+                            onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
                     <button className="option-button sign-up-button"
-                            onClick={()=>callback.setCurrentPage("register")}>{t("sign_up")}</button>
+                            onClick={()=>callback.gotoPage("register")}>{t("sign_up")}</button>
                     <button className="option-button continue-button"
                             onClick={()=>callback.activateGuestMode()}>{t("no_sign_in")}</button>
                 </div>

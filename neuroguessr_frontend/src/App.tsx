@@ -162,14 +162,16 @@ function App() {
    }
 
    const checkToken = async () => {
-      if (isTokenValid(authToken)) {
-         setIsLoggedIn(true);
-         refreshToken();
-      } else {
-         setIsLoggedIn(false);
-         localStorage.removeItem('authToken');
-         setAuthToken("");
-         showNotification('invalid_token', false);
+      if(authToken){
+         if (isTokenValid(authToken)) {
+            setIsLoggedIn(true);
+            refreshToken();
+         } else {
+            setIsLoggedIn(false);
+            localStorage.removeItem('authToken');
+            setAuthToken("");
+            showNotification('invalid_token', false);
+         }
       }
    }
 
@@ -235,7 +237,6 @@ function App() {
       startGame: startGame,
       gotoPage: gotoPage,
       handleChangeLanguage: handleChangeLanguage,
-      setCurrentPage: setCurrentPage,
       activateGuestMode: activateGuestMode,
       setIsLoggedIn: setIsLoggedIn,
       loginWithToken: loginWithToken,
