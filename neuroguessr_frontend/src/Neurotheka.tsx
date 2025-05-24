@@ -1,5 +1,6 @@
 import { init, type TFunction } from 'i18next'
 import './Neurotheka.css'
+import './Help.css'
 import atlasFiles from './atlas_files'
 import { use, useEffect, useRef, useState } from 'react';
 import { Niivue, NVImage, SHOW_RENDER } from '@niivue/niivue';

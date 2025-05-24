@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css'
+import './Help.css'
 import Header from './Header'
 import WelcomeScreen from './WelcomeScreen'
 import { useTranslation } from "react-i18next";
@@ -47,12 +48,19 @@ function App() {
    const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
+   const [headerScore, setHeaderScore] = useState<string>("")
+   const [headerErrors, setHeaderErrors] = useState<string>("")
+   const [headerStreak, setHeaderStreak] = useState<string>("")
+   const [headerTime, setHeaderTime] = useState<string>("")
    const [viewerOptions, setViewerOption] = useState<DisplayOptions>({
       displayType: "MultiPlanarRender",
       radiologicalOrientation: true,
       displayAtlas: true,
       displayOpacity: 1,
    })
+  const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
+  const helpContentRef = useRef<HTMLDivElement>(null);
+  const helpButtonRef = useRef<HTMLDivElement>(null);
 
    const startGame = (game: string) => {
       setCurrentPage(game);
@@ -197,7 +205,7 @@ function App() {
    }, [askedAtlas, askedRegion, loadEnforcer, gameMode]);
 
    const launchSinglePlayerGame = (atlas: string, mode: string) => {
-      targetPage.current = "game"
+      targetPage.current = "singleplayer"
       checkToken();
       setHeaderText(t("loading"));
       setAskedAtlas(atlas);
@@ -233,6 +241,24 @@ function App() {
       }
    }, [isLoggedIn])
 
+   useEffect(() => {
+      const handleClick = (event: MouseEvent) => {
+         if (
+            showHelpOverlay &&
+            helpContentRef.current &&
+            helpButtonRef.current &&
+            !helpButtonRef.current.contains(event.target as Node) &&
+            !helpContentRef.current.contains(event.target as Node)
+         ) {
+            setShowHelpOverlay(false);
+         }
+      };
+      document.addEventListener('click', handleClick);
+      return () => {
+         document.removeEventListener('click', handleClick);
+      };
+   }, [showHelpOverlay])
+
    const callback: AppCallback = {
       startGame: startGame,
       gotoPage: gotoPage,
@@ -243,6 +269,10 @@ function App() {
       logout: logout,
       openNeurotheka: openNeurotheka,
       setHeaderText: setHeaderText,
+      setHeaderScore: setHeaderScore,
+      setHeaderErrors: setHeaderErrors,
+      setHeaderStreak: setHeaderStreak,
+      setHeaderTime: setHeaderTime,
       setViewerOption: setViewerOption,
       launchSinglePlayerGame: launchSinglePlayerGame,
    }
@@ -251,13 +281,23 @@ function App() {
       <>
          <Header currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
-            userFirstName={userFirstName} userLastName={userLastName} headerText={headerText} 
+            userFirstName={userFirstName} userLastName={userLastName} 
+            headerText={headerText} headerScore={headerScore} headerErrors={headerErrors}
+            headerStreak={headerStreak} headerTime={headerTime}
             viewerOptions={viewerOptions} />
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
             {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} />}
          </>}
-         {currentPage === "game" && <GameScreen t={t} callback={callback} />}
+         {currentPage === "singleplayer" && 
+            <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+               atlasRegions={atlasRegions} 
+               askedAtlas={askedAtlas} gameMode={gameMode}
+               preloadedAtlas={preloadedAtlas}
+               preloadedBackgroundMNI={preloadedBackgroundMNI} 
+               viewerOptions={viewerOptions}
+               loadEnforcer={loadEnforcer}
+               isLoggedIn={isLoggedIn} />}
          {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
          {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
          {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}
@@ -274,6 +314,35 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer} />}
+         {currentPage === "welcome" && <>
+            {showHelpOverlay && <div id="help-overlay" className="help-overlay">
+               <div className="help-content" ref={helpContentRef}>
+                  <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
+                  <h2 data-i18n="help_title">Help</h2>
+                  <section>
+                     <h3>{t("help_presentation_title")}</h3>
+                     <p>{t("help_presentation_text")}</p>
+                  </section>
+                  <section>
+                     <h3>{t("help_atlases_title")}</h3>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_atlases_text") }}></p>
+                  </section>
+                  <section>
+                     <h3>{t("help_modes_title")}</h3>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_modes_navigation") }}></p>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_modes_practice") }}></p>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_modes_streak") }}></p>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_modes_time_attack") }}></p>
+                  </section>
+               </div>
+            </div>}
+
+            <div ref={helpButtonRef}>
+               <button id="help-button" className="help-button" onClick={() => setShowHelpOverlay(true)}>
+                  <i className="fas fa-question"></i>
+               </button>
+            </div>
+         </>}
       </>
    )
 }

@@ -10,6 +10,10 @@ type AppCallback = {
   openNeurotheka: (region: AtlasRegion) => void;
   logout: () => void;
   setHeaderText: (text: string) => void;
+  setHeaderStreak: (streak: string) => void;
+  setHeaderTime: (time: string) => void;
+  setHeaderScore: (score: string) => void;
+  setHeaderErrors: (errors: string) => void;
   setViewerOption: (option: DisplayOptions) => void;
   launchSinglePlayerGame: (atlas: string, mode: string) => void;
 };

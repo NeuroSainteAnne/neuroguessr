@@ -199,6 +199,22 @@
     text-align: left; /* Align text to the left */
 }
 
+.score-error-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+}
+.score-error-label,
+#score-label,
+#error-label,
+#streak-label,
+#time-label {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0.25rem 0;
+}
+
 /* Dropdown Menu Styles - Keep existing */
 .dropdown {
     position: relative;

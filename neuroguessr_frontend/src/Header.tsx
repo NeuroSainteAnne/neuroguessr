@@ -6,10 +6,15 @@ import SearchBar from './SearchBar';
 import OptionsDropdown from './OptionsDropdown';
 
 function Header({currentLanguage, currentPage, atlasRegions, t, callback, 
-    isLoggedIn, userFirstName, userLastName, headerText, viewerOptions}: 
+    isLoggedIn, userFirstName, userLastName, 
+    headerText, headerStreak, headerTime, headerScore, headerErrors,
+    viewerOptions}: 
     { currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
     t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, 
-    userFirstName: string, userLastName: string, headerText: string, viewerOptions: DisplayOptions }) {
+    userFirstName: string, userLastName: string, 
+    headerText: string, headerStreak: string, headerTime: string, headerScore: string,
+    headerErrors: string,
+    viewerOptions: DisplayOptions }) {
 
     return (
         <>
@@ -25,10 +30,20 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                         <p id="target-label"><span className="target-text">{headerText}</span></p>
                     </div>}
                     { currentPage == "neurotheka" && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
+                    { currentPage == "singleplayer" && <div className="score-error-container">
+                        {headerScore && <p id="score-label">{headerScore}</p>}
+                        {headerErrors && <p id="error-label">{headerErrors}</p>}
+                        {headerStreak && <p id="streak-label">
+                            <span>{t("streak_label")}</span>
+                            <img src="/neuroguessr_web/data/flame.png" alt="Streak Flame" className="streak-flame-icon" />
+                            <span id="streak-value">{headerStreak}</span>
+                        </p>}
+                        {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
+                    </div>}
                 </div>
         
                 <div className="navbar-right">
-                    {currentPage == "neurotheka" && <OptionsDropdown
+                    {(currentPage == "neurotheka" || currentPage == "singleplayer") && <OptionsDropdown
                         currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
                     {!isLoggedIn && 
                     <button id="guest-sign-in-button" className="guest-sign-in-button"
