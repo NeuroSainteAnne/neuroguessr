@@ -9,7 +9,7 @@ import RegisterScreen from './RegisterScreen';
 import ValidateEmailScreen from './ValidateEmailScreen';
 import LandingPage from './LandingPage';
 import Stats from './Stats';
-import { getTokenPayload, isTokenValid } from './helper_login';
+import { getTokenPayload, isTokenValid, refreshToken } from './helper_login';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
@@ -57,9 +57,34 @@ function App() {
    const startGame = (game: string) => {
       setCurrentPage(game);
    }
-   const gotoPage = (game: string) => {
-      setCurrentPage(game);
+
+   function loadHash() {
+      // Load hash from URL
+      const hash = window.location.hash.replace(/^#\/?/, "");
+      const parts = hash.split("/");
+      const page = parts[0] || "welcome";
+      if (page === "neurotheka"){
+         const atlas = parts[1] || null;
+         const region = parts[2] ? Number(parts[2]) : null;
+         if(atlas && region) {  
+            openNeurotheka({ id: region, name: "", atlas, atlasName: "" });
+         }
+      } else if (page === "singleplayer"){
+         const mode = parts[1] || null;
+         const atlas = parts[2] || null;
+         if(mode && atlas) {  
+            launchSinglePlayerGame(atlas, mode);
+         }
+      } else {
+         setCurrentPage(page);
+      }
+   }
+
+   const gotoPage = (page: string) => {
+      checkToken();
+      setCurrentPage(page);
       setHeaderText("");
+      window.location.hash = `#/${page}`;
    }
 
    const activateGuestMode = () => {
@@ -81,6 +106,10 @@ function App() {
          showNotification('error_loading_atlas', false, { atlas: askedAtlas });
          setPreloadedBackgroundMNI(null)
       });
+      loadHash();
+      const onHashChange = () => { loadHash() }
+      window.addEventListener("hashchange", onHashChange);
+      return () => window.removeEventListener("hashchange", onHashChange);
    }, [])
 
    useEffect(() => {
@@ -132,6 +161,18 @@ function App() {
       setIsLoggedIn(true);
    }
 
+   const checkToken = async () => {
+      if (isTokenValid(authToken)) {
+         setIsLoggedIn(true);
+         refreshToken();
+      } else {
+         setIsLoggedIn(false);
+         localStorage.removeItem('authToken');
+         setAuthToken("");
+         showNotification('invalid_token', false);
+      }
+   }
+
    const logout = () => {
       localStorage.removeItem('authToken');
       setAuthToken("");
@@ -139,24 +180,28 @@ function App() {
    }
 
    const openNeurotheka = (region: AtlasRegion) => {
+      checkToken();
       targetPage.current  ="neurotheka"
       setHeaderText(t("loading"));
       setAskedAtlas(region.atlas);
       setAskedRegion(region.id);
       setLoadEnforcer(prev => prev + 1);
+      window.location.hash = `#/neurotheka/${region.atlas}/${region.id}`;
    }
    useEffect(() => {
       if (askedAtlas) {
-         gotoPage(targetPage.current);
+         setCurrentPage(targetPage.current);
       }
    }, [askedAtlas, askedRegion, loadEnforcer, gameMode]);
 
    const launchSinglePlayerGame = (atlas: string, mode: string) => {
       targetPage.current = "game"
+      checkToken();
       setHeaderText(t("loading"));
       setAskedAtlas(atlas);
       setGameMode(mode);
       setLoadEnforcer(prev => prev + 1);
+      window.location.hash = `#/singleplayer/${mode}/${atlas}`;
    }
 
 
