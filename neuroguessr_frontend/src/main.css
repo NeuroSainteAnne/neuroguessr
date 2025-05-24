@@ -102,7 +102,7 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-input[type="text"],
+input[type="text"]:not(.search-input),
 input[type="email"], /* Added email input type */
 input[type="password"] {
     width: calc(100% - 20px);
