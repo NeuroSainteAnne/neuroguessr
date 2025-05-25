@@ -7,12 +7,13 @@ import OptionsDropdown from './OptionsDropdown';
 
 function Header({currentLanguage, currentPage, atlasRegions, t, callback, 
     isLoggedIn, userFirstName, userLastName, 
-    headerText, headerStreak, headerTime, headerScore, headerErrors,
+    headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
     viewerOptions}: 
     { currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
     t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, 
     userFirstName: string, userLastName: string, 
-    headerText: string, headerStreak: string, headerTime: string, headerScore: string,
+    headerText: string, headerTextMode: string, 
+    headerStreak: string, headerTime: string, headerScore: string,
     headerErrors: string,
     viewerOptions: DisplayOptions }) {
 
@@ -27,7 +28,19 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                 </div>
                 <div className="navbar-middle">
                     { headerText != "" && <div className="target-label-container">
-                        <p id="target-label"><span className="target-text">{headerText}</span></p>
+                        <p id="target-label">
+                            <span className="target-text" style={
+                                ((mode)=>{
+                                    switch(mode) {
+                                        case "success":
+                                            return { color: '#4ade80', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
+                                        case "failure":
+                                            return { color: '#f87171', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
+                                    }
+                                    return {};
+                                })(headerTextMode)
+                            }>{headerText}</span>
+                        </p>
                     </div>}
                     { currentPage == "neurotheka" && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
                     { currentPage == "singleplayer" && <div className="score-error-container">

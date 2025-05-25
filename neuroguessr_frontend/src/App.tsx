@@ -48,6 +48,7 @@ function App() {
    const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
+   const [headerTextMode, setHeaderTextMode] = useState<string>("")
    const [headerScore, setHeaderScore] = useState<string>("")
    const [headerErrors, setHeaderErrors] = useState<string>("")
    const [headerStreak, setHeaderStreak] = useState<string>("")
@@ -92,6 +93,7 @@ function App() {
       checkToken();
       setCurrentPage(page);
       setHeaderText("");
+      setHeaderTextMode("normal"); 
       window.location.hash = `#/${page}`;
    }
 
@@ -269,6 +271,7 @@ function App() {
       logout: logout,
       openNeurotheka: openNeurotheka,
       setHeaderText: setHeaderText,
+      setHeaderTextMode: setHeaderTextMode,
       setHeaderScore: setHeaderScore,
       setHeaderErrors: setHeaderErrors,
       setHeaderStreak: setHeaderStreak,
@@ -282,7 +285,8 @@ function App() {
          <Header currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
             userFirstName={userFirstName} userLastName={userLastName} 
-            headerText={headerText} headerScore={headerScore} headerErrors={headerErrors}
+            headerText={headerText} headerTextMode={headerTextMode}
+            headerScore={headerScore} headerErrors={headerErrors}
             headerStreak={headerStreak} headerTime={headerTime}
             viewerOptions={viewerOptions} />
          {currentPage === "welcome" && <>
@@ -297,7 +301,7 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer}
-               isLoggedIn={isLoggedIn} />}
+               isLoggedIn={isLoggedIn} authToken={authToken} />}
          {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
          {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
          {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}

@@ -42,6 +42,7 @@
   "time_attack_description": "Race against time",
   "play_button": "Play",
   "target_label": "Target",
+  "score_label": "Score",
   "correct_label": "Correct",
   "errors_label": "Errors",
   "streak_label": "Streak",

@@ -41,6 +41,7 @@
   "time_attack_description": "Mimimum de temps",
   "play_button": "Jouer",
   "target_label": "Cible",
+  "score_label": "Score",
   "correct_label": "Correct",
   "errors_label": "Erreurs",
   "streak_label": "Série",

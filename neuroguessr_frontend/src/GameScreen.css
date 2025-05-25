@@ -164,3 +164,172 @@
     gap: 20px; /* Space between buttons */
     margin-top: 20px;
 }
+
+/* Shared button style for menu/home/restart */
+.menu-button,
+.home-button,
+.restart-button {
+    padding: 10px 20px;
+    background-color: #007bff; /* Default blue, will override for home button */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    text-decoration: none; /* Remove underline from anchor-like buttons */
+    display: inline-flex; /* Use flexbox to center icon and text */
+    justify-content: center;
+    align-items: center;
+}
+
+.menu-button:hover,
+.home-button:hover,
+.restart-button:hover {
+    background-color: #0056b3;
+}
+
+/* Specific style for the round home button */
+.home-button {
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    border-radius: 50%; /* Make it round */
+    padding: 0; /* Remove padding */
+    font-size: 1.5em; /* Adjust icon size */
+    background-color: rgb(63, 109, 159); /* Match confirm guess button blue */
+}
+
+.home-button i {
+    /* Style for the Font Awesome icon inside the button */
+    color: white;
+}
+
+/* Specific style for the restart button */
+.restart-button {
+     width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
+    border-radius: 50%; /* Make it round */
+    padding: 0; /* Remove padding */
+    font-size: 1.5em; /* Adjust icon size */
+    background-color: #ffc107; /* Example color: yellow */
+    color: #333; /* Dark text color for contrast */
+}
+
+.restart-button:hover {
+    background-color: #e0a800; /* Darker yellow on hover */
+}
+
+.restart-button i {
+     color: #333; /* Dark icon color */
+}
+
+/* Progress Bar Styling */
+.score-progress-bar {
+    width: 90%;
+    margin: 15px auto;
+    height: 50px; /* Increased height for a thicker bar */
+    background-color: #e0e0e0;
+    border-radius: 50px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Update the main progress bar container */
+.score-progress-bar {
+    width: 90%;
+    margin: 50px auto;
+    height: 50px; /* Increased height for a thicker bar */
+    background-color: #e0e0e0; /* Light grey background for the empty part */
+    border-radius: 8px;
+    overflow: visible;
+    position: relative; /* Essential for positioning inner bar and labels */
+}
+
+/* Style for the filling progress bar itself */
+.score-progress-bar .w3-container {
+    height: 100%;
+    text-align: center;
+    line-height: 50px; /* Match the new height to vertically center text */
+    color: white;
+    background-color: rgb(63, 109, 159); /* Color same as return button */
+    border-radius: 8px;
+    transition: width 1s ease-out; /* Smooth transition for filling animation */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%; /* Start with 0% width for animation */
+    font-size: 2em; /* Increased text size */
+    font-weight: bold; /* Made text bold */
+    display: flex; /* Use flexbox to center content */
+    align-items: center; /* Center vertically */
+    justify-content: center; /* Center horizontally */
+}
+
+/* Styles for the new labels (750, 1000) */
+/* Styles for the new labels (750, 1000) */
+/* Styles for the new labels (750, 1000) */
+.progress-label {
+    position: absolute;
+    top: -25px; /* Position above the bar */
+    color: white; /* Changed to white for better visibility against a dark background */
+    font-size: 0.9em;
+    font-weight: bold;
+    transform: translateX(-50%); /* Adjust to center the text above its position */
+    pointer-events: none; /* Allow clicks to pass through to elements below */
+    z-index: 10000; /* Ensure labels are above the bar and ticks */
+}
+
+.progress-label-inf {
+    left: 25%; 
+}
+.progress-label-med {
+    left: 50%; 
+}
+.progress-label-max {
+    left: 100%; 
+}
+
+/* Add vertical ticks below the labels */
+/* Add vertical ticks that span the height of the bar */
+.score-progress-bar::before,
+.score-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; /* Position at the top of the progress bar */
+    height: 100%; /* Make ticks span the full height of the bar */
+    width: 2px; /* Thickness of the tick */
+    background-color: rgba(0, 0, 0, 0.7); /* Darker color for better visibility */
+    z-index: 1; /* Below labels, above the bar content */
+}
+
+.score-progress-bar::before { /* For 750 mark's tick */
+    left: 25%;
+    transform: translateX(-50%); /* Centering the tick visually */
+}
+
+.score-progress-bar::before { /* For 750 mark's tick */
+    left: 50%;
+    transform: translateX(-50%); /* Centering the tick visually */
+}
+
+.score-progress-bar::after { /* For 1000 mark's tick */
+    left: 100%;
+    transform: translateX(-50%); /* Centering the tick visually */
+}
+/* Style for the text displaying the score value inside the progress bar container */
+/* Removed the ::after pseudo-element */
+
+/* Region Tooltip - Keep existing */
+.region-tooltip {
+    position: absolute;
+    background: rgba(42, 42, 42, 0.9); /* Add opacity */
+    color: #d9dddc;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid #808588;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    pointer-events: none;
+    white-space: nowrap;
+}
