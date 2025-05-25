@@ -127,6 +127,7 @@ export const getNextRegion = async (req, res) => {
     }
 }
 
+const TOTAL_REGIONS_TIME_ATTACK = 18;
 
 export const validateRegion = async (req, res) => {
     const { sessionId, sessionToken, coordinates } = req.body;
@@ -138,7 +139,7 @@ export const validateRegion = async (req, res) => {
     }
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
-        SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1 LIMIT 1
+        SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
     `);
     const activeProgress = getActiveProgressStmt.get(sessionId);
     if (!activeProgress) {
@@ -165,15 +166,15 @@ export const validateRegion = async (req, res) => {
         WHERE id = ?
     `);
     const timeTaken = Math.floor((Date.now() - new Date(activeProgress.createdAt).getTime()) / 1000); // Time in seconds
-    updateProgressStmt.run(isCorrect ? 0 : 1, isCorrect ? 1 : 0, timeTaken, activeProgress.id);
+    updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, activeProgress.id);
 
     let endgame = false
     if(!isCorrect && session.mode == "streak"){
         endgame = true
     } else if(session.mode == "time-attack"){
-        const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
+        const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
-        if(answeredRegions.count >= 20){
+        if(answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK){
             endgame = true
         }
     }
