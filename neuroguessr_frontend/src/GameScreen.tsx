@@ -59,6 +59,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     backColor: [0, 0, 0, 1],
     crosshairColor: [1, 1, 1, 1]
   }));
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const guessButtonRef = useRef<HTMLButtonElement>(null);
   const startTime = useRef<number | null>(null);
   const timerInterval = useRef<number | null>(null);
   const sessionToken = useRef<string | null>(null);
@@ -187,14 +189,46 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
+  const resetGameState = () => {
+    currentTarget.current = null;
+    selectedVoxel.current = null;
+    setCurrentAttempts(0); // Reset attempts for practice mode
+    setCurrentScore(0); // Reset score for Time Attack
+    setCurrentCorrects(0); // Reset correct count for Practice/Streak
+    setCurrentErrors(0); // Reset errors
+    setCurrentStreak(0); // Reset streak
+    usedRegions.current = []; // Reset used regions for time attack
+    setHighlightedRegion(null);
+    callback.setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
+    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+    if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
+      niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+      niivue.current.updateGLVolume();
+    }
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+      timerInterval.current = null;
+    }
+    if (tooltip) {
+      setTooltip(null)
+    }
+    // Hide overlays
+    setShowHelpOverlay(false);
+    setShowStreakOverlay(false);
+    setTimeattackOverlay(false);
+    // Reset Niivue view if needed
+    if (niivue.current) {
+      niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar); // Or preferred default view
+      niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
+      niivue.current.opts.isRadiologicalConvention = true; // Or preferred default
+      niivue.current.setOpacity(1, 0.6); // Or preferred default opacity
+      niivue.current.drawScene();
+    }
+  }
+
   const startGame = () => {
     setIsGameRunning(true);
-    setCurrentScore(0);
-    setCurrentCorrects(0);
-    setCurrentErrors(0);
-    setCurrentStreak(0);
-    setCurrentAttempts(0);
-    usedRegions.current = [];
+    resetGameState();
 
     if (isLoggedIn) {
       console.log("is logged in, starting session"); // TODO
@@ -248,6 +282,122 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         niivue.current.updateGLVolume();
         niivue.current.drawScene(); // Redraw scene to ensure color reset is visible
       }
+    }
+  }
+
+  useEffect(() => {
+    if(highlightedRegion){
+      highlightRegionFluorescentYellow();
+    } else { // reset to original color
+      if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
+        niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.current.updateGLVolume();
+        niivue.current.drawScene();
+      }
+    }
+  }, [highlightedRegion]);
+
+  const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
+    const isTouch = e.type === 'touchstart';
+    const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
+    const mouseEvt = isTouch 
+        ? ({ ...e, layerX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX, 
+           layerY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY,
+           offsetX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX, 
+           offsetY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY } as unknown as MouseEvent)
+        : e ;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // Check if touch/click is within canvas bounds
+    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
+      const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(mouseEvt as MouseEvent, niivue.current.gl.canvas);
+      if (!pos) return; // If position is not valid, exit early
+      const frac = niivue.current.canvasPos2frac([pos.x * (niivue.current.uiData?.dpr ?? 1), pos.y * (niivue.current.uiData?.dpr ?? 1)]);
+      if (frac[0] >= 0) {
+        const mm = niivue.current.frac2mm(frac);
+        const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
+        const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
+        if (isFinite(idx) && idx > 0 && idx in (cMap.current?.labels ?? [])) { // Ensure valid region ID > 0
+          selectedVoxel.current = Array.from(vox);
+          if (gameMode === 'navigation') {
+            callback.setHeaderText(cMap.current.labels?.[idx] || t('no_region_selected'));
+            setHighlightedRegion(idx);
+            if (tooltip) {
+              setTooltip(null)
+            }
+            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+            niivue.current.drawScene();
+          } else {
+            if (guessButtonRef.current) {
+              guessButtonRef.current.disabled = false;
+            }
+            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+            niivue.current.drawScene();
+          }
+          console.log(`Clicked voxel: ${vox}, Region ID: ${idx}, Region Name: ${cMap.current.labels?.[idx] || t('unknown_region')}`);
+        } else { // invalid region selected
+          selectedVoxel.current = null;
+          if (gameMode === 'navigation') {
+            callback.setHeaderText(t('no_region_selected'));
+            setHighlightedRegion(null);
+          } else {
+            if(guessButtonRef.current) guessButtonRef.current.disabled = true;
+          }
+          console.log(`Clicked voxel: ${vox}, Invalid or background region ID: ${idx}`);
+        }
+      }
+    }
+  }
+
+
+  function highlightRegionFluorescentYellow() {
+    if (gameMode === 'navigation' && highlightedRegion === 0) return;
+    console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
+    if (cLut.current && niivue.current && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
+      const lut = cLut.current.slice();
+      // Make all regions transparent initially except region 0 if needed
+      for (let i = 0; i < lut.length / 4; i++) {
+        if (i !== 0 || (askedAtlas === 'aal' || askedAtlas === 'glasser' || askedAtlas === 'destrieux' || askedAtlas === 'schaefer')) {
+          lut[i * 4 + 3] = 0; // Make transparent
+        }
+      }
+      // Highlight the specific region in yellow
+      lut[highlightedRegion * 4 + 0] = 255; // R
+      lut[highlightedRegion * 4 + 1] = 255; // G
+      lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
+      lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
+
+      if(niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
+      niivue.current.updateGLVolume();
+      niivue.current.drawScene();
+    } else {
+      console.error('Cannot highlight region:', {
+        clut: !!cLut.current,
+        nv1: !!niivue.current,
+        highlightedRegion,
+        lutLength: cLut.current?.length
+      });
+    }
+  }
+
+  const handleRecolorization = () => {
+    if (isGameRunning && gameMode === 'navigation') {
+      if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
+        niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.current.updateGLVolume();
+        niivue.current.drawScene();
+      }
+      callback.setHeaderText(t('click_to_identify'));
+      selectedVoxel.current = null;
+      setHighlightedRegion(null);
+      if (tooltip) {
+        setTooltip(null);
+      }
+      niivue.current.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
+      niivue.current.drawScene();
     }
   }
 
@@ -333,11 +483,11 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   return (
     <div className="page-container">
       {isLoading && <div className="loading-screen"></div>}
-      <canvas id="gl1"></canvas>
+      <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
       <div className="button-container">
-        <button className="return-button">{t("return_button")}</button>
-        {gameMode == "navigation" && <button className="return-button">{t("restore_color")}</button>}
-        {gameMode != "navigation" && <button className="guess-button" disabled>
+        <button className="return-button" onClick={() => callback.gotoPage("welcome")}>{t("return_button")}</button>
+        {gameMode == "navigation" && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
+        {gameMode != "navigation" && <button className="guess-button" disabled ref={guessButtonRef}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
       </div>
@@ -347,20 +497,22 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
           <h2>{t("viewer_help_title")}</h2>
           <div id="help-mode-description"
-            dangerouslySetInnerHTML={{__html:(() => {
-              switch (gameMode) {
-                case 'navigation':
-                  return t('viewer_help_navigation');
-                case 'practice':
-                  return t('viewer_help_practice');
-                case 'streak':
-                  return t('viewer_help_streak');
-                case 'time-attack':
-                  return t('viewer_help_time_attack');
-                default:
-                  return t('viewer_help_general');
-              }
-            })()}}>
+            dangerouslySetInnerHTML={{
+              __html: (() => {
+                switch (gameMode) {
+                  case 'navigation':
+                    return t('viewer_help_navigation');
+                  case 'practice':
+                    return t('viewer_help_practice');
+                  case 'streak':
+                    return t('viewer_help_streak');
+                  case 'time-attack':
+                    return t('viewer_help_time_attack');
+                  default:
+                    return t('viewer_help_general');
+                }
+              })()
+            }}>
           </div>
           <section>
             <h3>{t("viewer_controls_title")}</h3>
@@ -391,7 +543,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         </div>
       </div>}
 
-      { showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
+      {showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
         <div className="overlay-content">
           <h2>{t("time_attack_ended_title")}</h2>
           <p><span>{t("time_attack_ended_time")}</span>
