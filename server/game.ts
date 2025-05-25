@@ -5,34 +5,15 @@ import path from "path";
 import { __dirname, htmlRoot } from "./utils.ts";
 import { NVImage } from "@niivue/niivue";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
-
-const atlasFiles = {
-    'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
-    'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
-    'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
-    // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
-    'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', name: 'Brodmann' },
-    'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser' },
-    // 'destrieux': { nii: '/neuroguessr_web/data/aparc.a2009s+aseg_stride.nii.gz', json: '/neuroguessr_web/data/destrieux_labs.json', json_fr: '/neuroguessr_web/data/destrieux_labs_fr.json', name: 'Destrieux' },
-    'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', name: 'Schaefer' },     
-    'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
-    'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
-    'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
-    'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', name: 'Cerebellum' },
-    'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', name: 'White Matter'},
-    'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
-    'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
-    'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
-    'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
-};
+import atlasFiles from "../neuroguessr_frontend/src/atlas_files.ts"
 
 const validRegions = {}
 const imageRef : Record<string,NVImage> = {}
 const imageMetadata : Record<string,any> = {}
 for (const atlas in atlasFiles) {
-    const atlasJsonPath = path.join(htmlRoot, atlasFiles[atlas].json.replace("/neuroguessr_web/",""))
+    const atlasJsonPath = path.join(htmlRoot, "neuroguessr_frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
-    const atlasNiiPath = path.join(htmlRoot, atlasFiles[atlas].nii.replace("/neuroguessr_web/",""))
+    const atlasNiiPath = path.join(htmlRoot, "neuroguessr_frontend", "dist", "assets", "atlas", "nii", atlasFiles[atlas].nii)
     const niiBuffer = await fs.openAsBlob(atlasNiiPath)
     imageRef[atlas] = await NVImage.loadFromFile({file: new File([niiBuffer], atlas)})
     imageMetadata[atlas] = imageRef[atlas].getImageMetadata()
