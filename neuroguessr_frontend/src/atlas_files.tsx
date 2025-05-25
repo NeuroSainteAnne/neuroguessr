@@ -4,7 +4,7 @@ export const atlasCategories = [
     "subcortical_regions",
     "white_matter_tracts",
     "functional_networks",
-    "cerebral-arteries"
+    "cerebral_arteries"
 ]
 
 const atlasFiles : Record<string, {nii: string, json: string, name: string, atlas_category:string, difficulty: number}> = {
@@ -100,7 +100,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         difficulty: 2
     },
     'territories': {
-        atlas_category: 'cerebral-arteries',
+        atlas_category: 'cerebral_arteries',
         nii: 'ArterialAtlas_stride_round.nii.gz',
         json: 'artery_territories.json',
         name: 'Territories',

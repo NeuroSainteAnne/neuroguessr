@@ -120,6 +120,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const streakOverlayRef = useRef<HTMLDivElement>(null);
   const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
   const timeattackOverlayRef = useRef<HTMLDivElement>(null);
+  const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
     initNiivue()
@@ -363,7 +364,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
       // Start the first round
       selectNewTarget();
-      updateGameDisplay();
+      setForceDisplayUpdate((u)=>u+1);
     })
 
   }
@@ -474,7 +475,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     currentTarget.current = regionId
 
     if (currentTarget.current) {
-      updateGameDisplay(); // Update display with the new target label
+      setForceDisplayUpdate((u)=>u+1); // Update display with the new target label
       selectedVoxel.current = null; // Reset selected voxel
       if(gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
       if (cLut.current && niivue.current) {
@@ -595,12 +596,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
     if (guessSuccess) {
       // Correct Guess
-      setCurrentCorrects(currentCorrects + 1); // Increment correct count for other modes
+      setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
       if (gameMode === 'time-attack') {
         setCurrentScore((curScore) => curScore + MAX_POINTS_PER_REGION); // Add full points for correct guess
       }
       if (gameMode === 'streak') {
-        setCurrentStreak((prevStreak) => prevStreak + 1); // Increment streak for correct guess
+        setCurrentStreak((cs) => cs + 1); // Increment streak for correct guess
       }
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
@@ -695,7 +696,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         callback.setHeaderText(incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg);
         callback.setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
-        updateGameDisplay(); // Update display immediately after incorrect guess
+        setForceDisplayUpdate((u)=>u+1); // Update display immediately after incorrect guess
 
         // Automatically move to the next target after a short delay
         setTimeout(() => {
@@ -725,7 +726,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
       if (gameMode !== 'practice') {
-        updateGameDisplay();
+        setForceDisplayUpdate((u)=>u+1);
       }
     }
 
@@ -802,6 +803,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
       callback.setHeaderErrors(`${currentErrors}`);
     }
+    console.log("streak", currentStreak)
     if (gameMode === 'streak') {
       callback.setHeaderStreak(`${currentStreak}`);
     }
@@ -858,8 +860,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }
 
   useEffect(() => {
+    console.log("calleth", currentStreak)
     updateGameDisplay();
-  }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion]);
+  }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
