@@ -26,7 +26,7 @@ function App() {
       const queryParameters = new URLSearchParams(window.location.search)
       if (queryParameters.get("validate")) return "validate"
       if (queryParameters.get("resetpwd")) return "resetpwd"
-      return "welcome"
+      return ""
    })
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")

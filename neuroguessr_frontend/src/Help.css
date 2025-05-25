@@ -34,8 +34,8 @@
     background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
     z-index: 2000; /* Ensure it's above everything else */
     display: flex;
-    justify-content: left;
-    align-items: left;
+    justify-content: center;   /* Center horizontally */
+    align-items: center;       /* Center vertically */
     opacity: 1; /* Start with opacity 1 */
     transition: opacity 0.3s ease-in-out; /* Smooth transition */
     backdrop-filter: blur(10px); /* Apply blur effect */

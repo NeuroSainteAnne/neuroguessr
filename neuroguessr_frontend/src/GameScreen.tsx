@@ -44,6 +44,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [currentCorrects, setCurrentCorrects] = useState<number>(0);
   const [currentErrors, setCurrentErrors] = useState<number>(0);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<string>("00:00");
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const currentTarget = useRef<number | null>(null);
   const selectedVoxel = useRef<number[] | null>(null);
@@ -65,6 +66,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const helpContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
+  const [showStreakOverlay, setShowStreakOverlay] = useState<boolean>(false);
+  const [showTimeattackOverlay, setTimeattackOverlay] = useState<boolean>(false);
 
   useEffect(() => {
     initNiivue()
@@ -257,10 +260,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
 
     if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
-      callback.setHeaderErrors(t('errors_label') + `: ${currentErrors}`);
+      callback.setHeaderErrors(`${currentErrors}`);
     }
     if (gameMode === 'streak') {
-      callback.setHeaderStreak(t('streak_label') + `: ${currentStreak}`);
+      callback.setHeaderStreak(`${currentStreak}`);
     }
 
     if (gameMode === 'navigation') {
@@ -329,7 +332,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   return (
     <div className="page-container">
-      {isLoading && <div className="loading-screen">Chargement...</div>}
+      {isLoading && <div className="loading-screen"></div>}
       <canvas id="gl1"></canvas>
       <div className="button-container">
         <button className="return-button">{t("return_button")}</button>
@@ -343,8 +346,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         <div className="help-content" ref={helpContentRef}>
           <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
           <h2>{t("viewer_help_title")}</h2>
-          <div id="help-mode-description">
-            {(() => {
+          <div id="help-mode-description"
+            dangerouslySetInnerHTML={{__html:(() => {
               switch (gameMode) {
                 case 'navigation':
                   return t('viewer_help_navigation');
@@ -357,7 +360,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
                 default:
                   return t('viewer_help_general');
               }
-            })()}
+            })()}}>
           </div>
           <section>
             <h3>{t("viewer_controls_title")}</h3>
@@ -371,6 +374,45 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           <i className="fas fa-question"></i>
         </button>
       </div>
+
+
+      {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
+        <div className="overlay-content">
+          <h2>{t("streak_ended_title")}</h2>
+          <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{currentStreak}</span></p>
+          <div className="overlay-buttons">
+            <button id="go-back-menu-button-streak" className="home-button">
+              <i className="fas fa-home"></i>
+            </button>
+            <button id="restart-button-streak" className="restart-button">
+              <i className="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+      </div>}
+
+      { showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
+        <div className="overlay-content">
+          <h2>{t("time_attack_ended_title")}</h2>
+          <p><span>{t("time_attack_ended_time")}</span>
+            <span id="final-time-attack-time">{currentTime}</span></p>
+          <p><span>{t("time_attack_ended_score")}</span></p>
+          <div className="score-progress-bar w3-light-grey w3-round">
+            <div id="time-attack-score-bar" className="w3-container w3-round w3-blue" style={{ width: "0%" }}></div>
+            <span className="progress-label progress-label-750">750</span>
+            <span className="progress-label progress-label-1000">1000</span>
+          </div>
+          <div className="overlay-buttons">
+            <button id="go-back-menu-button-time-attack" className="home-button">
+              <i className="fas fa-home"></i>
+            </button>
+            <button id="restart-button-time-attack" className="restart-button">
+              <i className="fas fa-sync-alt"></i>
+            </button>
+          </div>
+        </div>
+      </div>}
+
     </div>
   )
 }

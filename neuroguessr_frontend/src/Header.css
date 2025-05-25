@@ -215,6 +215,12 @@
     margin: 0.25rem 0;
 }
 
+.streak-flame-icon-small {
+    height: 1em; /* Half the size of the parent font */
+    vertical-align: middle; /* Align vertically with text */
+    margin-right: 0.2em; /* Small space between icon and number */
+}
+
 /* Dropdown Menu Styles - Keep existing */
 .dropdown {
     position: relative;

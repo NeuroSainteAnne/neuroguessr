@@ -81,3 +81,86 @@
     background: #2a2a2a;
     border: 1.5px solid #e5e7eb;
 }
+/* Style for the oversized streak number */
+.streak-number {
+    font-size: 8em; /* Doubled size */
+    font-weight: bold;
+    color: #eeeeee; /* Example color, can be adjusted */
+    display: block; /* Ensure it takes its own line */
+    margin: 10px 0; /* Add some margin around the number */
+}
+
+.streak-flame-icon {
+    height: 4em; /* Half the size of the parent font */
+    vertical-align: middle; /* Align vertically with text */
+    margin-right: 0.2em; /* Small space between icon and number */
+}
+
+/* Basic styling for overlays */
+.streak-overlay,
+.time-attack-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Increased transparency */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1; /* Start with opacity 1 */
+    transition: opacity 0.3s ease-in-out; /* Smooth transition */
+    backdrop-filter: blur(10px); /* Apply blur effect */
+    -webkit-backdrop-filter: blur(10px); /* For Safari */
+}
+
+.streak-overlay.hidden,
+.time-attack-overlay.hidden {
+    opacity: 0; /* Fade out when hidden */
+    pointer-events: none; /* Disable interactions when hidden */
+}
+
+.large-time-display {
+    font-size: 8rem; /* Apply a large font size */
+    font-weight: bold; /* Make it bold */
+    color: #eeeeee; /* Match the streak number color or choose another */
+    display: block; /* Ensure it takes its own line */
+    margin: 20px 0; /* Add some vertical margin */
+    /* You can add more styles here like text-shadow if desired */
+}
+
+
+.overlay-content {
+    background: rgba(54, 54, 54, 0.95);
+    color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center; /* Keep centered for streak and time attack */
+    max-width: 1000px;
+    position: relative; /* Needed for close button positioning */
+    width: 70%; /* Make content responsive */
+    box-sizing: border-box; /* Include padding in width */
+}
+
+ .overlay-content h2 {
+    margin-top: 0;
+    color: #d9dddc;
+    text-align: center; /* Keep centered for streak and time attack */
+
+}
+
+.overlay-content p {
+    margin: 15px 0; /* Increased vertical margin */
+    text-align: center; /* Keep centered for streak and time attack */
+    font-size: 1rem; /* Set font size to 1rem */
+
+}
+
+/* Container for multiple buttons in overlays */
+.overlay-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Space between buttons */
+    margin-top: 20px;
+}

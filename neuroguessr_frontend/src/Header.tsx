@@ -32,11 +32,11 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                     { currentPage == "neurotheka" && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
                     { currentPage == "singleplayer" && <div className="score-error-container">
                         {headerScore && <p id="score-label">{headerScore}</p>}
-                        {headerErrors && <p id="error-label">{headerErrors}</p>}
+                        {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
                         {headerStreak && <p id="streak-label">
-                            <span>{t("streak_label")}</span>
-                            <img src="/neuroguessr_web/data/flame.png" alt="Streak Flame" className="streak-flame-icon" />
+                            <span>{t("streak_label")}: </span>
                             <span id="streak-value">{headerStreak}</span>
+                            <img src="assets/interface/flame.png" alt="Streak Flame" className="streak-flame-icon-small" />
                         </p>}
                         {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
                     </div>}
