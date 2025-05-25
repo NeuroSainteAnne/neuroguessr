@@ -166,11 +166,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       setIsLoadedNiivue(true);
       niivue.current.setInterpolation(true);
       niivue.current.opts.crosshairGap = 0;
-      niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-      niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
       niivue.current.opts.dragMode = niivue.current.dragModes.slicer3D;
       niivue.current.opts.yoke3Dto2DZoom = true;
-      niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
+      defineNiiOptions()
     })
   }
   const loadAtlasNii = () => {
@@ -320,10 +318,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
     if (niivue.current) {
-      niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar); // Or preferred default view
-      niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-      niivue.current.opts.isRadiologicalConvention = true; // Or preferred default
-      niivue.current.setOpacity(1, 0.6); // Or preferred default opacity
+      defineNiiOptions()
       niivue.current.drawScene();
     }
   }
@@ -896,7 +891,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     };
   }, [showHelpOverlay])
 
-  useEffect(() => {
+  const defineNiiOptions = () => {
     if (niivue.current) {
       if (viewerOptions.displayType === "Axial") niivue.current.setSliceType(niivue.current.sliceTypeAxial);
       if (viewerOptions.displayType === "Coronal") niivue.current.setSliceType(niivue.current.sliceTypeCoronal);
@@ -919,6 +914,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
       niivue.current.updateGLVolume();
     }
+  }
+
+  useEffect(() => {
+    defineNiiOptions()
   }, [viewerOptions])
 
   return (
