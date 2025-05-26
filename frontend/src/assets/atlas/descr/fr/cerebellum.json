@@ -1,0 +1,41 @@
+{
+  "R": [0, 255, 255, 255, 255, 255, 255, 204, 153, 102, 51, 0, 0, 0, 0, 0, 0, 0,
+    51, 102, 153, 204, 255, 255, 255, 255, 255, 255, 255
+  ],
+  "G": [0, 0, 38, 77, 115, 153, 191, 204, 204, 204, 204, 204, 166, 128, 89, 51,
+    13, 0, 0, 0, 0, 0, 0, 13, 51, 89, 128, 166, 204
+  ],
+  "B": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 77, 115, 153, 191, 204, 204, 204,
+    204, 204, 204, 191, 153, 115, 77, 38, 0],
+  "labels": [
+    "Arrière-plan",
+    "Lobules I à IV Gauches ",
+    "Lobules I à IV Droits",
+    "Lobule  V Gauche",
+    "Lobule V Droit ",
+    "Lobule VI Gauche",
+    "Vermis VI",
+    "Lobule VI Droit",
+    "Lobule Crus I Gauche",
+    "Vermis Crus I",
+    "Lobule Crus I Droit",
+    "Lobule Crus II Gauche",
+    "Vermis Crus II",
+    "Lobule Crus II Droit",
+    "Lobule VIIb Gauche",
+    "Vermis VIIb",
+    "Lobule VIIb Droit",
+    "Lobule VIIIa Gauche",
+    "Vermis VIIIa",
+    "Lobule VIIIa Droit",
+    "Lobule VIIIb Gauche",
+    "Vermis VIIIb",
+    "Lobule VIIIb Droit",
+    "Lobule IX Gauche",
+    "Vermis IX",
+    "Lobule IX Droit",
+    "Lobule X Gauche",
+    "Vermis X",
+    "Lobule X Droit"
+  ]
+}

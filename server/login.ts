@@ -33,6 +33,7 @@ export const login = async (req, res) => {
             return res.status(403).send({ message: "Please verify your e-mail." });
         };
         const token = jwt.sign({ 
+            username: user.username,
             email: user.email, 
             firstname: user.firstname, 
             lastname: user.lastname,
@@ -65,6 +66,7 @@ export const refreshToken = async (req, res) => {
             // Generate a new token with a refreshed expiration time
             const newToken = jwt.sign(
                 { 
+                    username: user.username,
                     email: user.email, 
                     firstname: user.firstname, 
                     lastname: user.lastname, 
