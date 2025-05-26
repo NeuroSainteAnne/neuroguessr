@@ -160,6 +160,5 @@
   "reconfigure_mode": "Configuration",
   "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
   "reconfigure_success": "Configuration réussie !",
-  "reconfigure_failed": "Échec de la configuration. Veuillez réessayer.",
-  "your_best_scores" : "Vos statistiques personnelles"
+  "reconfigure_failed": "Échec de la configuration. Veuillez réessayer."
 }

@@ -1,0 +1,54 @@
+.stats-container {
+    padding: 20px;
+    max-width: 800px;
+    margin: 20px auto;
+    background-color: var(--background-color-secondary); /* Assuming you have CSS variables */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--text-color);
+}
+
+.stats-container h1 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 30px;
+}
+
+.stats-mode-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--background-color-tertiary);
+}
+
+.stats-mode-section h2 {
+    color: var(--secondary-color);
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.stats-item {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: var(--background-color-light);
+    border-radius: 4px;
+}
+
+.stats-item h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--accent-color);
+}
+
+.stats-item p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+.stats-error {
+    color: var(--error-color);
+    text-align: center;
+    font-weight: bold;
+}
