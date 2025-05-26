@@ -1,0 +1,28 @@
+{
+	"R": [
+		0, 255, 255, 0, 0, 220, 240, 178, 46, 199, 124, 218, 65, 255, 50
+	],
+	"G": [
+		0, 0, 215, 200, 105, 20, 230, 34, 139, 21, 252, 165, 105, 50, 110
+	],
+	"B": [
+		0, 0, 0, 80, 255, 60, 140, 34, 87, 133, 0, 32, 225, 10, 76
+	],
+	"labels": [
+		"Indéfini",
+		"Pulvinar-Gauche",
+		"Région-Antérieure-Gauche",
+		"Région-Dorso-Médianne-Gauche",
+		"Région-Ventrale-Dorso-Latérale-Gauche",
+		"Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Gauche",
+		"Région-Ventrale_Antérieure-Gauche",
+		"Région-Ventrale_Ventro-latérale-Gauche",
+		"Pulvinar-Droit",
+		"Région-Antérieure-Droite",
+		"Région-Dorso-Médianne-Droite",
+		"Région-Ventrale-Dorso-Latérale-Droit",
+		"Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Droit",
+		"Région-Ventrale-Antérieure-Droite",
+		"Région-Ventrale_Ventro-latérale-Droite"
+	]
+}

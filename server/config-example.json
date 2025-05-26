@@ -1,6 +1,6 @@
 {
     "email":{
-        "type": "gmail_api", // gmail_api or nodemailer
+        "type": "gmail_api", // gmail_api or nodemailer or none (development only)
         "server": "smtp.gmail.com", // only if nodemailer
         "port": 465, // only if nodemailer
         "mail_address": "xxx@gmail.com",
@@ -16,7 +16,12 @@
         "port": 3000,
         "external_address": "https://localhost:3000",
         "serverKey": "server.key",
-        "serverCert": "server.crt"
+        "serverCert": "server.crt",
+        "globalAuthentication": {
+            "enabled": false,
+            "username": "test",
+            "password": "test"
+        }
     },
     "salt": "xxx",
     "jwt_secret": "xxx"

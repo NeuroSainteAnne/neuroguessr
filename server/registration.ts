@@ -47,16 +47,30 @@ export const register = async (req, res) => {
         const salt = await bcrypt.genSalt(Number(config.salt));
         const hashPassword = await bcrypt.hash(req.body.password, salt);
 
+        let preVerify = 0;
+        if(config.email.type == "none"){
+            preVerify = 1;
+        }
+
         // Insérer le nouvel utilisateur
-        const stmt = db.prepare("INSERT INTO users (username, firstname, lastname, email, password) VALUES (?, ?, ?, ?, ?)");
+        const stmt = db.prepare("INSERT INTO users (username, firstname, lastname, email, password, verified) VALUES (?, ?, ?, ?, ?, ?)");
         const result = stmt.run(
             req.body.username,
             req.body.firstname,
             req.body.lastname,
             req.body.email,
-            hashPassword
+            hashPassword,
+            preVerify
         );
         const lastID = result.lastInsertRowid;
+
+        // Mode debug : pas d'envoi d'email
+        if(config.email.type == "none"){
+            res
+                .status(201)
+                .send({ preverified: true, message: "Vous avez été enregistré avec succès" });
+            return;
+        }
 
         // Créer un jeton pour l'utilisateur
         const tokenValue = jwt.sign(
@@ -81,7 +95,7 @@ export const register = async (req, res) => {
         await sendEmail(req.body.email, subject, message);
         res
             .status(201)
-            .send({ message: "An Email sent to your account please verify" });
+            .send({ preverified: false, message: "An Email sent to your account please verify" });
     } catch (error) {
         console.log(error);
         res.status(500).send({ message: "Internal Server Error" });
@@ -184,8 +198,17 @@ export const passwordLink = async (req, res) => {
         } else {
             tokenValue = token.token;
         }
-        console.log(token)
+        
         const url = `${config.server.external_address}/resetPwd/${user.id}/${tokenValue}`
+
+        // Mode debug : pas d'envoi d'email
+        if(config.email.type == "none"){
+            res
+                .status(200)
+                .send({ preverified: true, redirect_url: url });
+            return;
+        }
+
         const subject = "Password Reset";
         const message = `
         <p>Here is a link to reset your password</p>
@@ -194,7 +217,7 @@ export const passwordLink = async (req, res) => {
 
         await sendEmail(user.email, subject, message);
 
-        res.status(200).send({ message: "password reset link is sent to your email account" })
+        res.status(200).send({ preverified: false, message: "password reset link is sent to your email account" })
     } catch (error) {
         res.status(500).send({ message: "Internal server error" })
     }
@@ -240,6 +263,7 @@ export const resetPassword = async (req, res) => {
         deleteTokenStmt.run(user.id, req.body.token);
 
         const new_token = jwt.sign({ 
+            username: user.username,
             email: user.email, 
             firstname: user.firstname, 
             lastname: user.lastname,

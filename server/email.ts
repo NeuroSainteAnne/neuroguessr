@@ -77,7 +77,7 @@ export const sendEmail = async (email, subject, message) => {
                 newline: "unix", // LF (\n)
             });
             transporter.sendMail({
-                from: process.env.HOST,
+                from: config.email.mail_address,
                 to: email,
                 subject: subject,
                 html: message
@@ -109,7 +109,7 @@ export const sendEmail = async (email, subject, message) => {
             });
 
             transporter.sendMail({
-                from: process.env.HOST,
+                from: config.email.mail_address,
                 to: email,
                 subject: subject,
                 html: message

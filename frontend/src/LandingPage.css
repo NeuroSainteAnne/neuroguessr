@@ -1,0 +1,118 @@
+.landing-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+    width: 100%;
+    /* Ensure it takes full width to center its children */
+    max-width: 1200px;
+    /* Limit content width like original navbar */
+    margin: 0 auto;
+    /* Center the content area */
+    box-sizing: border-box;
+    /* Include padding in width */
+}
+
+.welcome-section {
+    margin-bottom: 40px;
+    color: #d9dddc;
+    /* Using text color from niivue.css body */
+    align-items: left;
+}
+
+.welcome-message {
+    font-size: 5em;
+    color: white;
+    /* Make welcome message stand out */
+    margin-bottom: 10px;
+}
+
+.welcome-section p {
+    font-size: 1.3em;
+    color: #d9dddc;
+}
+
+/* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
+.sign-in-panel {
+    background-color: rgba(0, 0, 0, 0);
+    /* Slightly transparent dark background */
+    padding: 30px;
+    border-radius: 8px;
+    width: 70%;
+    max-width: 1000px;
+    box-sizing: border-box;
+    color: #d9dddc;
+}
+
+.panel-title {
+    font-size: 1.8em;
+    color: white;
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+/* New CSS object for the container of sign-in options */
+.sign-in-options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    /* Space between buttons */
+}
+
+.option-button {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.3em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+    /* Consistent font */
+    font-weight: 400;
+    /* Make buttons a bit bolder */
+}
+
+/* Button specific colors, trying to fit the existing theme */
+.sign-in-button {
+    background-color: rgb(63, 109, 159);
+    /* A standard blue, common in modern UIs */
+    color: white;
+}
+
+.sign-up-button {
+    background-color: #545454;
+    /* A standard green for success/register */
+    color: white;
+}
+
+.continue-button {
+    background-color: #545454;
+    /* A standard grey for neutral actions */
+    color: white;
+}
+
+.option-button:hover {
+    /*            transform: translateY(-2px);*/
+    opacity: 0.85;
+    /* Slightly reduce opacity on hover */
+}
+
+/* Responsive Adjustments (keeping original niivue.css media queries in mind) */
+@media (max-width: 600px) {
+    .welcome-message {
+        font-size: 2em;
+    }
+
+    .sign-in-panel {
+        padding: 20px;
+    }
+
+    .option-button {
+        padding: 12px 15px;
+        font-size: 1em;
+    }
+}

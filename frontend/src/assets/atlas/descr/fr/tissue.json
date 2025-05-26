@@ -1,0 +1,6 @@
+{
+	"R" : [0,230,120,0],
+	"G" : [0,0,120,230],
+	"B" : [0,0,245,120],
+	"labels" : ["Unknown","Liquide Cortico-Spinal","Matière Grise","Matière Blanche"]
+}

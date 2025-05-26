@@ -133,6 +133,7 @@
   "login_success": "Connexion réussie !",
   "login_failed": "Nom d'utilisateur ou mot de passe invalide.",
   "register_success": "Inscription réussie ! Merci de vérifier votre boite email pour confirmer votre inscription.",
+  "register_success_no_verification": "Inscription réussie ! Vous pouvez maintenant vous connecter.",
   "register_failed": "Échec de l'inscription. Veuillez réessayer.",
   "server_error": "Une erreur s'est produite. Veuillez réessayer plus tard.",
   "welcome_message": "Bienvenue {{firstname}} !",

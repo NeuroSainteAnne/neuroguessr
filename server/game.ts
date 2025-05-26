@@ -5,34 +5,15 @@ import path from "path";
 import { __dirname, htmlRoot } from "./utils.ts";
 import { NVImage } from "@niivue/niivue";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
-
-const atlasFiles = {
-    'aal': { nii: '/neuroguessr_web/data/aal.nii.gz', json: '/neuroguessr_web/data/aal.json', json_fr: '/neuroguessr_web/data/aal_fr.json', name: 'AAL' },
-    'harvard-oxford': { nii: '/neuroguessr_web/data/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/harvard_oxford.json', json_fr: '/neuroguessr_web/data/harvard_oxford_fr.json', name: 'Harvard-Oxford' },
-    'tissues': { nii: '/neuroguessr_web/data/mni152_pveseg.nii.gz', json: '/neuroguessr_web/data/tissue.json', json_fr: '/neuroguessr_web/data/tissue_fr.json', name: 'Tissue' },
-    // 'hemisphere': { nii: '/neuroguessr_web/data/Hemispheric_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/hemisphere.json', json_fr: '/neuroguessr_web/data/hemisphere_fr.json', name: 'Hemisphere' },
-    'brodmann': { nii: '/neuroguessr_web/data/brodmann_grid.nii.gz', json: '/neuroguessr_web/data/brodmann.json', json_fr: '/neuroguessr_web/data/brodmann_fr.json', name: 'Brodmann' },
-    'glasser': { nii: '/neuroguessr_web/data/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', json: '/neuroguessr_web/data/glasser_neuroparc.json', json_fr: '/neuroguessr_web/data/glasser_neuroparc_fr.json', name: 'Glasser' },
-    // 'destrieux': { nii: '/neuroguessr_web/data/aparc.a2009s+aseg_stride.nii.gz', json: '/neuroguessr_web/data/destrieux_labs.json', json_fr: '/neuroguessr_web/data/destrieux_labs_fr.json', name: 'Destrieux' },
-    'schaefer': { nii: '/neuroguessr_web/data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz', json: '/neuroguessr_web/data/schaefer100.json', json_fr: '/neuroguessr_web/data/schaefer100_fr.json', name: 'Schaefer' },     
-    'yeo7': { nii: '/neuroguessr_web/data/Yeo-7-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo7.json', json_fr: '/neuroguessr_web/data/yeo7_fr.json', name: 'Yeo7' },
-    'yeo17': { nii: '/neuroguessr_web/data/Yeo-17-liberal_space-MNI152NLin6_res-1x1x1.nii.gz', json: '/neuroguessr_web/data/yeo17.json', json_fr: '/neuroguessr_web/data/yeo17_fr.json', name: 'Yeo17' },
-    'subcortical': { nii: '/neuroguessr_web/data/ICBM2009b_asym-SubCorSeg-1mm_nn_regrid.nii.gz', json: '/neuroguessr_web/data/subcortical.json', json_fr: '/neuroguessr_web/data/subcortical_fr.json', name: 'Subcortical' },
-    'cerebellum': { nii: '/neuroguessr_web/data/Cerebellum-MNIfnirt-maxprob-thr25-1mm.nii.gz', json: '/neuroguessr_web/data/cerebellum.json', json_fr: '/neuroguessr_web/data/cerebellum_fr.json', name: 'Cerebellum' },
-    'xtract': { nii: '/neuroguessr_web/data/xtract_web.nii.gz', json: '/neuroguessr_web/data/xtract_labels.json', json_fr: '/neuroguessr_web/data/xtract_labels_fr.json', name: 'White Matter'},
-    'thalamus': { nii: '/neuroguessr_web/data/Thalamus_Nuclei-HCP-MaxProb.nii.gz', json: '/neuroguessr_web/data/thalamus7.json', json_fr: '/neuroguessr_web/data/thalamus7_fr.json', name: 'Thalamus'},
-    'HippoAmyg': { nii: '/neuroguessr_web/data/HippoAmyg_web.nii.gz', json: '/neuroguessr_web/data/HippoAmyg_labels.json', json_fr: '/neuroguessr_web/data/HippoAmyg_labels_fr.json', name: 'Hippocampus & Amygdala' },
-    'JHU': { nii: '/neuroguessr_web/data/JHU_web.nii.gz', json: '/neuroguessr_web/data/JHU_labels.json', json_fr: '/neuroguessr_web/data/JHU_labels_fr.json', name: 'JHU' },
-    'territories' : { nii: '/neuroguessr_web/data/ArterialAtlas_stride_round.nii.gz', json: '/neuroguessr_web/data/artery_territories.json', json_fr: '/neuroguessr_web/data/artery_territories_fr.json', name: 'Territories' }
-};
+import atlasFiles from "../frontend/src/atlas_files.ts"
 
 const validRegions = {}
 const imageRef : Record<string,NVImage> = {}
 const imageMetadata : Record<string,any> = {}
 for (const atlas in atlasFiles) {
-    const atlasJsonPath = path.join(htmlRoot, atlasFiles[atlas].json.replace("/neuroguessr_web/",""))
+    const atlasJsonPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
-    const atlasNiiPath = path.join(htmlRoot, atlasFiles[atlas].nii.replace("/neuroguessr_web/",""))
+    const atlasNiiPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "nii", atlasFiles[atlas].nii)
     const niiBuffer = await fs.openAsBlob(atlasNiiPath)
     imageRef[atlas] = await NVImage.loadFromFile({file: new File([niiBuffer], atlas)})
     imageMetadata[atlas] = imageRef[atlas].getImageMetadata()
@@ -127,6 +108,7 @@ export const getNextRegion = async (req, res) => {
     }
 }
 
+const TOTAL_REGIONS_TIME_ATTACK = 18;
 
 export const validateRegion = async (req, res) => {
     const { sessionId, sessionToken, coordinates } = req.body;
@@ -138,7 +120,7 @@ export const validateRegion = async (req, res) => {
     }
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
-        SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1 LIMIT 1
+        SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
     `);
     const activeProgress = getActiveProgressStmt.get(sessionId);
     if (!activeProgress) {
@@ -165,24 +147,85 @@ export const validateRegion = async (req, res) => {
         WHERE id = ?
     `);
     const timeTaken = Math.floor((Date.now() - new Date(activeProgress.createdAt).getTime()) / 1000); // Time in seconds
-    updateProgressStmt.run(isCorrect ? 0 : 1, isCorrect ? 1 : 0, timeTaken, activeProgress.id);
+    updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, activeProgress.id);
 
     let endgame = false
     if(!isCorrect && session.mode == "streak"){
         endgame = true
-    } else if(isCorrect && session.mode == "time-attack"){
-        const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
+    } else if(session.mode == "time-attack"){
+        const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
-        if(answeredRegions.count >= validRegions[session.atlas].length){
+        if(answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK){
             endgame = true
         }
+    }
+
+    let accuracy = 0;
+    let finalScore = 0;
+    let duration = 0;
+
+    // If the game is over, update the session status
+    if (endgame) {
+        // Calculate final score and duration
+        // TEMPORARY CALCULATION ALGORITHM
+        // For streak mode, score = number of correct answers before failure
+        // For time-attack, score = number of correct answers, duration = sum of timeTaken for correct answers
+
+
+        if (session.mode === "streak") {
+            // Count correct answers before the first incorrect
+            const getStreakStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const streakResult = getStreakStmt.get(sessionId);
+            finalScore = streakResult.count;
+            // Duration: sum of timeTaken for correct answers
+            const getDurationStmt = db.prepare(`
+                SELECT SUM(timeTaken) as total FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const durationResult = getDurationStmt.get(sessionId);
+            duration = durationResult.total || 0;
+        } else if (session.mode === "time-attack") {
+            // All correct answers
+            const getScoreStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const scoreResult = getScoreStmt.get(sessionId);
+            finalScore = scoreResult.count;
+            // Accuracy: correct / total attempts
+            const getTotalStmt = db.prepare(`
+                SELECT COUNT(*) as total FROM gameprogress
+                WHERE sessionId = ?
+            `);
+            const totalResult = getTotalStmt.get(sessionId);
+            accuracy = totalResult.total > 0 ? finalScore / totalResult.total : 0;
+            // Duration: sum of timeTaken for correct answers
+            const getDurationStmt = db.prepare(`
+                SELECT SUM(timeTaken) as total FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const durationResult = getDurationStmt.get(sessionId);
+            duration = durationResult.total || 0;
+        }
+
+        // Insert into finishedsessions
+        const insertFinishedStmt = db.prepare(`
+            INSERT INTO finishedsessions (userId, mode, atlas, score, accuracy, duration)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, accuracy, duration);
     }
     // Respond with the result
     res.status(200).send({
         message: isCorrect ? "Correct guess!" : "Incorrect guess.",
         isCorrect,
-        endgame,
         regionId,
         voxelValue,
+        endgame,
+        accuracy,
+        finalScore,
     });
 }
