@@ -5,3 +5,6 @@ server/database.db
 server/config.json
 server/*.crt
 server/*.key
+
+.DS_Store
+.vscode/*
