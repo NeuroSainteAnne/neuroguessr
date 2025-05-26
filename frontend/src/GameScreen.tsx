@@ -91,6 +91,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [currentCorrects, setCurrentCorrects] = useState<number>(0);
   const [currentErrors, setCurrentErrors] = useState<number>(0);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const currentStreakRef = useRef<number>(0);
   const [finalStreak, setFinalStreak] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>("00:00");
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
@@ -101,7 +102,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
   const cMap = useRef<ColorMap | null>(null);
-  const cLut = useRef<Uint8Array | null>(null);
+  const cLut = useRef<Uint8ClampedArray | null>(null);
   const niivue = useRef(new Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
@@ -185,15 +186,32 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       niivue.current.opts.isSliceMM = true;
     }
   }
+  function generateRandomInts(quantity: number, max: number){
+    const arr = []
+    while(arr.length < quantity){
+      var candidateInt = Math.floor(Math.random() * max) + 1
+      if(arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
+    }
+    return(arr)
+  }
   const loadAtlasData = async () => {
     try {
       if (!askedAtlas) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       cMap.current = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
-        niivue.current.volumes[1].setColormapLabel(cMap.current);
-        const numRegions = Object.keys(cMap.current.labels || []).length;
-        console.log(`num regions : ${numRegions}`)
+        niivue.current.volumes[1].setColormapLabel(cMap.current)
+        niivue.current.volumes[1].setColormapLabel({
+          "R":generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "G":generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "B":generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "A":Array(1).fill(0).concat(Array((cMap.current.labels?.length || 0)-1).fill(255)),
+          "I":Array.from(Array(cMap.current.labels?.length || 0).keys()),
+          "labels":cMap.current.labels || [],
+        });
+        cLut.current = niivue.current.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
+        /*const numRegions = Object.keys(cMap.current.labels || []).length;
+        console.log(`num regions : ${numRegions}`, cMap.current.labels?.length, cMap.current.R.length, selectedAtlasFiles.json)
         cLut.current = new Uint8Array(numRegions * 4);
 
         if (askedAtlas === 'aal') {
@@ -225,8 +243,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           cLut.current[i * 4 + 3] = 255;
         }
 
-        if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
-        niivue.current.setOpacity(1, 0.6);
+        if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice()); */
+        niivue.current.setOpacity(1, viewerOptions.displayOpacity);
         niivue.current.updateGLVolume();
 
         const atlasData = niivue.current.volumes[1].getVolumeData();
@@ -240,8 +258,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         if (validRegions.current) console.log(`Valid Region Labels:`, validRegions.current.map(id => cMap.current?.labels?.[id]));
 
         if (validRegions.current.length === 0) {
-          console.error(`No valid regions found in ${selectedAtlasFiles.name} data.`);
-          console.log(`cmap.labels keys:`, Object.keys(cMap.current.labels || []));
+          console.warn(`No valid regions found in ${selectedAtlasFiles.name} data.`);
           validRegions.current = Object.keys(cMap.current.labels || [])
             .map(Number)
             .filter(val => val > 0 && Number.isInteger(val));
@@ -270,6 +287,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       setIsLoading(true);
     }
   }
+
+  useEffect(()=>{
+    currentStreakRef.current = currentStreak
+  }, [currentStreak])
 
   const resetGameState = () => {
     currentTarget.current = null;
@@ -456,8 +477,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         endTimeAttack();
         return;
       } else if (gameMode === 'streak') {
-        const myfinalStreak = currentStreak;
-        setFinalStreak(myfinalStreak); // Store the final streak before resetting
+        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
         setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
         setShowStreakOverlay(true);
         return;
@@ -486,7 +506,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       highlightRegionFluorescentYellow();
     } else { // reset to original color
       if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
         niivue.current.updateGLVolume();
         niivue.current.drawScene();
       }
@@ -606,7 +626,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       callback.setHeaderTextMode("success"); // Indicate correct guess visually
       if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
         niivue.current.updateGLVolume();
         niivue.current.drawScene(); // Redraw scene to ensure color reset is visible
       }
@@ -700,8 +720,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       } else if (gameMode === 'streak') {
         // Streak ends on incorrect guess
-        const myfinalStreak = currentStreak;
-        setFinalStreak(myfinalStreak); // Store the final streak before resetting
+        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
         setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
         // The streak label will be updated by updateGameDisplay called below
 
@@ -729,8 +748,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if(gameMode === 'time-attack'){
         endTimeAttack()
       } else if (gameMode === 'streak') {
-        const myfinalStreak = currentStreak;
-        setFinalStreak(myfinalStreak); // Store the final streak before resetting
+        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
         setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
         setShowStreakOverlay(true);
         return;
@@ -772,7 +790,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const handleRecolorization = () => {
     if (isGameRunning && gameMode === 'navigation') {
       if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
         niivue.current.updateGLVolume();
         niivue.current.drawScene();
       }
@@ -798,7 +816,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
       callback.setHeaderErrors(`${currentErrors}`);
     }
-    console.log("streak", currentStreak)
     if (gameMode === 'streak') {
       callback.setHeaderStreak(`${currentStreak}`);
     }
@@ -855,7 +872,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }
 
   useEffect(() => {
-    console.log("calleth", currentStreak)
     updateGameDisplay();
   }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 

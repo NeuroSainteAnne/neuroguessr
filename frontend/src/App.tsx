@@ -57,7 +57,7 @@ function App() {
       displayType: "MultiPlanarRender",
       radiologicalOrientation: true,
       displayAtlas: true,
-      displayOpacity: 1,
+      displayOpacity: 0.6,
    })
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const helpContentRef = useRef<HTMLDivElement>(null);

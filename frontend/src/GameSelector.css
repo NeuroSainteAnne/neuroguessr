@@ -122,6 +122,7 @@
 
 /* Container for Single Player Options (Atlas and Mode Selection) - Full Width */
 .single-player-options-container {
+    width: 90%; /* Changed to 90% as requested */
     max-width: none;
     /* Remove max-width constraint */
     display: flex;
@@ -129,6 +130,7 @@
     flex-direction: row;
     /* Keep row for inner sections */
     justify-content: center;
+    /* This will center the combined atlas and mode sections within the 90% width */
     align-items: stretch;
     gap: 3rem;
     /* Increased gap between atlas and mode sections */
@@ -183,9 +185,10 @@
 
 /* Atlas Selection Section Styles - Keep existing but adjust margins and flex-basis */
 .atlas-selection {
-    flex: 1;
-    min-width: 450px;
-    /* Increased min-width */
+    flex: 1 1 50%; /* Primary control for width */
+    width: auto;
+    min-width: 0; /* Allow shrinking if necessary, default to 0 */
+    max-width: none;
     margin: 0;
     text-align: left;
     min-height: auto;
@@ -195,10 +198,8 @@
 
 @media (min-width: 1024px) {
     .atlas-selection {
-        min-width: 400px;
-        /* Further increase min-width on larger screens */
         flex-basis: calc(50% - 1.5rem);
-        /* Half width minus gap */
+        /* Half width minus half of the gap (3rem total gap) */
         padding: 0.75rem;
         /* Added padding */
     }
@@ -206,8 +207,9 @@
 
 @media (max-width: 1023px) and (min-width: 481px) {
     .atlas-selection {
-        min-width: 300px;
-        /* Adjust min-width for tablets */
+        /* Consider adjusting this if you want them to stack or adjust more responsively on tablets */
+        flex-basis: 100%;
+        /* Example: if you want them to stack on tablets */
     }
 }
 
@@ -215,6 +217,8 @@
     .atlas-selection {
         min-width: auto;
         /* Remove min-width on mobile */
+        flex-basis: 100%;
+        /* Stack on mobile */
     }
 }
 
@@ -224,7 +228,6 @@
     .mode-selection {
         flex: 1;
         /* Allow sections to grow */
-        min-width: 350px;
         /* Increased min-width */
         margin: 0;
         text-align: left;
@@ -352,9 +355,8 @@
 
 /* Mode Selection Section Styles - Keep existing but adjust margins and min-width */
 .mode-selection {
-    flex: 1;
-    min-width: 300px;
-    /* Increased min-width */
+    flex: 1 1 50%; /* Primary control for width */
+    min-width: 0; /* Allow shrinking if necessary, default to 0 */
     text-align: center;
     min-height: 50vh;
     display: flex;
@@ -365,10 +367,8 @@
 
 @media (min-width: 1024px) {
     .mode-selection {
-        min-width: 350px;
-        /* Further increase min-width on larger screens */
         flex-basis: calc(50% - 1.5rem);
-        /* Half width minus gap */
+        /* Half width minus half of the gap (3rem total gap) */
         padding: 0.75rem;
         /* Added padding */
     }
@@ -376,8 +376,9 @@
 
 @media (max-width: 1023px) and (min-width: 481px) {
     .mode-selection {
-        min-width: 250px;
-        /* Adjust min-width for tablets */
+        /* Consider adjusting this if you want them to stack or adjust more responsively on tablets */
+        flex-basis: 100%;
+        /* Example: if you want them to stack on tablets */
     }
 }
 
@@ -385,6 +386,8 @@
     .mode-selection {
         min-width: auto;
         /* Remove min-width on mobile */
+        flex-basis: 100%;
+        /* Stack on mobile */
     }
 }
 
