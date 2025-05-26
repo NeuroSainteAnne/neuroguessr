@@ -35,12 +35,28 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
     - Arterial Atlas : "an atlas of brain arterial territories based on lesion distributions in 1,298 acute stroke patients. The atlas covers supra- and infra-tentorial regions and contains hierarchical segmentation levels created by a fusion of vascular and classical anatomical criteria. This deformable 3D digital atlas can be readily used by the clinical and research communities, enabling automatic and highly reproducible exploration of large-scaled data.". https://www.nature.com/articles/s41597-0
   - **JSON Files**: Label mappings for each atlas, used for region identification and display.
 
-## Server usage
+## Usage
 
-- Install modules with the command `npm install`
+1. Configure your server
+
 - copy **server/config-example.json** to **server/config.json** and change parameters accordingly
-- Put your server certificates in **server/server.crt** and **server/server.key** 
-- launch server from main folder with `node --experimental-strip-types .\server\server.ts`
+- (HTTPS only) Put your server certificates in **server/server.crt** and **server/server.key** 
+
+2. Transpile the neuroguessr frontend:
+
+```
+cd neuroguessr_frontend
+npm install
+npm run build
+cd ..
+```
+
+3. Launch the server
+
+```
+npm install 
+node --experimental-strip-types .\server\server.ts
+```
 
 ## License
 
