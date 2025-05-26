@@ -1,6 +1,5 @@
 node_modules/*
 package-lock.json
-data/*
 
 server/database.db
 server/config.json
