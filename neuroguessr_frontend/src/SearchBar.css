@@ -76,7 +76,7 @@
     border-radius: 50px;
     /* Or a very large pixel value like 50px or 50% */
     transition: border-color 0.2s, background 0.2s;
-    background-image: url('/neuroguessr_web/data/search.png');
+    background-image: url('assets/interface/search.png');
     background-position: 0.75rem center;
     background-repeat: no-repeat;
     background-size: 1.25rem;

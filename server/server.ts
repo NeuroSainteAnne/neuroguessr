@@ -29,46 +29,8 @@ app.get("/", (req: express.Request, res: express.Response) => {
 app.get("/index.html", (req: express.Request, res: express.Response) => {
     res.sendFile("index.html", { root: reactRoot });
 });
-app.get("/oldindex.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("index.html", { root: htmlRoot });
-});
-
-app.get("/login.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("login.html", { root: htmlRoot });
-});
-
-app.get("/register.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("register.html", { root: htmlRoot });
-});
-
-app.get("/config_user.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("config_user.html", { root: htmlRoot });
-});
-
-app.get("/reset_password.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("reset_password.html", { root: htmlRoot });
-});
-
-app.get("/viewer.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("viewer.html", { root: htmlRoot });
-});
-
-app.get("/neurotheka.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("neurotheka.html", { root: htmlRoot });
-});
-
-app.get("/stats.html", (req: express.Request, res: express.Response) => {
-    res.sendFile("stats.html", { root: htmlRoot });
-});
-
-app.get("/niivue.css", (req: express.Request, res: express.Response) => {
-    res.sendFile("niivue.css", { root: htmlRoot });
-});
 
 app.use("/assets", express.static(path.join(reactRoot, "assets")));
-app.use("/neuroguessr_web/scripts", express.static(path.join(htmlRoot, "scripts")));
-app.use("/neuroguessr_web/data", express.static(path.join(htmlRoot, "data")));
-app.use("/neuroguessr_web/dist", express.static(path.join(htmlRoot, "dist")));
 
 setInterval(() => {
     cleanExpiredTokens();

@@ -56,7 +56,7 @@ function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>,
                       {atlas.difficulty > 0 && (
                         <span className="difficulty-icons">
                           {[...Array(atlas.difficulty)].map((_, index) => (
-                            <img key={index} src="/neuroguessr_web/data/star.png" alt="Star" className="star-icon" />
+                            <img key={index} src="assets/interface/star.png" alt="Star" className="star-icon" />
                           ))}
                         </span>
                       )}

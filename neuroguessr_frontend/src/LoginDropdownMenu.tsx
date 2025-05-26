@@ -33,7 +33,7 @@ function LoginDropdownMenu({currentLanguage, t, callback, userFirstName, userLas
     return (
         <div id="user-dropdown-container" className="user-dropdown-container" ref={dropdownMenuRef}>
             <button id="user-menu-button" className="user-menu-button" onClick={()=>toggleDropdown()}>
-                <img src="/neuroguessr_web/data/user_brain.png" alt="User Icon" className="user-icon" />
+                <img src="assets/interface/user_brain.png" alt="User Icon" className="user-icon" />
                 <span id="welcome-username">{t('welcome_message', { "firstname": userFirstName })}</span>
                 <i className="fas fa-caret-down dropdown-arrow"></i>
             </button>
