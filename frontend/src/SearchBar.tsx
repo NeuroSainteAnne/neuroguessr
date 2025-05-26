@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import './Searchbar.css'
+import './SearchBar.css'
 import atlasFiles from './atlas_files'
 import { useRef, useState } from 'react';
 
