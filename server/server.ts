@@ -30,6 +30,11 @@ app.get("/index.html", (req: express.Request, res: express.Response) => {
     res.sendFile("index.html", { root: reactRoot });
 });
 
+app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
+    console.log(path.join(reactRoot, "assets", "favicon"))
+    res.sendFile("favicon.ico", { root: path.join(reactRoot, "assets", "favicon") });
+});
+
 app.use("/assets", express.static(path.join(reactRoot, "assets")));
 
 setInterval(() => {
