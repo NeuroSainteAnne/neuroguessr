@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>script automation</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="slide">Custom</label>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        class="slider"
+        id="slide"
+      />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <footer>
+      <textarea id="scriptText" name="customText" rows="8" cols="60">
+nv1.opts.isColorbar = !nv1.opts.isColorbar;&#10;nv1.opts.backColor[0] = 1 - nv1.opts.backColor[0]&#10;nv1.drawScene()&#10;document.getElementById("slide").onchange = function(){&#10;&nbsp;nv1.opts.backColor[1] = this.value / 100;&#10;&nbsp;nv1.drawScene();&#10;};&#10;</textarea
+      >
+      <button id="scriptButton">run script</button>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js";
+      document
+        .getElementById("scriptButton")
+        .addEventListener("click", doScript);
+      function doScript() {
+        var val = document.getElementById("scriptText");
+        val && eval(val.value);
+      }
+      var volumeList1 = [
+        {
+          url: "../images/mni152.nii.gz", 
+          colormap: "gray",
+          opacity: 1,
+          visible: true,
+        },
+      ];
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        backColor: [1, 0.5, 1, 1],
+      });
+      nv1.setSliceType(nv1.sliceTypeRender);
+      await nv1.attachTo("gl1");
+      nv1.loadVolumes(volumeList1);
+      nv1.loadMeshes([
+        {
+          url: "../images/BrainMesh_ICBM152.lh.mz3",
+          rgba255: [222, 164, 164, 255],
+        },
+        { url: "../images/motor_4t95mesh.rh.mz3", rgba255: [0, 0, 255, 255] },
+      ]);
+      nv1.setClipPlane([0.1, 0, 145]);
+      nv1.setRenderAzimuthElevation(100, 25);
+    </script>
+  </body>
+</html>

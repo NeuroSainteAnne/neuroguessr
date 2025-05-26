@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Mosaics</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <button id="about">Mosaic string:</button>
+      <input
+        type="text"
+        id="str"
+        value="A 0 L+ 50 L- 60 C -10 0 S 40; A X 0 S X 0 C X 0 R A X 0 R S X 0 R C X 0"
+        required
+        minlength="2"
+        maxlength="128"
+        size="128"
+      />
+      <p>
+        <label for="radioCheck">Radiological</label>
+        <input type="checkbox" id="radioCheck" unchecked />
+        <label for="mmCheck">&nbsp; World space</label>
+        <input type="checkbox" id="mmCheck" unchecked />
+        <label for="rulerCheck">&nbsp; Ruler</label>
+        <input type="checkbox" id="rulerCheck" unchecked />
+        <label for="sagCheck">&nbsp; Nose left</label>
+        <input type="checkbox" id="sagCheck" unchecked />
+        <label for="colorbarCheck">&nbsp; Colorbar</label>
+        <input type="checkbox" id="colorbarCheck" checked />
+        <label for="negativeCheck">&nbsp; Negative colors</label>
+        <input type="checkbox" id="negativeCheck" checked />
+        <label for="cubeCheck">&nbsp; Cube</label>
+        <input type="checkbox" id="cubeCheck" unchecked />
+        <label for="dpiCheck">&nbsp; HighDPI</label>
+        <input type="checkbox" id="dpiCheck" checked />
+        <label for="gamma">&nbsp; Gamma</label>
+        <input
+          type="range"
+          min="1"
+          max="20"
+          value="10"
+          class="slider"
+          id="gamma"
+        />
+        <label for="dragMode">&nbsp; Drag mode</label>
+        <select id="dragMode">
+          <option value="contrast">contrast</option>
+          <option value="measurement">measurement</option>
+          <option value="none">none</option>
+        </select>
+      </p>
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      dragMode.onchange = function () {
+        switch (document.getElementById("dragMode").value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none
+            break
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast
+            break
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement
+            break
+        }
+      }
+      gamma.oninput = function () {
+        nv1.setGamma(0.1 * this.value)
+      }
+      radioCheck.onchange = function () {
+        nv1.setRadiologicalConvention(this.checked)
+      }
+      mmCheck.onchange = function () {
+        nv1.setSliceMM(this.checked)
+      }
+      rulerCheck.onchange = function () {
+        nv1.opts.isRuler = this.checked
+        nv1.drawScene()
+      }
+      sagCheck.onchange = function () {
+        nv1.opts.sagittalNoseLeft = this.checked
+        nv1.drawScene()
+      }
+      colorbarCheck.onchange = function () {
+        nv1.opts.isColorbar = this.checked
+        nv1.drawScene()
+      }
+      negativeCheck.onchange = function () {
+        if (this.checked) nv1.setColormapNegative(nv1.volumes[1].id, "winter")
+        else nv1.setColormapNegative(nv1.volumes[1].id, "")
+        nv1.drawScene()
+      }
+      cubeCheck.onchange = function () {
+        nv1.opts.isOrientCube = this.checked
+        nv1.drawScene()
+      }
+      dpiCheck.onchange = function () {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+      str.onkeyup = function () {
+        nv1.setSliceMosaicString(txt.value)
+      }
+      about.onclick = function () {
+        window.alert(
+          "Choose axial (A), coronal (C) or sagittal (S) slices. Modify with cross slices (X) and renderings (R)."
+        )
+      }
+      var volumeList1 = [
+        {
+          url: "../images/fslmean.nii.gz",
+          colormap: "gray",
+        },
+        {
+          url: "../images/fslt.nii.gz",
+          colormap: "warm",
+          colormapNegative: "winter",
+          cal_min: 1,
+          cal_max: 6,
+        },
+      ]
+      var nv1 = new niivue.Niivue({ backColor: [1, 1, 1, 1] })
+      await nv1.attachTo("gl1")
+      await nv1.loadVolumes(volumeList1)
+      nv1.volumes[0].colorbarVisible = false //hide colorbar for anatomical scan
+      var txt = document.getElementById("str")
+      nv1.setSliceType(nv1.sliceTypeAxial)
+      nv1.opts.isColorbar = true
+      nv1.setSliceMosaicString(txt.value)
+    </script>
+  </body>
+</html>

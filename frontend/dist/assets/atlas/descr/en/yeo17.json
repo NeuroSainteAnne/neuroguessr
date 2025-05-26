@@ -1,0 +1,6 @@
+{
+	"R" : [0, 120, 91, 162, 173, 74, 214, 27, 45, 152, 71, 110, 136, 118, 4, 227, 161, 218],
+	"G" : [0, 123, 234, 6, 43, 250, 97, 115, 114, 177, 155, 3, 104, 224, 36, 131, 142, 11],
+	"B" : [0, 114, 143, 119, 190, 18, 226, 128, 98, 103, 90, 126, 204, 86, 63, 200, 217, 182],
+	"labels" : ["Unknown", "Visual-A","Visual-B","Motor-A","Motor-B","Dorsal-Attention-B","Dorsal-Attention-A","Ventral-Attention-A","Fronto-Parietal-A","Limbic-A","Limbic-B","Fronto-Parietal-B","Fronto-Parietal-C","Fronto-Parietal-D","Motor-C","Default-C","Default-A","Default-B"]
+}

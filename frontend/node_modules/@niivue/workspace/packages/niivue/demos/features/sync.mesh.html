@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>sync Mesh</title>
+    <link rel="stylesheet" href="light.css" />
+  </head>
+  <body>
+    <noscript>niivue requires JavaScript.</noscript>
+    <header>
+      <label for="dpiCheck">HighDPI</label>
+      <input type="checkbox" id="dpiCheck" unchecked />
+      <label for="zoomCheck"> 2D/3D Zoom Sync</label>
+      <input type="checkbox" id="zoomCheck" unchecked />
+      <label for="sliceType"> View</label>
+      <select id="sliceType">
+        <option value="0">Axial</option>
+        <option value="1">Coronal</option>
+        <option value="2">Sagittal</option>
+        <option value="4">Render</option>
+        <option value="3" selected>A+C+S+R</option>
+      </select>
+      <label for="controller"> Broadcast</label>
+      <select id="controller">
+        <option value="0">Independent</option>
+        <option value="1"  selected>Top Controls Bottom</option>
+        <option value="2">Bottom Controls Top</option>
+        <option value="3">Bidirectional</option>
+      </select>
+      <label for="dragMode"> Drag</label>
+      <select id="dragMode">
+        <option value="contrast" selected>contrast</option>
+        <option value="measurement">measurement</option>
+        <option value="pan">pan/zoom</option>
+        <option value="none">none</option>
+      </select>
+      <label for="dxSlider"> Mesh clipping</label>
+      <input
+        type="range"
+        min="0"
+        max="11"
+        value="11"
+        class="slider"
+        id="dxSlider"
+      />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <main>
+      <canvas id="gl2"></canvas>
+    </main>
+    <footer>
+      <x id="intensity"> &nbsp;</x>
+      <x id="intensity2"> &nbsp;</x>
+    </footer>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      sliceType.onchange = function() {
+        let st = parseInt(document.getElementById("sliceType").value)
+        nv1.setSliceType(st)
+        nv2.setSliceType(st)
+      }
+      controller.onchange = function() {
+        let v = parseInt(controller.value)
+        if ((v & 1) > 0)
+            nv1.broadcastTo([nv2], { "3d": true, "2d": true })
+        else
+            nv1.broadcastTo()
+        if ((v & 2) > 0)
+            nv2.broadcastTo([nv1], { "3d": true, "2d": true })
+        else
+            nv2.broadcastTo()
+      }
+      dragMode.onchange = function () {
+        switch (dragMode.value) {
+          case "none":
+            nv1.opts.dragMode = nv1.dragModes.none;
+            break;
+          case "contrast":
+            nv1.opts.dragMode = nv1.dragModes.contrast;
+            break;
+          case "measurement":
+            nv1.opts.dragMode = nv1.dragModes.measurement;
+            break;
+          case "pan":
+            nv1.opts.dragMode = nv1.dragModes.pan;
+            break;
+        }
+        nv2.opts.dragMode = nv1.opts.dragMode
+      }
+      dpiCheck.onchange = function() {
+        nv1.setHighResolutionCapable(this.checked)
+      }
+      zoomCheck.onchange = function() {
+        nv1.opts.yoke3Dto2DZoom = this.checked
+        nv2.opts.yoke3Dto2DZoom = this.checked
+        if (this.checked) {
+          nv1.scene.volScaleMultiplier = nv1.scene.pan2Dxyzmm[3]
+          nv2.scene.volScaleMultiplier = nv2.scene.pan2Dxyzmm[3]
+          nv1.drawScene()
+          nv2.drawScene()
+        }
+      }
+      dxSlider.oninput = function () {
+        let dx = parseFloat(this.value)
+        if (dx > 10) dx = Infinity
+        nv1.setMeshThicknessOn2D(dx)
+      }
+      function handleIntensityChange(data) {
+        document.getElementById("intensity").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      function handleIntensityChange2(data) {
+        document.getElementById("intensity2").innerHTML =
+          "&nbsp;&nbsp;" + data.string
+      }
+      var nv1 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange,
+        backColor: [1, 1, 1, 1],
+      })
+      await nv1.attachTo("gl1")
+      nv1.setHighResolutionCapable(false)
+      nv1.opts.isOrientCube = true
+      var volumeList1 = [{ url: "../images/mni152.nii.gz" }]
+      await nv1.loadVolumes(volumeList1)
+      await nv1.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      nv1.setMeshShader(0, "Outline")
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+      nv1.setSliceType(nv1.sliceTypeMultiplanar)
+      nv1.setSliceMM(true)
+      nv1.setClipPlane([0, 180, 40])
+      //
+      var nv2 = new niivue.Niivue({
+        show3Dcrosshair: true,
+        onLocationChange: handleIntensityChange2,
+        backColor: [1, 1, 1, 1],
+      })
+      await nv2.attachTo("gl2")
+      nv2.setHighResolutionCapable(true)
+      await nv2.loadVolumes(volumeList1)
+      await nv2.loadMeshes([{ url: "../images/BrainMesh_ICBM152.lh.mz3" }])
+      nv2.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS
+      nv2.setSliceType(nv2.sliceTypeMultiplanar)
+      nv2.setSliceMM(true)
+      nv2.setClipPlane([0, 180, 40])
+      controller.onchange()
+    </script>
+  </body>
+</html>

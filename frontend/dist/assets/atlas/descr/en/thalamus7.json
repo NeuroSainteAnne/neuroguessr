@@ -1,0 +1,28 @@
+{
+	"R": [
+		0, 255, 255, 0, 0, 220, 240, 178, 46, 199, 124, 218, 65, 255, 50
+	],
+	"G": [
+		0, 0, 215, 200, 105, 20, 230, 34, 139, 21, 252, 165, 105, 50, 110
+	],
+	"B": [
+		0, 0, 0, 80, 255, 60, 140, 34, 87, 133, 0, 32, 225, 10, 76
+	],
+	"labels": [
+		"Background",
+		"LH-Pulvinar",
+		"LH-Anterior",
+		"LH-Medio_Dorsal",
+		"LH-Ventral_Latero_Dorsal",
+		"LH-Central_Lateral-Lateral_Posterior-Medial_Pulvinar",
+		"LH-Ventral_Anterior",
+		"LH-Ventral_Latero_Ventral",
+		"RH-Pulvinar",
+		"RH-Anterior",
+		"RH-Medio_Dorsal",
+		"RH-Ventral_Latero_Dorsal",
+		"RH-Central_Lateral-Lateral_Posterior-Medial_Pulvinar",
+		"RH-Ventral_Anterior",
+		"RH-Ventral_Latero_Ventral"
+	]
+}
