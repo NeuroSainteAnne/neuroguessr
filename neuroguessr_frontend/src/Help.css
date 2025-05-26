@@ -1,28 +1,46 @@
-
 /* --- Help Button and Overlay Styles --- */
 
 .help-button {
     position: fixed;
-    bottom: 20px; /* Distance from bottom */
-    right: 20px; /* Distance from right */
-    width: 50px; /* Button size */
+    bottom: 20px;
+    /* Distance from bottom */
+    right: 20px;
+    /* Distance from right */
+    width: 50px;
+    /* Button size */
     height: 50px;
-    border-radius: 50%; /* Make it round */
-    background-color: rgb(63, 109, 159); /* Button background color */
-    color: white; /* Icon color */
-    font-size: 1.5rem; /* Icon size */
+    border-radius: 50%;
+    /* Make it round */
+    background-color: rgb(63, 109, 159);
+    /* Button background color */
+    color: white;
+    /* Icon color */
+    font-size: 1.5rem;
+    /* Icon size */
     border: none;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    z-index: 1000; /* Ensure it's above other content */
+    z-index: 1000;
+    /* Ensure it's above other content */
     transition: background-color 0.2s ease-in-out;
 }
 
 .help-button:hover {
-    background-color: #345a85; /* Darker shade on hover */
+    background-color: #345a85;
+    /* Darker shade on hover */
+}
+
+@media (max-width: 480px) {
+    .help-button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+        bottom: 15px;
+        right: 15px;
+    }
 }
 
 .help-overlay {
@@ -31,64 +49,129 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
-    z-index: 2000; /* Ensure it's above everything else */
+    background: rgba(0, 0, 0, 0.6);
+    /* Semi-transparent black background */
+    z-index: 2000;
+    /* Ensure it's above everything else */
     display: flex;
-    justify-content: center;   /* Center horizontally */
-    align-items: center;       /* Center vertically */
-    opacity: 1; /* Start with opacity 1 */
-    transition: opacity 0.3s ease-in-out; /* Smooth transition */
-    backdrop-filter: blur(10px); /* Apply blur effect */
-    -webkit-backdrop-filter: blur(10px); /* For Safari */
+    justify-content: center;
+    /* Center horizontally */
+    align-items: center;
+    /* Center vertically */
+    opacity: 1;
+    /* Start with opacity 1 */
+    transition: opacity 0.3s ease-in-out;
+    /* Smooth transition */
+    backdrop-filter: blur(10px);
+    /* Apply blur effect */
+    -webkit-backdrop-filter: blur(10px);
+    /* For Safari */
 }
 
 .help-overlay.hidden {
-    opacity: 0; /* Fade out when hidden */
-    pointer-events: none; /* Disable interactions when hidden */
+    opacity: 0;
+    /* Fade out when hidden */
+    pointer-events: none;
+    /* Disable interactions when hidden */
 }
 
 .help-content {
-    background: rgba(54, 54, 54, 0.95); /* Slightly transparent dark background */
+    background: rgba(54, 54, 54, 0.95);
+    /* Slightly transparent dark background */
     color: #d9dddc;
     padding: 2rem;
     border-radius: 0.75rem;
-    max-width: 800px; /* Max width of the help content */
-    max-height: 90vh; /* Max height of the help content */
-    overflow-y: auto; /* Add scroll if content exceeds height */
-    position: relative; /* Needed for close button positioning */
+    max-width: 800px;
+    /* Max width of the help content */
+    max-height: 90vh;
+    /* Max height of the help content */
+    overflow-y: auto;
+    /* Add scroll if content exceeds height */
+    position: relative;
+    /* Needed for close button positioning */
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    width: 90%; /* Responsive width */
-    box-sizing: border-box; /* Include padding in width */
-    text-align: left; /* Justify elements to the left */
+    width: 90%;
+    /* Responsive width */
+    box-sizing: border-box;
+    /* Include padding in width */
+    text-align: left;
+    /* Justify elements to the left */
 }
 
 .help-content h2 {
     margin-top: 0;
-    text-align: left; /* Justify h2 to the left */
-    color: #ffffff; /* White color for the main title */
+    text-align: left;
+    /* Justify h2 to the left */
+    color: #ffffff;
+    /* White color for the main title */
 }
 
 
 .help-content h3 {
     margin-top: 1.5rem;
     margin-bottom: 0.75rem;
-    color: #b0c4de; /* Lighter color for section titles */
-    border-bottom: 1px solid #808588; /* Separator line */
+    color: #b0c4de;
+    /* Lighter color for section titles */
+    border-bottom: 1px solid #808588;
+    /* Separator line */
     padding-bottom: 0.5rem;
-    text-align: left; /* Justify h3 to the left */
+    text-align: left;
+    /* Justify h3 to the left */
 }
 
 .help-content p {
     margin-bottom: 1rem;
     line-height: 1.6;
-    color: #c0c0c0; /* Lighter color for paragraph text */
-    text-align: left; /* Justify paragraphs to the left */
+    color: #c0c0c0;
+    /* Lighter color for paragraph text */
+    text-align: left;
+    /* Justify paragraphs to the left */
 }
 
 .help-content a {
-    color: inherit; /* Links will inherit the text color of their parent element */
-    text-decoration: underline; /* Ensure links are underlined */
-    font-weight: bold; /* Make links bold */
+    color: inherit;
+    /* Links will inherit the text color of their parent element */
+    text-decoration: underline;
+    /* Ensure links are underlined */
+    font-weight: bold;
+    /* Make links bold */
+}
+
+@media (max-width: 768px) {
+    .help-content {
+        padding: 1.5rem;
+        max-width: 95%;
+    }
+
+    .help-content h2 {
+        font-size: 1.8rem;
+    }
+
+    .help-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .help-content p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .help-content {
+        padding: 1rem;
+    }
+
+    .help-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .help-content h3 {
+        font-size: 1rem;
+    }
+
+    .help-content p {
+        font-size: 0.85rem;
+    }
 }
 
 .close-button {
@@ -105,6 +188,20 @@
 }
 
 .close-button:hover {
-    color: #ffffff; /* White color on hover */
+    color: #ffffff;
+    /* White color on hover */
 }
 
+@media (max-width: 768px) {
+    .close-button {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .close-button {
+        font-size: 1.5rem;
+        top: 5px;
+        right: 5px;
+    }
+}

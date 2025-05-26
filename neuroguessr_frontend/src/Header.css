@@ -10,6 +10,7 @@
     flex-shrink: 0;
     position: relative;
     top: 0;
+    margin-bottom: 10px;
     z-index: 1000;
     /* border-bottom: 1px solid #555; /* Removed border here */
 }
@@ -24,18 +25,19 @@
 }
 
 .navbar-left.logo-title-container-navbar {
-     /* Used in index page header */
+    /* Used in index page header */
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
 .logo-title-container-navbar h1 {
-     font-size: 3.5rem; /* Increased h1 size for navbar */
+    font-size: 3.5rem;
+    /* Increased h1 size for navbar */
 }
 
 .navbar-right {
-     /* Used in index page header */
+    /* Used in index page header */
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -44,9 +46,11 @@
 .logo-title-container h1 {
     margin: 0;
     cursor: pointer;
-    text-align: center; /* Default for index page */
+    text-align: center;
+    /* Default for index page */
     transition: transform 0.2s ease-in-out;
 }
+
 .logo-title-container h1:hover {
     transform: scale(1.02);
     cursor: pointer;
@@ -56,6 +60,68 @@
     height: 4rem;
     width: auto;
     image-rendering: optimizeQuality;
+}
+
+/* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
+@media (min-width: 1024px) {
+    .navbar-container {
+        flex-direction: row;
+        /* Changed back to row for wider screens */
+        gap: 1rem;
+    }
+
+    .navbar-left,
+    .navbar-right {
+        width: auto;
+        /* Allow width to be determined by content */
+        justify-content: flex-start;
+        /* Align to start */
+    }
+
+    .navbar-left.logo-title-container-navbar {
+        justify-content: flex-start;
+        /* Align to start */
+    }
+
+    .logo-title-container-navbar h1 {
+        font-size: 3.5rem;
+        /* Increased h1 size for navbar */
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0.5rem 1vw;
+    }
+
+    .logo {
+        height: 2.5rem;
+        /* Further reduce logo size */
+    }
+
+    .logo-title-container-navbar h1 {
+        font-size: 2.5rem;
+        /* Adjusted h1 size */
+    }
+}
+
+/* Mobile Layout (max-width 480px) */
+@media (max-width: 480px) {
+    .logo-title-container-navbar h1 {
+        font-size: 2rem;
+        /* Adjusted h1 size */
+    }
+
+    .logo {
+        display: none;
+        /* Hide logo completely on smallest screens */
+    }
+
+    /* Order language switcher before dropdown in Viewer header on mobile */
+    header:has(.game-status) .header-controls-right .language-switcher {
+        order: -1;
+        /* Place before other items */
+    }
 }
 
 /* Language Switcher - Keep existing */
@@ -73,7 +139,8 @@
     border-radius: 50px;
     transition: border-color 0.3s ease;
     margin: 0 3px;
-     opacity: 0.9; /* Added opacity */
+    opacity: 0.9;
+    /* Added opacity */
 }
 
 .lang-icon-btn img {
@@ -94,7 +161,8 @@
 
 /* Sign-in button for guest mode */
 .guest-sign-in-button {
-    background-color: rgb(63, 109, 159); /* A prominent blue */
+    background-color: rgb(63, 109, 159);
+    /* A prominent blue */
     color: white;
     padding: 10px 20px;
     border: none;
@@ -102,58 +170,12 @@
     cursor: pointer;
     font-size: 1em;
     transition: background-color 0.3s ease;
-    margin-left: 15px; /* Spacing from language switcher */
+    margin-left: 15px;
+    /* Spacing from language switcher */
 }
 
 .guest-sign-in-button:hover {
     opacity: 0.85;
-}
-
-
-/* Media Queries for Responsive Design (Adjusted for Navbar and other elements) */
-@media (min-width: 1024px) {
-    .navbar-container {
-        flex-direction: row; /* Changed back to row for wider screens */
-        gap: 1rem;
-    }
-    .navbar-left,
-    .navbar-right {
-        width: auto; /* Allow width to be determined by content */
-        justify-content: flex-start; /* Align to start */
-    }
-     .navbar-left.logo-title-container-navbar {
-        justify-content: flex-start; /* Align to start */
-    }
-     .logo-title-container-navbar h1 {
-         font-size: 3.5rem; /* Increased h1 size for navbar */
-    }
-}
-
-@media (max-width: 768px) {
-     .navbar {
-        padding: 0.5rem 1vw;
-    }
-    .logo {
-        height: 2.5rem; /* Further reduce logo size */
-    }
-    .logo-title-container-navbar h1 {
-         font-size: 2.5rem; /* Adjusted h1 size */
-    }
-}
-
-/* Mobile Layout (max-width 480px) */
-@media (max-width: 480px) {
-     .logo-title-container-navbar h1 {
-         font-size: 2rem; /* Adjusted h1 size */
-    }
-    .logo {
-        display: none; /* Hide logo completely on smallest screens */
-    }
-    
-    /* Order language switcher before dropdown in Viewer header on mobile */
-    header:has(.game-status) .header-controls-right .language-switcher {
-        order: -1; /* Place before other items */
-    }
 }
 
 /* Center box */
@@ -162,41 +184,57 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex:1;
+    flex: 1;
     flex-direction: column;
-    flex-grow: 1; /* Allow it to grow and take available space */
+    flex-grow: 1;
+    /* Allow it to grow and take available space */
 }
 
 .target-label-container {
     display: flex;
-    flex-direction: column; /* Stack region text */
-    align-items: center; 
+    flex-direction: column;
+    /* Stack region text */
+    align-items: center;
     justify-content: center;
     width: 100%;
     margin: 0;
     padding: 0;
-    flex-basis: auto; /* Allow content width */
+    flex-basis: auto;
+    /* Allow content width */
     flex-shrink: 0;
-    align-self: flex-start; /* Align to the start of the cross axis */
-    margin-top: 0.2rem; /* Pull region text closer to the title */
+    align-self: flex-start;
+    /* Align to the start of the cross axis */
+    margin-top: 0.2rem;
+    /* Pull region text closer to the title */
     margin-left: 0;
-    text-align: left; /* Align text to the left */
+    text-align: left;
+    /* Align text to the left */
 }
 
 .target-label-container p {
-    margin: 0; /* Remove extra margin */
-    text-align: left; /* Align text to the left */
+    margin: 0;
+    /* Remove extra margin */
+    text-align: left;
+    /* Align text to the left */
 }
 
 .target-label-container .target-text {
-    font-style: italic; /* Make the region text italic */
-    font-size: 1.2rem; /* Slightly smaller than h1, larger than body */
-    font-weight: 400; /* Adjust font weight */
-    background: none; /* Remove background */
-    padding: 0; /* Remove padding */
-    border-radius: 0; /* Remove border radius */
-    color: #d9dddc; /* Ensure correct color */
-    text-align: left; /* Align text to the left */
+    font-style: italic;
+    /* Make the region text italic */
+    font-size: 1.2rem;
+    /* Slightly smaller than h1, larger than body */
+    font-weight: 400;
+    /* Adjust font weight */
+    background: none;
+    /* Remove background */
+    padding: 0;
+    /* Remove padding */
+    border-radius: 0;
+    /* Remove border radius */
+    color: #d9dddc;
+    /* Ensure correct color */
+    text-align: left;
+    /* Align text to the left */
 }
 
 .score-error-container {
@@ -205,6 +243,7 @@
     justify-content: center;
     gap: 1rem;
 }
+
 .score-error-label,
 #score-label,
 #error-label,
@@ -215,96 +254,35 @@
     margin: 0.25rem 0;
 }
 
+@media (max-width: 768px) {
+
+    .score-error-container,
+    #score-label,
+    #error-label,
+    #streak-label,
+    #time-label {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .score-error-container,
+    #score-label,
+    #error-label,
+    #streak-label,
+    #time-label {
+        font-size: 0.9rem;
+        gap: 0.5rem;
+    }
+}
+
 .streak-flame-icon-small {
-    height: 1em; /* Half the size of the parent font */
-    vertical-align: middle; /* Align vertically with text */
-    margin-right: 0.2em; /* Small space between icon and number */
+    height: 1em;
+    /* Half the size of the parent font */
+    vertical-align: middle;
+    /* Align vertically with text */
+    margin-right: 0.2em;
+    /* Small space between icon and number */
 }
 
-/* Dropdown Menu Styles - Keep existing */
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-.dropbtn {
-    color: #d9dddc;
-    font-size: 1.25rem;
-    font-weight: 600;
-    padding: 0.5rem 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-align: left;
-     opacity: 0.9; /* Added opacity */
-}
-.dropbtn:hover,
-.dropbtn:active {
-    background: transparent;
-}
-
-.hamburger {
-    display: inline-flex;
-    align-items: center;
-}
-
-.hamburger svg {
-    width: 1.5rem;
-    height: 1.125rem;
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: rgba(42, 42, 42, 0.9); /* Add opacity */
-    width: auto;
-    min-width: 12rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    border-radius: 0.5rem;
-    border: 1px solid #808588;
-    right: 0;
-    opacity: 1; /* Start with opacity 1 */
-    transition: opacity 0.1s ease-in-out; /* Smooth transition */
-}
-.dropdown:hover .dropdown-content {
-    display: block;
-}
-.dropdown-content a {
-    color: #d9dddc;
-    font-weight: 500;
-    font-size: 0.875rem;
-    padding: 0.75rem 1rem;
-    text-decoration: none;
-    display: block;
-    white-space: nowrap;
-}
-.dropdown-content a:hover {
-    background-color: rgba(54, 54, 54, 0.9); /* Add opacity */
-}
-.dropdown-content .dropdown-item-checked::before {
-    content: '✓ ';
-    color: #4ade80;
-}
-.dropdown-content .divider {
-    border-top: 1px solid #808588;
-    margin: 0.5rem 0;
-}
-.slider-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-}
-.slider {
-    width: 6rem;
-    margin: 0;
-}
-.slider-label {
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 500;
-    white-space: nowrap;
-}

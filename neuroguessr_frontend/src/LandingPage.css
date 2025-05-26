@@ -36,7 +36,8 @@
 
 /* Sign-in Panel Styling (similar to existing button/panel styles in niivue.css if applicable) */
 .sign-in-panel {
-    background-color: rgba(0,0,0, 0); /* Slightly transparent dark background */
+    background-color: rgba(0, 0, 0, 0);
+    /* Slightly transparent dark background */
     padding: 30px;
     border-radius: 8px;
     width: 70%;
@@ -56,7 +57,8 @@
 .sign-in-options-container {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Space between buttons */
+    gap: 15px;
+    /* Space between buttons */
 }
 
 .option-button {
@@ -68,29 +70,35 @@
     font-size: 1.3em;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
-    font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif; /* Consistent font */
-    font-weight: 400; /* Make buttons a bit bolder */
+    font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
+    /* Consistent font */
+    font-weight: 400;
+    /* Make buttons a bit bolder */
 }
 
 /* Button specific colors, trying to fit the existing theme */
 .sign-in-button {
-    background-color: rgb(63, 109, 159); /* A standard blue, common in modern UIs */
+    background-color: rgb(63, 109, 159);
+    /* A standard blue, common in modern UIs */
     color: white;
 }
 
 .sign-up-button {
-    background-color: #545454; /* A standard green for success/register */
+    background-color: #545454;
+    /* A standard green for success/register */
     color: white;
 }
 
 .continue-button {
-    background-color: #545454; /* A standard grey for neutral actions */
+    background-color: #545454;
+    /* A standard grey for neutral actions */
     color: white;
 }
 
 .option-button:hover {
-/*            transform: translateY(-2px);*/
-    opacity: 0.85; /* Slightly reduce opacity on hover */
+    /*            transform: translateY(-2px);*/
+    opacity: 0.85;
+    /* Slightly reduce opacity on hover */
 }
 
 /* Responsive Adjustments (keeping original niivue.css media queries in mind) */

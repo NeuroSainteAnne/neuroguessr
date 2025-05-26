@@ -1,7 +1,8 @@
 /* --- Login Box Styles --- */
 
 .login-box {
-    background-color: rgba(40, 40, 40, 0.3); /* A slightly lighter dark background for the box */
+    background-color: rgba(40, 40, 40, 0.3);
+    /* A slightly lighter dark background for the box */
     padding: 40px;
     border-radius: 12px;
     width: 100%;
@@ -9,24 +10,28 @@
     text-align: center;
     box-sizing: border-box;
     position: relative;
-    border: 1px solid rgba(255, 255, 255, 0); /* Subtle light border for definition */
+    border: 1px solid rgba(255, 255, 255, 0);
+    /* Subtle light border for definition */
 }
 
 .login-box h2 {
     margin-bottom: 30px;
-    color: #E0E0E0; /* Light heading color for contrast */
+    color: #E0E0E0;
+    /* Light heading color for contrast */
     font-size: 2.2em;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
 
 #login_error {
-    color: #FF7070; /* Brighter red for error messages on dark background */
+    color: #FF7070;
+    /* Brighter red for error messages on dark background */
     font-size: 0.9em;
     height: 20px;
     text-align: center;
     margin-top: 10px;
 }
+
 #login_success {
     font-size: 0.9em;
     height: 20px;
@@ -38,7 +43,8 @@
     margin-top: 30px;
 }
 
-.login-element { /* This class is reused for the table structure */
+.login-element {
+    /* This class is reused for the table structure */
     width: 100%;
     margin-bottom: 20px;
     border-collapse: collapse;
@@ -62,51 +68,62 @@
 /* RECOVERY */
 
 .modal {
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 0, 0, 0); 
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0);
 }
 
 .modal-content {
-  background-color: #3f3f3f;
-  margin: 15% auto;
-  padding: 20px;
-  border: 1px solid rgba(0, 0, 0, 0);
-  width: 30%;
-  border-radius: 8px;
-  text-align: center;
+    background-color: #3f3f3f;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid rgba(0, 0, 0, 0);
+    width: 30%;
+    border-radius: 8px;
+    text-align: center;
 }
 
 
 
-.form-field { /* New class for all input fields you want styled identically */
+.form-field {
+    /* New class for all input fields you want styled identically */
     width: 100%;
     padding: 12px 10px;
-    background-color: #3B3B3B; /* Darker input background */
-    border: 1px solid rgba(0, 0, 0, 0); /* Transparent border */
-    border-radius: 50px; /* Fully rounded corners */
+    background-color: #3B3B3B;
+    /* Darker input background */
+    border: 1px solid rgba(0, 0, 0, 0);
+    /* Transparent border */
+    border-radius: 50px;
+    /* Fully rounded corners */
     font-size: 1em;
-    color: #E0E0E0; /* Light text color inside inputs */
+    color: #E0E0E0;
+    /* Light text color inside inputs */
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .form-field:focus {
-    border-color: rgb(63, 109, 159); /* Your specific blue on focus */
+    border-color: rgb(63, 109, 159);
+    /* Your specific blue on focus */
 }
-.form-button { /* New class for all buttons you want styled identically */
-    background-color: rgb(63, 109, 159); /* Your specific blue button color */
-    color: #d9dddc; /* Light text for button for contrast */
+
+.form-button {
+    /* New class for all buttons you want styled identically */
+    background-color: rgb(63, 109, 159);
+    /* Your specific blue button color */
+    color: #d9dddc;
+    /* Light text for button for contrast */
     padding: 14px 25px;
     border: none;
-    border-radius: 50px; /* Fully rounded corners */
+    border-radius: 50px;
+    /* Fully rounded corners */
     font-size: 1.1em;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
@@ -116,15 +133,18 @@
 }
 
 .form-button:hover {
-    background-color: #728AD2; /* Darker shade on hover */
-    transform: translateY(-2px); /* Slight lift on hover */
+    background-color: #728AD2;
+    /* Darker shade on hover */
+    transform: translateY(-2px);
+    /* Slight lift on hover */
 }
 
 
 .modal-content h2 {
     margin-bottom: 20px;
     color: #E0E0E0;
-    font-size: 2em; /* Slightly smaller for modal heading */
+    font-size: 2em;
+    /* Slightly smaller for modal heading */
     font-weight: 600;
     text-align: left;
 
@@ -140,37 +160,55 @@
 
 /* Input specific to the modal (already covered by input[type="email"] above, but for clarity) */
 #recovery-email {
-    margin-bottom: 15px; /* Space between input and button */
+    margin-bottom: 15px;
+    /* Space between input and button */
 }
 
 /* Button specific to the modal (already covered by #send-recovery-email above) */
 #send-recovery-email {
-    margin-top: 10px; /* Adjust as needed for spacing */
+    margin-top: 10px;
+    /* Adjust as needed for spacing */
 }
 
 
 
 .close-button {
-  color: #aaa;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  position: absolute;
-  top: 10px; /* Distance from the top edge of .modal-content */
-  right: 20px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    /* Distance from the top edge of .modal-content */
+    right: 20px;
 }
 
 .close-button:hover,
 .close-button:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .close-button {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .close-button {
+        font-size: 1.5rem;
+        top: 5px;
+        right: 5px;
+    }
 }
 
 .recovery-message {
-  margin-top: 10px;
-  font-size: 14px;
+    margin-top: 10px;
+    font-size: 14px;
 }
+
 #recovery_error {
-  color: #FF7070;
+    color: #FF7070;
 }

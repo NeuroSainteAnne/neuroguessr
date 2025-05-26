@@ -104,6 +104,11 @@ function App() {
    }
 
    useEffect(() => {
+      const rootElem = document.getElementById("root")
+      if(rootElem) rootElem.style.opacity = "1";
+      const loadElem = document.getElementById("loading-screen")
+      if(loadElem) loadElem.style.display = "none";
+
       if (authToken && isTokenValid(authToken)) {
          setIsGuest(false);
          setIsLoggedIn(true);
