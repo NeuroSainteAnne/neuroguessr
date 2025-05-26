@@ -5,15 +5,15 @@ import path from "path";
 import { __dirname, htmlRoot } from "./utils.ts";
 import { NVImage } from "@niivue/niivue";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
-import atlasFiles from "../neuroguessr_frontend/src/atlas_files.ts"
+import atlasFiles from "../frontend/src/atlas_files.ts"
 
 const validRegions = {}
 const imageRef : Record<string,NVImage> = {}
 const imageMetadata : Record<string,any> = {}
 for (const atlas in atlasFiles) {
-    const atlasJsonPath = path.join(htmlRoot, "neuroguessr_frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
+    const atlasJsonPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
-    const atlasNiiPath = path.join(htmlRoot, "neuroguessr_frontend", "dist", "assets", "atlas", "nii", atlasFiles[atlas].nii)
+    const atlasNiiPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "nii", atlasFiles[atlas].nii)
     const niiBuffer = await fs.openAsBlob(atlasNiiPath)
     imageRef[atlas] = await NVImage.loadFromFile({file: new File([niiBuffer], atlas)})
     imageMetadata[atlas] = imageRef[atlas].getImageMetadata()

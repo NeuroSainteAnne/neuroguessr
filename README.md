@@ -45,7 +45,7 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 2. Transpile the neuroguessr frontend:
 
 ```
-cd neuroguessr_frontend
+cd frontend
 npm install
 npm run build
 cd ..
