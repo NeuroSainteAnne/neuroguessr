@@ -94,9 +94,10 @@ export const getNextRegion = async (req, res) => {
         const getSessionStmt = db.prepare(`SELECT * FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
         const answeredRegions = getSessionStmt.all(sessionId);
         const answeredRegionIds = answeredRegions.map(region => region.regionId);
-        const remainingRegionIds = atlasValidRegions.filter(regionId => !answeredRegionIds.includes(regionId));
+        let remainingRegionIds = atlasValidRegions.filter(regionId => !answeredRegionIds.includes(regionId));
         if (remainingRegionIds.length === 0) {
-            return res.status(200).send({ message: "No more regions available to guess.", regionId: -1 });
+            // if no region remaining, we'll take a random region
+            remainingRegionIds = atlasValidRegions
         }
         // Select a random region from the remaining regions
         const randomIndex = Math.floor(Math.random() * remainingRegionIds.length);
