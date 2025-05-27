@@ -127,7 +127,6 @@ export const validateRegion = async (req, res) => {
     if (!session) {
         return res.status(403).send({ message: "Invalid session or token mismatch" });
     }
-    const currentScore = session.currentScore || 0;
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
         SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
@@ -175,8 +174,6 @@ export const validateRegion = async (req, res) => {
                 } else {
                     scoreIncrement = 0; // No points for too far away
                 }
-                console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
-                console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);
             }
         }
     }
@@ -189,77 +186,64 @@ export const validateRegion = async (req, res) => {
     const timeTaken = Math.floor((Date.now() - new Date(activeProgress.createdAt).getTime()) / 1000); // Time in seconds
     updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
 
-    // TODO save the score in the session
-
     let endgame = false
+    const sessionStartTime = new Date(session.createdAt).getTime();
+    const currentTime = Date.now();
+    const elapsedTime = Math.floor((currentTime - sessionStartTime) / 1000); // Time in seconds
     if(!isCorrect && session.mode == "streak"){
         endgame = true
     } else if(session.mode == "time-attack"){
-        // TODO CHECK TIME
+        // Check time elapsed since session start
+        // Check if all regions have been answered
         const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
         if(answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK){
             endgame = true
+            if(elapsedTime < MAX_TIME_IN_SECONDS) { // add bonus points if time is not over
+                scoreIncrement += (MAX_TIME_IN_SECONDS - elapsedTime) * BONUS_POINTS_PER_SECOND;
+            }
+        }
+        if (elapsedTime >= MAX_TIME_IN_SECONDS) {
+            endgame = true;
         }
     }
 
-    let accuracy = 0;
-    let finalScore = 0;
-    let duration = 0;
+    // Save the score in the session
+    const finalScore = session.currentScore + scoreIncrement; // Add the last score increment
+    const updateSessionStmt = db.prepare(`
+        UPDATE gamesessions
+        SET currentScore = ?
+        WHERE id = ?
+    `);
+    updateSessionStmt.run(finalScore, sessionId);
 
+
+    let accuracy = 0;
     // If the game is over, update the session status
     if (endgame) {
-        // Calculate final score and duration
-        // TEMPORARY CALCULATION ALGORITHM
-        // For streak mode, score = number of correct answers before failure
-        // For time-attack, score = number of correct answers, duration = sum of timeTaken for correct answers
-
-
-        if (session.mode === "streak") {
-            // Count correct answers before the first incorrect
-            const getStreakStmt = db.prepare(`
-                SELECT COUNT(*) as count FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 1
-            `);
-            const streakResult = getStreakStmt.get(sessionId);
-            finalScore = streakResult.count;
-            // Duration: sum of timeTaken for correct answers
-            const getDurationStmt = db.prepare(`
-                SELECT SUM(timeTaken) as total FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 1
-            `);
-            const durationResult = getDurationStmt.get(sessionId);
-            duration = durationResult.total || 0;
-        } else if (session.mode === "time-attack") {
+        // calculate accuracy for time attack mode
+        if (session.mode === "time-attack") {
             // All correct answers
             const getScoreStmt = db.prepare(`
                 SELECT COUNT(*) as count FROM gameprogress
                 WHERE sessionId = ? AND isCorrect = 1
             `);
-            const scoreResult = getScoreStmt.get(sessionId);
-            finalScore = scoreResult.count;
+            const accurateResults = getScoreStmt.get(sessionId);
             // Accuracy: correct / total attempts
             const getTotalStmt = db.prepare(`
                 SELECT COUNT(*) as total FROM gameprogress
                 WHERE sessionId = ?
             `);
             const totalResult = getTotalStmt.get(sessionId);
-            accuracy = totalResult.total > 0 ? finalScore / totalResult.total : 0;
-            // Duration: sum of timeTaken for correct answers
-            const getDurationStmt = db.prepare(`
-                SELECT SUM(timeTaken) as total FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 1
-            `);
-            const durationResult = getDurationStmt.get(sessionId);
-            duration = durationResult.total || 0;
+            accuracy = totalResult.total > 0 ? accurateResults.count / totalResult.total : 0;
         }
-
+        
         // Insert into finishedsessions
         const insertFinishedStmt = db.prepare(`
             INSERT INTO finishedsessions (userId, mode, atlas, score, accuracy, duration)
             VALUES (?, ?, ?, ?, ?, ?)
         `);
-        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, accuracy, duration);
+        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, accuracy, elapsedTime);
     }
     // Respond with the result
     res.status(200).send({
@@ -269,6 +253,7 @@ export const validateRegion = async (req, res) => {
         voxelValue,
         endgame,
         accuracy,
+        scoreIncrement,
         finalScore,
     });
 }
