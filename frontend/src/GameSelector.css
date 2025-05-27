@@ -185,10 +185,9 @@
 
 /* Atlas Selection Section Styles - Keep existing but adjust margins and flex-basis */
 .atlas-selection {
-    flex: 1 1 50%; /* Primary control for width */
+    flex: 1;
     width: auto;
-    min-width: 0; /* Allow shrinking if necessary, default to 0 */
-    max-width: none;
+    max-width: 700px;
     margin: 0;
     text-align: left;
     min-height: auto;
@@ -198,8 +197,6 @@
 
 @media (min-width: 1024px) {
     .atlas-selection {
-        flex-basis: calc(50% - 1.5rem);
-        /* Half width minus half of the gap (3rem total gap) */
         padding: 0.75rem;
         /* Added padding */
     }
@@ -226,7 +223,6 @@
 
     .atlas-selection,
     .mode-selection {
-        flex: 1;
         /* Allow sections to grow */
         /* Increased min-width */
         margin: 0;
@@ -301,7 +297,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    flex-basis: 200px;
+    flex-basis: 250px;
     flex-shrink: 0;
     padding: 0.5rem;
     overflow-y: auto;
@@ -355,7 +351,6 @@
 
 /* Mode Selection Section Styles - Keep existing but adjust margins and min-width */
 .mode-selection {
-    flex: 1 1 50%; /* Primary control for width */
     min-width: 0; /* Allow shrinking if necessary, default to 0 */
     text-align: center;
     min-height: 50vh;
@@ -367,8 +362,6 @@
 
 @media (min-width: 1024px) {
     .mode-selection {
-        flex-basis: calc(50% - 1.5rem);
-        /* Half width minus half of the gap (3rem total gap) */
         padding: 0.75rem;
         /* Added padding */
     }
@@ -584,7 +577,7 @@
     border-radius: 0.5rem;
     cursor: pointer;
     transition: background 0.2s, border 0.2s, opacity 0.2s;
-    width: 90%;
+    width: 100%;
     max-width: 25rem;
     box-sizing: border-box;
     opacity: 0.9;
