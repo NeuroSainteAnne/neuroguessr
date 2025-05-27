@@ -127,6 +127,11 @@ export const validateRegion = async (req, res) => {
     if (!session) {
         return res.status(403).send({ message: "Invalid session or token mismatch" });
     }
+    // get time elapsed from session start
+    const sessionStartTime = new Date(session.createdAt).getTime();
+    const currentTime = Date.now();
+    const elapsedTime = Math.floor((currentTime - sessionStartTime) / 1000); // Time in seconds
+
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
         SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
@@ -157,7 +162,7 @@ export const validateRegion = async (req, res) => {
         if(isCorrect) {
             scoreIncrement = 1;
         }
-    } else if (session.mode == "time-attack") {
+    } else if (session.mode == "time-attack" && elapsedTime < MAX_TIME_IN_SECONDS) {
         if (isCorrect) {
             scoreIncrement = MAX_POINTS_PER_REGION;
         } else {
@@ -187,9 +192,6 @@ export const validateRegion = async (req, res) => {
     updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
 
     let endgame = false
-    const sessionStartTime = new Date(session.createdAt).getTime();
-    const currentTime = Date.now();
-    const elapsedTime = Math.floor((currentTime - sessionStartTime) / 1000); // Time in seconds
     if(!isCorrect && session.mode == "streak"){
         endgame = true
     } else if(session.mode == "time-attack"){
