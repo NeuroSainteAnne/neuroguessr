@@ -7,9 +7,19 @@ import { NVImage } from "@niivue/niivue";
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 import atlasFiles from "../frontend/src/atlas_files.ts"
 
+const TOTAL_REGIONS_TIME_ATTACK = 18;
+const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
+const MAX_TIME_IN_SECONDS = 100; // nombre de secondes pour le Time Attack
+const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
+const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
+const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
+const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
+
 const validRegions = {}
 const imageRef : Record<string,NVImage> = {}
 const imageMetadata : Record<string,any> = {}
+const regionCenters : Record<string,number[][]> = {}
 for (const atlas in atlasFiles) {
     const atlasJsonPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
@@ -30,6 +40,7 @@ for (const atlas in atlasFiles) {
         console.warn(`Fallback to cmap.labels keys for ${atlas}`);
     }
     validRegions[atlas] = theseValidRegions;
+    regionCenters[atlas] = atlasJson.centers
 }
 
 export const startGameSession = async (req, res) => {
@@ -108,8 +119,6 @@ export const getNextRegion = async (req, res) => {
     }
 }
 
-const TOTAL_REGIONS_TIME_ATTACK = 18;
-
 export const validateRegion = async (req, res) => {
     const { sessionId, sessionToken, coordinates } = req.body;
     // Validate the session token
@@ -118,6 +127,7 @@ export const validateRegion = async (req, res) => {
     if (!session) {
         return res.status(403).send({ message: "Invalid session or token mismatch" });
     }
+    const currentScore = session.currentScore || 0;
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
         SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
@@ -141,18 +151,51 @@ export const validateRegion = async (req, res) => {
     const voxelValue = atlasImage.getValue(x, y, z);
     // Check if the voxel value matches the active region ID
     const isCorrect = voxelValue === regionId;
+
+    // update the score
+    let scoreIncrement = 0;
+    if (session.mode == "streak"){
+        if(isCorrect) {
+            scoreIncrement = 1;
+        }
+    } else if (session.mode == "time-attack") {
+        if (isCorrect) {
+            scoreIncrement = MAX_POINTS_PER_REGION;
+        } else {
+            if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
+                const center = regionCenters[session.atlas][regionId];
+                const distance = Math.sqrt(
+                    Math.pow(center[0] - x, 2) +
+                    Math.pow(center[1] - y, 2) +
+                    Math.pow(center[2] - z, 2)
+                );
+                // Calculate score based on distance
+                if (distance <= MAX_PENALTY_DISTANCE) {
+                    scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                } else {
+                    scoreIncrement = 0; // No points for too far away
+                }
+                console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
+                console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);
+            }
+        }
+    }
+
     const updateProgressStmt = db.prepare(`
         UPDATE gameprogress
-        SET isActive = ?, isCorrect = ?, timeTaken = ?, createdAt = datetime('now')
+        SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?, createdAt = datetime('now')
         WHERE id = ?
     `);
     const timeTaken = Math.floor((Date.now() - new Date(activeProgress.createdAt).getTime()) / 1000); // Time in seconds
-    updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, activeProgress.id);
+    updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
+
+    // TODO save the score in the session
 
     let endgame = false
     if(!isCorrect && session.mode == "streak"){
         endgame = true
     } else if(session.mode == "time-attack"){
+        // TODO CHECK TIME
         const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
         const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
         if(answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK){

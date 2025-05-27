@@ -29,7 +29,8 @@ export const database_init = () => {
                 userId INTEGER KEY NOT NULL,
                 token TEXT NOT NULL,
                 mode TEXT NOT NULL,
-                atlas TEXT NOT NULL
+                atlas TEXT NOT NULL,
+                currentScore INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS gameprogress (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +40,7 @@ export const database_init = () => {
                 timeTaken INTEGER NOT NULL,
                 isActive BOOLEAN NOT NULL DEFAULT 1,
                 isCorrect BOOLEAN NOT NULL DEFAULT 0,
+                scoreIncrement INTEGER NOT NULL DEFAULT 0,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
             );
