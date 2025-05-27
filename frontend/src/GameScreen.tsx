@@ -97,6 +97,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [finalStreak, setFinalStreak] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>("00:00");
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
+  const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
   const selectedVoxel = useRef<number[] | null>(null);
   const validRegions = useRef<number[]>([]);
@@ -296,6 +297,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   useEffect(()=>{
     currentScoreRef.current = currentScore
   }, [currentScore])
+  useEffect(()=>{
+    currentAttemptsRef.current = currentAttempts
+  }, [currentAttempts])
 
   const resetGameState = () => {
     currentTarget.current = null;
@@ -454,22 +458,20 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         console.error("Error occured during next region fetching:", error);
         return false;
       }
-    } else {
-      if (gameMode === 'time-attack' && usedRegions.current && usedRegions.current.length >= TOTAL_REGIONS_TIME_ATTACK) {
-        regionId = -1;
-      } else if (validRegions.current && validRegions.current.length === 0) {
-        regionId = -1;
-      } else if (validRegions.current && usedRegions.current) {
-        let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
-        console.log("avail", availableRegions.length)
-        if (availableRegions.length !== 0) {
-          regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-          if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
-            usedRegions.current.push(regionId);
-          }
+    } else if (validRegions.current && usedRegions.current){
+      let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
+      if (gameMode === 'time-attack' && availableRegions.length === 0) {
+        // if no region remaining, we'll take a random region
+        availableRegions = validRegions.current
+      } 
+      if (availableRegions.length !== 0) {
+        regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
+          usedRegions.current.push(regionId);
         }
       }
     }
+    
     if(regionId === -1){ // did not found region
       if (gameMode === 'time-attack') {
         // TODO take into account server response = -1
@@ -608,6 +610,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     } else {
       clickedRegion = Math.round(niivue.current.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
       guessSuccess = clickedRegion === currentTarget.current;
+      if(gameMode === 'time-attack') {
+        isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
+      }
+      if (gameMode === 'streak') {
+        isEndgame = !guessSuccess
+      }
     }
 
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
