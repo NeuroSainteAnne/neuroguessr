@@ -30,6 +30,7 @@ export const database_init = () => {
                 token TEXT NOT NULL,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
+                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 currentScore INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS gameprogress (
@@ -41,7 +42,7 @@ export const database_init = () => {
                 isActive BOOLEAN NOT NULL DEFAULT 1,
                 isCorrect BOOLEAN NOT NULL DEFAULT 0,
                 scoreIncrement INTEGER NOT NULL DEFAULT 0,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
             );
             CREATE TABLE IF NOT EXISTS finishedsessions (
@@ -52,7 +53,7 @@ export const database_init = () => {
                 score INTEGER NOT NULL,
                 accuracy REAL NOT NULL,
                 duration INTEGER NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (userId) REFERENCES users (id)
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
