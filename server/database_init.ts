@@ -19,7 +19,8 @@ export const database_init = async () => {
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                verified BOOLEAN NOT NULL DEFAULT 0
+                verified BOOLEAN NOT NULL DEFAULT 0,
+                publishToLeaderboard BOOLEAN DEFAULT NULL
             );
             CREATE TABLE IF NOT EXISTS tokens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

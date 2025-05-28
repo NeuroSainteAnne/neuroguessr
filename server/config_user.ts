@@ -24,7 +24,7 @@ export const configUser = async (req, res) => {
         if (error)
             return res.status(400).send({ message: error.details[0].message });
 
-        const { firstname, lastname, password } = req.body;
+        const { firstname, lastname, password, publishToLeaderboard } = req.body;
 
         // Dynamically construct the SQL query
         const updates : string[] = [];
@@ -44,6 +44,10 @@ export const configUser = async (req, res) => {
             const hashedPassword = await bcrypt.hash(password, salt);
             updates.push("password = ?");
             params.push(hashedPassword);
+        }
+        if (publishToLeaderboard !== undefined) {
+            updates.push("publishToLeaderboard = ?");
+            params.push(publishToLeaderboard);
         }
         if (updates.length === 0) {
             return res.status(400).send({ message: "No fields to update" });
