@@ -7,7 +7,7 @@ import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "database.db"));
+export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "..", "database.db"));
 
 export const database_init = async () => {
     try {
