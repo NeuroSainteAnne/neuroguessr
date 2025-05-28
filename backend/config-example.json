@@ -23,6 +23,7 @@
             "password": "test"
         }
     },
+    "addTestUser": true, // adds a user with name "test" and password "test" for testing purposes
     "salt": "xxx",
     "jwt_secret": "xxx"
 }
