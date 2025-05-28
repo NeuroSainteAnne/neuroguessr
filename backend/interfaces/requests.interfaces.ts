@@ -100,3 +100,17 @@ export interface ConfigUserBody {
     password?: string;
     publishToLeaderboard?: boolean | null;
 }
+
+/* LEADERBOARD INTERFACES */
+
+interface GetLeaderboardBody {
+    mode?: string;
+    atlas?: string;
+    numberLimit?: number;
+    timeLimit?: number;
+    appendTotal?: boolean;
+}
+
+export interface GetLeaderboardRequest {
+    body: GetLeaderboardBody
+}

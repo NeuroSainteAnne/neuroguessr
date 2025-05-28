@@ -12,6 +12,7 @@ import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
 import type { GetNextRegionRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+import { getLeaderboard } from "./modules/leaderboard.ts";
 const config: Config = configJson;
 
 const app = express();
@@ -52,6 +53,7 @@ app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
 app.get('/api/user-info', authenticateToken, getUserInfo);
 app.post('/api/config-user', authenticateToken, configUser);
+app.post('/api/get-leaderboard', getLeaderboard);
 
 app.get("/verify/:id/:token", emailLink)
 
