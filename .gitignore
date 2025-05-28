@@ -1,10 +1,14 @@
 node_modules/*
 package-lock.json
 
-server/database.db
-server/config.json
-server/*.crt
-server/*.key
+backend/database.db
+backend/config.json
+backend/*.crt
+backend/*.key
+
+backend/node_modules
+frontend/node_modules
+**/.DS_Store
 
 .DS_Store
 .vscode/*
