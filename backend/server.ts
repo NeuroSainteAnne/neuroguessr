@@ -2,14 +2,17 @@ import express from "express";
 import path from "path";
 import fs from "fs"
 import https from 'https';
-import { __dirname, htmlRoot, reactRoot } from "./utils.ts";
-import { db, database_init, cleanExpiredTokens } from "./database_init.ts";
-import { login, refreshToken, authenticateToken, getUserInfo } from "./login.ts";
-import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./registration.ts";
-import { configUser } from "./config_user.ts";
-import { getNextRegion, startGameSession, validateRegion } from "./game.ts";
-import { globalAuthentication } from "./global_auth.ts";
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
+import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
+import { db, database_init, cleanExpiredTokens } from "./modules/database_init.ts";
+import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
+import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
+import { configUser } from "./modules/config_user.ts";
+import { getNextRegion, startGameSession, validateRegion } from "./modules/game.ts";
+import { globalAuthentication } from "./modules/global_auth.ts";
+import type { Config } from "./interfaces/config.interfaces.ts";
+import configJson from './config.json' with { type: "json" };
+import type { GetNextRegionRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
@@ -56,8 +59,10 @@ app.get("/resetPwd/:id/:token", (req, res) => {
     res.redirect("/index.html?resetpwd=true&id=" + req.params.id + "&token=" + req.params.token);
 })
 
-app.post('/api/start-game-session', authenticateToken, startGameSession);
-app.post('/api/get-next-region', authenticateToken, getNextRegion);
+app.post('/api/start-game-session', authenticateToken, 
+    (req, res) => startGameSession(req as StartGameSessionRequest, res));
+app.post('/api/get-next-region', authenticateToken, 
+    (req, res) => getNextRegion(req as GetNextRegionRequest, res));
 app.post('/api/validate-region', authenticateToken, validateRegion);
 
 if(config.server.mode == "https"){

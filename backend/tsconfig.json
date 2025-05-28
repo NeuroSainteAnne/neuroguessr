@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
     "baseUrl": "./",
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ES2024",
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "nodenext",
     "allowImportingTsExtensions": true,
     "declaration": true,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "strict": true
   }
 }

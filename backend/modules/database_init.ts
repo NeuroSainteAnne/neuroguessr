@@ -2,8 +2,9 @@ import sqlite3 from "better-sqlite3";
 import path from "path";
 import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
-import fs from 'fs'
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
+type Config = import("../interfaces/config.interfaces.ts").Config;
+import configJson from '../config.json' with { type: "json" };
+const config: Config = configJson;
 
 // Create a new database or open an existing one
 export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "database.db"));
@@ -74,7 +75,7 @@ export const database_init = async () => {
             console.log("Test user added successfully.");
         }
     } catch (err) {
-        console.error("Error initializing database schema:", err.message);
+        console.error("Error initializing database schema:", (err instanceof Error ? err.message : err));
     }
 }
 
@@ -89,6 +90,6 @@ export const cleanExpiredTokens = () => {
             console.log(`Cleaned up ${result.changes} expired tokens.`);
         }
     } catch (err) {
-        console.error("Error cleaning expired tokens:", err.message);
+        console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };

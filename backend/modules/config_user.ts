@@ -1,35 +1,38 @@
 import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import passwordComplexity from "joi-password-complexity";
-import fs from 'fs'
-import path from "path";
 import { __dirname } from "./utils.ts";
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
+import type { Config } from "../interfaces/config.interfaces.ts";
+import configJson from '../config.json' with { type: "json" };
+import type { Request, Response } from "express";
+import type { AuthenticatedRequest, ConfigUserBody } from "../interfaces/requests.interfaces.ts";
+const config: Config = configJson;
 
 
-export const configUser = async (req, res) => {
+export const configUser = async (req: Request, res: Response): Promise<void> => {
     try {
-        const validate = (data) => {
+        const validate = (data: ConfigUserBody): Joi.ValidationResult<ConfigUserBody> => {
             const schema = Joi.object({
                 firstname: Joi.string().optional().label("firstname"),
                 lastname: Joi.string().optional().label("lastname"),
-                password: passwordComplexity().optional().label("password"),
+                password: passwordComplexity.default().optional().label("password"),
                 publishToLeaderboard: Joi.boolean().optional(),
             });
             return schema.validate(data);
         };
-        const userId = req.user._id;
+        const userId = (req as AuthenticatedRequest).user.id;
         const { error } = validate(req.body);
-        if (error)
-            return res.status(400).send({ message: error.details[0].message });
+        if (error){
+            res.status(400).send({ message: error.details[0].message });
+            return;
+        }
 
-        const { firstname, lastname, password, publishToLeaderboard } = req.body;
+        const { firstname, lastname, password, publishToLeaderboard } = req.body as ConfigUserBody;
 
         // Dynamically construct the SQL query
-        const updates : string[] = [];
-        const params : string[] = [];
+        const updates: string[] = [];
+        const params: string[] = [];
 
         if (firstname) {
             updates.push("firstname = ?");
@@ -41,26 +44,26 @@ export const configUser = async (req, res) => {
         }
         if (password) {
             // Hash the password before updating
-            const salt = await bcrypt.genSalt(Number(config.salt));
-            const hashedPassword = await bcrypt.hash(password, salt);
+            const salt: string = await bcrypt.genSalt(Number(config.salt));
+            const hashedPassword: string = await bcrypt.hash(password, salt);
             updates.push("password = ?");
             params.push(hashedPassword);
         }
         if (publishToLeaderboard !== undefined) {
             updates.push("publishToLeaderboard = ?");
-            params.push(publishToLeaderboard === null ? "NULL" : (publishToLeaderboard? "1" : "0"));
+            params.push(publishToLeaderboard === null ? "NULL" : (publishToLeaderboard ? "1" : "0"));
         }
         if (updates.length === 0) {
-            return res.status(400).send({ message: "No fields to update" });
+            res.status(400).send({ message: "No fields to update" });
         }
         // Add the user ID to the parameters
-        params.push(userId);
+        params.push(String(userId));
 
         // Construct and execute the SQL query
         const updateUserStmt = db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`);
         updateUserStmt.run(...params);
         res.status(200).send({ message: "User updated successfully" });
-    }  catch (error) {
+    } catch (error: unknown) {
         console.log(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
