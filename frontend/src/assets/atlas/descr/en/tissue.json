@@ -2,5 +2,5 @@
 	"R" : [0,230,120,0],
 	"G" : [0,0,120,230],
 	"B" : [0,0,245,120],
-	"labels" : ["Unknown","Cortico-Spinal Fluid","Grey-Matter","White-Matter"]
+	"labels" : ["Unknown","Cerebrospinal Fluid","Grey-Matter","White-Matter"]
 }
