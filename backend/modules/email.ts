@@ -105,6 +105,7 @@ export const sendEmail = async (
       );
     } else {
       const transporter = nodemailer.createTransport({
+        // @ts-ignore
         host: config.email.server,
         port: config.email.port,
         auth: {
