@@ -79,7 +79,7 @@ export const getNextRegion = async (req, res) => {
     const { sessionId, sessionToken } = req.body;
     // Validate the session token
     const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-    const session = getSessionStmt.get(sessionId, sessionToken);
+    const session: Record<string,any> = getSessionStmt.get(sessionId, sessionToken);
     if (!session) {
         return res.status(403).send({ message: "Invalid session or token mismatch" });
     }
@@ -92,7 +92,7 @@ export const getNextRegion = async (req, res) => {
     if(session.mode == "time-attack"){
         // we have to select region that has not already been answered
         const getSessionStmt = db.prepare(`SELECT * FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`);
-        const answeredRegions = getSessionStmt.all(sessionId);
+        const answeredRegions: Record<string,any> = getSessionStmt.all(sessionId);
         const answeredRegionIds = answeredRegions.map(region => region.regionId);
         let remainingRegionIds = atlasValidRegions.filter(regionId => !answeredRegionIds.includes(regionId));
         if (remainingRegionIds.length === 0) {
@@ -124,7 +124,7 @@ export const validateRegion = async (req, res) => {
     const { sessionId, sessionToken, coordinates } = req.body;
     // Validate the session token
     const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-    const session = getSessionStmt.get(sessionId, sessionToken);
+    const session: Record<string,any> = getSessionStmt.get(sessionId, sessionToken);
     if (!session) {
         return res.status(403).send({ message: "Invalid session or token mismatch" });
     }
@@ -137,7 +137,7 @@ export const validateRegion = async (req, res) => {
     const getActiveProgressStmt = db.prepare(`
         SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
     `);
-    const activeProgress = getActiveProgressStmt.get(sessionId);
+    const activeProgress: Record<string,any> = getActiveProgressStmt.get(sessionId);
     if (!activeProgress) {
         return res.status(400).send({ message: "No active region to validate." });
     }
@@ -199,7 +199,7 @@ export const validateRegion = async (req, res) => {
         // Check time elapsed since session start
         // Check if all regions have been answered
         const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
-        const answeredRegions = getAnsweredRegionsStmt.get(sessionId);
+        const answeredRegions: Record<string,any> = getAnsweredRegionsStmt.get(sessionId);
         if(answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK){
             endgame = true
             if(elapsedTime < MAX_TIME_IN_SECONDS) { // add bonus points if time is not over
@@ -231,13 +231,13 @@ export const validateRegion = async (req, res) => {
                 SELECT COUNT(*) as count FROM gameprogress
                 WHERE sessionId = ? AND isCorrect = 1
             `);
-            const accurateResults = getScoreStmt.get(sessionId);
+            const accurateResults: Record<string,any> = getScoreStmt.get(sessionId);
             // Accuracy: correct / total attempts
             const getTotalStmt = db.prepare(`
                 SELECT COUNT(*) as total FROM gameprogress
                 WHERE sessionId = ?
             `);
-            const totalResult = getTotalStmt.get(sessionId);
+            const totalResult: Record<string,any> = getTotalStmt.get(sessionId);
             accuracy = totalResult.total > 0 ? accurateResults.count / totalResult.total : 0;
         }
         

@@ -21,7 +21,7 @@ export const login = async (req, res) => {
         if (error) return res.status(400).send({ message: error.details[0].message });
 
         const stmt = db.prepare("SELECT * FROM users WHERE username = ?");
-        const user = stmt.get(req.body.username);
+        const user: Record<string,any> = stmt.get(req.body.username);
 
         if (!user) return res.status(401).send({ message: "Invalid Username or Password" });
 

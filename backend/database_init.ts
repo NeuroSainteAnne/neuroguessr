@@ -6,7 +6,7 @@ import fs from 'fs'
 var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
 
 // Create a new database or open an existing one
-export const db = new sqlite3(path.join(__dirname, "database.db"));
+export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "database.db"));
 
 export const database_init = async () => {
     try {

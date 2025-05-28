@@ -105,7 +105,7 @@ export const register = async (req, res) => {
 export const emailLink = async (req, res) => {
     try {
         const getUserStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserStmt.get(req.params.id);
+        const user: Record<string,any> = getUserStmt.get(req.params.id);
         if (!user) {
             return res.send(`
                 <html>
@@ -175,7 +175,7 @@ export const passwordLink = async (req, res) => {
         })
         // Check if the username already exists
         const getUserByUsernameStmt = db.prepare("SELECT * FROM users WHERE email = ?");
-        const user = getUserByUsernameStmt.get(req.body.email);
+        const user: Record<string,any> = getUserByUsernameStmt.get(req.body.email);
         if (!user)
             return res
                 .status(409)
@@ -183,7 +183,7 @@ export const passwordLink = async (req, res) => {
 
         // Check if the username already exists
         const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ?");
-        let token = getTokenByUsernameStmt.get(user.id);
+        let token: Record<string,any> = getTokenByUsernameStmt.get(user.id);
         let tokenValue = null;
         if (!token) {
             // Créer un jeton pour l'utilisateur
@@ -239,11 +239,11 @@ export const resetPassword = async (req, res) => {
             message: error.details[0].message
         })
         const getUserByIdStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserByIdStmt.get(req.body.id);
+        const user: Record<string,any> = getUserByIdStmt.get(req.body.id);
         if (!user) return res.status(400).send({ message: "Invalid link" });
 
         const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ?");
-        const token = getTokenByUsernameStmt.get(user.id, req.body.token);
+        const token: Record<string,any> = getTokenByUsernameStmt.get(user.id, req.body.token);
         if (!token) return res.status(400).send({ message: "Invalid Link" })
 
 
@@ -294,11 +294,11 @@ export const validateResetToken = async (req, res) => {
             message: error.details[0].message
         })
         const getUserByIdStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserByIdStmt.get(req.body.id);
+        const user: Record<string,any> = getUserByIdStmt.get(req.body.id);
         if (!user) return res.status(400).send({ message: "Invalid link" });
 
         const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ?");
-        const token = getTokenByUsernameStmt.get(user.id, req.body.token);
+        const token: Record<string,any> = getTokenByUsernameStmt.get(user.id, req.body.token);
         if (!token) return res.status(400).send({ message: "Invalid Link" })
 
         res.status(200).send({ message: "token valid" })
