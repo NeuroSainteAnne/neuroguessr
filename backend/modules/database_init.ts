@@ -93,3 +93,31 @@ export const cleanExpiredTokens = () => {
         console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };
+
+export const cleanOldGameSessions = () => {
+    try {
+        const suppressionDelay = 60 * 60 * 1000; // in ms 
+        // Delete from gameprogress where the session is older than 1 hour
+        const deleteGameProgressStmt = db.prepare(`
+            DELETE FROM gameprogress
+            WHERE sessionId IN (
+                SELECT id FROM gamesessions WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+            )
+        `);
+        const resultProgress = deleteGameProgressStmt.run();
+        if(resultProgress.changes !== 0){
+            console.log(`Cleaned up ${resultProgress.changes} old gameprogress entries.`);
+        }
+        // Delete from gamesessions older than 1 hour
+        const deleteGameSessionsStmt = db.prepare(`
+            DELETE FROM gamesessions
+            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        `);
+        const resultSessions = deleteGameSessionsStmt.run();
+        if(resultSessions.changes !== 0){
+            console.log(`Cleaned up ${resultSessions.changes} old gamesessions.`);
+        }
+    } catch (err) {
+        console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
+    }
+}

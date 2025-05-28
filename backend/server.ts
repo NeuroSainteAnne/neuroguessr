@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs"
 import https from 'https';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
-import { db, database_init, cleanExpiredTokens } from "./modules/database_init.ts";
+import { db, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
 import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
@@ -44,6 +44,11 @@ app.use("/assets", express.static(path.join(reactRoot, "assets")));
 setInterval(() => {
     cleanExpiredTokens();
 }, 60*1000); // each minute
+
+cleanOldGameSessions();
+setInterval(() => {
+    cleanOldGameSessions();
+}, 10*60*1000); // each 10 minute
 
 app.post('/api/login', login);
 app.post('/api/refresh-token', refreshToken);
