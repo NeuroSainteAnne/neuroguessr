@@ -23,7 +23,8 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 firstname: Joi.string().required().label("firstname"),
                 lastname: Joi.string().required().label("lastname"),
                 email: Joi.string().email().required().label("email"),
-                password: passwordComplexity.default().required().label("password"),
+                // @ts-ignore
+                password: passwordComplexity().required().label("password"),
             });
             return schema.validate(data);
         };
@@ -248,7 +249,8 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
     try {
         const validate = (data: ResetPasswordBody): Joi.ValidationResult<ResetPasswordBody> => {
             const passwordSchema = Joi.object({
-                password: passwordComplexity.default().required().label("password"),
+                // @ts-ignore
+                password: passwordComplexity().required().label("password"),
                 id: Joi.string().required().label("id"),
                 token: Joi.string().required().label("token")
             });

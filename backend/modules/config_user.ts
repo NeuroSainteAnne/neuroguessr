@@ -16,7 +16,8 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             const schema = Joi.object({
                 firstname: Joi.string().optional().label("firstname"),
                 lastname: Joi.string().optional().label("lastname"),
-                password: passwordComplexity.default().optional().label("password"),
+                // @ts-ignore
+                password: passwordComplexity().optional().label("password"),
                 publishToLeaderboard: Joi.boolean().optional(),
             });
             return schema.validate(data);
