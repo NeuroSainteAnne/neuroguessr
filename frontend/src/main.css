@@ -41,7 +41,7 @@ body {
 /* Add a pseudo-element for background opacity and blur */
 #root::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;

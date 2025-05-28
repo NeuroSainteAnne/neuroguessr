@@ -156,6 +156,7 @@
   "password_reset_failed": "Failed to reset password. Please try again.",
   "config_mode": "Setup",
   "config_description": "Account parameters",
+  "config_publish_to_leaderboard": "Publish to leaderboard",
   "reconfigure_button": "Save",
   "reconfigure_mode": "Setup",
   "password-helper-leaveempty": "Leave empty to keep the same password",

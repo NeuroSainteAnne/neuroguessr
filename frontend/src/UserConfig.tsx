@@ -10,6 +10,7 @@ function UserConfig({t, callback, authToken}:
     const firstnameInput = useRef<HTMLInputElement>(null);
     const lastnameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
+    const publishToLeaderboardInput = useRef<HTMLInputElement>(null);
     const confirmPasswordInput = useRef<HTMLInputElement>(null);
     const [reconfigureErrorText, setReconfigureErrorText] = useState<string>("");
     const [reconfigureSuccessText, setReconfigureSuccessText] = useState<string>("");
@@ -37,6 +38,12 @@ function UserConfig({t, callback, authToken}:
             if(emailInput.current) emailInput.current.value = result.user.email;
             if(firstnameInput.current) firstnameInput.current.value = result.user.firstname;
             if(lastnameInput.current) lastnameInput.current.value = result.user.lastname;
+            if(publishToLeaderboardInput.current){
+                if(result.user.publishToLeaderboard === null)
+                    publishToLeaderboardInput.current.indeterminate = true
+                else
+                    publishToLeaderboardInput.current.checked = result.user.publishToLeaderboard;
+            } 
           } else {
             // Handle errors (e.g., unauthorized or user not found)
             setReconfigureErrorText(result.message || t('error_loading_user_info'));
@@ -53,6 +60,7 @@ function UserConfig({t, callback, authToken}:
         const lastname = lastnameInput.current?.value;
         const password = passwordInput.current?.value;
         const confirmPassword = confirmPasswordInput.current?.value
+        const publishToLeaderboard = publishToLeaderboardInput.current?.indeterminate ? null : publishToLeaderboardInput.current?.checked || false;
 
         // Clear previous error messages
         setReconfigureErrorText("")
@@ -91,9 +99,10 @@ function UserConfig({t, callback, authToken}:
         }
 
         // Prepare the data to send
-        let formData : Record<string,string> = {
+        let formData : Record<string,string|boolean|null> = {
             firstname: firstname.trim(),
-            lastname: lastname.trim()
+            lastname: lastname.trim(),
+            publishToLeaderboard: publishToLeaderboard
         };
         if (password) {
             formData.password = password.trim();
@@ -186,6 +195,14 @@ function UserConfig({t, callback, authToken}:
                         </td>
                         <td>
                             <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label id="publish-to-leaderboard-label" htmlFor="publish-to-leaderboard">{t("config_publish_to_leaderboard")}</label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="publish-to-leaderboard" name="publish-to-leaderboard" ref={publishToLeaderboardInput} />
                         </td>
                     </tr>
                     {reconfigureErrorText && <tr>

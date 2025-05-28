@@ -79,6 +79,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const MAX_TIME_IN_SECONDS = 100; // nombre de secondes pour le Time Attack
   const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
   const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+  const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
 
@@ -86,6 +87,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
   const [currentScore, setCurrentScore] = useState<number>(0);
+  const currentScoreRef = useRef<number>(0);
   const [finalScore, setFinalScore] = useState<number>(0);
   const [finalElapsed, setFinalElapsed] = useState<number>(0);
   const [currentCorrects, setCurrentCorrects] = useState<number>(0);
@@ -95,6 +97,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [finalStreak, setFinalStreak] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>("00:00");
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
+  const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
   const selectedVoxel = useRef<number[] | null>(null);
   const validRegions = useRef<number[]>([]);
@@ -291,6 +294,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   useEffect(()=>{
     currentStreakRef.current = currentStreak
   }, [currentStreak])
+  useEffect(()=>{
+    currentScoreRef.current = currentScore
+  }, [currentScore])
+  useEffect(()=>{
+    currentAttemptsRef.current = currentAttempts
+  }, [currentAttempts])
 
   const resetGameState = () => {
     currentTarget.current = null;
@@ -400,17 +409,16 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
     callback.setHeaderTime(`${minutes}:${seconds}`);
-    if (remaining <= 0) endTimeAttack(); // Call endTimeAttack to show the window
+    if (remaining <= 0) endTimeAttack(currentScoreRef.current); // Call endTimeAttack to show the window // TODO CALL SERVER IF CONNECTED
   }
 
-  function endTimeAttack() {
+  function endTimeAttack(givenFinalScore: number) {
     if (timerInterval.current) clearInterval(timerInterval.current);
-    const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
     const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
     const minutes = Math.floor(elapsed / 60);
     const seconds = (elapsed % 60).toString().padStart(2, '0');
 
-    setFinalScore(Math.round(currentScore + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0)));
+    setFinalScore(givenFinalScore);
     setFinalElapsed(elapsed);
     setShowTimeattackOverlay(true); // Show Time Attack end overlay
 
@@ -450,31 +458,25 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         console.error("Error occured during next region fetching:", error);
         return false;
       }
-    } else {
-      if (gameMode === 'time-attack' && usedRegions.current && usedRegions.current.length >= TOTAL_REGIONS_TIME_ATTACK) {
-        endTimeAttack(); // Call endTimeAttack to show the window
-        return;
-      } else if (validRegions.current && validRegions.current.length === 0) {
-        console.warn('No valid regions available for target selection');
-        resetGameState();
-        return;
-      } else if (validRegions.current && usedRegions.current) {
-        let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
-        console.log("avail", availableRegions.length)
-        if (availableRegions.length !== 0) {
-          regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-          if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
-            usedRegions.current.push(regionId);
-          }
+    } else if (validRegions.current && usedRegions.current){
+      let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
+      if (gameMode === 'time-attack' && availableRegions.length === 0) {
+        // if no region remaining, we'll take a random region
+        availableRegions = validRegions.current
+      } 
+      if (availableRegions.length !== 0) {
+        regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
+          usedRegions.current.push(regionId);
         }
       }
     }
+    
     if(regionId === -1){ // did not found region
-      // This case should ideally not be reached if validRegions had enough regions initially
-      console.warn('No available regions for target selection in the remaining set.');
-      // As a fallback, you could end the game here if somehow it didn't end after 20
       if (gameMode === 'time-attack') {
-        endTimeAttack();
+        // TODO take into account server response = -1
+        const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+        endTimeAttack(Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0)));
         return;
       } else if (gameMode === 'streak') {
         setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
@@ -578,6 +580,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     let guessSuccess = null;
     let isEndgame = false;
     let clickedRegion = null;
+    let scoreIncrement = 0;
+    let givenFinalScore = 0;
     if (isLoggedIn) {
       try {
         const token = localStorage.getItem('authToken');
@@ -597,6 +601,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         guessSuccess = result.isCorrect;
         isEndgame = result.endgame;
         clickedRegion = result.voxelValue;
+        scoreIncrement = result.scoreIncrement;
+        givenFinalScore = result.finalScore
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
@@ -604,6 +610,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     } else {
       clickedRegion = Math.round(niivue.current.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
       guessSuccess = clickedRegion === currentTarget.current;
+      if(gameMode === 'time-attack') {
+        isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
+      }
+      if (gameMode === 'streak') {
+        isEndgame = !guessSuccess
+      }
     }
 
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
@@ -612,12 +624,16 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     if (guessSuccess) {
       // Correct Guess
       setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
+      
       if (gameMode === 'time-attack') {
-        setCurrentScore((curScore) => curScore + MAX_POINTS_PER_REGION); // Add full points for correct guess
+        // Add full points for correct guess
+        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION)); 
       }
       if (gameMode === 'streak') {
-        setCurrentStreak((cs) => cs + 1); // Increment streak for correct guess
+        // Increment streak for correct guess
+        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1)); 
       }
+
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
       } else {
@@ -643,7 +659,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
 
       if (gameMode === 'practice') {
-
         // Use i18next interpolation for the incorrect message
         const incorrectMessage = t('incorrect', { region: clickedRegionName });
         callback.setHeaderText(incorrectMessage);
@@ -666,10 +681,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
-        let pointsEarned = 0;
-        if (isLoggedIn) {
-          // TODO
-        } else if (cMap.current && cMap.current.labels && cMap.current.centers) {
+        if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
           const correctCenter = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
           const clickedCenter = cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion] : null;
 
@@ -680,34 +692,34 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
               Math.pow(correctCenter[1] - clickedCenter[1], 2) +
               Math.pow(correctCenter[2] - clickedCenter[2], 2)
             );
-
-            // Calculate points earned based on distance
-            // Points = MAX_POINTS_PER_REGION * (1 - distance / MAX_PENALTY_DISTANCE)
-            // Ensure points are not negative and cap at MAX_POINTS_PER_REGION
-            const normalizedDistance = Math.min(distance, MAX_PENALTY_DISTANCE); // Cap distance at max penalty distance
-            pointsEarned = MAX_POINTS_PER_REGION * (1 - normalizedDistance / MAX_PENALTY_DISTANCE);
-            pointsEarned = Math.max(0, pointsEarned); // Ensure points are not negative
+            
+            // Calculate score based on distance
+            if (distance <= MAX_PENALTY_DISTANCE) {
+                scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+            } else {
+                scoreIncrement = 0; // No points for too far away
+            }
 
             console.log(`Time Attack Error:`);
             console.log(`  Target Region ID: ${currentTarget} (${targetName}), Clicked Region ID: ${clickedRegion} (${clickedRegionName})`);
             console.log(`  Correct Center: ${correctCenter}`);
             console.log(`  Clicked Center: ${clickedCenter}`);
             console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
-            console.log(`  Points earned for this error: ${pointsEarned.toFixed(2)}`);
+            console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);
             // ***************************************************************************
 
           } else {
             console.warn(`Center data missing for region ${currentTarget} or ${clickedRegion}. Cannot calculate distance-based score.`);
             // Option: award minimal points or 0 if center data is missing
-            pointsEarned = 0; // Award 0 points if centers are missing
+            scoreIncrement = 0; // Award 0 points if centers are missing
           }
         }
 
-        setCurrentScore((score) => score + pointsEarned); // Add points earned for this attempt to the total score
+        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
 
         // Display temporary incorrect message and points earned
         const incorrectMsgPrefix = t('incorrect_prefix') || 'Incorrect! It\'s ';
-        const pointsMsg = Math.round(pointsEarned) > 0 ? ` (+${pointsEarned.toFixed(1)} pts)` : ' (+0 pts)';
+        const pointsMsg = Math.round(scoreIncrement) > 0 ? ` (+${scoreIncrement.toFixed(1)} pts)` : ' (+0 pts)';
         callback.setHeaderText(incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg);
         callback.setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
@@ -746,7 +758,11 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
     if(isEndgame){
       if(gameMode === 'time-attack'){
-        endTimeAttack()
+        if(!isLoggedIn){
+          const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+          givenFinalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
+        }
+        endTimeAttack(givenFinalScore)
       } else if (gameMode === 'streak') {
         setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
         setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
