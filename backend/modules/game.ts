@@ -282,6 +282,14 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             VALUES (?, ?, ?, ?, ?, ?)
         `);
         insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, accuracy, elapsedTime);
+
+        // Delete all gameprogress for this session
+        const deleteProgressStmt = db.prepare(`DELETE FROM gameprogress WHERE sessionId = ?`);
+        deleteProgressStmt.run(sessionId);
+
+        // Delete the gamesession itself
+        const deleteSessionStmt = db.prepare(`DELETE FROM gamesessions WHERE id = ?`);
+        deleteSessionStmt.run(sessionId);
     }
     // Respond with the result
     res.status(200).send({
