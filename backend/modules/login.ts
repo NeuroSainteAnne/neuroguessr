@@ -51,7 +51,7 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
             firstname: user.firstname, 
             lastname: user.lastname,
             publishToLeaderboard: user.publishToLeaderboard,
-            _id: user.id 
+            id: user.id 
         }, config.jwt_secret, { expiresIn: "1h" });
         res.status(200).send({ 
             token: token, 

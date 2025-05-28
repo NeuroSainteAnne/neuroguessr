@@ -298,7 +298,7 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
                 firstname: user.firstname,
                 lastname: user.lastname,
                 publishToLeaderboard: user.publishToLeaderboard,
-                _id: user.id
+                id: user.id
             },
             config.jwt_secret,
             { expiresIn: "1h" }
