@@ -156,6 +156,7 @@
   "password_reset_failed": "Échec de la réinitialisation du mot de passe. Veuillez réessayer.",
   "config_mode": "Configuration",
   "config_description": "Paramètres de votre compte",
+  "config_publish_to_leaderboard": "Publier votre classement",
   "reconfigure_button": "Enregistrer",
   "reconfigure_mode": "Configuration",
   "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
