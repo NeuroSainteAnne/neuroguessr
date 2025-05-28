@@ -37,6 +37,7 @@ export const login = async (req, res) => {
             email: user.email, 
             firstname: user.firstname, 
             lastname: user.lastname,
+            publishToLeaderboard: user.publishToLeaderboard,
             _id: user.id 
         }, config.jwt_secret, { expiresIn: "1h" });
         res.status(200).send({ 
@@ -70,6 +71,7 @@ export const refreshToken = async (req, res) => {
                     email: user.email, 
                     firstname: user.firstname, 
                     lastname: user.lastname, 
+                    publishToLeaderboard: user.publishToLeaderboard,
                     _id: user._id 
                 },
                 config.jwt_secret,
@@ -112,7 +114,7 @@ export const getUserInfo = async (req, res) => {
         const userId = req.user._id;
 
         // Fetch user information from the database
-        const stmt = db.prepare("SELECT id, username, firstname, lastname, email FROM users WHERE id = ?");
+        const stmt = db.prepare("SELECT id, username, firstname, lastname, email, publishToLeaderboard FROM users WHERE id = ?");
         const user = stmt.get(userId);
 
         if (!user) {

@@ -267,6 +267,7 @@ export const resetPassword = async (req, res) => {
             email: user.email, 
             firstname: user.firstname, 
             lastname: user.lastname,
+            publishToLeaderboard: user.publishToLeaderboard,
             _id: user.id 
         }, config.jwt_secret, { expiresIn: "1h" });
         res.status(200).send({ 
