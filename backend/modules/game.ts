@@ -106,6 +106,25 @@ export const getNextRegion = async (
         return;
     }
 
+    // --- TIME-ATTACK: Check if time is up before selecting a new region ---
+    if (session.mode === "time-attack") {
+        const elapsedTime = Date.now() - session.createdAt;
+        if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
+            // Time is up, end the game and notify frontend
+            let {finalScore} = endGame({ session, elapsedTime: MAX_TIME_IN_SECONDS*1000, quitReason: "timeout" });
+            res.status(200).send({
+                message: "Time is up! Game over.",
+                regionId: -1,
+                isCorrect: false,
+                voxelValue: -1,
+                scoreIncrement: 0,
+                finalScore,
+                endgame: true
+            });
+            return;
+        }
+    }
+
     // Check if there is already an active gameprogress element; if yes, return the ongoing region
     const getActiveProgressStmt = db.prepare(
         `SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1`
@@ -172,7 +191,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         return
     }
     // get time elapsed from session start
-    const elapsedTime = Math.floor((Date.now() - session.createdAt)); // Time in milliseconds
+    let elapsedTime = Math.floor((Date.now() - session.createdAt)); // Time in milliseconds
 
     // Retrieve the active gameprogress entry
     const getActiveProgressStmt = db.prepare(`
@@ -257,6 +276,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         }
         if (elapsedTime >= MAX_TIME_IN_SECONDS*1000) {
             endgame = true;
+            elapsedTime = MAX_TIME_IN_SECONDS*1000;
         }
     }
 
@@ -288,7 +308,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
 // TODO ADD ENDGAME WHEN TIME HAS ELAPSED IN FRONTEND
 
 const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} : 
-    {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : void => {
+    {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : {finalScore: number, elapsedTime: number} => {
     if(finalScore === undefined){
         const getScoreStmt = db.prepare(`SELECT currentScore FROM gamesessions WHERE id = ?`);
         const scoreRow = getScoreStmt.get(session.id) as { currentScore: number };
@@ -383,4 +403,5 @@ const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} :
     const deleteSessionStmt = db.prepare(`DELETE FROM gamesessions WHERE id = ?`);
     deleteSessionStmt.run(session.id);
 
+    return {finalScore, elapsedTime}
 }
