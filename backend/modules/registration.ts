@@ -164,15 +164,7 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
             message: "success_email_verified" 
         });
     } catch (error) {
-        res.send(`
-            <html>
-                <head><title>Internal Server Error</title></head>
-                <body>
-                    <h1>Something Went Wrong</h1>
-                    <p>We encountered an error while processing your request. Please try again later.</p>
-                </body>
-            </html>
-        `);
+        res.status(500).send({ message: "server_error" });
     }    
 }
 
