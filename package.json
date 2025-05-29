@@ -9,12 +9,5 @@
         "build-frontend": "cd frontend && npm run build",
         "start-backend": "cd backend && node --experimental-strip-types server.ts",
         "build-frontend-then-start-backend": "cd frontend && npm run build && cd ../backend && node --experimental-strip-types server.ts"
-    },
-    "devDependencies": {
-        "@types/jsonwebtoken": "^9.0.9"
-    },
-    "dependencies": {
-        "@types/express": "^5.0.2",
-        "@types/joi-password-complexity": "^3.1.0"
     }
 }

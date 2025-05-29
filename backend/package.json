@@ -19,7 +19,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "server-destroy": "^1.0.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "@types/express": "^5.0.2",
+    "@types/joi-password-complexity": "^3.1.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -27,6 +29,7 @@
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.23",
     "@types/nodemailer": "^6.4.17",
-    "@types/server-destroy": "^1.0.4"
+    "@types/server-destroy": "^1.0.4",
+    "@types/jsonwebtoken": "^9.0.9"
   }
 }
