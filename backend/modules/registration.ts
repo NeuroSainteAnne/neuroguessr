@@ -1,6 +1,6 @@
 
 import passwordComplexity from "joi-password-complexity";
-import { sendEmail } from "./email.ts";
+import { sendEmail, logoString } from "./email.ts";
 import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
@@ -14,6 +14,7 @@ import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, Registe
     VerifyEmailBody} from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import i18next from "./i18n.ts";
 const config: Config = configJson;
 
 export const register = async (req: RegisterRequest, res: Response): Promise<void> => {
@@ -24,6 +25,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 firstname: Joi.string().required().label("firstname"),
                 lastname: Joi.string().required().label("lastname"),
                 email: Joi.string().email().required().label("email"),
+                language: Joi.string().label("language"),
                 // @ts-ignore
                 password: passwordComplexity().required().label("password"),
             });
@@ -97,12 +99,34 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         tokenStmt.run(lastID, tokenValue);
 
         const url = `${config.server.external_address}/\#/validate/${lastID}/${tokenValue}`;
-
-        const subject = "Please Validate Email";
+        const lang = req.body.language ? req.body.language : 'fr';
+        
+        const subject = i18next.t('register_email_subject', { lng: lang });
         const message = `
-        <h3>Hello ${req.body.firstname} ${req.body.lastname}</h3>
-        <p>Thanks for registering to Neuroguessr.</p>
-        <p>Click this link <a href="${url}">here</a> to validate your email</p>
+        <head>
+            <style>
+                a:visited { color: #8888cc !important; }
+            </style>
+        </head>
+        <body style="background-color:#363636;width:100%;font-family: Open Sans,system-ui,Arial,Helvetica,sans-serif;color: #d9dddc;text-align:center;">
+        <table cellpadding="0" cellspacing="0" border="0" style="text-align:left;margin-top:20px;">
+            <tr>
+                <td width=70>
+                    <img src="${logoString}" width=64 height=64></img>
+                </td>
+                <td style="vertical-align:middle;">
+                    <h1 style="font-size:56px; margin:0;">NeuroGuessr</h1>
+                </td>
+            </tr>
+            <tr>
+                <td colspan=2>
+                    <h3 style="margin-top:15px">${i18next.t('register_email_greeting', { lng: lang })} ${req.body.firstname} ${req.body.lastname}</h3>
+                    <p>${i18next.t('register_email_thanks', { lng: lang })}</p>
+                    <p>${i18next.t('register_email_validate', { lng: lang, url })}</p>
+                </td>
+            </tr>
+        </table>
+        </body>
       `;
 
         await sendEmail(req.body.email, subject, message);
@@ -227,7 +251,7 @@ export const passwordLink = async (
         const subject = "Password Reset";
         const message = `
         <p>Here is a link to reset your password</p>
-        <p>Click this link <a href="${url}">here</a> to reset your password</p>
+        <p>Click this link <a style="color: #A2B9F0" href="${url}">here</a> to reset your password</p>
       `;
 
         await sendEmail(user.email, subject, message);

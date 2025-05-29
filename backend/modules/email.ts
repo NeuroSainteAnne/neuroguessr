@@ -9,7 +9,16 @@ import destroyer from 'server-destroy';
 import {OAuth2Client} from 'google-auth-library';
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import path from "path";
+import fs from "fs";
 const config: Config = configJson;
+
+// Read and encode the image as base64
+const logoPath = path.join(__dirname, "../assets/neuroguessr_logo.png");
+const logoData = fs.readFileSync(logoPath);
+const logoBase64 = logoData.toString("base64");
+const logoMime = "image/png";
+export const logoString = `data:${logoMime};base64,${logoBase64}`
 
 /**
 * Create a new OAuth2Client, and go through the OAuth2 content

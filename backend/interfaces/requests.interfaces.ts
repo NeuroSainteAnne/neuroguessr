@@ -20,6 +20,7 @@ export interface RegisterBody {
     lastname: string;
     email: string;
     password: string;
+    language?: string;
 }
 
 export interface RegisterRequest extends Request {

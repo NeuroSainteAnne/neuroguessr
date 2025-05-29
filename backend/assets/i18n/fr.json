@@ -1,0 +1,6 @@
+{
+    "register_email_subject": "Veuillez valider votre adresse e-mail",
+    "register_email_greeting": "Bonjour",
+    "register_email_thanks": "Merci de vous être inscrit à Neuroguessr.",
+    "register_email_validate": "Cliquez sur <a style=\"color: #A2B9F0\" href=\"{{url}}\">ce lien</a> pour valider votre adresse e-mail"
+}
