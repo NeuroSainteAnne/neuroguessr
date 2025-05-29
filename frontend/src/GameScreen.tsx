@@ -403,13 +403,42 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }, 500);
   }
 
+  const manualClotureGameSession = async (): Promise<number> => {
+    try {
+        const response = await fetch('/api/cloture-game-session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
+        });
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.message || "Unknown error");
+        }
+        const result = await response.json();
+        return result.finalScore;
+      } catch (error) {
+        throw error;
+      }
+  }
+
   const refreshTimer = () => {
     const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
     //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
     callback.setHeaderTime(`${minutes}:${seconds}`);
-    if (remaining <= 0) endTimeAttack(currentScoreRef.current); // Call endTimeAttack to show the window // TODO CALL SERVER IF CONNECTED
+    if (remaining <= 0){
+      if(isLoggedIn){
+        manualClotureGameSession().then((finalScore)=>{
+          endTimeAttack(finalScore);
+        })
+      } else {
+        endTimeAttack(currentScoreRef.current);
+      }
+    }
   }
 
   function endTimeAttack(givenFinalScore: number) {
