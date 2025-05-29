@@ -18,9 +18,10 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
 
     const handleCheckToken = async () => {
         // Extract token from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        const userId = urlParams.get('id');
+        const hash = window.location.hash.replace(/^#\/?/, "");
+        const parts = hash.split("/");
+        const userId = parts[1];
+        const token = parts[2];
         setUserId(userId)
         setResetToken(token)
 

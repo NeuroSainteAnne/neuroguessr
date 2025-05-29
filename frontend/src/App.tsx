@@ -22,12 +22,7 @@ function App() {
    const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
-   const [currentPage, setCurrentPage] = useState<string>(() => {
-      const queryParameters = new URLSearchParams(window.location.search)
-      if (queryParameters.get("validate")) return "validate"
-      if (queryParameters.get("resetpwd")) return "resetpwd"
-      return ""
-   })
+   const [currentPage, setCurrentPage] = useState<string>("")
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")
    const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([])
