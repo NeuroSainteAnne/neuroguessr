@@ -100,7 +100,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
 
         const url = `${config.server.external_address}/\#/validate/${lastID}/${tokenValue}`;
         const lang = req.body.language ? req.body.language : 'fr';
-        
+
         const subject = i18next.t('register_email_subject', { lng: lang });
         const message = `
         <head>
@@ -200,6 +200,7 @@ export const passwordLink = async (
         const validate = (data: PasswordLinkBody) => {
             const emailSchema = Joi.object({
                 email: Joi.string().email().required().label("Email"),
+                language: Joi.string().label("language"),
             });
             return emailSchema.validate(data);
         };
@@ -248,10 +249,32 @@ export const passwordLink = async (
             return;
         }
 
-        const subject = "Password Reset";
+        const lang = req.body.language ? req.body.language : 'fr';
+        const subject = i18next.t('reset_password_subject', { lng: lang });
         const message = `
-        <p>Here is a link to reset your password</p>
-        <p>Click this link <a style="color: #A2B9F0" href="${url}">here</a> to reset your password</p>
+        <head>
+            <style>
+                a:visited { color: #8888cc !important; }
+            </style>
+        </head>
+        <body style="background-color:#363636;width:100%;font-family: Open Sans,system-ui,Arial,Helvetica,sans-serif;color: #d9dddc;text-align:center;">
+        <table cellpadding="0" cellspacing="0" border="0" style="text-align:left;margin-top:20px;">
+            <tr>
+                <td width=70>
+                    <img src="${logoString}" width=64 height=64></img>
+                </td>
+                <td style="vertical-align:middle;">
+                    <h1 style="font-size:56px; margin:0;">NeuroGuessr</h1>
+                </td>
+            </tr>
+            <tr>
+                <td colspan=2>
+                    <h3 style="margin-top:15px">${i18next.t('register_email_greeting', { lng: lang })} ${user.firstname} ${user.lastname}</h3>
+                    <p>${i18next.t('reset_password_link', { lng: lang, url })}</p>
+                </td>
+            </tr>
+        </table>
+        </body>
       `;
 
         await sendEmail(user.email, subject, message);

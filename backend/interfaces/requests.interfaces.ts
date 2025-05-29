@@ -38,6 +38,7 @@ export interface VerifyEmailRequest extends Request<VerifyEmailBody> {
 
 export interface PasswordLinkBody {
     email: string;
+    language?: string;
 }
 
 export interface PasswordLinkRequest extends Request {
