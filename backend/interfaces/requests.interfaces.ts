@@ -26,12 +26,14 @@ export interface RegisterRequest extends Request {
     body: RegisterBody;
 }
 
-interface EmailLinkParams {
+export interface VerifyEmailBody {
     id: string;
     token: string;
 }
 
-export interface EmailLinkRequest extends Request<EmailLinkParams> {}
+export interface VerifyEmailRequest extends Request<VerifyEmailBody> {
+    body: VerifyEmailBody;
+}
 
 export interface PasswordLinkBody {
     email: string;

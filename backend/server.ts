@@ -5,7 +5,7 @@ import https from 'https';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
 import { db, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
-import { register, emailLink, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
+import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
 import { getNextRegion, startGameSession, validateRegion } from "./modules/game.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
@@ -56,15 +56,10 @@ app.post('/api/register', register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
+app.post("/api/verify-email", verifyEmail)
 app.get('/api/user-info', authenticateToken, getUserInfo);
 app.post('/api/config-user', authenticateToken, configUser);
 app.post('/api/get-leaderboard', getLeaderboard);
-
-app.get("/verify/:id/:token", emailLink)
-
-app.get("/resetPwd/:id/:token", (req, res) => {
-    res.redirect("/index.html?resetpwd=true&id=" + req.params.id + "&token=" + req.params.token);
-})
 
 app.post('/api/start-game-session', authenticateToken, 
     (req, res) => startGameSession(req as StartGameSessionRequest, res));

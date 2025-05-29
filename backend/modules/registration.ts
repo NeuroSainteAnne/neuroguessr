@@ -8,9 +8,10 @@ import jwt from "jsonwebtoken";
 import { __dirname } from "./utils.ts";
 import type { Response } from "express";
 import type { Token, User } from "../interfaces/database.interfaces.ts";
-import type { EmailLinkRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
+import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
     RegisterRequest, ResetPasswordBody, ResetPasswordRequest, 
-    ValidateResetTokenBody, ValidateResetTokenRequest } from "../interfaces/requests.interfaces.ts";
+    ValidateResetTokenBody, ValidateResetTokenRequest, 
+    VerifyEmailBody} from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
@@ -95,13 +96,13 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         const tokenStmt = db.prepare("INSERT INTO tokens (userId, token) VALUES (?, ?)");
         tokenStmt.run(lastID, tokenValue);
 
-        const url = `${config.server.external_address}/verify/${lastID}/${tokenValue}`;
+        const url = `${config.server.external_address}/\#/validate/${lastID}/${tokenValue}`;
 
-        const subject = "Please Verify Email";
+        const subject = "Please Validate Email";
         const message = `
         <h3>Hello ${req.body.firstname} ${req.body.lastname}</h3>
         <p>Thanks for registering to Neuroguessr.</p>
-        <p>Click this link <a href="${url}">here</a> to verify your email</p>
+        <p>Click this link <a href="${url}">here</a> to validate your email</p>
       `;
 
         await sendEmail(req.body.email, subject, message);
@@ -114,35 +115,33 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
     }
 };
 
-export const emailLink = async (req: EmailLinkRequest, res: Response): Promise<void> => {
+export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promise<void> => {
     try {
+        const validate = (data: VerifyEmailBody) => {
+            const schema = Joi.object({
+                id: Joi.string().required().label("id"),
+                token: Joi.string().required().label("token")
+            });
+            return schema.validate(data);
+        };
+
+        const { error } = validate(req.body);
+        if (error){
+            res.status(400).send({ message: "error_invalid_token" });
+            return;
+        }
+
         const getUserStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserStmt.get(req.params.id) as User;
+        const user = getUserStmt.get(req.body.id) as User;
         if (!user) {
-            res.send(`
-                <html>
-                    <head><title>Verification Failed</title></head>
-                    <body>
-                        <h1>Invalid Link</h1>
-                        <p>The verification link is invalid or has expired.</p>
-                    </body>
-                </html>
-            `);
+            res.status(400).send({ message: "error_invalid_token" });
             return;
         }
 
         const getTokenStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ?");
-        const tokenRecord = getTokenStmt.get(user.id, req.params.token) as Token;
+        const tokenRecord = getTokenStmt.get(user.id, req.body.token) as Token;
         if (!tokenRecord) {
-            res.send(`
-                <html>
-                    <head><title>Verification Failed</title></head>
-                    <body>
-                        <h1>Invalid Link</h1>
-                        <p>The verification link is invalid or has expired.</p>
-                    </body>
-                </html>
-            `);
+            res.status(400).send({ message: "error_invalid_token" });
             return;
         }
 
@@ -152,15 +151,18 @@ export const emailLink = async (req: EmailLinkRequest, res: Response): Promise<v
         const deleteTokenStmt = db.prepare("DELETE FROM tokens WHERE userId = ?");
         deleteTokenStmt.run(user.id);
 
-        res.send(`
-            <html>
-                <head><title>Verification Successful</title></head>
-                <body>
-                    <h1>Email Verified Successfully</h1>
-                    <p>Thank you for verifying your email. You can now <a href="/login.html">log in</a>.</p>
-                </body>
-            </html>
-        `);
+        const token = jwt.sign({ 
+            username: user.username,
+            email: user.email, 
+            firstname: user.firstname, 
+            lastname: user.lastname,
+            publishToLeaderboard: user.publishToLeaderboard,
+            id: user.id 
+        }, config.jwt_secret, { expiresIn: "1h" });
+        res.status(200).send({ 
+            token: token, 
+            message: "success_email_verified" 
+        });
     } catch (error) {
         res.send(`
             <html>
@@ -220,7 +222,7 @@ export const passwordLink = async (
             tokenValue = token.token;
         }
         
-        const url = `${config.server.external_address}/resetPwd/${user.id}/${tokenValue}`;
+        const url = `${config.server.external_address}/#/resetpwd/${user.id}/${tokenValue}`;
 
         // debug mode: no email sending
         if(config.email.type == "none"){
