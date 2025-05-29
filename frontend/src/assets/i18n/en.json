@@ -164,5 +164,6 @@
   "reconfigure_mode": "Setup",
   "password-helper-leaveempty": "Leave empty to keep the same password",
   "reconfigure_success": "Configuration successful!",
-  "reconfigure_failed": "Configuration failed. Please try again."
+  "reconfigure_failed": "Configuration failed. Please try again.",
+  "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime"
 }

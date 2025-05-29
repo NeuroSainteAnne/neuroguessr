@@ -164,5 +164,6 @@
   "reconfigure_mode": "Configuration",
   "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
   "reconfigure_success": "Configuration réussie !",
-  "reconfigure_failed": "Échec de la configuration. Veuillez réessayer."
+  "reconfigure_failed": "Échec de la configuration. Veuillez réessayer.",
+  "beta_version_login_message": "ATTENTION : ce site est en version de développement expérimental. Votre compte ainsi que vos résultats peuvent être supprimés à tout moment"
 }

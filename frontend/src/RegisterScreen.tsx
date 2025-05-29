@@ -106,6 +106,11 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
           <h2>{t("register_mode")}</h2>
           <table className="login-element">
             <tr>
+                <td colSpan={2} id="login_error">
+                    {t("beta_version_login_message")}
+                </td>
+            </tr>
+            <tr>
               <td>
                 <label id="username-label" htmlFor="username">{t("login_username")}</label>
               </td>
