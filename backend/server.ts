@@ -7,11 +7,11 @@ import { db, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./m
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
-import { getNextRegion, startGameSession, validateRegion } from "./modules/game.ts";
+import { getNextRegion, manualClotureGameSession, startGameSession, validateRegion } from "./modules/game.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { GetNextRegionRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard } from "./modules/leaderboard.ts";
 const config: Config = configJson;
 
@@ -66,6 +66,8 @@ app.post('/api/start-game-session', authenticateToken,
 app.post('/api/get-next-region', authenticateToken, 
     (req, res) => getNextRegion(req as GetNextRegionRequest, res));
 app.post('/api/validate-region', authenticateToken, validateRegion);
+app.post('/api/cloture-game-session', authenticateToken,
+    (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
 
 if(config.server.mode == "https"){
     var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));

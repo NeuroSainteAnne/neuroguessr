@@ -7,7 +7,7 @@ import { NVImage } from "@niivue/niivue";
 import atlasFiles from "../../frontend/src/atlas_files.ts"
 import type { Response } from "express";
 import type { GameProgress, GameSession } from "../interfaces/database.interfaces.ts";
-import type { GetNextRegionRequest, StartGameSessionRequest, ValidateRegionRequest } from "../interfaces/requests.interfaces.ts";
+import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionRequest, ValidateRegionRequest } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
@@ -111,7 +111,7 @@ export const getNextRegion = async (
         const elapsedTime = Date.now() - session.createdAt;
         if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
             // Time is up, end the game and notify frontend
-            let {finalScore} = endGame({ session, elapsedTime: MAX_TIME_IN_SECONDS*1000, quitReason: "timeout" });
+            let {finalScore} = endGame({ session, quitReason: "timeout" });
             res.status(200).send({
                 message: "Time is up! Game over.",
                 regionId: -1,
@@ -305,7 +305,29 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
     });
 }
 
-// TODO ADD ENDGAME WHEN TIME HAS ELAPSED IN FRONTEND
+export const manualClotureGameSession = async (req: ClotureGameSessionRequest, res: Response): Promise<void> => {
+    const { sessionId, sessionToken } = req.body;
+    // Validate the session token
+    const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
+    const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
+    if (!session) {
+        res.status(403).send({ message: "Invalid session or token mismatch" });
+        return
+    }
+    
+    // Time is up, end the game and notify frontend
+    let {finalScore} = endGame({ session, quitReason: "timeout" });
+    res.status(200).send({
+        message: session.mode === "time-attack"?"Time is up! Game over.":"Game over.",
+        isCorrect: false,
+        regionId: -1,
+        voxelValue: -1,
+        endgame: true,
+        scoreIncrement: 0,
+        finalScore
+    });
+    return;
+}
 
 const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} : 
     {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : {finalScore: number, elapsedTime: number} => {
@@ -315,13 +337,7 @@ const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} :
         finalScore = scoreRow ? scoreRow.currentScore : 0;
     }
     if(elapsedTime === undefined){
-        const getCreatedAtStmt = db.prepare(`SELECT createdAt FROM gamesessions WHERE id = ?`);
-        const createdAtRow = getCreatedAtStmt.get(session.id) as { createdAt: number };
-        if (createdAtRow && typeof createdAtRow.createdAt === 'number') {
-            elapsedTime = Math.floor((Date.now() - createdAtRow.createdAt));
-        } else {
-            elapsedTime = 0;
-        }
+        elapsedTime = Math.min(Math.floor((Date.now() - session.createdAt)), MAX_TIME_IN_SECONDS);
     }
     if(bonusTime === undefined) bonusTime = 0
     if(quitReason === undefined) quitReason = ""

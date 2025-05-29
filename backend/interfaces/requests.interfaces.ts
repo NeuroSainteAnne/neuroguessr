@@ -96,6 +96,15 @@ export interface ValidateRegionRequest extends Request {
     body: ValidateRegionRequestBody;
 }
 
+interface ClotureGameSessionBody {
+    sessionId: number;
+    sessionToken: string;
+}
+
+export interface ClotureGameSessionRequest extends Request {
+    body: ClotureGameSessionBody;
+}
+
 /* CONFIG USER INTERFACES */
 
 export interface ConfigUserBody {
