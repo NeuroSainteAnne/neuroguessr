@@ -105,6 +105,22 @@ export const getNextRegion = async (
             .send({ message: "Invalid atlas specified in the session." });
         return;
     }
+
+    // Check if there is already an active gameprogress element; if yes, return the ongoing region
+    const getActiveProgressStmt = db.prepare(
+        `SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1`
+    );
+    const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress | undefined;
+    if (activeProgress) {
+        // There is already an active region, return it
+        res.status(200).send({
+            message: "Ongoing region found.",
+            regionId: activeProgress.regionId,
+            newRegion: false
+        });
+        return;
+    }
+
     let randomRegionId: number | null = null;
     if (session.mode == "time-attack") {
         // we have to select region that has not already been answered
@@ -133,22 +149,15 @@ export const getNextRegion = async (
         randomRegionId = atlasValidRegions[randomIndex];
     }
     if (randomRegionId !== null) {
-        const insertProgressStmt = db.prepare(`
+        db.exec(`
+            UPDATE gameprogress SET isActive = 0 WHERE sessionId = ${sessionId} AND isActive = 1;
             INSERT INTO gameprogress (sessionId, sessionToken, regionId, timeTaken, isActive, isCorrect)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (${sessionId}, '${sessionToken}', ${randomRegionId}, 0, 1, 0);
         `);
-        // TODO deactivate all other active regions in order to prevent concurrent requests bugs
-        insertProgressStmt.run(
-            sessionId,
-            sessionToken,
-            randomRegionId,
-            0,
-            1,
-            0
-        );
         res.status(200).send({
             message: "Next region selected successfully.",
             regionId: randomRegionId,
+            newRegion: true
         });
     }
 };
