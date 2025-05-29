@@ -618,6 +618,20 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
     }
 
+    let previousScore = currentScoreRef.current;
+    scoreIncrement = getUpdatedScore({isEndgame, clickedRegion, guessSuccess, scoreIncrement}).scoreIncrement
+
+    if(isEndgame){
+      performEndGame({finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
+    }
+  }
+
+  const getUpdatedScore = ({isEndgame, clickedRegion, guessSuccess, scoreIncrement}:
+        {isEndgame: boolean, clickedRegion:number, guessSuccess:boolean, scoreIncrement:number}) : {scoreIncrement:number} => {
+    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
+      console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
+      return {scoreIncrement};
+    }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
     const clickedRegionName = clickedRegion && cMap.current && cMap.current.labels?.[clickedRegion] ? cMap.current.labels[clickedRegion] : t('unknown_region');
 
@@ -633,7 +647,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         // Increment streak for correct guess
         setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1)); 
       }
-
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
       } else {
@@ -650,10 +663,11 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
 
       // Move to the next target after a short delay to show feedback
-      setTimeout(() => {
-        selectNewTarget();
-      }, 100);
-
+      if(!isEndgame){
+        setTimeout(() => {
+          selectNewTarget();
+        }, 100);
+      }
     } else { // Incorrect Guess
       setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
       setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
@@ -666,7 +680,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
         console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
-
         console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
         if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
@@ -678,7 +691,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           callback.setHeaderText(findPrefix + targetName);
           callback.setHeaderTextMode("normal")
         }, 3000); // Increased delay to 3 seconds
-
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
@@ -723,28 +735,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         callback.setHeaderText(incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg);
         callback.setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
-        setForceDisplayUpdate((u)=>u+1); // Update display immediately after incorrect guess
-
         // Automatically move to the next target after a short delay
-        setTimeout(() => {
-          selectNewTarget();
-        }, 100); // Adjust delay as needed
-
-      } else if (gameMode === 'streak') {
-        // Streak ends on incorrect guess
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        // The streak label will be updated by updateGameDisplay called below
-
-        // Display Streak End Overlay instead of redirecting
-        setShowStreakOverlay(true);
-
-        callback.setHeaderTextMode("failure"); // Indicate streak ended visually
-
-        // Stop the game
-        setIsGameRunning(false);
-
-        // Do not call selectNewTarget or redirect automatically here
+        if(!isEndgame){
+          setTimeout(() => {
+            selectNewTarget();
+          }, 100);
+        }
       }
 
       selectedVoxel.current = null;
@@ -755,21 +751,29 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         setForceDisplayUpdate((u)=>u+1);
       }
     }
-
-    if(isEndgame){
+    return {scoreIncrement}
+  }
+ 
+  function performEndGame ({finalScore}:{finalScore:number}) {
+    if (gameMode === 'streak') {
+        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+        setShowStreakOverlay(true);
+        callback.setHeaderTextMode("failure"); // Indicate streak ended visually
+        setIsGameRunning(false);
+      }
       if(gameMode === 'time-attack'){
         if(!isLoggedIn){
           const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-          givenFinalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
+          finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
         }
-        endTimeAttack(givenFinalScore)
+        endTimeAttack(finalScore)
       } else if (gameMode === 'streak') {
         setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
         setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
         setShowStreakOverlay(true);
         return;
       }
-    }
   }
 
 
