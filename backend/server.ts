@@ -11,8 +11,9 @@ import { getNextRegion, manualClotureGameSession, startGameSession, validateRegi
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard } from "./modules/leaderboard.ts";
+import { getUserStats } from "./modules/stats.ts";
 const config: Config = configJson;
 
 const app = express();
@@ -60,6 +61,8 @@ app.post("/api/verify-email", verifyEmail)
 app.get('/api/user-info', authenticateToken, getUserInfo);
 app.post('/api/config-user', authenticateToken, configUser);
 app.post('/api/get-leaderboard', getLeaderboard);
+app.post('/api/get-stats', authenticateToken, 
+    (req, res) => getUserStats(req as GetStatsRequest, res));
 
 app.post('/api/start-game-session', authenticateToken, 
     (req, res) => startGameSession(req as StartGameSessionRequest, res));

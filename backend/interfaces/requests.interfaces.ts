@@ -127,3 +127,18 @@ interface GetLeaderboardBody {
 export interface GetLeaderboardRequest {
     body: GetLeaderboardBody
 }
+
+/* STATS request */
+
+
+interface GetStatsBody {
+    mode?: string;
+    atlas?: string;
+    numberLimit?: number;
+    timeLimit?: number;
+    appendTotal?: boolean;
+}
+
+export interface GetStatsRequest {
+    body: GetStatsBody
+}
