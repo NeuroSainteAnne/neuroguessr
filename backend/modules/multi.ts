@@ -9,6 +9,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import express from 'express';
 
+const DEFAULT_REGION_NUMBER = 15;
+const DEFAULT_DURATION_PER_REGION = 15;
+const DEFAULT_GAMEOVER_ON_ERROR = false;
+
 interface WSGame extends WebSocket {
   userName?: string;
   gameRef?: MultiplayerGame;
@@ -18,6 +22,12 @@ interface WSGame extends WebSocket {
 interface MultiplayerGame {
   lobby: Set<WebSocket>;
   hasStarted: boolean;
+  parameters: {
+    atlas?: string
+    regionsNumber: number;
+    durationPerRegion: number;
+    gameoverOnError: boolean;
+  }
 } 
 
 const app = express();
@@ -79,7 +89,12 @@ wss.on('connection', (ws, req) => {
         if (!games[data.sessionCode]){
           games[data.sessionCode] = {
             lobby: new Set(),
-            hasStarted: false
+            hasStarted: false,
+            parameters: {
+              regionsNumber: DEFAULT_REGION_NUMBER,
+              durationPerRegion: DEFAULT_DURATION_PER_REGION,
+              gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
+            }
           }
         }
         games[data.sessionCode].lobby.add(ws);
@@ -91,8 +106,9 @@ wss.on('connection', (ws, req) => {
           .map(client => (client as any).userName)
           .filter(Boolean);
         ws.send(JSON.stringify({ type: 'lobby-users', users: userList }));
+        ws.send(JSON.stringify({ type: 'parameters-updated', parameters: games[data.sessionCode].parameters }));
 
-        // Optionally broadcast to others in the lobby
+        // Broadcast to others in the lobby
         games[data.sessionCode].lobby.forEach(client => {
           if (client !== ws && client.readyState === ws.OPEN) {
             client.send(JSON.stringify({ type: 'player-joined', userName: userName }));
@@ -119,11 +135,30 @@ wss.on('connection', (ws, req) => {
             client.send(JSON.stringify({ type: 'game-start' }));
           }
         });
+      } else if (data.type === 'update-parameters' && (ws as WSGame).gameRef && typeof data.parameters === 'object') {
+        // Update the game parameters for this lobby
+        const gameRef = (ws as WSGame).gameRef;
+        if(!gameRef){
+          ws.send(JSON.stringify({ type: 'error', message: 'Game not available.' }));
+          return;
+        }
+        gameRef.parameters = {
+          ...gameRef.parameters,
+          ...data.parameters
+        };
+        // Optionally broadcast updated parameters to all lobby members
+        gameRef.lobby.forEach(client => {
+          if (client.readyState === ws.OPEN) {
+            client.send(JSON.stringify({ type: 'parameters-updated', parameters: gameRef.parameters }));
+          }
+        });
       }
     } catch (e) {
       ws.send(JSON.stringify({ type: 'error', message: e }));
     }
   });
+
+  
 
   ws.on('close', () => {
     // Remove from current lobby
