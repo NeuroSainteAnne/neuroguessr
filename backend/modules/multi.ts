@@ -9,10 +9,21 @@ import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import express from 'express';
 
+interface WSGame extends WebSocket {
+  userName?: string;
+  gameRef?: MultiplayerGame;
+  sessionCode?: string;
+} 
+
+interface MultiplayerGame {
+  lobby: Set<WebSocket>;
+  hasStarted: boolean;
+} 
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
-const lobbies: Record<string, Set<WebSocket>> = {};
+const games: Record<string, MultiplayerGame> = {};
 
 // Helper to generate a unique 8-digit code
 function generateCode(): string {
@@ -58,34 +69,39 @@ wss.on('connection', (ws, req) => {
           return;
         }
         const userName = jwtpayload.username;
-        (ws as any).userName = userName;
+        (ws as WSGame).userName = userName;
         const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(data.sessionCode);
         if (!session) {
           ws.send(JSON.stringify({ type: 'error', message: 'Lobby does not exist.' }));
           ws.close();
           return;
         }
-        if (!lobbies[data.sessionCode]) lobbies[data.sessionCode] = new Set();
-        lobbies[data.sessionCode].add(ws);
-        (ws as any).lobby = lobbies[data.sessionCode];
-        (ws as any).sessionCode = data.sessionCode;
+        if (!games[data.sessionCode]){
+          games[data.sessionCode] = {
+            lobby: new Set(),
+            hasStarted: false
+          }
+        }
+        games[data.sessionCode].lobby.add(ws);
+        (ws as WSGame).gameRef = games[data.sessionCode];
+        (ws as WSGame).sessionCode = data.sessionCode;
         
         // Send the list to the newly joined client
-        const userList = Array.from(lobbies[data.sessionCode])
+        const userList = Array.from(games[data.sessionCode].lobby)
           .map(client => (client as any).userName)
           .filter(Boolean);
         ws.send(JSON.stringify({ type: 'lobby-users', users: userList }));
 
         // Optionally broadcast to others in the lobby
-        lobbies[data.sessionCode].forEach(client => {
+        games[data.sessionCode].lobby.forEach(client => {
           if (client !== ws && client.readyState === ws.OPEN) {
             client.send(JSON.stringify({ type: 'player-joined', userName: userName }));
           }
         });
       } else if (data.type === 'launch-game' && data.sessionToken) {
-        const lobby = (ws as any).lobby;
-        const userName = (ws as any).userName;
-        const sessionCode = (ws as any).sessionCode
+        const lobby = (ws as WSGame).gameRef?.lobby;
+        const userName = (ws as WSGame).userName;
+        const sessionCode = (ws as WSGame).sessionCode
         if (!lobby || !userName || !Array.from(lobby).some(client => (client as any).userName === userName)) {
           ws.send(JSON.stringify({ type: 'error', message: 'You are not in the lobby.' }));
           return;
@@ -98,7 +114,7 @@ wss.on('connection', (ws, req) => {
         }
         console.log("Starting game", sessionCode)
         // broadcast gamestart to all users
-        lobbies[sessionCode].forEach(client => {
+        games[data.sessionCode].lobby.forEach(client => {
           if (client.readyState === ws.OPEN) {
             client.send(JSON.stringify({ type: 'game-start' }));
           }
@@ -110,19 +126,20 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
-    // Remove from all lobbies
-    Object.entries(lobbies).forEach(([code, set]) => {
-      if (set.has(ws)) {
-        set.delete(ws);
-        const userName = (ws as any).userName;
-        // Notify remaining clients in this lobby
-        set.forEach(client => {
-          if (client.readyState === ws.OPEN) {
-            client.send(JSON.stringify({ type: 'player-left', userName }));
-          }
-        });
-      }
-    });
+    // Remove from current lobby
+    const gameRef = (ws as WSGame).gameRef;
+    if(!gameRef) return;
+    const lobby = gameRef.lobby;
+    if (lobby.has(ws)) {
+      lobby.delete(ws);
+      const userName = (ws as WSGame).userName;
+      // Notify remaining clients in this lobby
+      lobby.forEach(client => {
+        if (client.readyState === ws.OPEN) {
+          client.send(JSON.stringify({ type: 'player-left', userName }));
+        }
+      });
+    }
   });
 });
 
