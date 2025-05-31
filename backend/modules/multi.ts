@@ -8,10 +8,12 @@ const config: Config = configJson;
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import express from 'express';
+import { validRegions } from "./game.ts";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
+const LOAD_ATLAS_DURATION = 5;
 
 interface WSGame extends WebSocket {
   userName?: string;
@@ -29,8 +31,19 @@ interface MultiplayerParametersType {
 interface MultiplayerGame {
   lobby: Set<WebSocket>;
   hasStarted: boolean;
-  parameters: MultiplayerParametersType
+  hasEnded: boolean;
+  parameters: MultiplayerParametersType;
+  commands?: GameCommands[];
+  currentCommandIndex?: number;
+  commandTimeout?: NodeJS.Timeout;
 } 
+
+interface GameCommands {
+  action: string;
+  atlas?: string;
+  regionId?: number;
+  duration: number;
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -87,6 +100,8 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
     games[sessionCode] = {
       lobby: new Set(),
       hasStarted: false,
+      hasEnded: false,
+      currentCommandIndex: 0,
       parameters: {
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
@@ -114,6 +129,38 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
   });
 }
 
+function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
+  const commands = [];
+  if(!params.atlas) return;
+  // 1. Load atlas
+  commands.push({
+    action: "load-atlas",
+    atlas: params.atlas,
+    duration: LOAD_ATLAS_DURATION
+  });
+
+  // 2. Generate region IDs (replace with your actual region list logic)
+  let regionPool = [...validRegions[params.atlas]];
+  for (let i = 0; i < params.regionsNumber; i++) {
+    // If pool is empty, refill with all regions (to allow repeats only after all have been used)
+    if (regionPool.length === 0) {
+      regionPool = [...validRegions[params.atlas]];
+    }
+    // Pick a random region from the pool
+    const idx = Math.floor(Math.random() * regionPool.length);
+    const regionId = regionPool[idx];
+    commands.push({
+      action: "guess",
+      regionId,
+      duration: params.durationPerRegion
+    });
+    // Remove from pool
+    regionPool.splice(idx, 1);
+  }
+
+  return commands;
+}
+
 function launchGame(ws: WebSocket, sessionToken: string){
   const lobby = (ws as WSGame).gameRef?.lobby;
   const userName = (ws as WSGame).userName;
@@ -134,6 +181,7 @@ function launchGame(ws: WebSocket, sessionToken: string){
     return;
   }
   console.log("Starting game", sessionCode)
+  gameRef.commands = generateGameCommands(gameRef.parameters) || []
   gameRef.hasStarted = true;
   // broadcast gamestart to all users
   gameRef.lobby.forEach(client => {
@@ -141,6 +189,36 @@ function launchGame(ws: WebSocket, sessionToken: string){
       client.send(JSON.stringify({ type: 'game-start' }));
     }
   });
+  sendNextCommand(gameRef);
+}
+
+function sendNextCommand(gameRef: MultiplayerGame) {
+  if (!gameRef.commands || gameRef.currentCommandIndex === undefined) return;
+
+  // If all commands sent, stop
+  if (gameRef.currentCommandIndex >= gameRef.commands.length) {
+    // Optionally broadcast game end
+    gameRef.lobby.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: 'game-end' }));
+      }
+    });
+    return;
+  }
+
+  const command = gameRef.commands[gameRef.currentCommandIndex];
+  gameRef.lobby.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ type: 'game-command', command }));
+    }
+  });
+
+  // Schedule next command
+  gameRef.currentCommandIndex++;
+  if (gameRef.currentCommandIndex < gameRef.commands.length + 1) {
+    const nextDuration = command.duration * 1000; // convert to ms
+    gameRef.commandTimeout = setTimeout(() => sendNextCommand(gameRef), nextDuration);
+  }
 }
 
 function updateParameters(ws: WebSocket, parameters: MultiplayerParametersType) {

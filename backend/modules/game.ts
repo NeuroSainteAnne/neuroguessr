@@ -21,7 +21,7 @@ const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the regio
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
 
-const validRegions : Record<string,number[]> = {}
+export const validRegions : Record<string,number[]> = {}
 const imageRef : Record<string,NVImage> = {}
 const imageMetadata : Record<string,any> = {}
 const regionCenters : Record<string,number[][]> = {}
