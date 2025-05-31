@@ -70,9 +70,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }, [askedSessionCode, askedSessionToken])
 
   useEffect(()=>{
-      console.log("asked3")
     tryLaunchGame()
-      console.log("asked4")
   }, [askedSessionToken])
 
   return (

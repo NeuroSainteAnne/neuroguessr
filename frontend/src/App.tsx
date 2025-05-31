@@ -236,7 +236,6 @@ function App() {
       targetPage.current = "multiplayer-game"
       setAskedSessionCode(sessionCode);
       setAskedSessionToken(sessionToken || null);
-      console.log("asked1",sessionToken)
       setLoadEnforcer(prev => prev + 1);
       window.location.hash = `#/multiplayer-game/${sessionCode}${sessionToken ? `/${sessionToken}` : ``}`;
    }
