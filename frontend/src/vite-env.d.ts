@@ -33,3 +33,10 @@ type DisplayOptions = {
   displayAtlas: boolean;
   displayOpacity: number;
 }
+
+interface MultiplayerParametersType {
+    atlas?: string
+    regionsNumber: number;
+    durationPerRegion: number;
+    gameoverOnError: boolean;
+}

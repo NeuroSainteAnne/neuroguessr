@@ -13,6 +13,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const [connected, setConnected] = useState(false);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
 
   const handleConnect = () => {
     setError(null);
@@ -42,6 +43,8 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
       } else if (data.type === 'player-left' && data.userName) {
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
+      } else if (data.type === 'parameters-updated' && data.parameters) {
+        setParameters(data.parameters as MultiplayerParametersType);
       }
     };
     ws.onerror = () => {
@@ -91,6 +94,13 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
             </ul>
+            {parameters && <><h4>Parameters:</h4>
+              {parameters?.atlas && <div>Atlas: {parameters.atlas}</div>}
+              <div>Number of regions: {parameters.regionsNumber}</div>
+              <div>Time per region: {parameters.durationPerRegion}</div>
+              {parameters.gameoverOnError && <div>Game over on error mode activated</div>}
+            </>}
+
       </div>}
     </div>
   )

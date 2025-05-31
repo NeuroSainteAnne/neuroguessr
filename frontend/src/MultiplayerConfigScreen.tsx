@@ -3,6 +3,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { GameSelectorAtlas } from './GameSelector';
 
+const DEFAULT_REGION_NUMBER = 15;
+const DEFAULT_DURATION_PER_REGION = 15;
+const DEFAULT_GAMEOVER_ON_ERROR = false;
+
 const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string }) => {
     const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -14,6 +18,15 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
     const wsRef = useRef<WebSocket | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>("cortical_regions");
     const [selectedAtlas, setSelectedAtlas] = useState<string>("");
+    const [numRegions, setNumRegions] = useState<number>(DEFAULT_REGION_NUMBER);
+    const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
+    const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
+    const parametersRef = useRef<MultiplayerParametersType>({
+        atlas: undefined,
+        regionsNumber: DEFAULT_REGION_NUMBER,
+        durationPerRegion: DEFAULT_DURATION_PER_REGION,
+        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
+    })
 
     const createSession = async () => {
         setLoading(true);
@@ -87,6 +100,25 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
         }
     }, [sessionCode, sessionToken]);
 
+    const updateParameters = (newParameters : Partial<MultiplayerParametersType>) => {
+        parametersRef.current = {...parametersRef.current, ...newParameters}
+        // Send updated parameters to the server
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                type: 'update-parameters',
+                parameters: parametersRef.current
+            }));
+        }
+    }
+
+    useEffect(()=>{
+        if(selectedAtlas){
+            updateParameters({atlas:selectedAtlas})
+        } else {
+            updateParameters({atlas:undefined})
+        }
+    }, [selectedAtlas])
+
     useEffect(() => {
         createSession()
     }, [])
@@ -118,6 +150,55 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                         <section className="mode-selection">
                             <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
                             <div className="mode-buttons">
+                                <div style={{ margin: '24px 0' }}>
+                                <label htmlFor="numRegionsSlider" style={{ fontSize: 18, marginRight: 12 }}>
+                                    Number of Regions: <b>{numRegions}</b>
+                                </label>
+                                <input
+                                    id="numRegionsSlider"
+                                    type="range"
+                                    min={5}
+                                    max={30}
+                                    value={numRegions}
+                                    onChange={e => setNumRegions(Number(e.target.value))}
+                                    onMouseUp={(e) => updateParameters({regionsNumber: Number((e.currentTarget as HTMLInputElement).value)})}
+                                    onTouchEnd={(e) => updateParameters({regionsNumber: Number((e.currentTarget as HTMLInputElement).value)})}
+                                    style={{ width: 200, verticalAlign: 'middle' }}
+                                />
+                                </div>
+                            </div>
+                            <div className="mode-buttons">
+                                <div style={{ margin: '24px 0' }}>
+                                <label htmlFor="regionsDurationSlider" style={{ fontSize: 18, marginRight: 12 }}>
+                                    Duration per region (sec): <b>{durationPerRegion}</b>
+                                </label>
+                                <input
+                                    id="regionsDurationSlider"
+                                    type="range"
+                                    min={5}
+                                    max={30}
+                                    value={durationPerRegion}
+                                    onChange={e => setDurationPerRegion(Number(e.target.value))}
+                                    onMouseUp={(e) => updateParameters({durationPerRegion: Number((e.currentTarget as HTMLInputElement).value)})}
+                                    onTouchEnd={(e) => updateParameters({durationPerRegion: Number((e.currentTarget as HTMLInputElement).value)})}
+                                    style={{ width: 200, verticalAlign: 'middle' }}
+                                />
+                                </div>
+                            </div>
+                            <div className="mode-buttons">
+                                <label htmlFor="gameoverOnErrorCheckbox" style={{ fontSize: 18, marginRight: 12 }}>
+                                    <input
+                                        id="gameoverOnErrorCheckbox"
+                                        type="checkbox"
+                                        checked={gameoverOnError}
+                                        onChange={e => {
+                                            setGameoverOnError(e.target.checked);
+                                            updateParameters({ gameoverOnError: e.target.checked });
+                                        }}
+                                        style={{ marginRight: 8 }}
+                                    />
+                                    Game over on first error
+                                </label>
                             </div>
                             <button
                                 className={(selectedAtlas=="")?"play-button disabled":"play-button enabled"}
