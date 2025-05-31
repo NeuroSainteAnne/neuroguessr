@@ -34,36 +34,8 @@ function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>,
         { selectedPlayer=="singleplayer" && <div id="single-player-options" className="single-player-options-container hidden">
           <section className="atlas-selection">
             <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span data-i18n="select_atlas">Select Atlas</span></h2>
-            <div className="atlas-layout">
-              <div className="category-list">
-                {atlasCategories.map((category) => (
-                  <button key={category} 
-                      className={selectedCategory==category?"category-button selected":"category-button"}
-                      onClick={() => {setSelectedCategory(category)}}>
-                    {t(category)}
-                  </button>
-                ))}
-              </div>
-              <div className="atlas-choices-display">
-                  {Object.entries(atlasFiles)
-                    .filter(([key, b])=>b.atlas_category==selectedCategory)
-                    .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
-                    .map(([key, atlas]) => (
-                    <button key={atlas.name}
-                      className={selectedAtlas==key?"panel-button selected":"panel-button"}
-                      onClick={() => setSelectedAtlas(key)}>
-                      <span className="atlas-info" dangerouslySetInnerHTML={{__html: t(key.toLowerCase()+"_info")}}></span>
-                      {atlas.difficulty > 0 && (
-                        <span className="difficulty-icons">
-                          {[...Array(atlas.difficulty)].map((_, index) => (
-                            <img key={index} src="assets/interface/star.png" alt="Star" className="star-icon" />
-                          ))}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-              </div>
-            </div>
+            <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
+              selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}/>
           </section>
 
           <section className="mode-selection">
@@ -107,6 +79,44 @@ function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>,
         </div> }
       </div>
     </>
+  )
+}
+
+export const GameSelectorAtlas = ({t, selectedAtlas, setSelectedAtlas, selectedCategory, setSelectedCategory} :
+  { t: TFunction<"translation", undefined>; selectedAtlas: string; setSelectedAtlas: React.Dispatch<React.SetStateAction<string>>; 
+    selectedCategory: string; setSelectedCategory: React.Dispatch<React.SetStateAction<string>> }
+) => {
+  return (
+    <div className="atlas-layout">
+      <div className="category-list">
+        {atlasCategories.map((category) => (
+          <button key={category}
+            className={selectedCategory == category ? "category-button selected" : "category-button"}
+            onClick={() => { setSelectedCategory(category) }}>
+            {t(category)}
+          </button>
+        ))}
+      </div>
+      <div className="atlas-choices-display">
+        {Object.entries(atlasFiles)
+          .filter(([key, b]) => b.atlas_category == selectedCategory)
+          .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
+          .map(([key, atlas]) => (
+            <button key={atlas.name}
+              className={selectedAtlas == key ? "panel-button selected" : "panel-button"}
+              onClick={() => setSelectedAtlas(key)}>
+              <span className="atlas-info" dangerouslySetInnerHTML={{ __html: t(key.toLowerCase() + "_info") }}></span>
+              {atlas.difficulty > 0 && (
+                <span className="difficulty-icons">
+                  {[...Array(atlas.difficulty)].map((_, index) => (
+                    <img key={index} src="assets/interface/star.png" alt="Star" className="star-icon" />
+                  ))}
+                </span>
+              )}
+            </button>
+          ))}
+      </div>
+    </div>
   )
 }
 
