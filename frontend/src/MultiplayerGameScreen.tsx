@@ -1,11 +1,14 @@
 import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
+import { Niivue, NVImage } from '@niivue/niivue';
+import { initNiivue, loadAtlasNii } from './NiiHelpers';
 
-const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer }:
+const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, viewerOptions, preloadedBackgroundMNI }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string,
-    askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number
+    askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number,
+    viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null
   }) => {
   const [inputCode, setInputCode] = useState<string>("");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -14,6 +17,13 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
+  const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
+  const niivue = useRef(new Niivue({
+    show3Dcrosshair: true,
+    backColor: [0, 0, 0, 1],
+    crosshairColor: [1, 1, 1, 1]
+  }));
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const handleConnect = () => {
     setError(null);
@@ -73,6 +83,25 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     tryLaunchGame()
   }, [askedSessionToken])
 
+  
+  useEffect(() => {
+    initNiivue(niivue.current, viewerOptions, ()=>{
+        setIsLoadedNiivue(true);
+    })
+    loadAtlasNii(niivue.current, preloadedBackgroundMNI);
+  }, [])
+  useEffect(() => {
+    loadAtlasNii(niivue.current, preloadedBackgroundMNI);
+  }, [preloadedBackgroundMNI, isLoadedNiivue, loadEnforcer])
+
+  const handleCanvasInteraction = () => {
+    // todo
+  }
+  
+  const handleCanvasMouseMove = () => {
+    // todo
+  }
+
   return (
     <div className="page-container">
       {!connected && <>
@@ -100,6 +129,8 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             </>}
 
       </div>}
+      <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
+        onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
     </div>
   )
 }

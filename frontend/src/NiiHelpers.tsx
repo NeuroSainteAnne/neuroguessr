@@ -36,16 +36,18 @@ export const initNiivue = (myniivue: Niivue, viewerOptions: DisplayOptions, call
     })
 }
 
-export const loadAtlasNii = (myniivue: Niivue, askedAtlas: string, preloadedAtlas: NVImage, preloadedBackgroundMNI: NVImage) => {
-    if (myniivue && askedAtlas && preloadedAtlas && preloadedBackgroundMNI) {
+export const loadAtlasNii = (myniivue: Niivue, preloadedBackgroundMNI: NVImage|null, preloadedAtlas?: NVImage) => {
+    if (myniivue) {
         for (let i = 1; i < myniivue.volumes.length; i++) {
             myniivue.removeVolume(myniivue.volumes[i]);
         }
         // Load volumes
-        if (myniivue.volumes.length == 0) {
+        if (myniivue.volumes.length == 0 && preloadedBackgroundMNI) {
             myniivue.addVolume(preloadedBackgroundMNI);
         }
-        myniivue.addVolume(preloadedAtlas);
+        if(preloadedAtlas){
+            myniivue.addVolume(preloadedAtlas);
+        }
         myniivue.setClipPlane([2, 270, 0]);
         myniivue.opts.isSliceMM = true;
     }

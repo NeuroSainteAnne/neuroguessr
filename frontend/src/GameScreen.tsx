@@ -117,7 +117,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions,()=>{
+    initNiivue(niivue.current, viewerOptions, ()=>{
         setIsLoadedNiivue(true);
     })
     checkLoading();
@@ -250,7 +250,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const checkLoading = async () => {
     if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
       setIsLoading(false);
-      loadAtlasNii(niivue.current, askedAtlas, preloadedAtlas, preloadedBackgroundMNI);
+      loadAtlasNii(niivue.current, preloadedBackgroundMNI, preloadedAtlas);
       await loadAtlasData();
       startGame();
     } else {
