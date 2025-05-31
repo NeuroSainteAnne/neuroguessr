@@ -132,7 +132,24 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
                         <div>
                             <h3>Your Game Code:</h3>
-                            <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}</div>
+                            <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
+                                <button
+                                    title="Copy game link"
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}
+                                    onClick={() => {
+                                        if (sessionCode && sessionToken) {
+                                            const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
+                                            navigator.clipboard.writeText(url);
+                                        }
+                                    }}
+                                >
+                                    {/* Simple copy icon SVG */}
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div style={{ marginTop: 24 }}>
                             <h4>Players in Lobby:</h4>
