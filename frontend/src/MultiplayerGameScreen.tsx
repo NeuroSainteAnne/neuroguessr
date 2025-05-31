@@ -32,6 +32,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const [askedAtlas, setAskedAtlas] = useState<string>("");
   const [loadedAtlas, setLoadedAtlas] = useState<NVImage|undefined>();
   const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
+  const [hasStarted, setHasStarted] = useState<boolean>(false);
 
   const handleConnect = () => {
     setError(null);
@@ -63,8 +64,9 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
         setParameters(data.parameters as MultiplayerParametersType);
+      } else if (data.type === 'game-start') {
+        setHasStarted(true)
       } else if (data.type === 'game-command' && data.command) {
-        console.log(data.command)
         if (data.command.action === 'load-atlas') {
           // Load the specified atlas in the viewer
           if (data.command.atlas) {
@@ -114,14 +116,10 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       const cmap = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue.current && niivue.current.volumes.length > 1 && cmap) {
-        console.log(niivue.current.volumes[1])
         niivue.current.volumes[1].setColormapLabel(cmap)
         niivue.current.volumes[1].setColormapLabel(askedLut);
         niivue.current.setOpacity(1, viewerOptions.displayOpacity);
         niivue.current.updateGLVolume();
-
-        const atlasData = niivue.current.volumes[1].getVolumeData();
-        const dataRegions = [...new Set((atlasData as unknown as number[]).filter(val => val > 0).map(val => Math.round(val)))];
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -140,13 +138,16 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     tryLaunchGame()
   }, [askedSessionToken])
 
-  
   useEffect(() => {
     initNiivue(niivue.current, viewerOptions, ()=>{
         setIsLoadedNiivue(true);
     })
     loadAtlasNii(niivue.current, preloadedBackgroundMNI);
     return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
       if (countdownInterval.current) clearInterval(countdownInterval.current);
     };
   }, [])
@@ -182,6 +183,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
 
   return (
     <div className="page-container">
+      <div style={{display:hasStarted?"block":"none"}}>
+        <canvas id="gl1" 
+          onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
+          onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+      </div>
       {!connected && <>
         <h2>Join Multiplayer Lobby</h2>
         <input
@@ -207,8 +213,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             </>}
 
       </div>}
-      <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
-        onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
     </div>
   )
 }
