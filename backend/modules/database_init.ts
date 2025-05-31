@@ -70,6 +70,14 @@ export const database_init = async () => {
                 createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (userId) REFERENCES users (id)
             );
+            CREATE TABLE IF NOT EXISTS multisessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessionCode INTEGER NOT NULL,
+                sessionToken TEXT NOT NULL,
+                creatorId INTEGER NOT NULL,
+                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
+                FOREIGN KEY (creatorId) REFERENCES users (id)
+            );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
         `);
         console.log("Database schema initialized successfully.");

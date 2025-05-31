@@ -14,6 +14,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
+import { createMultiplayerSession } from "./modules/multi.ts";
 const config: Config = configJson;
 
 const app = express();
@@ -71,6 +72,8 @@ app.post('/api/get-next-region', authenticateToken,
 app.post('/api/validate-region', authenticateToken, validateRegion);
 app.post('/api/cloture-game-session', authenticateToken,
     (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
+
+app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
 
 if(config.server.mode == "https"){
     var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
