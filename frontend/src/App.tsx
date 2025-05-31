@@ -16,6 +16,8 @@ import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
 import {Niivue, NVImage} from '@niivue/niivue';
 import Neurotheka from './Neurotheka';
+import MultiplayerConfigScreen from './MultiplayerConfigScreen';
+import MultiplayerGameScreen from './MultiplayerGameScreen';
 
 function App() {
    const niivue = new Niivue();
@@ -23,6 +25,7 @@ function App() {
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
    const [currentPage, setCurrentPage] = useState<string>("")
+   const [userUsername, setUserUsername] = useState<string>("")
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")
    const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([])
@@ -40,6 +43,7 @@ function App() {
    const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null)
    const [askedRegion, setAskedRegion] = useState<number|null>(null)
    const [gameMode, setGameMode] = useState<string|null>(null)
+   const [askedSessionCode, setAskedSessionCode] = useState<string|null>(null)
    const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
@@ -78,6 +82,11 @@ function App() {
          const atlas = parts[2] || null;
          if(mode && atlas) {  
             launchSinglePlayerGame(atlas, mode);
+         }
+      } else if (page === "multiplayer-game"){
+         const code = parts[1] || null;
+         if(code) {  
+            launchMultiPlayerGame(code);
          }
       } else {
          setCurrentPage(page);
@@ -206,6 +215,12 @@ function App() {
       }
    }, [askedAtlas, askedRegion, loadEnforcer, gameMode]);
 
+   useEffect(() => {
+      if (askedSessionCode){
+         setCurrentPage(targetPage.current);
+      }
+   }, [askedSessionCode])
+
    const launchSinglePlayerGame = (atlas: string, mode: string) => {
       targetPage.current = "singleplayer"
       checkToken();
@@ -214,6 +229,12 @@ function App() {
       setGameMode(mode);
       setLoadEnforcer(prev => prev + 1);
       window.location.hash = `#/singleplayer/${mode}/${atlas}`;
+   }
+   const launchMultiPlayerGame = (sessionCode: string) => {
+      targetPage.current = "multiplayer-game"
+      setAskedSessionCode(sessionCode);
+      setLoadEnforcer(prev => prev + 1);
+      window.location.hash = `#/multiplayer-game/${sessionCode}`;
    }
 
 
@@ -238,6 +259,7 @@ function App() {
          setIsGuest(false);
          localStorage.setItem('guestMode', 'false');
          const payload = getTokenPayload(authToken)
+         setUserUsername(payload.username || t('default_user'))
          setUserFirstName(payload.firstname || t('default_user'))
          setUserLastName(payload.lastname || "")
       }
@@ -278,6 +300,7 @@ function App() {
       setHeaderTime: setHeaderTime,
       setViewerOption: setViewerOption,
       launchSinglePlayerGame: launchSinglePlayerGame,
+      launchMultiPlayerGame: launchMultiPlayerGame
    }
 
    return (
@@ -302,6 +325,13 @@ function App() {
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer}
                isLoggedIn={isLoggedIn} authToken={authToken} />}
+         {currentPage === "multiplayer-config" && <>
+            <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />
+         </>}
+         {currentPage === "multiplayer-game" && <>
+            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
+               askedSessionCode={askedSessionCode} loadEnforcer={loadEnforcer} />
+         </>}
          {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
          {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
          {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}
