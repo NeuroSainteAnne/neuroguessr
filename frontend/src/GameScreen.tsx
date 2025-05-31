@@ -180,40 +180,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           "labels":cMap.current.labels || [],
         });
         cLut.current = niivue.current.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
-        /*const numRegions = Object.keys(cMap.current.labels || []).length;
-        console.log(`num regions : ${numRegions}`, cMap.current.labels?.length, cMap.current.R.length, selectedAtlasFiles.json)
-        cLut.current = new Uint8Array(numRegions * 4);
-
-        if (askedAtlas === 'aal') {
-          cLut.current[0] = Math.floor(Math.random() * 256);
-          cLut.current[1] = Math.floor(Math.random() * 256);
-          cLut.current[2] = Math.floor(Math.random() * 256);
-          cLut.current[3] = 255;
-          cLut.current[4] = Math.floor(Math.random() * 256);
-          cLut.current[5] = Math.floor(Math.random() * 256);
-          cLut.current[6] = Math.floor(Math.random() * 256);
-          cLut.current[7] = 255;
-        }
-        else if (askedAtlas === 'glasser') {
-          //   console.log('Atlas cmap.labels:', cmap.labels);
-        } else {
-          cLut.current[0] = 0;
-          cLut.current[1] = 0;
-          cLut.current[2] = 0;
-          cLut.current[3] = 0;
-          cLut.current[4] = Math.floor(Math.random() * 256);
-          cLut.current[5] = Math.floor(Math.random() * 256);
-          cLut.current[6] = Math.floor(Math.random() * 256);
-          cLut.current[7] = 255;
-        }
-        for (let i = 2; i < numRegions; i++) {
-          cLut.current[i * 4 + 0] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 1] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 2] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 3] = 255;
-        }
-
-        if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice()); */
         niivue.current.setOpacity(1, viewerOptions.displayOpacity);
         niivue.current.updateGLVolume();
 
