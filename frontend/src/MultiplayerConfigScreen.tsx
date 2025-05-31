@@ -99,7 +99,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                     <button
                         style={{ marginTop: 24, fontSize: 20, padding: '8px 24px' }}
                         onClick={() => {
-                            callback.launchMultiPlayerGame(sessionCode);
+                            callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
                         }}
                         disabled={loading}
                     >

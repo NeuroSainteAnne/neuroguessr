@@ -2,10 +2,10 @@ import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 
-const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, loadEnforcer }:
+const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string,
-    askedSessionCode: string | null, loadEnforcer: number
+    askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number
   }) => {
   const [inputCode, setInputCode] = useState<string>("");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -37,6 +37,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       } else if (data.type === 'lobby-users' && Array.isArray(data.users)) {
         setConnected(true)
         setLobbyUsers(data.users);
+        tryLaunchGame()
       } else if (data.type === 'player-joined' && data.userName) {
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
       } else if (data.type === 'player-left' && data.userName) {
@@ -48,15 +49,28 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     };
     ws.onclose = () => {
       setConnected(false);
+      wsRef.current = null
     };
   };
+
+  const tryLaunchGame = () => {
+    if(wsRef.current && wsRef.current.readyState && askedSessionToken){
+      wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: inputCode, sessionToken: askedSessionToken }))
+    }
+  }
 
   useEffect(() => {
     if (askedSessionCode) {
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
     }
-  }, [askedSessionCode])
+  }, [askedSessionCode, askedSessionToken])
+
+  useEffect(()=>{
+      console.log("asked3")
+    tryLaunchGame()
+      console.log("asked4")
+  }, [askedSessionToken])
 
   return (
     <div className="page-container">

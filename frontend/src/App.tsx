@@ -44,6 +44,7 @@ function App() {
    const [askedRegion, setAskedRegion] = useState<number|null>(null)
    const [gameMode, setGameMode] = useState<string|null>(null)
    const [askedSessionCode, setAskedSessionCode] = useState<string|null>(null)
+   const [askedSessionToken, setAskedSessionToken] = useState<string|null>(null)
    const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
@@ -85,8 +86,9 @@ function App() {
          }
       } else if (page === "multiplayer-game"){
          const code = parts[1] || null;
+         const token = parts[2] || undefined;
          if(code) {  
-            launchMultiPlayerGame(code);
+            launchMultiPlayerGame(code, token);
          }
       } else {
          setCurrentPage(page);
@@ -219,7 +221,7 @@ function App() {
       if (askedSessionCode){
          setCurrentPage(targetPage.current);
       }
-   }, [askedSessionCode])
+   }, [askedSessionCode, askedSessionToken])
 
    const launchSinglePlayerGame = (atlas: string, mode: string) => {
       targetPage.current = "singleplayer"
@@ -230,11 +232,13 @@ function App() {
       setLoadEnforcer(prev => prev + 1);
       window.location.hash = `#/singleplayer/${mode}/${atlas}`;
    }
-   const launchMultiPlayerGame = (sessionCode: string) => {
+   const launchMultiPlayerGame = (sessionCode: string, sessionToken?: string) => {
       targetPage.current = "multiplayer-game"
       setAskedSessionCode(sessionCode);
+      setAskedSessionToken(sessionToken || null);
+      console.log("asked1",sessionToken)
       setLoadEnforcer(prev => prev + 1);
-      window.location.hash = `#/multiplayer-game/${sessionCode}`;
+      window.location.hash = `#/multiplayer-game/${sessionCode}${sessionToken ? `/${sessionToken}` : ``}`;
    }
 
 
@@ -330,7 +334,7 @@ function App() {
          </>}
          {currentPage === "multiplayer-game" && <>
             <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
-               askedSessionCode={askedSessionCode} loadEnforcer={loadEnforcer} />
+               askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer} />
          </>}
          {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
          {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
