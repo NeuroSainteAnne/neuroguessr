@@ -335,7 +335,8 @@ function App() {
             <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
                askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}
                viewerOptions={viewerOptions}
-               preloadedBackgroundMNI={preloadedBackgroundMNI}  />
+               preloadedBackgroundMNI={preloadedBackgroundMNI} 
+               currentLanguage={currentLanguage} />
          </>}
          {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
          {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}

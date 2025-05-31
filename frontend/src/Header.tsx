@@ -53,6 +53,11 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                         </p>}
                         {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
                     </div>}
+                    { currentPage == "multiplayer-game" && <div className="score-error-container">
+                        {headerScore && <p id="score-label">{headerScore}</p>}
+                        {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
+                        {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
+                    </div>}
                 </div>
         
                 <div className="navbar-right">

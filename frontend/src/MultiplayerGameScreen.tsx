@@ -3,12 +3,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { initNiivue, loadAtlasNii } from './NiiHelpers';
+import atlasFiles from './atlas_files';
+import { fetchJSON } from './helper_niivue';
 
-const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, viewerOptions, preloadedBackgroundMNI }:
+const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string,
     askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number,
-    viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null
+    viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null, currentLanguage: string
   }) => {
   const [inputCode, setInputCode] = useState<string>("");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -24,6 +26,12 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     crosshairColor: [1, 1, 1, 1]
   }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stepCountdown, setStepCountdown] = useState<number | null>(null);
+  const countdownInterval = useRef<number | null>(null);
+  const stepEndTime = useRef<number | null>(null);
+  const [askedAtlas, setAskedAtlas] = useState<string>("");
+  const [loadedAtlas, setLoadedAtlas] = useState<NVImage|undefined>();
+  const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
 
   const handleConnect = () => {
     setError(null);
@@ -55,6 +63,16 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
         setParameters(data.parameters as MultiplayerParametersType);
+      } else if (data.type === 'game-command' && data.command) {
+        console.log(data.command)
+        if (data.command.action === 'load-atlas') {
+          // Load the specified atlas in the viewer
+          if (data.command.atlas) {
+            setAskedAtlas(data.command.atlas)
+            setAskedLut(data.command.lut)
+          }
+        }
+        startStepCountdown(data.command.duration);
       }
     };
     ws.onerror = () => {
@@ -69,6 +87,45 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const tryLaunchGame = () => {
     if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken){
       wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: askedSessionCode, sessionToken: askedSessionToken }))
+    }
+  }
+
+  const startStepCountdown = (duration: number) => {
+    if (countdownInterval.current) clearInterval(countdownInterval.current);
+    const end = Date.now() + duration * 1000;
+    stepEndTime.current = end;
+    setStepCountdown(duration);
+    countdownInterval.current = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      setStepCountdown(remaining);
+      const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+      const seconds = (remaining % 60).toString().padStart(2, '0');
+      callback.setHeaderTime(`${minutes}:${seconds}`);
+      if (remaining <= 0 && countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+        countdownInterval.current = null;
+      }
+    }, 250);
+  };
+
+  const loadAtlasData = async () => {
+    try {
+      if (!askedAtlas || !askedLut) return
+      const selectedAtlasFiles = atlasFiles[askedAtlas];
+      const cmap = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      if (niivue.current && niivue.current.volumes.length > 1 && cmap) {
+        console.log(niivue.current.volumes[1])
+        niivue.current.volumes[1].setColormapLabel(cmap)
+        niivue.current.volumes[1].setColormapLabel(askedLut);
+        niivue.current.setOpacity(1, viewerOptions.displayOpacity);
+        niivue.current.updateGLVolume();
+
+        const atlasData = niivue.current.volumes[1].getVolumeData();
+        const dataRegions = [...new Set((atlasData as unknown as number[]).filter(val => val > 0).map(val => Math.round(val)))];
+      }
+    } catch (error) {
+      console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
+      callback.setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
     }
   }
 
@@ -89,10 +146,31 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         setIsLoadedNiivue(true);
     })
     loadAtlasNii(niivue.current, preloadedBackgroundMNI);
+    return () => {
+      if (countdownInterval.current) clearInterval(countdownInterval.current);
+    };
   }, [])
+
   useEffect(() => {
-    loadAtlasNii(niivue.current, preloadedBackgroundMNI);
-  }, [preloadedBackgroundMNI, isLoadedNiivue, loadEnforcer])
+  if (askedAtlas) {
+      const atlas = atlasFiles[askedAtlas];
+      if (atlas) {
+        const niiFile = "assets/atlas/nii/" + atlas.nii;
+        NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
+            setLoadedAtlas(nvImage);
+        }).catch((error) => {
+            console.error("Error loading NIfTI file:", error);
+            setLoadedAtlas(undefined)
+        });
+      }
+  }
+}, [askedAtlas])
+
+  useEffect(() => {
+    loadAtlasNii(niivue.current, preloadedBackgroundMNI, loadedAtlas);
+    loadAtlasData();
+  }, [preloadedBackgroundMNI, isLoadedNiivue, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
+
 
   const handleCanvasInteraction = () => {
     // todo
