@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
+import { GameSelectorAtlas } from './GameSelector';
 
 const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string }) => {
@@ -11,6 +12,8 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
     const [error, setError] = useState<string | null>(null);
     const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
     const wsRef = useRef<WebSocket | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string>("cortical_regions");
+    const [selectedAtlas, setSelectedAtlas] = useState<string>("");
 
     const createSession = async () => {
         setLoading(true);
@@ -94,22 +97,38 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
             {!sessionCode && <div>'Creating multiplayer session...'</div>}
             {sessionCode && (
                 <div style={{ marginTop: 24 }}>
-                    <h3>Your Game Code:</h3>
-                    <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}</div>
-                    <button
-                        style={{ marginTop: 24, fontSize: 20, padding: '8px 24px' }}
-                        onClick={() => {
-                            callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
-                        }}
-                        disabled={loading}
-                    >
-                        Start Game
-                    </button>
-                    <div style={{ marginTop: 24 }}>
-                        <h4>Players in Lobby:</h4>
-                        <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
-                            {lobbyUsers.map(u => <li key={u}>{u}</li>)}
-                        </ul>
+                    <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
+                        <div>
+                            <h3>Your Game Code:</h3>
+                            <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}</div>
+                        </div>
+                        <div style={{ marginTop: 24 }}>
+                            <h4>Players in Lobby:</h4>
+                            <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
+                                {lobbyUsers.map(u => <li key={u}>{u}</li>)}
+                            </ul>
+                        </div>
+                    </div>
+                    <div id="single-player-options" className="single-player-options-container">
+                        <section className="atlas-selection">
+                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span data-i18n="select_atlas">Select Atlas</span></h2>
+                            <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
+                                selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />
+                        </section>
+                        <section className="mode-selection">
+                            <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
+                            <div className="mode-buttons">
+                            </div>
+                            <button
+                                className={(selectedAtlas=="")?"play-button disabled":"play-button enabled"}
+                                onClick={() => {
+                                    callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
+                                }}
+                                disabled={loading}
+                            >
+                                Start Game
+                            </button>
+                        </section>
                     </div>
                 </div>
             )}
