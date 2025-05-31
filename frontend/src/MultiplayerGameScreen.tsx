@@ -57,8 +57,8 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   };
 
   const tryLaunchGame = () => {
-    if(wsRef.current && wsRef.current.readyState && askedSessionToken){
-      wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: inputCode, sessionToken: askedSessionToken }))
+    if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken){
+      wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: askedSessionCode, sessionToken: askedSessionToken }))
     }
   }
 
