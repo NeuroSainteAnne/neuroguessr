@@ -40,3 +40,15 @@ interface MultiplayerParametersType {
     durationPerRegion: number;
     gameoverOnError: boolean;
 }
+
+type ColorMap = {
+  R: number[];
+  G: number[];
+  B: number[];
+  A: number[];
+  I: number[];
+  min?: number;
+  max?: number;
+  labels?: string[];
+  centers?: number[][];
+};

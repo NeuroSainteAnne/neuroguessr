@@ -1,11 +1,12 @@
 import type { TFunction } from 'i18next';
 import './GameScreen.css'
 import './Help.css'
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { Niivue, SHOW_RENDER, type NVImage } from '@niivue/niivue';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import { isTokenValid, refreshToken } from './helper_login';
+import { defineNiiOptions, getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 
 type GameScreenProps = {
   t: TFunction<"translation", undefined>;
@@ -20,17 +21,6 @@ type GameScreenProps = {
   loadEnforcer: number;
   isLoggedIn: boolean;
   authToken: string;
-};
-type ColorMap = {
-  R: number[];
-  G: number[];
-  B: number[];
-  A: number[];
-  I: number[];
-  min?: number;
-  max?: number;
-  labels?: string[];
-  centers?: number[][];
 };
 
 async function startOnlineSession(token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -127,7 +117,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
-    initNiivue()
+    initNiivue(niivue.current, viewerOptions,()=>{
+        setIsLoadedNiivue(true);
+    })
     checkLoading();
   }, [])
 
@@ -164,31 +156,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
-
-  const initNiivue = () => {
-    niivue.current.attachTo('gl1').then(() => {
-      setIsLoadedNiivue(true);
-      niivue.current.setInterpolation(true);
-      niivue.current.opts.crosshairGap = 0;
-      niivue.current.opts.dragMode = niivue.current.dragModes.slicer3D;
-      niivue.current.opts.yoke3Dto2DZoom = true;
-      defineNiiOptions()
-    })
-  }
-  const loadAtlasNii = () => {
-    if (niivue.current && askedAtlas && preloadedAtlas && preloadedBackgroundMNI) {
-      for (let i = 1; i < niivue.current.volumes.length; i++) {
-        niivue.current.removeVolume(niivue.current.volumes[i]);
-      }
-      // Load volumes
-      if (niivue.current.volumes.length == 0) {
-        niivue.current.addVolume(preloadedBackgroundMNI);
-      }
-      niivue.current.addVolume(preloadedAtlas);
-      niivue.current.setClipPlane([2, 270, 0]);
-      niivue.current.opts.isSliceMM = true;
-    }
-  }
   function generateRandomInts(quantity: number, max: number){
     const arr = []
     while(arr.length < quantity){
@@ -281,9 +248,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, gameMode, askedAtlas, loadEnforcer])
 
   const checkLoading = async () => {
-    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue) {
+    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
       setIsLoading(false);
-      loadAtlasNii();
+      loadAtlasNii(niivue.current, askedAtlas, preloadedAtlas, preloadedBackgroundMNI);
       await loadAtlasData();
       startGame();
     } else {
@@ -348,7 +315,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
     if (niivue.current) {
-      defineNiiOptions()
+      defineNiiOptions(niivue.current, viewerOptions)
       niivue.current.drawScene();
     }
   }
@@ -546,57 +513,31 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
-    const isTouch = e.type === 'touchstart';
-    const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
-    const mouseEvt = isTouch
-      ? ({
-        ...e, layerX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        layerY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY,
-        offsetX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        offsetY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY
-      } as unknown as MouseEvent)
-      : e;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    // Check if touch/click is within canvas bounds
-    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
-      const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(mouseEvt as MouseEvent, niivue.current.gl.canvas);
-      if (!pos) return; // If position is not valid, exit early
-      const frac = niivue.current.canvasPos2frac([pos.x * (niivue.current.uiData?.dpr ?? 1), pos.y * (niivue.current.uiData?.dpr ?? 1)]);
-      if (frac[0] >= 0) {
-        const mm = niivue.current.frac2mm(frac);
-        const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
-        const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
-        if (isFinite(idx) && idx > 0 && idx in (cMap.current?.labels ?? [])) { // Ensure valid region ID > 0
-          selectedVoxel.current = Array.from(vox);
-          if (gameMode === 'navigation') {
-            callback.setHeaderText(cMap.current.labels?.[idx] || t('no_region_selected'));
-            setHighlightedRegion(idx);
-            if (tooltip) {
-              setTooltip({ ...tooltip, visible: false });
-            }
-            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-            niivue.current.drawScene();
-          } else {
-            if (guessButtonRef.current) {
-              guessButtonRef.current.disabled = false;
-            }
-            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-            niivue.current.drawScene();
-          }
-          console.log(`Clicked voxel: ${vox}, Region ID: ${idx}, Region Name: ${cMap.current.labels?.[idx] || t('unknown_region')}`);
-        } else { // invalid region selected
-          selectedVoxel.current = null;
-          if (gameMode === 'navigation') {
-            callback.setHeaderText(t('no_region_selected'));
-            setHighlightedRegion(null);
-          } else {
-            if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-          }
-          console.log(`Clicked voxel: ${vox}, Invalid or background region ID: ${idx}`);
+    const clickedRegionLocation = getClickedRegion(niivue.current, canvasRef.current, cMap.current, e)
+    if(clickedRegionLocation){
+      selectedVoxel.current = clickedRegionLocation.vox;
+      if (gameMode === 'navigation') {
+        callback.setHeaderText(cMap.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
+        setHighlightedRegion(clickedRegionLocation.idx);
+        if (tooltip) {
+          setTooltip({ ...tooltip, visible: false });
         }
+        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.current.drawScene();
+      } else {
+        if (guessButtonRef.current) {
+          guessButtonRef.current.disabled = false;
+        }
+        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.current.drawScene();
+      }
+    } else {
+      selectedVoxel.current = null;
+      if (gameMode === 'navigation') {
+        callback.setHeaderText(t('no_region_selected'));
+        setHighlightedRegion(null);
+      } else {
+        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       }
     }
   }
@@ -898,7 +839,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.pageX;
     const y = e.clientY - rect.top;
-    const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(e as unknown as MouseEvent, niivue.current.gl.canvas);
+    const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(e.nativeEvent, niivue.current.gl.canvas);
 
     // Check if mouse is within canvas bounds
     if (x >= 0 && x < rect.width && y >= 0 && y < rect.height && pos && cMap.current && cMap.current.labels && niivue.current.uiData && niivue.current.uiData.dpr) {
@@ -925,7 +866,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 
   useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
+    const handleClick = (event: Event) => {
       if (
         showHelpOverlay &&
         helpContentRef.current &&
@@ -956,33 +897,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     };
   }, [showHelpOverlay])
 
-  const defineNiiOptions = () => {
-    if (niivue.current) {
-      if (viewerOptions.displayType === "Axial") niivue.current.setSliceType(niivue.current.sliceTypeAxial);
-      if (viewerOptions.displayType === "Coronal") niivue.current.setSliceType(niivue.current.sliceTypeCoronal);
-      if (viewerOptions.displayType === "Sagittal") niivue.current.setSliceType(niivue.current.sliceTypeSagittal);
-      if (viewerOptions.displayType === "Render") {
-        niivue.current.setSliceType(niivue.current.sliceTypeRender);
-        niivue.current.setClipPlane(niivue.current.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
-      }
-      if (viewerOptions.displayType === "MultiPlanar") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
-      }
-      if (viewerOptions.displayType === "MultiPlanarRender") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
-      }
-      if (niivue.current.volumes.length > 1) {
-        niivue.current.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
-      }
-      niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
-      niivue.current.updateGLVolume();
-    }
-  }
-
   useEffect(() => {
-    defineNiiOptions()
+    defineNiiOptions(niivue.current, viewerOptions)
   }, [viewerOptions])
 
   return (
