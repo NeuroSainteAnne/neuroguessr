@@ -128,7 +128,12 @@ wss.on('connection', (ws, req) => {
           ws.send(JSON.stringify({ type: 'error', message: 'Invalid session token for this lobby.' }));
           return;
         }
+        if(games[data.sessionCode].hasStarted){
+          ws.send(JSON.stringify({ type: 'error', message: 'Game already started.' }));
+          return;
+        }
         console.log("Starting game", sessionCode)
+        games[data.sessionCode].hasStarted = true;
         // broadcast gamestart to all users
         games[data.sessionCode].lobby.forEach(client => {
           if (client.readyState === ws.OPEN) {
