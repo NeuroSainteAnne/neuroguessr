@@ -38,9 +38,19 @@ interface MultiplayerGame {
   commandTimeout?: NodeJS.Timeout;
 } 
 
+interface AtlasLUT {
+  R: number[];
+  G: number[];
+  B: number[];
+  A: number[];
+  I: number[];
+  labels: string[];
+}
+
 interface GameCommands {
   action: string;
   atlas?: string;
+  lut?: AtlasLUT;
   regionId?: number;
   duration: number;
 }
@@ -63,6 +73,15 @@ async function getUniqueCode(): Promise<string> {
         exists = db.prepare("SELECT COUNT(*) as count FROM multisessions WHERE sessionCode = ?").get(code) as { count: number };
     } while (exists.count > 0);
     return code;
+}
+
+function generateRandomInts(quantity: number, max: number) {
+  const arr = []
+  while (arr.length < quantity) {
+    var candidateInt = Math.floor(Math.random() * max) + 1
+    if (arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
+  }
+  return (arr)
 }
 
 export const createMultiplayerSession = async (req: Request, res: Response) => {
@@ -133,9 +152,18 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   const commands = [];
   if(!params.atlas) return;
   // 1. Load atlas
+  const atlasNumberRegions = validRegions[params.atlas].length
   commands.push({
     action: "load-atlas",
     atlas: params.atlas,
+    lut:{
+          "R":generateRandomInts(atlasNumberRegions || 0, 255),
+          "G":generateRandomInts(atlasNumberRegions || 0, 255),
+          "B":generateRandomInts(atlasNumberRegions || 0, 255),
+          "A":Array(1).fill(0).concat(Array((atlasNumberRegions || 0)-1).fill(255)),
+          "I":Array.from(Array(atlasNumberRegions || 0).keys()),
+          "labels": (validRegions[params.atlas] || []).map(String) || [],
+        },
     duration: LOAD_ATLAS_DURATION
   });
 
