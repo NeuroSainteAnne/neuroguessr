@@ -67,6 +67,8 @@ wss.on('connection', (ws, req) => {
         }
         if (!lobbies[data.sessionCode]) lobbies[data.sessionCode] = new Set();
         lobbies[data.sessionCode].add(ws);
+        (ws as any).lobby = lobbies[data.sessionCode];
+        (ws as any).sessionCode = data.sessionCode;
         
         // Send the list to the newly joined client
         const userList = Array.from(lobbies[data.sessionCode])
@@ -80,9 +82,30 @@ wss.on('connection', (ws, req) => {
             client.send(JSON.stringify({ type: 'player-joined', userName: userName }));
           }
         });
+      } else if (data.type === 'launch-game' && data.sessionToken) {
+        const lobby = (ws as any).lobby;
+        const userName = (ws as any).userName;
+        const sessionCode = (ws as any).sessionCode
+        if (!lobby || !userName || !Array.from(lobby).some(client => (client as any).userName === userName)) {
+          ws.send(JSON.stringify({ type: 'error', message: 'You are not in the lobby.' }));
+          return;
+        }
+        // Check that the sessionToken matches the one in the multisessions table
+        const session = db.prepare("SELECT sessionToken FROM multisessions WHERE sessionCode = ?").get(sessionCode) as {sessionToken: string};
+        if (!session || session.sessionToken !== data.sessionToken) {
+          ws.send(JSON.stringify({ type: 'error', message: 'Invalid session token for this lobby.' }));
+          return;
+        }
+        console.log("Starting game", sessionCode)
+        // broadcast gamestart to all users
+        lobbies[sessionCode].forEach(client => {
+          if (client.readyState === ws.OPEN) {
+            client.send(JSON.stringify({ type: 'game-start' }));
+          }
+        });
       }
     } catch (e) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid message format' }));
+      ws.send(JSON.stringify({ type: 'error', message: e }));
     }
   });
 
