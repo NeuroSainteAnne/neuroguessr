@@ -328,11 +328,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             ))
           }
         </ul>
-        {parameters && !hasStarted && <><h4>{t("parameters")}</h4>
+        {parameters && !hasStarted && "FOR v2" && <><h4>{t("parameters")}</h4>
           {parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
           <div>{t("number_regions")}: {parameters.regionsNumber}</div>
           <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
-          {parameters.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
+          {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
         {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
       </div>}

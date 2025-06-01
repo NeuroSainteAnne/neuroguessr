@@ -221,7 +221,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                 />
                                 </div>
                             </div>
-                            <div className="mode-buttons">
+                            {false && "FOR v2" && <div className="mode-buttons">
                                 <label htmlFor="gameoverOnErrorCheckbox" style={{ fontSize: 18, marginRight: 12 }}>
                                     <input
                                         id="gameoverOnErrorCheckbox"
@@ -235,7 +235,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                     />
                                     {t("gameover_first_error")}
                                 </label>
-                            </div>
+                            </div>}
                             <button
                                 className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                                 onClick={() => {
