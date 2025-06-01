@@ -230,6 +230,10 @@ function launchGame(ws: WebSocket, sessionToken: string){
     ws.send(JSON.stringify({ type: 'error', message: 'You are not in the lobby.' }));
     return;
   }
+  if (lobby.size <= 1) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Insufficient users in lobby.' }));
+    return;
+  }
   const gameRef = games[sessionCode];
   // Check that the sessionToken matches the one in the multisessions table
   const session = db.prepare("SELECT sessionToken FROM multisessions WHERE sessionCode = ?").get(sessionCode) as { sessionToken: string };
