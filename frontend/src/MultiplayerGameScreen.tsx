@@ -41,6 +41,9 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const cMap = useRef<ColorMap | null>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const isFirstGuess = useRef<boolean>(true);
+  const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
+  const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
+  const [hasWon, setHasWon] = useState<boolean>(false)
 
   const handleConnect = () => {
     setError(null);
@@ -75,6 +78,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       } else if (data.type === 'game-start') {
         setHasStarted(true)
         setCurrentAttempts(0)
+        setHasWon(false)
         isFirstGuess.current = true;
         if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       } else if (data.type === 'game-command' && data.command) {
@@ -109,14 +113,17 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             ...prev,
             [data.user]: data.score
         }));
+      } else if (data.type === 'game-end') {
+        clearInterface()
+        setHasWon(data.youWon)
+        setShowMultiplayerOverlay(true)
       }
     };
     ws.onerror = () => {
       setError(t('websocket-error'));
     };
     ws.onclose = () => {
-      setConnected(false);
-      wsRef.current = null
+      clearInterface()
     };
   };
 
@@ -147,7 +154,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const updateGameDisplay = () => {
     if (currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
-      callback.setHeaderText(`${currentAttempts}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
+      callback.setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
     } else {
       callback.setHeaderText("");
     }
@@ -174,14 +181,20 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     }
   }
 
-  useEffect(() => {
-    if (askedSessionCode) {
+  function clearInterface () {
+      setConnected(false);
       setHasStarted(false)
-      setLobbyUsers([])
-      setPlayerScores({})
       callback.setHeaderTextMode("")
       callback.setHeaderText("")
       callback.setHeaderTime("")
+      wsRef.current = null
+  }
+
+  useEffect(() => {
+    if (askedSessionCode) {
+      clearInterface()
+      setLobbyUsers([])
+      setPlayerScores({})
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
     }
@@ -252,7 +265,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
 
   return (
     <div className="page-container">
-      <div style={{display:hasStarted?"block":"none"}}>
+      <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" 
           onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
         <div className="button-container">
@@ -299,6 +312,37 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           {parameters.gameoverOnError && <div>Game over on error mode activated</div>}
         </>}
         {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+      </div>}
+
+      
+      {showMultiplayerOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
+        <div className="overlay-content" ref={multiplayerOverlayRef}>
+          <h2>{t("multiplayer_ended_title")}</h2>
+          <p><span>{t("multiplayer_ended_score")}</span></p>
+          <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
+            {[...lobbyUsers]
+              .sort((a, b) => {
+                const scoreA = playerScores[a];
+                const scoreB = playerScores[b];
+                if (scoreA === undefined && scoreB === undefined) return 0;
+                if (scoreA === undefined) return 1;
+                if (scoreB === undefined) return -1;
+                return scoreB - scoreA;
+              })
+              .map((u) => (
+                <li key={u} style={u === userUsername ? { color: 'green', fontWeight: 'bold' } : {}}>
+                  {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
+                </li>
+              ))
+            }
+          </ul>
+          <h2>{hasWon?t("multiplayer-you-won"):t("multiplayer-you-lost")}</h2>
+          <div className="overlay-buttons">
+            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoPage("welcome")}>
+              <i className="fas fa-home"></i>
+            </button>
+          </div>
+        </div>
       </div>}
     </div>
   )
