@@ -37,6 +37,7 @@ export function isTokenValid(token: string) {
     try {
         const payload = getTokenPayload(token); // Decode the payload
         const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+        token = "";
         return payload.exp > currentTime; // Check if the token is still valid
     } catch (error) {
         console.error('Invalid token:', error);
