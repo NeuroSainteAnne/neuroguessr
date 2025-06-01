@@ -362,7 +362,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
-    callback.setHeaderTime(`${minutes}:${seconds}`);
+    callback.setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
     if (remaining <= 0){
       if(isLoggedIn){
         manualClotureGameSession().then((finalScore)=>{
