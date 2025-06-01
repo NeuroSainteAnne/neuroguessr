@@ -11,6 +11,7 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
     const [loginSuccessText, setLoginSuccessText] = useState<string>("");
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
+    const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true)
 
     const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -66,6 +67,8 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
           return;
         }
 
+        setShowRecoveryButton(false)
+        
         try {
           // Send recovery request to the server
           const response = await fetch('/api/password-recovery', {
@@ -84,6 +87,9 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                 window.location.href = result.redirect_url;
             } else {
               setRecoverySuccessText(t('recovery_email_sent'));
+              setTimeout(()=>{
+                setRecoveryModalDisplay(false)
+              }, 1000)
             }
           } else {
             setRecoveryErrorText(result.message || t('recovery_failed'));
@@ -138,7 +144,10 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                     <div><a id="registration_link" onClick={()=>callback.gotoPage("register")}>
                         {t("registration_link")}
                     </a></div>
-                    <div><a id="forgot_password_link" onClick={()=>setRecoveryModalDisplay(true)}>{t("forgot_password_link")}</a></div>
+                    <div>
+                      <a id="forgot_password_link" onClick={()=>{setShowRecoveryButton(true); setRecoveryModalDisplay(true)}}>
+                        {t("forgot_password_link")}</a>
+                    </div>
                 </div>
             </form>
             { recoveryModalDisplay &&
@@ -151,7 +160,8 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                         <input type="email" id="recovery-email" className="form-field" 
                             placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
 
-                        <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>
+                        {showRecoveryButton && 
+                          <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
 
                         {recoveryErrorText && <p id="recovery_error" className="recovery-message">{recoveryErrorText}</p>}
                         {recoverySuccessText && <p id="recovery_success" className="recovery-message">{recoverySuccessText}</p>}
