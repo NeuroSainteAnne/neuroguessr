@@ -130,15 +130,14 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                 <div style={{ marginTop: 24 }}>
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
                         <div>
-                            <h3>Your Game Code:</h3>
+                            <h3>{t("game_code")}</h3>
                             <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
                                 <button
-                                    title="Copy game link"
+                                    title="Copy game number"
                                     style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}
                                     onClick={() => {
                                         if (sessionCode && sessionToken) {
-                                            const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
-                                            navigator.clipboard.writeText(url);
+                                            navigator.clipboard.writeText(sessionCode);
                                         }
                                     }}
                                 >
@@ -148,10 +147,26 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                                     </svg>
                                 </button>
+                                <button
+                                    title="Copy game link (link icon)"
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'inherit', marginLeft: 4 }}
+                                    onClick={() => {
+                                        if (sessionCode && sessionToken) {
+                                            const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
+                                            navigator.clipboard.writeText(url);
+                                        }
+                                    }}
+                                >
+                                    {/* Link icon SVG */}
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
+                                        <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         <div style={{ marginTop: 24 }}>
-                            <h4>Players in Lobby:</h4>
+                            <h4>{t("players_in_lobby")}</h4>
                             <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
                             </ul>
@@ -168,7 +183,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                             <div className="mode-buttons">
                                 <div style={{ margin: '24px 0' }}>
                                 <label htmlFor="numRegionsSlider" style={{ fontSize: 18, marginRight: 12 }}>
-                                    Number of Regions: <b>{numRegions}</b>
+                                    {t("number_regions")} <b>{numRegions}</b>
                                 </label>
                                 <input
                                     id="numRegionsSlider"
@@ -186,7 +201,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                             <div className="mode-buttons">
                                 <div style={{ margin: '24px 0' }}>
                                 <label htmlFor="regionsDurationSlider" style={{ fontSize: 18, marginRight: 12 }}>
-                                    Duration per region (sec): <b>{durationPerRegion}</b>
+                                    {t("duration_per_region")}: <b>{durationPerRegion}</b>
                                 </label>
                                 <input
                                     id="regionsDurationSlider"
@@ -213,7 +228,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                         }}
                                         style={{ marginRight: 8 }}
                                     />
-                                    Game over on first error
+                                    {t("gameover_first_error")}
                                 </label>
                             </div>
                             <button
@@ -223,7 +238,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                 }}
                                 disabled={loading}
                             >
-                                Start Game
+                                {t("start_game_button")}
                             </button>
                         </section>
                     </div>

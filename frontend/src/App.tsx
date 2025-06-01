@@ -326,7 +326,8 @@ function App() {
       setViewerOption: setViewerOption,
       launchSinglePlayerGame: launchSinglePlayerGame,
       launchMultiPlayerGame: launchMultiPlayerGame,
-      setWelcomeSubpage: setWelcomeSubpage
+      setWelcomeSubpage: setWelcomeSubpage,
+      gotoWelcomeSubpage: gotoWelcomeSubpage
    }
 
    return (

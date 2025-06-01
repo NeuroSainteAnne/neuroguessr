@@ -172,5 +172,20 @@
   "password-helper-leaveempty": "Leave empty to keep the same password",
   "reconfigure_success": "Configuration successful!",
   "reconfigure_failed": "Configuration failed. Please try again.",
-  "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime"
+  "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime",
+  "game_code": "Your sharing game code",
+  "players_in_lobby": "Players in lobby",
+  "parameters": "Configuration",
+  "parameters_atlas": "Atlas",
+  "number_regions": "Number of regions",
+  "duration_per_region": "Duration per region (sec)",
+  "gameover_first_error": "Game over on first error",
+  "gameover_first_error_activated": "Game over on first error activated",
+  "start_game_button": "Start Game",
+  "multiplayer_ended_title": "Multiplayer game ended!",
+  "multiplayer_ended_score": "Final scores",
+  "multiplayer_you_won": "You won!",
+  "multiplayer_you_lost": "You lost... try again!",
+  "prepare-yourself": "Prepare yourself...",
+  "remaining-time": "Remaining time"
 }

@@ -280,18 +280,18 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         </div>
       </div>
       {!connected && <>
-        <h2>Join Multiplayer Lobby</h2>
+        <h2>{t("join_multiplayer_lobby")}</h2>
         <input
           type="text"
           value={inputCode}
           onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-          placeholder="Enter 8-digit code"
-          style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 180 }}
+          placeholder={t("multi_8_digits")}
+          style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
         />
-        <button style={{ marginLeft: 16, fontSize: 18 }} onClick={handleConnect}>Join</button>
+        <button style={{ marginLeft: 16, fontSize: 18 }} onClick={handleConnect}>{t("join_multiplayer_button")}</button>
       </>}
       {connected && <div style={{ marginTop: 24 }}>
-        <h4>Players in Lobby:</h4>
+        <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]
             .sort((a, b) => {
@@ -309,11 +309,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
             ))
           }
         </ul>
-        {parameters && !hasStarted && <><h4>Parameters:</h4>
-          {parameters?.atlas && <div>Atlas: {parameters.atlas}</div>}
-          <div>Number of regions: {parameters.regionsNumber}</div>
-          <div>Time per region: {parameters.durationPerRegion}</div>
-          {parameters.gameoverOnError && <div>Game over on error mode activated</div>}
+        {parameters && !hasStarted && <><h4>{t("parameters")}</h4>
+          {parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
+          <div>{t("number_regions")}: {parameters.regionsNumber}</div>
+          <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
+          {parameters.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
         {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
       </div>}
@@ -340,7 +340,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
               ))
             }
           </ul>
-          <h2>{hasWon?t("multiplayer-you-won"):t("multiplayer-you-lost")}</h2>
+          <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
           <div className="overlay-buttons">
             <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoWelcomeSubpage("multiplayer")}>
               <i className="fas fa-home"></i>
