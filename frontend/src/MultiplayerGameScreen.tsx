@@ -152,7 +152,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   };
 
   const updateGameDisplay = () => {
-    if (currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
+    if (hasStarted && connected && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       callback.setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
     } else {
@@ -184,10 +184,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   function clearInterface () {
       setConnected(false);
       setHasStarted(false)
+      if(countdownInterval.current) clearInterval(countdownInterval.current);
+      countdownInterval.current = null;
       callback.setHeaderTextMode("")
       callback.setHeaderText("")
       callback.setHeaderTime("")
-      wsRef.current = null
   }
 
   useEffect(() => {
@@ -195,6 +196,9 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       clearInterface()
       setLobbyUsers([])
       setPlayerScores({})
+      setShowMultiplayerOverlay(false)
+      if(wsRef.current) wsRef.current.close()
+      wsRef.current = null
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
     }
