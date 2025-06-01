@@ -163,6 +163,25 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     updateGameDisplay();
   }, [parameters, currentAttempts, forceDisplayUpdate]);
 
+  const handleSpaceBar = () => {
+    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && connected) {
+      validateGuess();
+    }
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleSpaceBar();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      // Remove event listener
+      document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [hasStarted])
 
   const loadAtlasData = async () => {
     try {
