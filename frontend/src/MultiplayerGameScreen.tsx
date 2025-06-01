@@ -55,7 +55,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }
 
   const connectWS = (inputCode: string) => {
-    const ws = new WebSocket(`ws://${window.location.hostname}:3001`);
+    const ws = new WebSocket(`/websocket`);
     wsRef.current = ws;
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'join', sessionCode: inputCode, token: authToken }));

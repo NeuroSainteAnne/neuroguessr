@@ -15,6 +15,7 @@ import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, 
 import { getLeaderboard } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession } from "./modules/multi.ts";
+import { createProxyMiddleware } from "http-proxy-middleware";
 const config: Config = configJson;
 
 const app = express();
@@ -42,6 +43,16 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 });
 
 app.use("/assets", express.static(path.join(reactRoot, "assets")));
+
+app.use(
+  '/websocket',
+  createProxyMiddleware({
+    target: `ws://localhost:${config.server.websocket_port}`,
+    changeOrigin: true,
+    ws: true, // enable websocket proxying
+    pathRewrite: { '^/websocket': '' }, // optional: remove /websocket prefix if needed
+  })
+);
 
 setInterval(() => {
     cleanExpiredTokens();

@@ -72,7 +72,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
 
     useEffect(() => {
         if (sessionCode && sessionToken) {
-            const ws = new WebSocket(`ws://${window.location.hostname}:3001`);
+            const ws = new WebSocket(`/websocket`);
             wsRef.current = ws;
             ws.onopen = () => {
                 ws.send(JSON.stringify({
