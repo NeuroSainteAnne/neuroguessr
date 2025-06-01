@@ -388,7 +388,10 @@ function App() {
                   </section>
                   <section>
                      <h3>{t("help_atlases_title")}</h3>
-                     <p dangerouslySetInnerHTML={{ __html: t("help_atlases_text") }}></p>
+                     <p dangerouslySetInnerHTML={{ __html: t("help_atlases_text").replace(
+                        /\[doi:([^\]]+)\]/g,
+                        (_match, doi) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
+                        ) }}></p>
                   </section>
                   <section>
                      <h3>{t("help_modes_title")}</h3>

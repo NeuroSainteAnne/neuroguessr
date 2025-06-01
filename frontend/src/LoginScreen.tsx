@@ -135,10 +135,10 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                         </tr>}
                     </table>
                     <button type="submit">{t("login_button")}</button>
-                    <a id="registration_link" onClick={()=>callback.gotoPage("register")}>
+                    <div><a id="registration_link" onClick={()=>callback.gotoPage("register")}>
                         {t("registration_link")}
-                    </a>
-                    <a id="forgot_password_link" onClick={()=>setRecoveryModalDisplay(true)}>{t("forgot_password_link")}</a>
+                    </a></div>
+                    <div><a id="forgot_password_link" onClick={()=>setRecoveryModalDisplay(true)}>{t("forgot_password_link")}</a></div>
                 </div>
             </form>
             { recoveryModalDisplay &&
