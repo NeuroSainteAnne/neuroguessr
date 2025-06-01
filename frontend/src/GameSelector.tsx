@@ -2,17 +2,32 @@ import type { TFunction } from 'i18next';
 import './GameSelector.css'
 import atlasFiles, { atlasCategories } from './atlas_files';
 import { useState } from 'react';
+import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 
-function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
+function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }: 
+    { t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, authToken: string, userUsername: string }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("cortical_regions");
   const [selectedAtlas, setSelectedAtlas] = useState<string>("");
   const [selectedMode, setSelectedMode] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("singleplayer");
+  const [multiplayerInputCode, setMultiplayerInputCode] = useState<string>("")
+  const [createMultiplayerMode, setCreateMultiplayerMode] = useState<boolean>(false)
 
   const handleLaunchSinglePlayerGame = () => {
     if (selectedPlayer == "singleplayer" && selectedAtlas && selectedMode) {
       callback.launchSinglePlayerGame(selectedAtlas, selectedMode);
     }
+  }
+
+  const handleJoinMultiplayer = () =>  {
+    if(parseInt(multiplayerInputCode) >= 10000000 && parseInt(multiplayerInputCode) <= 99999999){
+      console.log(multiplayerInputCode)
+      callback.launchMultiPlayerGame(multiplayerInputCode, undefined);
+    }
+  }
+
+  const handleCreateMultiplayer = () => {
+    setCreateMultiplayerMode(true)
   }
 
   return (
@@ -26,7 +41,7 @@ function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>,
           </button>
           <button id="single-player-button" 
               className={(selectedPlayer=="multiplayer"?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>setSelectedPlayer("multiplayer")}>
+              onClick={()=>{setCreateMultiplayerMode(false); setSelectedPlayer("multiplayer")}}>
                 {t("multiplayer_button")}
           </button>
         </div>
@@ -74,9 +89,29 @@ function GameSelector({ t, callback }: { t: TFunction<"translation", undefined>,
           </section>
         </div>}
 
-        { selectedPlayer=="multiplayer" && <div id="multiplayer-message" className="hidden">
-          <p data-i18n="multiplayer_not_available">Multiplayer not available for now</p>
-        </div> }
+        {selectedPlayer == "multiplayer" && <>
+          {!createMultiplayerMode && <div className="multiplayer-box">
+            {isLoggedIn && <>
+              <div className="multiplayer-box-join">
+                <h2>{t("join-multiplayer-lobby")}</h2>
+                <div><input
+                  type="text"
+                  value={multiplayerInputCode}
+                  onChange={e => setMultiplayerInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder={t("multi-8-digits")}
+                  style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 230 }}
+                /></div>
+                <div><button className="play-button enabled" onClick={handleJoinMultiplayer}>{t("join-button")}</button></div>
+              </div>
+              <div className="multiplayer-box-join">
+                <h2>{t("create-multiplayer-game")}</h2>
+                <div><button className="play-button enabled" onClick={handleCreateMultiplayer}>{t("create-button")}</button></div>
+              </div>
+            </>}
+            {!isLoggedIn && <>{t("multi-unavailable-login")}</>}
+          </div>}
+          {createMultiplayerMode && <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />}
+        </>}
       </div>
     </>
   )

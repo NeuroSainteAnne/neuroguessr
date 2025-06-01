@@ -317,7 +317,8 @@ function App() {
             viewerOptions={viewerOptions} />
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
-            {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} />}
+            {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
+               isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
          </>}
          {currentPage === "singleplayer" && 
             <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
@@ -328,9 +329,6 @@ function App() {
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer}
                isLoggedIn={isLoggedIn} authToken={authToken} />}
-         {currentPage === "multiplayer-config" && <>
-            <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />
-         </>}
          {currentPage === "multiplayer-game" && <>
             <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
                askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}

@@ -125,7 +125,6 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
 
     return (
         <div className="page-container">
-            <h2>Placeholder for Multiplayer Game Setup</h2>
             {!sessionCode && <div>'Creating multiplayer session...'</div>}
             {sessionCode && (
                 <div style={{ marginTop: 24 }}>
@@ -218,9 +217,9 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                 </label>
                             </div>
                             <button
-                                className={(selectedAtlas=="")?"play-button disabled":"play-button enabled"}
+                                className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                                 onClick={() => {
-                                    if(!loading && selectedAtlas) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
+                                    if(!loading && selectedAtlas && lobbyUsers.length > 1) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
                                 }}
                                 disabled={loading}
                             >
