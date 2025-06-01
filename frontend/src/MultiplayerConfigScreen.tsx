@@ -27,6 +27,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
         gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
     })
+    const [copiedIcon, setCopiedIcon] = useState<null | "code" | "link">(null);
 
     const createSession = async () => {
         setLoading(true);
@@ -134,10 +135,12 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                             <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
                                 <button
                                     title="Copy game number"
-                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
                                     onClick={() => {
                                         if (sessionCode && sessionToken) {
                                             navigator.clipboard.writeText(sessionCode);
+                                            setCopiedIcon("code");
+                                            setTimeout(() => setCopiedIcon(null), 1000);
                                         }
                                     }}
                                 >
@@ -149,11 +152,13 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                 </button>
                                 <button
                                     title="Copy game link (link icon)"
-                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: 'inherit', marginLeft: 4 }}
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
                                     onClick={() => {
                                         if (sessionCode && sessionToken) {
                                             const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
                                             navigator.clipboard.writeText(url);
+                                            setCopiedIcon("link");
+                                            setTimeout(() => setCopiedIcon(null), 1000);
                                         }
                                     }}
                                 >
