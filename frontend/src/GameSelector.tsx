@@ -1,20 +1,19 @@
 import type { TFunction } from 'i18next';
 import './GameSelector.css'
 import atlasFiles, { atlasCategories } from './atlas_files';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 
-function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }: 
-    { t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, authToken: string, userUsername: string }) {
+function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcomeSubpage }: 
+    { t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, authToken: string, userUsername: string, welcomeSubpage: string }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("cortical_regions");
   const [selectedAtlas, setSelectedAtlas] = useState<string>("");
   const [selectedMode, setSelectedMode] = useState<string>("");
-  const [selectedPlayer, setSelectedPlayer] = useState<string>("singleplayer");
   const [multiplayerInputCode, setMultiplayerInputCode] = useState<string>("")
   const [createMultiplayerMode, setCreateMultiplayerMode] = useState<boolean>(false)
 
   const handleLaunchSinglePlayerGame = () => {
-    if (selectedPlayer == "singleplayer" && selectedAtlas && selectedMode) {
+    if (welcomeSubpage == "singleplayer" && selectedAtlas && selectedMode) {
       callback.launchSinglePlayerGame(selectedAtlas, selectedMode);
     }
   }
@@ -27,34 +26,38 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
   }
 
   const handleCreateMultiplayer = () => {
-    setCreateMultiplayerMode(true)
+    callback.setWelcomeSubpage("multiplayer-create")
   }
+
+  useEffect(() => {
+    if(welcomeSubpage == "singleplayer") setSelectedMode("singlepl")
+  }, [welcomeSubpage])
 
   return (
     <>
       <div className="centered-container">
         <div className="player-selection-buttons">
           <button id="single-player-button" 
-              className={(selectedPlayer=="singleplayer"?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>setSelectedPlayer("singleplayer")}>
+              className={(welcomeSubpage=="singleplayer"?"player-mode-button selected":"player-mode-button")}
+              onClick={()=>callback.setWelcomeSubpage("singleplayer")}>
                 {t("single_player_button")}
           </button>
           <button id="single-player-button" 
-              className={(selectedPlayer=="multiplayer"?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>{setCreateMultiplayerMode(false); setSelectedPlayer("multiplayer")}}>
+              className={((welcomeSubpage=="multiplayer"||welcomeSubpage=="multiplayer-create")?"player-mode-button selected":"player-mode-button")}
+              onClick={()=>{setCreateMultiplayerMode(false); callback.setWelcomeSubpage("multiplayer")}}>
                 {t("multiplayer_button")}
           </button>
         </div>
 
-        { selectedPlayer=="singleplayer" && <div id="single-player-options" className="single-player-options-container hidden">
+        { welcomeSubpage=="singleplayer" && <div id="single-player-options" className="single-player-options-container hidden">
           <section className="atlas-selection">
-            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span data-i18n="select_atlas">Select Atlas</span></h2>
+            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
             <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
               selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}/>
           </section>
 
           <section className="mode-selection">
-            <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
+            <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span>{t("select_game_mode")}</span></h2>
             <div className="mode-buttons">
               <button className={selectedMode=="navigation"?"mode-button selected":"mode-button"}
                       onClick={() => setSelectedMode("navigation")}>
@@ -89,29 +92,28 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
           </section>
         </div>}
 
-        {selectedPlayer == "multiplayer" && <>
-          {!createMultiplayerMode && <div className="multiplayer-box">
+        {welcomeSubpage == "multiplayer" && <div className="multiplayer-box">
             {isLoggedIn && <>
               <div className="multiplayer-box-join">
-                <h2>{t("join-multiplayer-lobby")}</h2>
+                <h2>{t("join_multiplayer_lobby")}</h2>
                 <div><input
                   type="text"
                   value={multiplayerInputCode}
                   onChange={e => setMultiplayerInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                  placeholder={t("multi-8-digits")}
-                  style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 230 }}
+                  placeholder={t("multi_8_digits")}
+                  style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
                 /></div>
-                <div><button className="play-button enabled" onClick={handleJoinMultiplayer}>{t("join-button")}</button></div>
+                <div><button className="play-button enabled" onClick={handleJoinMultiplayer}>{t("join_multiplayer_button")}</button></div>
               </div>
               <div className="multiplayer-box-join">
-                <h2>{t("create-multiplayer-game")}</h2>
-                <div><button className="play-button enabled" onClick={handleCreateMultiplayer}>{t("create-button")}</button></div>
+                <h2>{t("create_multiplayer_game")}</h2>
+                <div><button className="play-button enabled" onClick={handleCreateMultiplayer}>{t("create_multiplayer_button")}</button></div>
               </div>
             </>}
-            {!isLoggedIn && <>{t("multi-unavailable-login")}</>}
+            {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")}}></div>}
           </div>}
-          {createMultiplayerMode && <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />}
-        </>}
+        {welcomeSubpage == "multiplayer-create" && <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />}
+        
       </div>
     </>
   )

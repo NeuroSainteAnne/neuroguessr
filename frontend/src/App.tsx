@@ -62,6 +62,7 @@ function App() {
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const helpContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
+  const [welcomeSubpage, setWelcomeSubpage] = useState<string>("singleplayer")
 
    const startGame = (game: string) => {
       setCurrentPage(game);
@@ -90,6 +91,14 @@ function App() {
          if(code) {  
             launchMultiPlayerGame(code, token);
          }
+      } else if (page === "welcome"){
+         setCurrentPage(page);
+         const subpage = parts[1] || null;
+         if(subpage) {  
+            setWelcomeSubpage(subpage);
+         } else {
+            setWelcomeSubpage("singleplayer")
+         }
       } else {
          setCurrentPage(page);
       }
@@ -102,6 +111,14 @@ function App() {
       setHeaderTextMode("normal"); 
       window.location.hash = `#/${page}`;
    }
+
+   useEffect(()=>{
+      if(currentPage == "welcome"){
+         if(welcomeSubpage){
+            window.location.hash = `#/${currentPage}/${welcomeSubpage}`;
+         }
+      }
+   }, [welcomeSubpage])
 
    const activateGuestMode = () => {
       setIsGuest(true);
@@ -303,7 +320,8 @@ function App() {
       setHeaderTime: setHeaderTime,
       setViewerOption: setViewerOption,
       launchSinglePlayerGame: launchSinglePlayerGame,
-      launchMultiPlayerGame: launchMultiPlayerGame
+      launchMultiPlayerGame: launchMultiPlayerGame,
+      setWelcomeSubpage: setWelcomeSubpage
    }
 
    return (
@@ -318,7 +336,8 @@ function App() {
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
             {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
-               isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
+               isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} 
+               welcomeSubpage={welcomeSubpage} />}
          </>}
          {currentPage === "singleplayer" && 
             <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}

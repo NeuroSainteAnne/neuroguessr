@@ -18,6 +18,7 @@ type AppCallback = {
   setViewerOption: (option: DisplayOptions) => void;
   launchSinglePlayerGame: (atlas: string, mode: string) => void;
   launchMultiPlayerGame: (sessionCode: string, sessionToken: string|undefined) => void;
+  setWelcomeSubpage: (subpage: string) => void;
 };
 
 type AtlasRegion = {

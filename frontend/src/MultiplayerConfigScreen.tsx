@@ -159,12 +159,12 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="atlas-selection">
-                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span data-i18n="select_atlas">Select Atlas</span></h2>
+                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
                             <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
                                 selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />
                         </section>
                         <section className="mode-selection">
-                            <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span data-i18n="select_game_mode">Select Game Mode</span></h2>
+                            <h2><img src="assets/interface/numero-2.png" alt="Parameters Icon" /> <span>{t("select_params")}</span></h2>
                             <div className="mode-buttons">
                                 <div style={{ margin: '24px 0' }}>
                                 <label htmlFor="numRegionsSlider" style={{ fontSize: 18, marginRight: 12 }}>

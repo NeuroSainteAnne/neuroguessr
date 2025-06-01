@@ -16,21 +16,21 @@
 
 @media (max-width: 1023px) and (min-width: 481px) {
     .centered-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         /* Increased padding below search bar */
     }
 }
 
 @media (max-width: 480px) {
     .centered-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         /* Increased padding below search bar */
     }
 }
 
 @media (min-width: 1024px) {
     .centered-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         /* Increased padding below search bar */
     }
 }
@@ -44,7 +44,7 @@
 
 @media (max-width: 768px) {
     .centered-container {
-        padding-top: 0.5rem;
+        padding-top: 1rem;
         /* Increased padding below search bar */
     }
 }
@@ -720,4 +720,8 @@
 .multiplayer-box-join{
     flex-direction: column;
     margin:15px;
+}
+
+.multiplayer-please-login {
+    margin-top:20px;
 }
