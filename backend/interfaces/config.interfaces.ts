@@ -20,6 +20,7 @@ export interface GlobalAuthenticationConfig {
 export interface ServerConfig {
     mode: string;
     port: number;
+    websocket_port: number;
     external_address: string;
     serverKey: string;
     serverCert: string;

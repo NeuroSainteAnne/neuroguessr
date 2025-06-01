@@ -495,6 +495,6 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(3001, () => {
-  console.log('WebSocket running on port 3001');
+server.listen(config.server.websocket_port, () => {
+  console.log(`WebSocket running on port ${config.server.websocket_port}`);
 });

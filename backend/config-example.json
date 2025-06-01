@@ -14,6 +14,7 @@
     "server":{
         "mode": "https",
         "port": 3000,
+        "websocket_port": 3001,
         "external_address": "https://localhost:3000",
         "serverKey": "server.key",
         "serverCert": "server.crt",
