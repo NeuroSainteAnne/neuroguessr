@@ -111,6 +111,11 @@ function App() {
       setHeaderTextMode("normal"); 
       window.location.hash = `#/${page}`;
    }
+   const gotoWelcomeSubpage = (subpage: string) => {
+      checkToken();
+      setCurrentPage("welcome");
+      setWelcomeSubpage(subpage)
+   }
 
    useEffect(()=>{
       if(currentPage == "welcome"){

@@ -342,7 +342,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           </ul>
           <h2>{hasWon?t("multiplayer-you-won"):t("multiplayer-you-lost")}</h2>
           <div className="overlay-buttons">
-            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoPage("welcome")}>
+            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoWelcomeSubpage("multiplayer")}>
               <i className="fas fa-home"></i>
             </button>
           </div>
