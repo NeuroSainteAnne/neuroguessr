@@ -66,6 +66,7 @@ export const database_init = async () => {
                 maxTimePerCorrectRegion INTEGER,
                 avgTimePerCorrectRegion INTEGER,
                 quitReason TEXT,
+                multiplayerGamesWon INTEGER DEFAULT 0,
                 duration INTEGER NOT NULL,
                 createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (userId) REFERENCES users (id)

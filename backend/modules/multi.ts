@@ -14,7 +14,7 @@ import { NVImage } from "@niivue/niivue";
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
-const LOAD_ATLAS_DURATION = 5;
+const LOAD_ATLAS_DURATION = 3;
 const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
 const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
@@ -42,11 +42,16 @@ interface MultiplayerGame {
   currentCommandIndex: number;
   currentAtlas: string;
   currentRegionId: number;
+  duration: number;
   stepStartTime?: number;
   commandTimeout?: NodeJS.Timeout;
   totalGuessNumber: number;
   hasAnswered: Record<string,boolean[]>;
   individualScores: Record<string,number>;
+  individualAttempts: Record<string,number>;
+  individualSuccesses: Record<string,number>;
+  individualDurations: Record<string,number[]>;
+  individualCorrectDurations: Record<string,number[]>;
 } 
 
 interface AtlasLUT {
@@ -135,18 +140,27 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
       totalGuessNumber: 0,
       currentAtlas: "",
       currentRegionId: -1,
+      duration: 0,
       parameters: {
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
         gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
       },
       hasAnswered: {},
-      individualScores: {}
+      individualScores: {},
+      individualAttempts: {},
+      individualSuccesses: {},
+      individualDurations: {},
+      individualCorrectDurations: {}
     }
   }
   const gameRef = games[sessionCode];
   gameRef.lobby.add(ws);
   gameRef.individualScores[userName] = 0;
+  gameRef.individualAttempts[userName] = 0;
+  gameRef.individualSuccesses[userName] = 0;
+  gameRef.individualDurations[userName] = [];
+  gameRef.individualCorrectDurations[userName] = [];
   (ws as WSGame).gameRef = gameRef;
   (ws as WSGame).sessionCode = sessionCode;
   
@@ -228,6 +242,7 @@ function launchGame(ws: WebSocket, sessionToken: string){
   console.log("Starting game", sessionCode)
   gameRef.commands = generateGameCommands(gameRef.parameters) || []
   gameRef.hasStarted = true;
+  gameRef.duration = Date.now();
   gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
   // broadcast gamestart to all users
   gameRef.lobby.forEach(client => {
@@ -249,6 +264,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
         client.send(JSON.stringify({ type: 'game-end' }));
       }
     });
+    clotureMultiplayerGame(gameRef)
     return;
   }
 
@@ -322,15 +338,15 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
   const voxelValue: number = atlasImage.getValue(x, y, z);
   const isCorrect: boolean = voxelValue === gameRef.currentRegionId;
   let scoreIncrement = 0
+  const command = gameRef.commands[gameRef.currentCommandIndex];
+  const now = Date.now();
+  const elapsed = (now - (gameRef.stepStartTime || 0));
   if (isCorrect) {
     let bonus = 0;
     if (gameRef.commands && gameRef.commands[gameRef.currentCommandIndex]) {
-      const command = gameRef.commands[gameRef.currentCommandIndex];
-      const now = Date.now();
       if (gameRef.stepStartTime) {
-        const elapsed = (now - gameRef.stepStartTime) / 1000;
-        const remaining = Math.max(0, command.duration - elapsed);
-        bonus = Math.floor(remaining * BONUS_POINTS_PER_SECOND);
+        const bonusTime = Math.max(0, command.duration - (elapsed/1000));
+        bonus = Math.floor(bonusTime * BONUS_POINTS_PER_SECOND);
       }
     }
     scoreIncrement = MAX_POINTS_PER_REGION + bonus;
@@ -351,12 +367,62 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
       }
   }
   gameRef.individualScores[userName] += scoreIncrement
+  gameRef.individualAttempts[userName] += 1;
+  if(isCorrect) gameRef.individualSuccesses[userName] += 1;
+  gameRef.individualDurations[userName].push(elapsed);
+  if(isCorrect) gameRef.individualCorrectDurations[userName].push(elapsed);
   ws.send(JSON.stringify({ type: 'guess-result', isCorrect, scoreIncrement, totalScore: gameRef.individualScores[userName] }));
   gameRef.lobby.forEach(client => {
     if (client.readyState === ws.OPEN) {
       client.send(JSON.stringify({ type: 'score-update', user: userName, score: gameRef.individualScores[userName] }));
     }
   });
+}
+
+function clotureMultiplayerGame(gameRef: MultiplayerGame) {
+  const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
+  const allScores = Object.values(gameRef.individualScores);
+  const maxScore = Math.max(...allScores);
+
+  // Prepare SQL statements
+  const insertFinishedStmt = db.prepare(`
+    INSERT INTO finishedsessions (
+      userId, mode, atlas, score, attempts, correct, incorrect,
+      minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
+      minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
+      quitReason, multiplayerGamesWon, duration
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  // Map usernames to userIds
+  const getUserIdStmt = db.prepare('SELECT id FROM users WHERE username = ?');
+
+  for (const username in gameRef.individualScores) {
+    const userRow = getUserIdStmt.get(username) as {id: number};
+    if (!userRow) continue;
+    const userId = userRow.id;
+    const mode = 'multiplayer';
+    const atlas = gameRef.currentAtlas;
+    const score = gameRef.individualScores[username] || 0;
+    const attempts = gameRef.individualAttempts[username] || 0;
+    const correct = gameRef.individualSuccesses[username] || 0;
+    const incorrect = attempts - correct;
+    const durations = gameRef.individualDurations[username] || [];
+    const correctDurations = gameRef.individualCorrectDurations[username] || [];
+    const minTimePerRegion = durations.length > 0 ? Math.min(...durations) : null;
+    const maxTimePerRegion = durations.length > 0 ? Math.max(...durations) : null;
+    const avgTimePerRegion = durations.length > 0 ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length) : null;
+    const minTimePerCorrectRegion = correctDurations.length > 0 ? Math.min(...correctDurations) : null;
+    const maxTimePerCorrectRegion = correctDurations.length > 0 ? Math.max(...correctDurations) : null;
+    const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a,b)=>a+b,0)/correctDurations.length) : null;
+    const quitReason = 'end';
+    const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
+    insertFinishedStmt.run(
+      userId, mode, atlas, score, attempts, correct, incorrect,
+      minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
+      minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
+      quitReason, multiplayerGamesWon, gameDuration
+    );
+  }
 }
 
 wss.on('connection', (ws, req) => {
