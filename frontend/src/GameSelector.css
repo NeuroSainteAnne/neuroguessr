@@ -122,7 +122,7 @@
 
 /* Container for Single Player Options (Atlas and Mode Selection) - Full Width */
 .single-player-options-container {
-    width: 90%; /* Changed to 90% as requested */
+    width: 100%; /* Changed to 90% as requested */
     max-width: none;
     /* Remove max-width constraint */
     display: flex;
