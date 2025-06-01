@@ -220,7 +220,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                             <button
                                 className={(selectedAtlas=="")?"play-button disabled":"play-button enabled"}
                                 onClick={() => {
-                                    callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
+                                    if(!loading && selectedAtlas) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
                                 }}
                                 disabled={loading}
                             >
