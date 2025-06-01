@@ -8,12 +8,17 @@ const config: Config = configJson;
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
 import express from 'express';
-import { validRegions } from "./game.ts";
+import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
+import { NVImage } from "@niivue/niivue";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
 const LOAD_ATLAS_DURATION = 5;
+const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
+const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
+const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
+const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 
 interface WSGame extends WebSocket {
   userName?: string;
@@ -34,8 +39,14 @@ interface MultiplayerGame {
   hasEnded: boolean;
   parameters: MultiplayerParametersType;
   commands?: GameCommands[];
-  currentCommandIndex?: number;
+  currentCommandIndex: number;
+  currentAtlas: string;
+  currentRegionId: number;
+  stepStartTime?: number;
   commandTimeout?: NodeJS.Timeout;
+  totalGuessNumber: number;
+  hasAnswered: Record<string,boolean[]>;
+  individualScores: Record<string,number>;
 } 
 
 interface AtlasLUT {
@@ -107,7 +118,7 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
     ws.close();
     return;
   }
-  const userName = jwtpayload.username;
+  const userName = String(jwtpayload.username);
   (ws as WSGame).userName = userName;
   const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(sessionCode);
   if (!session) {
@@ -121,15 +132,21 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
       hasStarted: false,
       hasEnded: false,
       currentCommandIndex: 0,
+      totalGuessNumber: 0,
+      currentAtlas: "",
+      currentRegionId: -1,
       parameters: {
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
         gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
-      }
+      },
+      hasAnswered: {},
+      individualScores: {}
     }
   }
   const gameRef = games[sessionCode];
   gameRef.lobby.add(ws);
+  gameRef.individualScores[userName] = 0;
   (ws as WSGame).gameRef = gameRef;
   (ws as WSGame).sessionCode = sessionCode;
   
@@ -211,6 +228,7 @@ function launchGame(ws: WebSocket, sessionToken: string){
   console.log("Starting game", sessionCode)
   gameRef.commands = generateGameCommands(gameRef.parameters) || []
   gameRef.hasStarted = true;
+  gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
   // broadcast gamestart to all users
   gameRef.lobby.forEach(client => {
     if (client.readyState === ws.OPEN) {
@@ -221,7 +239,7 @@ function launchGame(ws: WebSocket, sessionToken: string){
 }
 
 function sendNextCommand(gameRef: MultiplayerGame) {
-  if (!gameRef.commands || gameRef.currentCommandIndex === undefined) return;
+  if (!gameRef.commands) return;
 
   // If all commands sent, stop
   if (gameRef.currentCommandIndex >= gameRef.commands.length) {
@@ -234,18 +252,24 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     return;
   }
 
+  gameRef.stepStartTime = Date.now();
   const command = gameRef.commands[gameRef.currentCommandIndex];
+  if(command.action == "load-atlas") gameRef.currentAtlas = command.atlas || ""
+  if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
   gameRef.lobby.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify({ type: 'game-command', command }));
+      client.send(JSON.stringify({ type: 'all-scores-update', scores: gameRef.individualScores }));
     }
   });
 
   // Schedule next command
-  gameRef.currentCommandIndex++;
-  if (gameRef.currentCommandIndex < gameRef.commands.length + 1) {
+  if (gameRef.currentCommandIndex < gameRef.commands.length) {
     const nextDuration = command.duration * 1000; // convert to ms
-    gameRef.commandTimeout = setTimeout(() => sendNextCommand(gameRef), nextDuration);
+    gameRef.commandTimeout = setTimeout(() => { 
+      gameRef.currentCommandIndex += 1; 
+      sendNextCommand(gameRef)
+    }, nextDuration);
   }
 }
 
@@ -268,6 +292,73 @@ function updateParameters(ws: WebSocket, parameters: MultiplayerParametersType) 
   });
 }
 
+const validateGuess = (ws: WebSocket, voxel: number[]) => {
+  const gameRef = (ws as WSGame).gameRef;
+  const userName = (ws as WSGame).userName;
+  if (!gameRef || !gameRef.commands) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Game not available.' }));
+    return;
+  }
+  if (!userName) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Username not found.' }));
+    return;
+  }
+  if(!gameRef.hasAnswered) gameRef.hasAnswered = {}
+  if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands.length).fill(false);
+  if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
+    ws.send(JSON.stringify({ type: 'error', message: 'Answer already given.' }));
+    return;
+  }
+
+  const [x, y, z] = voxel;
+  const atlasImage: NVImage = imageRef[gameRef.currentAtlas];
+  const atlasMetadata = imageMetadata[gameRef.currentAtlas];
+  if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Coordinates out of bound.' }));
+    return;
+  }
+
+  gameRef.hasAnswered[userName][gameRef.currentCommandIndex] = true; // mark that the user has answered
+  const voxelValue: number = atlasImage.getValue(x, y, z);
+  const isCorrect: boolean = voxelValue === gameRef.currentRegionId;
+  let scoreIncrement = 0
+  if (isCorrect) {
+    let bonus = 0;
+    if (gameRef.commands && gameRef.commands[gameRef.currentCommandIndex]) {
+      const command = gameRef.commands[gameRef.currentCommandIndex];
+      const now = Date.now();
+      if (gameRef.stepStartTime) {
+        const elapsed = (now - gameRef.stepStartTime) / 1000;
+        const remaining = Math.max(0, command.duration - elapsed);
+        bonus = Math.floor(remaining * BONUS_POINTS_PER_SECOND);
+      }
+    }
+    scoreIncrement = MAX_POINTS_PER_REGION + bonus;
+  } else {
+      if (regionCenters[gameRef.currentAtlas] && regionCenters[gameRef.currentAtlas][gameRef.currentRegionId]) {
+          const center: number[] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId];
+          const distance = Math.sqrt(
+              Math.pow(center[0] - x, 2) +
+              Math.pow(center[1] - y, 2) +
+              Math.pow(center[2] - z, 2)
+          );
+          // Calculate score based on distance
+          if (distance <= MAX_PENALTY_DISTANCE) {
+              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+          } else {
+              scoreIncrement = 0; // No points for too far away
+          }
+      }
+  }
+  gameRef.individualScores[userName] += scoreIncrement
+  ws.send(JSON.stringify({ type: 'guess-result', isCorrect, scoreIncrement, totalScore: gameRef.individualScores[userName] }));
+  gameRef.lobby.forEach(client => {
+    if (client.readyState === ws.OPEN) {
+      client.send(JSON.stringify({ type: 'score-update', user: userName, score: gameRef.individualScores[userName] }));
+    }
+  });
+}
+
 wss.on('connection', (ws, req) => {
   ws.on('message', (message) => {
     try {
@@ -278,6 +369,8 @@ wss.on('connection', (ws, req) => {
         launchGame(ws, data.sessionToken)
       } else if (data.type === 'update-parameters' && (ws as WSGame).gameRef && typeof data.parameters === 'object') {
         updateParameters(ws, data.parameters)
+      } else if (data.type === 'validate-guess' && (ws as WSGame).gameRef && data.voxel) {
+        validateGuess(ws, data.voxel)
       }
     } catch (e) {
       ws.send(JSON.stringify({ type: 'error', message: e }));

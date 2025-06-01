@@ -22,9 +22,9 @@ const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
 
 export const validRegions : Record<string,number[]> = {}
-const imageRef : Record<string,NVImage> = {}
-const imageMetadata : Record<string,any> = {}
-const regionCenters : Record<string,number[][]> = {}
+export const imageRef : Record<string,NVImage> = {}
+export const imageMetadata : Record<string,any> = {}
+export const regionCenters : Record<string,number[][]> = {}
 for (const atlas in atlasFiles) {
     const atlasJsonPath = path.join(htmlRoot, "frontend", "dist", "assets", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
