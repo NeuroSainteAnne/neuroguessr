@@ -35,6 +35,7 @@ interface MultiplayerParametersType {
 
 interface MultiplayerGame {
   lobby: Set<WebSocket>;
+  sessionCode: string;
   hasStarted: boolean;
   hasEnded: boolean;
   parameters: MultiplayerParametersType;
@@ -134,6 +135,7 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
   if (!games[sessionCode]){
     games[sessionCode] = {
       lobby: new Set(),
+      sessionCode: sessionCode,
       hasStarted: false,
       hasEnded: false,
       currentCommandIndex: 0,
@@ -259,9 +261,14 @@ function sendNextCommand(gameRef: MultiplayerGame) {
   // If all commands sent, stop
   if (gameRef.currentCommandIndex >= gameRef.commands.length) {
     // Optionally broadcast game end
+    const allScores = Object.values(gameRef.individualScores);
+    const maxScore = Math.max(...allScores);
     gameRef.lobby.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: 'game-end' }));
+        const userName = (client as WSGame).userName;
+        const userScore = userName ? gameRef.individualScores[userName] : undefined;
+        const youWon = userScore !== undefined && userScore === maxScore && maxScore > 0;
+        client.send(JSON.stringify({ type: 'game-end', scores: gameRef.individualScores, youWon }));
       }
     });
     clotureMultiplayerGame(gameRef)
@@ -323,6 +330,10 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
   if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands.length).fill(false);
   if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
     ws.send(JSON.stringify({ type: 'error', message: 'Answer already given.' }));
+    return;
+  }
+  if(gameRef.commands[gameRef.currentCommandIndex].action != "guess"){
+    ws.send(JSON.stringify({ type: 'error', message: 'Guess delay timed out.' }));
     return;
   }
 
@@ -423,6 +434,25 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       quitReason, multiplayerGamesWon, gameDuration
     );
   }
+
+  const sessionCode = gameRef.sessionCode
+  gameRef.lobby.forEach(client => {
+    try {
+      client.close();
+    } catch (e) {
+      // Ignore errors
+    }
+  });
+  gameRef.lobby.clear();
+  if (gameRef.commandTimeout) {
+    clearTimeout(gameRef.commandTimeout);
+    gameRef.commandTimeout = undefined;
+  }
+  for (const key in gameRef) {
+    // @ts-ignore
+    delete gameRef[key];
+  }
+  delete games[sessionCode];
 }
 
 wss.on('connection', (ws, req) => {
@@ -448,7 +478,7 @@ wss.on('connection', (ws, req) => {
     const gameRef = (ws as WSGame).gameRef;
     if(!gameRef) return;
     const lobby = gameRef.lobby;
-    if (lobby.has(ws)) {
+    if (lobby && lobby.has(ws)) {
       lobby.delete(ws);
       const userName = (ws as WSGame).userName;
       // Notify remaining clients in this lobby
