@@ -49,8 +49,9 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         }
 
         // Vérifier si l'utilisateur existe déjà
+        const email = req.body.email.toLowerCase();
         const getUserStmt = db.prepare("SELECT * FROM users WHERE email = ?");
-        const user = getUserStmt.get(req.body.email);
+        const user = getUserStmt.get(email);
         if (user){
             res
                 .status(409)
@@ -73,7 +74,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             req.body.username,
             req.body.firstname,
             req.body.lastname,
-            req.body.email,
+            email,
             hashPassword,
             preVerify
         );
@@ -89,7 +90,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
 
         // Créer un jeton pour l'utilisateur
         const tokenValue = jwt.sign(
-            { email: req.body.email, id: lastID },
+            { email: email, id: lastID },
             config.jwt_secret,
             { expiresIn: "1h" }
         );
@@ -129,7 +130,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         </body>
       `;
 
-        await sendEmail(req.body.email, subject, message);
+        await sendEmail(email, subject, message);
         res
             .status(201)
             .send({ preverified: false, message: "An Email sent to your account please verify" });
@@ -213,8 +214,9 @@ export const passwordLink = async (
         }
 
         // Check if the email already exists
+        const email = req.body.email.toLowerCase();
         const getUserByUsernameStmt = db.prepare("SELECT * FROM users WHERE email = ?");
-        const user = getUserByUsernameStmt.get(req.body.email) as User;
+        const user = getUserByUsernameStmt.get(email) as User;
         if (!user){
              res
                 .status(409)
@@ -228,7 +230,7 @@ export const passwordLink = async (
         if (!token) {
             // Create a token for the user
             tokenValue = jwt.sign(
-                { email: req.body.email, id: user.id },
+                { email: email, id: user.id },
                 config.jwt_secret,
                 { expiresIn: "1h" }
             );
