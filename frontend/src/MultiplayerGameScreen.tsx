@@ -44,7 +44,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
-
   const handleConnect = () => {
     setError(null);
     if (!inputCode.match(/^\d{8}$/)) {
@@ -334,7 +333,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
-        {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
       </div>}
 
       
@@ -367,6 +365,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           </div>
         </div>
       </div>}
+      {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
     </div>
   )
 }
