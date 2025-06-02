@@ -102,8 +102,10 @@ function UserConfig({t, callback, authToken}:
         let formData : Record<string,string|boolean|null> = {
             firstname: firstname.trim(),
             lastname: lastname.trim(),
-            publishToLeaderboard: publishToLeaderboard
         };
+        if (publishToLeaderboard !== null) {
+            formData.publishToLeaderboard = publishToLeaderboard;
+        }
         if (password) {
             formData.password = password.trim();
         }
