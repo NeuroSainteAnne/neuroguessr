@@ -5,7 +5,7 @@ import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { __dirname } from "./utils.ts";
+import { __dirname, verifyCaptcha } from "./utils.ts";
 import type { Response } from "express";
 import type { Token, User } from "../interfaces/database.interfaces.ts";
 import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
@@ -28,6 +28,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 language: Joi.string().label("language"),
                 // @ts-ignore
                 password: passwordComplexity().required().label("password"),
+                captcha_token: Joi.string().label("captcha_token")
             });
             return schema.validate(data);
         };
@@ -57,6 +58,20 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 .status(409)
                 .send({ message: "User with given email already exists" });
             return;
+        }
+
+        // CAPTCHA CHECK (if enabled)
+        if (config.captcha && config.captcha.activate) {
+            const captchaToken = req.body.captcha_token;
+            if (!captchaToken) {
+                res.status(400).send({ message: "Captcha token missing" });
+                return;
+            }
+            const captchaOk = await verifyCaptcha(captchaToken, config.captcha.secretKey);
+            if (!captchaOk) {
+                res.status(400).send({ message: "Captcha verification failed" });
+                return;
+            }
         }
 
         // Hacher le mot de passe
@@ -202,6 +217,7 @@ export const passwordLink = async (
             const emailSchema = Joi.object({
                 email: Joi.string().email().required().label("Email"),
                 language: Joi.string().label("language"),
+                captcha_token: Joi.string().label("captcha_token")
             });
             return emailSchema.validate(data);
         };
@@ -221,6 +237,20 @@ export const passwordLink = async (
              res
                 .status(409)
                 .send({ message: "User with email does not exists" });
+        }
+
+        // CAPTCHA CHECK (if enabled)
+        if (config.captcha && config.captcha.activate) {
+            const captchaToken = req.body.captcha_token;
+            if (!captchaToken) {
+                res.status(400).send({ message: "Captcha token missing" });
+                return;
+            }
+            const captchaOk = await verifyCaptcha(captchaToken, config.captcha.secretKey);
+            if (!captchaOk) {
+                res.status(400).send({ message: "Captcha verification failed" });
+                return;
+            }
         }
         
         // Check if a token already exists

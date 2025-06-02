@@ -21,6 +21,7 @@ export interface RegisterBody {
     email: string;
     password: string;
     language?: string;
+    captcha_token?: string;
 }
 
 export interface RegisterRequest extends Request {
@@ -39,6 +40,7 @@ export interface VerifyEmailRequest extends Request<VerifyEmailBody> {
 export interface PasswordLinkBody {
     email: string;
     language?: string;
+    captcha_token?: string;
 }
 
 export interface PasswordLinkRequest extends Request {

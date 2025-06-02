@@ -27,10 +27,18 @@ export interface ServerConfig {
     globalAuthentication: GlobalAuthenticationConfig;
 }
 
+export interface CaptchaConfig {
+    activate: boolean;
+    siteKey: string;
+    secretKey: string;
+    proxy: string;
+}
+
 export interface Config {
     email: EmailConfig;
     server: ServerConfig;
     addTestUser: boolean;
+    captcha: CaptchaConfig;
     salt: string;
     jwt_secret: string;
 }
