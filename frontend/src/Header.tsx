@@ -63,10 +63,24 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                 <div className="navbar-right">
                     {(currentPage == "neurotheka" || currentPage == "singleplayer") && <OptionsDropdown
                         currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
-                    {!isLoggedIn && 
-                    <button id="guest-sign-in-button" className="guest-sign-in-button"
-                        onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
-                    }
+                    {!isLoggedIn && <>
+                        <button id="guest-sign-in-button" className="guest-sign-in-button"
+                            onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
+                        <span className={currentLanguage=="fr"?
+                                    "lang-icon-btn lang-icon-btn-active":
+                                    "lang-icon-btn"}
+                                data-lang="fr" aria-label="Français" 
+                                onClick={()=>{callback.handleChangeLanguage('fr')}}>
+                            <img src="assets/interface/fr.png" alt="FR" />
+                        </span>
+                        <span className={currentLanguage=="en"?
+                                    "lang-icon-btn lang-icon-btn-active":
+                                    "lang-icon-btn"}
+                                data-lang="en" aria-label="English"
+                                onClick={()=>{callback.handleChangeLanguage('en')}}>
+                            <img src="assets/interface/en.png" alt="EN" />
+                        </span>
+                    </>}
                     {isLoggedIn && 
                         <LoginDropdownMenu 
                             currentLanguage={currentLanguage}

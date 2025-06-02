@@ -155,10 +155,10 @@
     background: none;
     border: none;
     cursor: pointer;
-    padding: 5px;
+    padding: 0;
     margin: 0 5px;
     /* Adjust margin between flag buttons */
-    border-radius: 3px;
+    border-radius: 13px;
     transition: background-color 0.2s ease;
 }
 
@@ -167,8 +167,11 @@
 }
 
 .language-switcher-dropdown .lang-icon-btn-dropdown img {
-    width: 30px;
-    /* Slightly larger flags in dropdown */
-    height: 20px;
+    width: 26px;
+    height: 26px;
     vertical-align: middle;
+}
+
+.language-switcher-dropdown .lang-icon-btn-dropdown-active {
+    border: white solid 1px;
 }
