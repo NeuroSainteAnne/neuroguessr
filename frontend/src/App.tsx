@@ -10,7 +10,7 @@ import RegisterScreen from './RegisterScreen';
 import ValidateEmailScreen from './ValidateEmailScreen';
 import LandingPage from './LandingPage';
 import Stats from './Stats';
-import { getTokenPayload, isTokenValid, refreshToken } from './helper_login';
+import { isTokenValid, refreshToken } from './helper_login';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
@@ -18,6 +18,7 @@ import {Niivue, NVImage} from '@niivue/niivue';
 import Neurotheka from './Neurotheka';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 import MultiplayerGameScreen from './MultiplayerGameScreen';
+import { jwtDecode } from 'jwt-decode';
 
 function App() {
    const niivue = new Niivue();
@@ -283,9 +284,10 @@ function App() {
       if (isLoggedIn) {
          setIsGuest(false);
          localStorage.setItem('guestMode', 'false');
-         const payload = getTokenPayload(authToken)
-         setUserUsername(payload.username || t('default_user'))
-         setUserFirstName(payload.firstname || t('default_user'))
+         const payload = jwtDecode<CustomTokenPayload>(authToken)
+         console.log(payload)
+         setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'))
+         setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'))
          setUserLastName(payload.lastname || "")
       }
    }, [isLoggedIn])

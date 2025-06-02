@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './UserConfig.css'
 import type { TFunction } from 'i18next';
-import { getTokenPayload } from './helper_login';
 
 function UserConfig({t, callback, authToken}: 
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string }) {

@@ -54,3 +54,10 @@ type ColorMap = {
   labels?: string[];
   centers?: number[][];
 };
+
+
+interface CustomTokenPayload {
+  username?: string;
+  firstname?: string;
+  lastname?: string;
+}

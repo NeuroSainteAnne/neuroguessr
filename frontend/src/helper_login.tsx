@@ -1,3 +1,5 @@
+import { jwtDecode } from "jwt-decode"
+
 export async function refreshToken() {
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -29,18 +31,14 @@ export async function refreshToken() {
     }
 }
 
-export function getTokenPayload(token: string){
-    return JSON.parse(atob(token.split('.')[1]));
-}
-
 export function isTokenValid(token: string) {
     try {
-        const payload = getTokenPayload(token); // Decode the payload
+        const payload = jwtDecode(token); // Decode the payload
         const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
         token = "";
-        return payload.exp > currentTime; // Check if the token is still valid
+        if(payload.exp) return payload.exp > currentTime; // Check if the token is still valid
     } catch (error) {
         console.error('Invalid token:', error);
-        return false;
     }
+    return false;
 }
