@@ -447,7 +447,8 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     );
   }
 
-  const sessionCode = gameRef.sessionCode
+  const sessionCode = gameRef.sessionCode 
+  db.prepare('DELETE FROM multisessions WHERE sessionCode = ?').run(sessionCode);
   gameRef.lobby.forEach(client => {
     try {
       client.close();
