@@ -1,8 +1,24 @@
 import type { TFunction } from 'i18next';
 import './RegisterScreen.css'
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
-function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
+// Try to import config, fallback to default if not found
+let config: any = {
+  recaptcha: {
+    activate: false,
+    siteKey: ""
+  }
+};
+try {
+  // @ts-ignore
+  config = require('../config.json');
+} catch (e) {
+  console.warn("config.json not found, using fallback config");
+}
+
+function RegisterScreen({ t, callback, currentLanguage }: 
+    { t: TFunction<"translation", undefined>, callback: AppCallback, currentLanguage:string }) {
   const usernameInput = useRef<HTMLInputElement>(null);
   const emailInput = useRef<HTMLInputElement>(null);
   const firstnameInput = useRef<HTMLInputElement>(null);
@@ -11,7 +27,14 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
   const confirmPasswordInput = useRef<HTMLInputElement>(null);
   const [registerErrorText, setRegisterErrorText] = useState<string>("");
   const [registerSuccessText, setRegisterSuccessText] = useState<string>("");
-  
+  const activateCaptcha = config.recaptcha.activate;
+  const captchaKey = config.recaptcha.siteKey;
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+
+  const onCaptchaVerify = useCallback((token: string) => {
+    setCaptchaToken(token);
+  }, []);
+
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const username = usernameInput.current?.value;
@@ -45,6 +68,9 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
     if (!username || !email || !firstname || !lastname || !password || !confirmPassword) {
       setRegisterErrorText(t('error_empty_fields'));
       return;
+    } else if(activateCaptcha && !captchaToken){
+      setRegisterErrorText(t('error_captcha'));
+      return;
     } else {
       if (!emailRegex.test(email.trim())) {
         setRegisterErrorText(t('error_invalid_email'));
@@ -59,13 +85,23 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
       }
     }
 
-    const formData = {
+    let formData: {
+        username: string;
+        email: string;
+        firstname: string;
+        lastname: string;
+        password: string;
+        captcha_token?: string;
+    } = {
         username: username.trim(),
         email: email.trim(),
         firstname: firstname.trim(),
         lastname: lastname.trim(),
         password: password.trim(),
     };
+    if(activateCaptcha){
+      formData.captcha_token = captchaToken;
+    }
 
     try {
         // Send the data to the server
@@ -99,8 +135,8 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
 
   }
 
-  return (
-    <div className="page-container">
+  const formContent =     
+  (<div className="page-container">
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
           <h2>{t("register_mode")}</h2>
@@ -174,12 +210,22 @@ function RegisterScreen({ t, callback }: { t: TFunction<"translation", undefined
               </td>
             </tr>}
           </table>
-
+          {activateCaptcha && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
           {registerSuccessText == "" && <button type="submit">{t("register_button")}</button>}
         </div>
       </form>
-    </div>
-  )
+    </div>)
+
+  return activateCaptcha ? (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={captchaKey}
+      language={currentLanguage}
+    >
+      {formContent}
+    </GoogleReCaptchaProvider>
+  ) : (
+    formContent
+  );
 }
 
 export default RegisterScreen

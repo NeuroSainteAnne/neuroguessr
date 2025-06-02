@@ -139,6 +139,7 @@
   "error_invalid_email": "Veuillez entrer une adresse e-mail valide.",
   "error_password_mismatch": "Les mots de passe ne correspondent pas.",
   "error_password_complexity": "Le mot de passe ne respecte pas les exigences de complexité.",
+  "error_captcha": "Impossible de recueillir le CAPTCHA",
   "login_success": "Connexion réussie !",
   "login_failed": "Nom d'utilisateur ou mot de passe invalide.",
   "register_success": "Inscription réussie ! Merci de vérifier votre boite email pour confirmer votre inscription.",

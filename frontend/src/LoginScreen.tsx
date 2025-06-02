@@ -1,8 +1,23 @@
 import type { TFunction } from 'i18next';
 import './LoginScreen.css'
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
-function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
+// Try to import config, fallback to default if not found
+let config: any = {
+  recaptcha: {
+    activate: false,
+    siteKey: ""
+  }
+};
+try {
+  // @ts-ignore
+  config = require('../config.json');
+} catch (e) {
+  console.warn("config.json not found, using fallback config");
+}
+
+function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translation", undefined>, callback: AppCallback, currentLanguage: string }) {
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const recoveryEmailInput = useRef<HTMLInputElement>(null);
@@ -11,8 +26,15 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
     const [loginSuccessText, setLoginSuccessText] = useState<string>("");
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
-    const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true)
+    const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true);
+    const activateCaptcha = config.recaptcha.activate;
+    const captchaKey = config.recaptcha.siteKey;
+    const [captchaToken, setCaptchaToken] = useState<string>("");
 
+    const onCaptchaVerify = useCallback((token: string) => {
+      setCaptchaToken(token);
+    }, []);
+    
     const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const username = usernameInput.current?.value.trim();
@@ -65,25 +87,38 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
         if (!email) {
           setRecoveryErrorText(t('error_empty_email'));
           return;
-        }
+        } else if(activateCaptcha && !captchaToken){
+          setRecoveryErrorText(t('error_captcha'));
+          return;
+        } 
 
         setShowRecoveryButton(false)
         
         try {
+          let formData: {
+              email: string;
+              language: string;
+              captcha_token?: string;
+          } = {
+              email: email.trim(),
+              language: currentLanguage
+          };
+          if(activateCaptcha){
+            formData.captcha_token = captchaToken;
+          }
           // Send recovery request to the server
           const response = await fetch('/api/password-recovery', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email }),
+            body: JSON.stringify(formData),
           });
 
           const result = await response.json();
 
           if (response.ok) {
             if(result.preverified){
-                alert(result.redirect_url)
                 window.location.href = result.redirect_url;
             } else {
               setRecoverySuccessText(t('recovery_email_sent'));
@@ -101,8 +136,7 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
 
     }
 
-    return (
-        <>
+    const formContent = (
         <div className="page-container">
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
@@ -159,6 +193,7 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
 
                         <input type="email" id="recovery-email" className="form-field" 
                             placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
+                        {activateCaptcha && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
 
                         {showRecoveryButton && 
                           <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
@@ -169,8 +204,17 @@ function LoginScreen({ t, callback }: { t: TFunction<"translation", undefined>, 
                 </div>
             }
         </div>
-        </>
     )
+    return activateCaptcha ? (
+      <GoogleReCaptchaProvider
+        reCaptchaKey={captchaKey}
+        language={currentLanguage}
+      >
+        {formContent}
+      </GoogleReCaptchaProvider>
+    ) : (
+      formContent
+    );
 }
 
 export default LoginScreen

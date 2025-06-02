@@ -19,6 +19,7 @@ import Neurotheka from './Neurotheka';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 import MultiplayerGameScreen from './MultiplayerGameScreen';
 import { jwtDecode } from 'jwt-decode';
+import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 function App() {
    const niivue = new Niivue();
@@ -363,8 +364,8 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                currentLanguage={currentLanguage} />
          </>}
-         {currentPage === "login" && <LoginScreen t={t} callback={callback} />}
-         {currentPage === "register" && <RegisterScreen t={t} callback={callback} />}
+         {currentPage === "login" && <LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />}
+         {currentPage === "register" && <RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />}
          {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}
          {currentPage === "resetpwd" && <ResetPasswordScreen t={t} callback={callback} />}
          {currentPage === "config" && <UserConfig t={t} callback={callback} authToken={authToken} />}
