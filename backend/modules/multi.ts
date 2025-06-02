@@ -157,6 +157,14 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
     }
   }
   const gameRef = games[sessionCode];
+
+  // Prevent duplicate user in lobby
+  const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === userName);
+  if (userAlreadyInLobby) {
+    ws.send(JSON.stringify({ type: 'error', message: 'User already in lobby.' }));
+    return;
+  }
+  
   gameRef.lobby.add(ws);
   gameRef.individualScores[userName] = 0;
   gameRef.individualAttempts[userName] = 0;
