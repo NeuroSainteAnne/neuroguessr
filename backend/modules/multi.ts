@@ -24,6 +24,7 @@ interface WSGame extends WebSocket {
   userName?: string;
   gameRef?: MultiplayerGame;
   sessionCode?: string;
+  lastActivity?: number;
 } 
 
 interface MultiplayerParametersType {
@@ -469,8 +470,10 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
 }
 
 wss.on('connection', (ws, req) => {
+  (ws as WSGame).lastActivity = Date.now();
   ws.on('message', (message) => {
     try {
+      (ws as WSGame).lastActivity = Date.now();
       const data = JSON.parse(message.toString());
       if (data.type === 'join' && data.sessionCode && data.token) {
         joinLobby(ws, data.token, data.sessionCode)
@@ -503,6 +506,20 @@ wss.on('connection', (ws, req) => {
     }
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+  wss.clients.forEach((client) => {
+    const wsGame = client as WSGame;
+    if (wsGame.lastActivity && now - wsGame.lastActivity > 60 * 60 * 1000) { // 1 hour
+      try {
+        client.terminate();
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+  });
+}, 60 * 10 * 1000); // Cleanup every 10 minute
 
 server.listen(config.server.websocket_port, () => {
   console.log(`WebSocket running on port ${config.server.websocket_port}`);
