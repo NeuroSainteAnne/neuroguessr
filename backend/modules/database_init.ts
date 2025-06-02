@@ -135,6 +135,15 @@ export const cleanOldGameSessions = () => {
         if(resultSessions.changes !== 0){
             console.log(`Cleaned up ${resultSessions.changes} old gamesessions.`);
         }
+        // Delete from multisessions older than 1 hour
+        const deleteMultiSessionsStmt = db.prepare(`
+            DELETE FROM multisessions
+            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        `);
+        const resultMultiSessions = deleteMultiSessionsStmt.run();
+        if(resultMultiSessions.changes !== 0){
+            console.log(`Cleaned up ${resultMultiSessions.changes} old multisessions.`);
+        }
     } catch (err) {
         console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
     }
