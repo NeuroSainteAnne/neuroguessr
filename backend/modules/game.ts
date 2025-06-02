@@ -162,8 +162,8 @@ export const getNextRegion = async (
             Math.random() * remainingRegionIds.length
         );
         randomRegionId = remainingRegionIds[randomIndex];
-    } else if (session.mode == "streak") {
-        // Select a random region from the remaining regions
+    } else {
+        // Select a random region from all regions
         const randomIndex = Math.floor(Math.random() * atlasValidRegions.length);
         randomRegionId = atlasValidRegions[randomIndex];
     }
@@ -252,8 +252,12 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?
         WHERE id = ?
     `);
+    let isActive = 0
+    if(session.mode == "practice"){
+        isActive = isCorrect ? 0 : 1
+    }
     const timeTaken = Math.floor((Date.now() - activeProgress.createdAt)); // Time in milliseconds
-    updateProgressStmt.run(0, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
+    updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
 
     let endgame = false;
     let quitReason = ""
