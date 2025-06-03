@@ -66,6 +66,9 @@ function App() {
   const legalContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
   const [welcomeSubpage, setWelcomeSubpage] = useState<string>("singleplayer")
+   const headerRef = useRef<HTMLDivElement>(null);
+   const lowerBarRef = useRef<HTMLDivElement>(null);
+   const pageContainerRef = useRef<HTMLDivElement>(null);
 
    const startGame = (game: string) => {
       setCurrentPage(game);
@@ -312,6 +315,21 @@ function App() {
       };
    }, [showHelpOverlay])
 
+   const updatePageContainerHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const lowerBarHeight = lowerBarRef.current?.offsetHeight || 0;
+      const vh = window.innerHeight;
+      if (pageContainerRef.current) {
+         pageContainerRef.current.style.height = `${vh - headerHeight - lowerBarHeight}px`;
+      }
+   };
+
+   useEffect(() => {
+      updatePageContainerHeight();
+      window.addEventListener('resize', updatePageContainerHeight);
+      return () => window.removeEventListener('resize', updatePageContainerHeight);
+   }, []);
+
    const callback: AppCallback = {
       startGame: startGame,
       gotoPage: gotoPage,
@@ -336,13 +354,14 @@ function App() {
 
    return (
       <>
-         <Header currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
+         <Header ref={headerRef} currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
             userFirstName={userFirstName} userLastName={userLastName} 
             headerText={headerText} headerTextMode={headerTextMode}
             headerScore={headerScore} headerErrors={headerErrors}
             headerStreak={headerStreak} headerTime={headerTime}
             viewerOptions={viewerOptions} />
+         <div ref={pageContainerRef} className="page-container">
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
             {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
@@ -382,7 +401,10 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer} />}
-               
+
+         <div className='lower-bar-phantom'></div>
+         </div>      
+         
          {currentPage === "welcome" && <>
             {showHelpOverlay && <div id="help-overlay" className="help-overlay">
                <div className="help-content" ref={helpContentRef}>
@@ -432,7 +454,8 @@ function App() {
             </div>
          </div>}
 
-         <div className='lower-bar'>
+         
+         <div ref={lowerBarRef} className='lower-bar'>
             <a
                href="https://github.com/FRramon/neuroguessr_web/"
                target="_blank"

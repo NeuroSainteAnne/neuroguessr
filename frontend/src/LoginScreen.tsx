@@ -124,7 +124,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
     }
 
     const formContent = (
-        <div className="page-container">
+        <>
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
                     <h2>{t("login_mode")}</h2>
@@ -190,7 +190,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
                     </div>
                 </div>
             }
-        </div>
+        </>
     )
     return activateCaptcha ? (
       <GoogleReCaptchaProvider

@@ -123,7 +123,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
   }
 
   const formContent =     
-  (<div className="page-container">
+  (<>
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
           <h2>{t("register_mode")}</h2>
@@ -201,7 +201,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
           {registerSuccessText == "" && <button type="submit">{t("register_button")}</button>}
         </div>
       </form>
-    </div>)
+    </>)
 
   return activateCaptcha ? (
     <GoogleReCaptchaProvider

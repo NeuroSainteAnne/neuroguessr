@@ -1,13 +1,13 @@
 /* Styles for Buttons Below Canvas (viewer page) - Keep existing */
 .button-container {
-    position: absolute;
+    /*position: absolute;
     bottom: 2vh;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%);*/
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    z-index: 1000;
+    z-index: 10;
     justify-content: center;
 }
 

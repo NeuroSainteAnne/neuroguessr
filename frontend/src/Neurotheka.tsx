@@ -204,7 +204,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
   }, [viewerOptions])
 
   return (
-    <div className="page-container">
+    <>
       {isLoading && <div className="loading-screen">Chargement...</div>}
       <canvas id="gl1"></canvas>
 
@@ -238,9 +238,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       </button>
       </div>
       
-    </div>
-
-
+    </>
   )
 }
 

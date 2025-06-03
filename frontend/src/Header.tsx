@@ -1,15 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 import './Header.css'
 import type { TFunction } from 'i18next';
 import LoginDropdownMenu from './LoginDropdownMenu';
 import SearchBar from './SearchBar';
 import OptionsDropdown from './OptionsDropdown';
 
-function Header({currentLanguage, currentPage, atlasRegions, t, callback, 
+function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback, 
     isLoggedIn, userFirstName, userLastName, 
     headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
     viewerOptions}: 
-    { currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
+    { ref:RefObject<HTMLDivElement | null>, currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
     t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, 
     userFirstName: string, userLastName: string, 
     headerText: string, headerTextMode: string, 
@@ -19,7 +19,7 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
 
     return (
         <>
-        <header className="navbar">
+        <header className="navbar" ref={ref}>
             <div className="navbar-container">
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
                     onClick={()=>{callback.gotoPage("welcome")}}>

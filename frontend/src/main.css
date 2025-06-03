@@ -69,7 +69,7 @@ body {
   min-height: calc(100vh - 150px);
   /* Adjust min-height as header is smaller */
   position: relative;
-  background: transparent;
+  background: transparent !important;
   /* Background handled by body pseudo-element */
 }
 

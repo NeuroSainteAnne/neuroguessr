@@ -286,7 +286,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }
 
   return (
-    <div className="page-container">
+    <>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" 
           onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
@@ -366,7 +366,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         </div>
       </div>}
       {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
-    </div>
+    </>
   )
 }
 

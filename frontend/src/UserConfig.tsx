@@ -136,7 +136,7 @@ function UserConfig({t, callback, authToken}:
     }
     
     return(
-    <div className="page-container">
+    <>
         <form id="reconfigure_form" onSubmit={handleReconfigure}>
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>
@@ -222,7 +222,7 @@ function UserConfig({t, callback, authToken}:
                 <button type="submit">{t("reconfigure_button")}</button>
             </div>
         </form>
-    </div>
+    </>
     )
 }
 

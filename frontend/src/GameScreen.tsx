@@ -871,7 +871,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [viewerOptions])
 
   return (
-    <div className="page-container">
+    <>
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}
@@ -961,7 +961,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         </div>
       </div>}
 
-    </div>
+    </>
   )
 }
 
