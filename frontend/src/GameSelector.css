@@ -659,7 +659,7 @@
     border: 1px solid #808588;
     border-radius: 50px;
     transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
-    z-index: 1000;
+    z-index: 10;
     margin-top: 1rem;
     opacity: 0.9;
     /* Added opacity */
