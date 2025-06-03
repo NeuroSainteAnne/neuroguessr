@@ -5,6 +5,7 @@ import atlasFiles from './atlas_files'
 import { use, useEffect, useRef, useState } from 'react';
 import { Niivue, NVImage, SHOW_RENDER } from '@niivue/niivue';
 import { fetchJSON } from './helper_niivue';
+import { initNiivue } from './NiiHelpers';
 
 function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, askedAtlas,
   preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer }:
@@ -167,20 +168,9 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       setIsLoading(true);
     }
   }
-  const initNiivue = () => {
-    niivue.current.attachTo('gl1').then(() => {
-      setIsLoadedNiivue(true);
-      niivue.current.setInterpolation(true);
-      niivue.current.opts.crosshairGap = 0;
-      niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-      niivue.current.opts.dragMode = niivue.current.dragModes.slicer3D;
-      niivue.current.opts.yoke3Dto2DZoom = true;
-      niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
-    })
-  }
 
   useEffect(() => {
-    initNiivue()
+    initNiivue(niivue.current, viewerOptions, ()=>{setIsLoadedNiivue(true);})
     checkLoading();
   }, [])
 
