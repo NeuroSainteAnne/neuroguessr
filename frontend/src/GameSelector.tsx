@@ -29,10 +29,6 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcom
     callback.setWelcomeSubpage("multiplayer-create")
   }
 
-  useEffect(() => {
-    if(welcomeSubpage == "singleplayer") setSelectedMode("singlepl")
-  }, [welcomeSubpage])
-
   return (
     <>
       <div className="centered-container">
