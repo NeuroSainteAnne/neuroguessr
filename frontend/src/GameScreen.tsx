@@ -1,12 +1,12 @@
 import type { TFunction } from 'i18next';
 import './GameScreen.css'
 import './Help.css'
-import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
-import { Niivue, SHOW_RENDER, type NVImage } from '@niivue/niivue';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import { isTokenValid, refreshToken } from './helper_login';
 import { defineNiiOptions, getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
+import { LoadingScreen } from './App';
 
 type GameScreenProps = {
   t: TFunction<"translation", undefined>;
@@ -15,13 +15,15 @@ type GameScreenProps = {
   atlasRegions: AtlasRegion[];
   askedAtlas: string | null;
   gameMode: string | null;
-  preloadedAtlas: NVImage | null;
-  preloadedBackgroundMNI: NVImage | null;
+  preloadedAtlas: any | null;
+  preloadedBackgroundMNI: any | null;
   viewerOptions: DisplayOptions;
   loadEnforcer: number;
   isLoggedIn: boolean;
   authToken: string;
   userPublishToLeaderboard: boolean | null;
+  niivue: any;
+  niivueModule: any;
 };
 
 async function startOnlineSession(token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -63,7 +65,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
 
 
 function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, gameMode,
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard }: GameScreenProps) {
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard, niivue, niivueModule }: GameScreenProps) {
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
   const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -97,11 +99,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
   const cMap = useRef<ColorMap | null>(null);
   const cLut = useRef<Uint8ClampedArray | null>(null);
-  const niivue = useRef(new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1]
-  }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
   const startTime = useRef<number | null>(null);
@@ -118,7 +115,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions, () => {
+    initNiivue(niivue, viewerOptions, () => {
       setIsLoadedNiivue(true);
     })
     checkLoading();
@@ -170,9 +167,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (!askedAtlas) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       cMap.current = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
-        niivue.current.volumes[1].setColormapLabel(cMap.current)
-        niivue.current.volumes[1].setColormapLabel({
+      if (niivue && niivue.volumes.length > 1 && cMap.current) {
+        niivue.volumes[1].setColormapLabel(cMap.current)
+        niivue.volumes[1].setColormapLabel({
           "R": generateRandomInts(cMap.current.labels?.length || 0, 255),
           "G": generateRandomInts(cMap.current.labels?.length || 0, 255),
           "B": generateRandomInts(cMap.current.labels?.length || 0, 255),
@@ -180,11 +177,11 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           "I": Array.from(Array(cMap.current.labels?.length || 0).keys()),
           "labels": cMap.current.labels || [],
         });
-        cLut.current = niivue.current.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
-        niivue.current.setOpacity(1, viewerOptions.displayOpacity);
-        niivue.current.updateGLVolume();
+        cLut.current = niivue.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
+        niivue.setOpacity(1, viewerOptions.displayOpacity);
+        niivue.updateGLVolume();
 
-        const atlasData = niivue.current.volumes[1].getVolumeData();
+        const atlasData = niivue.volumes[1].getVolumeData();
         const dataRegions = [...new Set((atlasData as unknown as number[]).filter(val => val > 0).map(val => Math.round(val)))];
         validRegions.current = dataRegions.filter(val => cMap.current?.labels?.[val] !== undefined && Number.isInteger(val));
 
@@ -217,7 +214,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const checkLoading = async () => {
     if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
       setIsLoading(false);
-      loadAtlasNii(niivue.current, preloadedBackgroundMNI, preloadedAtlas);
+      loadAtlasNii(niivue, preloadedBackgroundMNI, preloadedAtlas);
       await loadAtlasData();
       startGame();
     } else {
@@ -265,9 +262,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       callback.setHeaderStreak("");
     }
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-    if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-      niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
-      niivue.current.updateGLVolume();
+    if (cLut.current && niivue && niivue.volumes.length > 1 && niivue.volumes[1].colormapLabel) {
+      niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+      niivue.updateGLVolume();
     }
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
@@ -281,9 +278,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     setShowStreakOverlay(false);
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
-    if (niivue.current) {
-      defineNiiOptions(niivue.current, viewerOptions)
-      niivue.current.drawScene();
+    if (niivue) {
+      defineNiiOptions(niivue, viewerOptions)
+      niivue.drawScene();
     }
   }
 
@@ -458,10 +455,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
       selectedVoxel.current = null; // Reset selected voxel
       if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
-      if (cLut.current && niivue.current) {
-        if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
-        niivue.current.updateGLVolume();
-        niivue.current.drawScene(); // Redraw scene to ensure color reset is visible
+      if (cLut.current && niivue) {
+        if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
+        niivue.updateGLVolume();
+        niivue.drawScene(); // Redraw scene to ensure color reset is visible
       }
     }
   }
@@ -470,17 +467,17 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     if (highlightedRegion) {
       highlightRegionFluorescentYellow();
     } else { // reset to original color
-      if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
-        niivue.current.updateGLVolume();
-        niivue.current.drawScene();
+      if (cLut.current && niivue && niivue.volumes.length > 1 && niivue.volumes[1].colormapLabel) {
+        niivue.volumes[1].colormapLabel.lut = cLut.current;
+        niivue.updateGLVolume();
+        niivue.drawScene();
       }
     }
   }, [highlightedRegion]);
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
-    const clickedRegionLocation = getClickedRegion(niivue.current, canvasRef.current, cMap.current, e)
+    if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
+    const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if (clickedRegionLocation) {
       selectedVoxel.current = clickedRegionLocation.vox;
       if (gameMode === 'navigation') {
@@ -489,14 +486,14 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         if (tooltip) {
           setTooltip({ ...tooltip, visible: false });
         }
-        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-        niivue.current.drawScene();
+        niivue.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.drawScene();
       } else {
         if (guessButtonRef.current) {
           guessButtonRef.current.disabled = false;
         }
-        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-        niivue.current.drawScene();
+        niivue.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.drawScene();
       }
     } else {
       selectedVoxel.current = null;
@@ -545,7 +542,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         return false;
       }
     } else {
-      clickedRegion = Math.round(niivue.current.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
+      clickedRegion = Math.round(niivue.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
       guessSuccess = clickedRegion === currentTarget.current;
       if (gameMode === 'time-attack') {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
@@ -591,10 +588,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
 
       callback.setHeaderTextMode("success"); // Indicate correct guess visually
-      if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
-        niivue.current.updateGLVolume();
-        niivue.current.drawScene(); // Redraw scene to ensure color reset is visible
+      if (cLut.current && niivue && niivue.volumes.length > 1 && niivue.volumes[1].colormapLabel) {
+        niivue.volumes[1].colormapLabel.lut = cLut.current;
+        niivue.updateGLVolume();
+        niivue.drawScene(); // Redraw scene to ensure color reset is visible
       }
       selectedVoxel.current = null; // Reset selected voxel after guess
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
@@ -717,7 +714,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   function highlightRegionFluorescentYellow() {
     if (gameMode === 'navigation' && highlightedRegion === 0) return;
     console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
-    if (cLut.current && niivue.current && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
+    if (cLut.current && niivue && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
       const lut = cLut.current.slice();
       // Make all regions transparent initially except region 0 if needed
       for (let i = 0; i < lut.length / 4; i++) {
@@ -731,13 +728,13 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
       lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
 
-      if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
-      niivue.current.updateGLVolume();
-      niivue.current.drawScene();
+      if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
+      niivue.updateGLVolume();
+      niivue.drawScene();
     } else {
       console.error('Cannot highlight region:', {
         clut: !!cLut.current,
-        nv1: !!niivue.current,
+        nv1: !!niivue,
         highlightedRegion,
         lutLength: cLut.current?.length
       });
@@ -746,10 +743,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   const handleRecolorization = () => {
     if (isGameRunning && gameMode === 'navigation') {
-      if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
-        niivue.current.volumes[1].colormapLabel.lut = cLut.current;
-        niivue.current.updateGLVolume();
-        niivue.current.drawScene();
+      if (cLut.current && niivue && niivue.volumes.length > 1 && niivue.volumes[1].colormapLabel) {
+        niivue.volumes[1].colormapLabel.lut = cLut.current;
+        niivue.updateGLVolume();
+        niivue.drawScene();
       }
       callback.setHeaderText(t('click_to_identify'));
       selectedVoxel.current = null;
@@ -757,8 +754,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (tooltip) {
         setTooltip({ ...tooltip, visible: false });
       }
-      niivue.current.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
-      niivue.current.drawScene();
+      niivue.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
+      niivue.drawScene();
     }
   }
 
@@ -799,22 +796,22 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isGameRunning || !canvasRef.current || !niivue.current || gameMode !== 'navigation' || highlightedRegion !== null) {
+    if (!isGameRunning || !canvasRef.current || !niivue || gameMode !== 'navigation' || highlightedRegion !== null) {
       setTooltip({ ...tooltip, visible: false });
       return;
     }
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.pageX;
     const y = e.clientY - rect.top;
-    const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(e.nativeEvent, niivue.current.gl.canvas);
+    const pos = niivue.getNoPaddingNoBorderCanvasRelativeMousePosition(e.nativeEvent, niivue.gl.canvas);
 
     // Check if mouse is within canvas bounds
-    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height && pos && cMap.current && cMap.current.labels && niivue.current.uiData && niivue.current.uiData.dpr) {
-      const frac = niivue.current.canvasPos2frac([pos.x * niivue.current.uiData.dpr, pos.y * niivue.current.uiData.dpr]);
+    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height && pos && cMap.current && cMap.current.labels && niivue.uiData && niivue.uiData.dpr) {
+      const frac = niivue.canvasPos2frac([pos.x * niivue.uiData.dpr, pos.y * niivue.uiData.dpr]);
       if (frac[0] >= 0) {
-        const mm = niivue.current.frac2mm(frac);
-        const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
-        const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
+        const mm = niivue.frac2mm(frac);
+        const vox = niivue.volumes[1].mm2vox(Array.from(mm));
+        const idx = Math.round(niivue.volumes[1].getValue(vox[0], vox[1], vox[2]));
         if (isFinite(idx) && idx > 0 && idx in cMap.current.labels) { // Ensure valid region ID > 0
           setTooltip({
             visible: true, text: cMap.current.labels[idx] || t('unknown_region'),
@@ -867,14 +864,21 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [showHelpOverlay])
 
   useEffect(() => {
-    defineNiiOptions(niivue.current, viewerOptions)
+    defineNiiOptions(niivue, viewerOptions)
   }, [viewerOptions])
+  
+  useLayoutEffect(() => {
+  if (niivue && canvasRef.current && !isLoading) {
+    // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+    niivue.resizeListener();
+  }
+}, [niivue, isLoading]);
 
   return (
     <div className="page-container">
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-      {isLoading && <div className="loading-screen"></div>}
+      {isLoading && <LoadingScreen />}
       <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
         onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
       <div className="button-container">

@@ -1,16 +1,17 @@
 import type { TFunction } from 'i18next';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
-import { Niivue, NVImage } from '@niivue/niivue';
 import { getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 
-const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
+const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, 
+  viewerOptions, preloadedBackgroundMNI, currentLanguage, niivue, niivueModule }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string,
     askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number,
-    viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null, currentLanguage: string
+    viewerOptions: DisplayOptions, preloadedBackgroundMNI: any | null, currentLanguage: string,
+    niivue: any, niivueModule: any
   }) => {
   const [inputCode, setInputCode] = useState<string>("");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -21,18 +22,13 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   const wsRef = useRef<WebSocket | null>(null);
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
-  const niivue = useRef(new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1]
-  }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
   const [stepCountdown, setStepCountdown] = useState<number | null>(null);
   const countdownInterval = useRef<number | null>(null);
   const stepEndTime = useRef<number | null>(null);
   const [askedAtlas, setAskedAtlas] = useState<string>("");
-  const [loadedAtlas, setLoadedAtlas] = useState<NVImage|undefined>();
+  const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
   const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const selectedVoxel = useRef<number[] | null>(null);
@@ -187,11 +183,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       if (!askedAtlas || !askedLut) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       cMap.current = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
-        niivue.current.volumes[1].setColormapLabel(cMap.current)
-        niivue.current.volumes[1].setColormapLabel(askedLut);
-        niivue.current.setOpacity(1, viewerOptions.displayOpacity);
-        niivue.current.updateGLVolume();
+      if (niivue && niivue.volumes.length > 1 && cMap.current) {
+        niivue.volumes[1].setColormapLabel(cMap.current)
+        niivue.volumes[1].setColormapLabel(askedLut);
+        niivue.setOpacity(1, viewerOptions.displayOpacity);
+        niivue.updateGLVolume();
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -227,10 +223,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }, [askedSessionToken])
 
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions, ()=>{
-        setIsLoadedNiivue(true);
-    })
-    loadAtlasNii(niivue.current, preloadedBackgroundMNI);
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -243,30 +235,47 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
     };
   }, [])
 
+  useEffect(()=>{
+    if(niivue && canvasRef.current){
+      initNiivue(niivue, viewerOptions, ()=>{
+          setIsLoadedNiivue(true);
+      })
+      loadAtlasNii(niivue, preloadedBackgroundMNI);
+    }
+  }, [niivue, canvasRef.current])
+
   useEffect(() => {
   if (askedAtlas) {
       const atlas = atlasFiles[askedAtlas];
-      if (atlas) {
+      if (atlas && niivueModule) {
         const niiFile = "assets/atlas/nii/" + atlas.nii;
-        NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
+        niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
             setLoadedAtlas(nvImage);
-        }).catch((error) => {
+        }).catch((error: any) => {
             console.error("Error loading NIfTI file:", error);
             setLoadedAtlas(undefined)
         });
       }
   }
-}, [askedAtlas])
+}, [askedAtlas, niivueModule])
 
   useEffect(() => {
-    loadAtlasNii(niivue.current, preloadedBackgroundMNI, loadedAtlas);
-    loadAtlasData();
-  }, [preloadedBackgroundMNI, isLoadedNiivue, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
+    if(niivue && preloadedBackgroundMNI && canvasRef.current){
+      loadAtlasNii(niivue, preloadedBackgroundMNI, loadedAtlas);
+      loadAtlasData();
+    }
+  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, canvasRef.current, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
 
+  useLayoutEffect(() => {
+  if (niivue && canvasRef.current && hasStarted) {
+    // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+    niivue.resizeListener();
+  }
+}, [niivue, hasStarted, connected]);
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
-    const clickedRegionLocation = getClickedRegion(niivue.current, canvasRef.current, cMap.current, e)
+    if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
+    const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if(clickedRegionLocation){
       selectedVoxel.current = clickedRegionLocation.vox;
     }
@@ -287,16 +296,15 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
 
   return (
     <div className="page-container">
-      <div style={{display:((hasStarted && connected)?"block":"none")}}>
+      {hasStarted && connected && 
         <canvas id="gl1" 
-          onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
-        <div className="button-container">
+          onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>}
+       {hasStarted && connected && <div className="button-container">
           <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
             <span className="confirm-text">{t("confirm_guess")}</span>
             <span className="space-text">{t("space_key")}</span>
           </button>
-        </div>
-      </div>
+        </div>}
       {!connected && <>
         <h2>{t("join_multiplayer_lobby")}</h2>
         <input

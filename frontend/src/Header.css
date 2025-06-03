@@ -18,6 +18,7 @@
 .navbar-container {
     /* Used in index page header */
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     width: 100%;
     max-width: 95vw;
@@ -187,6 +188,8 @@
     flex: 1;
     flex-direction: column;
     flex-grow: 1;
+    min-width: 200px;
+    max-width: 450px;
     /* Allow it to grow and take available space */
 }
 

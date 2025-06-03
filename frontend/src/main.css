@@ -66,11 +66,20 @@ body {
   /* Adjusted padding top */
   box-sizing: border-box;
   flex-grow: 1;
+  height: calc(100vh - 150px);
   min-height: calc(100vh - 150px);
   /* Adjust min-height as header is smaller */
   position: relative;
   background: transparent;
   /* Background handled by body pseudo-element */
+}
+
+#gl1 {
+  max-height: calc(100% - 150px);
+}
+#gl1:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .grecaptcha-badge {
