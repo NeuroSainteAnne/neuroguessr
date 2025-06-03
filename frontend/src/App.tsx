@@ -168,7 +168,7 @@ function App() {
 
    useEffect(()=>{
       if(niivue){
-         const niiFile = "assets/atlas/mni152.nii.gz";
+         const niiFile = "assets/atlas/mni152_downsampled.nii.gz";
          niivue.loadFromUrl(niiFile).then((nvImage: any) => {
             setPreloadedBackgroundMNI(nvImage);
          }).catch((error: any) => {

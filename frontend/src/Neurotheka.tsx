@@ -85,6 +85,8 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       // Load volumes
       if (niivue.volumes.length == 0) {
         niivue.addVolume(preloadedBackgroundMNI);
+        const firstVolumeId = niivue.volumes[0].id;
+        niivue.setColormap(firstVolumeId, 'MNI_Cmap');
       }
       if (!useTractography) {
         niivue.addVolume(preloadedAtlas);
