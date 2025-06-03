@@ -56,14 +56,14 @@ function LoginDropdownMenu({currentLanguage, t, callback, userFirstName, userLas
                                 "lang-icon-btn-dropdown"}
                             data-lang="fr" aria-label="Français" 
                             onClick={()=>{callback.handleChangeLanguage('fr')}}>
-                        <img src="assets/interface/fr.png" alt="FR" />
+                        <img src="assets/interface/fr-64.png" alt="FR" />
                     </button>
                     <button className={currentLanguage=="en"?
                                 "lang-icon-btn-dropdown lang-icon-btn-dropdown-active":
                                 "lang-icon-btn-dropdown"}
                             data-lang="en" aria-label="English"
                             onClick={()=>{callback.handleChangeLanguage('en')}}>
-                        <img src="assets/interface/en.png" alt="EN" />
+                        <img src="assets/interface/en-64.png" alt="EN" />
                     </button>
                 </div>
                 <button id="logout-button-dropdown" className="dropdown-item logout-item" onClick={()=>callback.logout()}>
