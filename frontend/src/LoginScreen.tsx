@@ -2,20 +2,7 @@ import type { TFunction } from 'i18next';
 import './LoginScreen.css'
 import { useCallback, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
-
-// Try to import config, fallback to default if not found
-let config: any = {
-  recaptcha: {
-    activate: false,
-    siteKey: ""
-  }
-};
-try {
-  // @ts-ignore
-  config = require('../config.json');
-} catch (e) {
-  console.warn("config.json not found, using fallback config");
-}
+import config from '../config.json';
 
 function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translation", undefined>, callback: AppCallback, currentLanguage: string }) {
     const usernameInput = useRef<HTMLInputElement>(null);
