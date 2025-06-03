@@ -60,4 +60,5 @@ interface CustomTokenPayload {
   username?: string;
   firstname?: string;
   lastname?: string;
+  publishToLeaderboard?: boolean|null;
 }

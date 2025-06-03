@@ -21,6 +21,7 @@ type GameScreenProps = {
   loadEnforcer: number;
   isLoggedIn: boolean;
   authToken: string;
+  userPublishToLeaderboard: boolean | null;
 };
 
 async function startOnlineSession(token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -62,7 +63,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
 
 
 function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, gameMode,
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken }: GameScreenProps) {
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard }: GameScreenProps) {
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
   const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -117,8 +118,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions, ()=>{
-        setIsLoadedNiivue(true);
+    initNiivue(niivue.current, viewerOptions, () => {
+      setIsLoadedNiivue(true);
     })
     checkLoading();
   }, [])
@@ -156,13 +157,13 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
-  function generateRandomInts(quantity: number, max: number){
+  function generateRandomInts(quantity: number, max: number) {
     const arr = []
-    while(arr.length < quantity){
+    while (arr.length < quantity) {
       var candidateInt = Math.floor(Math.random() * max) + 1
-      if(arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
+      if (arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
     }
-    return(arr)
+    return (arr)
   }
   const loadAtlasData = async () => {
     try {
@@ -172,12 +173,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
         niivue.current.volumes[1].setColormapLabel(cMap.current)
         niivue.current.volumes[1].setColormapLabel({
-          "R":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "G":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "B":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "A":Array(1).fill(0).concat(Array((cMap.current.labels?.length || 0)-1).fill(255)),
-          "I":Array.from(Array(cMap.current.labels?.length || 0).keys()),
-          "labels":cMap.current.labels || [],
+          "R": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "G": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "B": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "A": Array(1).fill(0).concat(Array((cMap.current.labels?.length || 0) - 1).fill(255)),
+          "I": Array.from(Array(cMap.current.labels?.length || 0).keys()),
+          "labels": cMap.current.labels || [],
         });
         cLut.current = niivue.current.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
         niivue.current.setOpacity(1, viewerOptions.displayOpacity);
@@ -224,13 +225,13 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     currentStreakRef.current = currentStreak
   }, [currentStreak])
-  useEffect(()=>{
+  useEffect(() => {
     currentScoreRef.current = currentScore
   }, [currentScore])
-  useEffect(()=>{
+  useEffect(() => {
     currentAttemptsRef.current = currentAttempts
   }, [currentAttempts])
 
@@ -322,7 +323,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
       // Start the first round
       selectNewTarget();
-      setForceDisplayUpdate((u)=>u+1);
+      setForceDisplayUpdate((u) => u + 1);
     })
 
   }
@@ -338,23 +339,23 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   const manualClotureGameSession = async (): Promise<number> => {
     try {
-        const response = await fetch('/api/cloture-game-session', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
-        });
-        if (!response.ok) {
-          const result = await response.json();
-          throw new Error(result.message || "Unknown error");
-        }
+      const response = await fetch('/api/cloture-game-session', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
+      });
+      if (!response.ok) {
         const result = await response.json();
-        return result.finalScore;
-      } catch (error) {
-        throw error;
+        throw new Error(result.message || "Unknown error");
       }
+      const result = await response.json();
+      return result.finalScore;
+    } catch (error) {
+      throw error;
+    }
   }
 
   const refreshTimer = () => {
@@ -363,9 +364,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
     callback.setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
-    if (remaining <= 0){
-      if(isLoggedIn){
-        manualClotureGameSession().then((finalScore)=>{
+    if (remaining <= 0) {
+      if (isLoggedIn) {
+        manualClotureGameSession().then((finalScore) => {
           endTimeAttack(finalScore);
         })
       } else {
@@ -420,12 +421,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         console.error("Error occured during next region fetching:", error);
         return false;
       }
-    } else if (validRegions.current && usedRegions.current){
+    } else if (validRegions.current && usedRegions.current) {
       let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
       if (gameMode === 'time-attack' && availableRegions.length === 0) {
         // if no region remaining, we'll take a random region
         availableRegions = validRegions.current
-      } 
+      }
       if (availableRegions.length !== 0) {
         regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
@@ -433,8 +434,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         }
       }
     }
-    
-    if(regionId === -1){ // did not found region
+
+    if (regionId === -1) { // did not found region
       if (gameMode === 'time-attack') {
         // TODO take into account server response = -1
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
@@ -454,9 +455,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     currentTarget.current = regionId
 
     if (currentTarget.current) {
-      setForceDisplayUpdate((u)=>u+1); // Update display with the new target label
+      setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
       selectedVoxel.current = null; // Reset selected voxel
-      if(gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
+      if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
       if (cLut.current && niivue.current) {
         if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
         niivue.current.updateGLVolume();
@@ -480,7 +481,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue.current, canvasRef.current, cMap.current, e)
-    if(clickedRegionLocation){
+    if (clickedRegionLocation) {
       selectedVoxel.current = clickedRegionLocation.vox;
       if (gameMode === 'navigation') {
         callback.setHeaderText(cMap.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
@@ -546,7 +547,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     } else {
       clickedRegion = Math.round(niivue.current.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
       guessSuccess = clickedRegion === currentTarget.current;
-      if(gameMode === 'time-attack') {
+      if (gameMode === 'time-attack') {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
       }
       if (gameMode === 'streak') {
@@ -555,18 +556,18 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({isEndgame, clickedRegion, guessSuccess, scoreIncrement}).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }).scoreIncrement
 
-    if(isEndgame){
-      performEndGame({finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
+    if (isEndgame) {
+      performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({isEndgame, clickedRegion, guessSuccess, scoreIncrement}:
-        {isEndgame: boolean, clickedRegion:number, guessSuccess:boolean, scoreIncrement:number}) : {scoreIncrement:number} => {
+  const getUpdatedScore = ({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }:
+    { isEndgame: boolean, clickedRegion: number, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
     if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
       console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
-      return {scoreIncrement};
+      return { scoreIncrement };
     }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
     const clickedRegionName = clickedRegion && cMap.current && cMap.current.labels?.[clickedRegion] ? cMap.current.labels[clickedRegion] : t('unknown_region');
@@ -574,14 +575,14 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     if (guessSuccess) {
       // Correct Guess
       setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
-      
+
       if (gameMode === 'time-attack') {
         // Add full points for correct guess
-        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION)); 
+        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION));
       }
       if (gameMode === 'streak') {
         // Increment streak for correct guess
-        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1)); 
+        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1));
       }
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
@@ -599,7 +600,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
 
       // Move to the next target after a short delay to show feedback
-      if(!isEndgame){
+      if (!isEndgame) {
         setTimeout(() => {
           selectNewTarget();
         }, 100);
@@ -640,12 +641,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
               Math.pow(correctCenter[1] - clickedCenter[1], 2) +
               Math.pow(correctCenter[2] - clickedCenter[2], 2)
             );
-            
+
             // Calculate score based on distance
             if (distance <= MAX_PENALTY_DISTANCE) {
-                scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
-                scoreIncrement = 0; // No points for too far away
+              scoreIncrement = 0; // No points for too far away
             }
 
             console.log(`Time Attack Error:`);
@@ -672,7 +673,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         callback.setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
         // Automatically move to the next target after a short delay
-        if(!isEndgame){
+        if (!isEndgame) {
           setTimeout(() => {
             selectNewTarget();
           }, 100);
@@ -684,32 +685,32 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
       if (gameMode !== 'practice') {
-        setForceDisplayUpdate((u)=>u+1);
+        setForceDisplayUpdate((u) => u + 1);
       }
     }
-    return {scoreIncrement}
+    return { scoreIncrement }
   }
- 
-  function performEndGame ({finalScore}:{finalScore:number}) {
+
+  function performEndGame({ finalScore }: { finalScore: number }) {
     if (gameMode === 'streak') {
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        setShowStreakOverlay(true);
-        callback.setHeaderTextMode("failure"); // Indicate streak ended visually
-        setIsGameRunning(false);
+      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+      setShowStreakOverlay(true);
+      callback.setHeaderTextMode("failure"); // Indicate streak ended visually
+      setIsGameRunning(false);
+    }
+    if (gameMode === 'time-attack') {
+      if (!isLoggedIn) {
+        const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+        finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
       }
-      if(gameMode === 'time-attack'){
-        if(!isLoggedIn){
-          const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-          finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
-        }
-        endTimeAttack(finalScore)
-      } else if (gameMode === 'streak') {
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        setShowStreakOverlay(true);
-        return;
-      }
+      endTimeAttack(finalScore)
+    } else if (gameMode === 'streak') {
+      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+      setShowStreakOverlay(true);
+      return;
+    }
   }
 
 
@@ -798,10 +799,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isGameRunning || !canvasRef.current || !niivue.current || gameMode !== 'navigation' || highlightedRegion !== null){
+    if (!isGameRunning || !canvasRef.current || !niivue.current || gameMode !== 'navigation' || highlightedRegion !== null) {
       setTooltip({ ...tooltip, visible: false });
       return;
-    } 
+    }
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.pageX;
     const y = e.clientY - rect.top;
@@ -815,8 +816,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
         const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
         if (isFinite(idx) && idx > 0 && idx in cMap.current.labels) { // Ensure valid region ID > 0
-          setTooltip({visible: true, text: cMap.current.labels[idx] || t('unknown_region'),
-             x:x+10, y: y+10});
+          setTooltip({
+            visible: true, text: cMap.current.labels[idx] || t('unknown_region'),
+            x: x + 10, y: y + 10
+          });
         } else {
           setTooltip({ ...tooltip, visible: false });
         }
@@ -922,6 +925,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         <div className="overlay-content" ref={streakOverlayRef}>
           <h2>{t("streak_ended_title")}</h2>
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
+          {userPublishToLeaderboard === null && <PublishToLeaderboardBox t={t} callback={callback} />}
           <div className="overlay-buttons">
             <button id="go-back-menu-button-streak" className="home-button" onClick={() => callback.gotoPage("welcome")}>
               <i className="fas fa-home"></i>
@@ -939,6 +943,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           <p><span>{t("time_attack_ended_time")}</span>
             <span id="final-time-attack-time">{finalElapsed}</span></p>
           <p><span>{t("time_attack_ended_score")}</span></p>
+          {userPublishToLeaderboard === null && <PublishToLeaderboardBox t={t} callback={callback} />}
           <div className="score-progress-bar w3-light-grey w3-round">
             <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
               style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
@@ -957,6 +962,73 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       </div>}
 
     </div>
+  )
+}
+
+const PublishToLeaderboardBox = ({ t, callback }:
+  { t: TFunction<"translation", undefined>, callback: AppCallback }) => {
+  const [published, setPublished] = useState<boolean | null>(null);
+  const [publishErrorText, setPublishErrorText] = useState<string>("");
+  const handleClick = async (val: boolean) => {
+    setPublished(val);
+    try {
+      // Send the data to the server
+      const response = await fetch('/api/config-user', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publishToLeaderboard: val }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        callback.loginWithToken(result.token);
+      } else {
+        setPublishErrorText(result.message);
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error('Error updating publish mode:', error);
+      setPublishErrorText(t('server_error'))
+    }
+  }
+  return (
+    <>
+      <h2>{t("publish_to_leaderboard_header")}</h2>
+      <p dangerouslySetInnerHTML={{ __html: t("publish_to_leaderboard_explanation") }}></p>
+      <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
+        <button
+          type="button" className="publish-btn"
+          style={{
+            padding: "0.5em 1.5em",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+          onClick={() => handleClick(true)}
+        >
+          {t("publish_yes")}
+        </button>
+        <button
+          type="button" className="publish-btn"
+          style={{
+            padding: "0.5em 1.5em",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+          onClick={() => handleClick(false)}
+        >
+          {t("publish_no")}
+        </button>
+      </div>
+      {publishErrorText && <div style={{ color: "red" }}>
+        {publishErrorText}
+      </div>}
+    </>
   )
 }
 

@@ -188,5 +188,9 @@
   "multiplayer_you_won": "You won!",
   "multiplayer_you_lost": "You lost... try again!",
   "prepare-yourself": "Prepare yourself...",
-  "remaining-time": "Remaining time"
+  "remaining-time": "Remaining time",
+  "publish_to_leaderboard_header": "Publish your ranking",
+  "publish_to_leaderboard_explanation": "Do you want to show your ranking publicly?<br />This option can be changed at any time from your settings panel.",
+  "publish_yes": "Publish",
+  "publish_no": "Do not publish"
 }

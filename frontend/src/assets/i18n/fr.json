@@ -188,5 +188,9 @@
   "multiplayer_you_won": "Vous avez gagné !",
   "multiplayer_you_lost": "Vous avez perdu... essayez encore !",
   "prepare-yourself": "Preparez vous...",
-  "remaining-time": "Temps restant"
+  "remaining-time": "Temps restant",
+  "publish_to_leaderboard_header": "Publier vos résultats",
+  "publish_to_leaderboard_explanation": "Souhaitez-vous publier votre classement publiquement ?<br />Cette option peut être changée à tout moment depuis votre panneau de configuration",
+  "publish_yes": "Publier",
+  "publish_no": "Ne pas publier"
 }

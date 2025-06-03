@@ -30,6 +30,7 @@ function App() {
    const [userUsername, setUserUsername] = useState<string>("")
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")
+   const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean|null>(null)
    const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([])
    const { t, i18n } = useTranslation();
    const [currentLanguage, setCurrentLanguage] = useState(i18n.language)
@@ -289,6 +290,7 @@ function App() {
          setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'))
          setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'))
          setUserLastName(payload.lastname || "")
+         setUserPublishToLeaderboard(payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard)
       }
    }, [isLoggedIn, authToken])
 
@@ -355,7 +357,8 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer}
-               isLoggedIn={isLoggedIn} authToken={authToken} />}
+               isLoggedIn={isLoggedIn} authToken={authToken}
+               userPublishToLeaderboard={userPublishToLeaderboard} />}
          {currentPage === "multiplayer-game" && <>
             <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
                askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}
