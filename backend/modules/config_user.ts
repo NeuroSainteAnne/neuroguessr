@@ -1,12 +1,14 @@
 import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import passwordComplexity from "joi-password-complexity";
 import { __dirname } from "./utils.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest, ConfigUserBody } from "../interfaces/requests.interfaces.ts";
+import type { User } from "../interfaces/database.interfaces.ts";
 const config: Config = configJson;
 
 
@@ -63,7 +65,19 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
         // Construct and execute the SQL query
         const updateUserStmt = db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`);
         updateUserStmt.run(...params);
-        res.status(200).send({ message: "User updated successfully" });
+
+        // update token content
+        const stmt = db.prepare("SELECT * FROM users WHERE id = ?");
+        const user = stmt.get(userId) as User;
+        const token = jwt.sign({ 
+            username: user.username,
+            email: user.email, 
+            firstname: user.firstname, 
+            lastname: user.lastname,
+            publishToLeaderboard: user.publishToLeaderboard,
+            id: user.id 
+        }, config.jwt_secret, { expiresIn: "1h" });
+        res.status(200).send({ message: "User updated successfully", token: token });
     } catch (error: unknown) {
         console.log(error);
         res.status(500).send({ message: "Internal Server Error" });

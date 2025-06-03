@@ -286,12 +286,11 @@ function App() {
          setIsGuest(false);
          localStorage.setItem('guestMode', 'false');
          const payload = jwtDecode<CustomTokenPayload>(authToken)
-         console.log(payload)
          setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'))
          setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'))
          setUserLastName(payload.lastname || "")
       }
-   }, [isLoggedIn])
+   }, [isLoggedIn, authToken])
 
    useEffect(() => {
       const handleClick = (event: MouseEvent) => {
