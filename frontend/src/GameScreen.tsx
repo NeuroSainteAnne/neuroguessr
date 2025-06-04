@@ -871,7 +871,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [viewerOptions])
 
   return (
-    <div className="page-container">
+    <>
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}
@@ -961,7 +961,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         </div>
       </div>}
 
-    </div>
+    </>
   )
 }
 
@@ -983,7 +983,7 @@ const PublishToLeaderboardBox = ({ t, callback }:
       });
       const result = await response.json();
       if (response.ok) {
-        callback.loginWithToken(result.token);
+        callback.updateToken(result.token);
       } else {
         setPublishErrorText(result.message);
       }

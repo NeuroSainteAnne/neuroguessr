@@ -1,13 +1,17 @@
 import { jwtDecode } from "jwt-decode"
 
-export async function refreshToken() {
+export async function refreshToken(): Promise<string|null> {
     const token = localStorage.getItem('authToken');
     if (!token) {
         console.log('No token found');
-        return false;
+        return null;
     }
-
+    
     try {
+        const currentPayload = jwtDecode(token); // Decode the payload
+        const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+        if(!currentPayload || !currentPayload.exp || currentPayload.exp <= currentTime) return null 
+
         const response = await fetch('/api/refresh-token', {
             method: 'POST',
             headers: {
@@ -20,14 +24,14 @@ export async function refreshToken() {
             const result = await response.json();
             localStorage.setItem('authToken', result.token); // Save the new token
             console.log('Token refreshed successfully');
-            return true;
+            return result.token;
         } else {
             console.error('Failed to refresh token:', response.status);
-            return false;
+            return null;
         }
     } catch (error) {
         console.error('Error refreshing token:', error);
-        return false;
+        return null;
     }
 }
 

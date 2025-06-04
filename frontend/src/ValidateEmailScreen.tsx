@@ -37,7 +37,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
           } else {
             setValidatedSuccessText(t('success_email_verified'));
             setTimeout( () => {
-              callback.loginWithToken(result.token);
+              callback.updateToken(result.token);
               callback.gotoPage("welcome");
             }, 1000);
           }
@@ -49,19 +49,17 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
     
   return (
     <>
-    <div className="page-container">
-          <div className="register-box">
-              <h2>{t("validate_email_header")}</h2>
-              <table className="login-element">
-                  {!validatedErrorText && !validatedSuccessText &&
-                    <tr><td colSpan={2} className="recovery-message">{t("email_validation_wait")}</td></tr>}
-                  {validatedErrorText &&
-                    <tr><td colSpan={2} id="recovery_error" className="recovery-message">{validatedErrorText}</td></tr>}
-                  {validatedSuccessText &&
-                    <tr><td colSpan={2} id="recovery_success" className="recovery-message">{validatedSuccessText}</td></tr>}
-              </table>
-          </div>
-    </div>
+        <div className="register-box">
+            <h2>{t("validate_email_header")}</h2>
+            <table className="login-element">
+                {!validatedErrorText && !validatedSuccessText &&
+                  <tr><td colSpan={2} className="recovery-message">{t("email_validation_wait")}</td></tr>}
+                {validatedErrorText &&
+                  <tr><td colSpan={2} id="recovery_error" className="recovery-message">{validatedErrorText}</td></tr>}
+                {validatedSuccessText &&
+                  <tr><td colSpan={2} id="recovery_success" className="recovery-message">{validatedSuccessText}</td></tr>}
+            </table>
+        </div>
     </>
   )
 }

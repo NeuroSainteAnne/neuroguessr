@@ -16,10 +16,8 @@ import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
 import {Niivue, NVImage} from '@niivue/niivue';
 import Neurotheka from './Neurotheka';
-import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 import MultiplayerGameScreen from './MultiplayerGameScreen';
 import { jwtDecode } from 'jwt-decode';
-import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 
 function App() {
    const niivue = new Niivue();
@@ -63,9 +61,14 @@ function App() {
       displayOpacity: 0.6,
    })
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
+  const [showLegalOverlay, setShowLegalOverlay] = useState<boolean>(false);
   const helpContentRef = useRef<HTMLDivElement>(null);
+  const legalContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
   const [welcomeSubpage, setWelcomeSubpage] = useState<string>("singleplayer")
+   const headerRef = useRef<HTMLDivElement>(null);
+   const lowerBarRef = useRef<HTMLDivElement>(null);
+   const pageContainerRef = useRef<HTMLDivElement>(null);
 
    const startGame = (game: string) => {
       setCurrentPage(game);
@@ -93,6 +96,8 @@ function App() {
          const token = parts[2] || undefined;
          if(code) {  
             launchMultiPlayerGame(code, token);
+         } else {
+            gotoPage("multiplayer-game")
          }
       } else if (page === "welcome"){
          setCurrentPage(page);
@@ -107,15 +112,15 @@ function App() {
       }
    }
 
-   const gotoPage = (page: string) => {
-      checkToken();
+   const gotoPage = async (page: string) => {
+      updateToken(await refreshToken());
       setCurrentPage(page);
       setHeaderText("");
       setHeaderTextMode("normal"); 
       window.location.hash = `#/${page}`;
    }
-   const gotoWelcomeSubpage = (subpage: string) => {
-      checkToken();
+   const gotoWelcomeSubpage = async (subpage: string) => {
+      updateToken(await refreshToken());
       setCurrentPage("welcome");
       setWelcomeSubpage(subpage)
    }
@@ -201,23 +206,15 @@ function App() {
       setTimeout(() => {setNotificationMessage("")}, 3000);
    }
 
-   const loginWithToken = async (token: string) => {
-      localStorage.setItem('authToken', token);
-      setAuthToken(token);
-      setIsLoggedIn(true);
-   }
-
-   const checkToken = async () => {
-      if(authToken){
-         if (isTokenValid(authToken)) {
-            setIsLoggedIn(true);
-            refreshToken();
-         } else {
-            setIsLoggedIn(false);
-            localStorage.removeItem('authToken');
-            setAuthToken("");
-            showNotification('invalid_token', false);
-         }
+   const updateToken = (token: string|null) => {
+      if(token){
+         localStorage.setItem('authToken', token);
+         setAuthToken(token);
+         setIsLoggedIn(true);
+      } else {
+         localStorage.removeItem('authToken');
+         setAuthToken("");
+         setIsLoggedIn(false);
       }
    }
 
@@ -227,8 +224,8 @@ function App() {
       setIsLoggedIn(false);
    }
 
-   const openNeurotheka = (region: AtlasRegion) => {
-      checkToken();
+   const openNeurotheka = async (region: AtlasRegion) => {
+      updateToken(await refreshToken());
       targetPage.current  ="neurotheka"
       setHeaderText(t("loading"));
       setAskedAtlas(region.atlas);
@@ -248,9 +245,9 @@ function App() {
       }
    }, [askedSessionCode, askedSessionToken])
 
-   const launchSinglePlayerGame = (atlas: string, mode: string) => {
+   const launchSinglePlayerGame = async (atlas: string, mode: string) => {
       targetPage.current = "singleplayer"
-      checkToken();
+      updateToken(await refreshToken());
       setHeaderText(t("loading"));
       setAskedAtlas(atlas);
       setGameMode(mode);
@@ -312,13 +309,28 @@ function App() {
       };
    }, [showHelpOverlay])
 
+   const updatePageContainerHeight = () => {
+      const headerHeight = headerRef.current?.offsetHeight || 0;
+      const lowerBarHeight = lowerBarRef.current?.offsetHeight || 0;
+      const vh = window.innerHeight;
+      if (pageContainerRef.current) {
+         pageContainerRef.current.style.height = `${vh - headerHeight - lowerBarHeight}px`;
+      }
+   };
+
+   useEffect(() => {
+      updatePageContainerHeight();
+      window.addEventListener('resize', updatePageContainerHeight);
+      return () => window.removeEventListener('resize', updatePageContainerHeight);
+   }, []);
+
    const callback: AppCallback = {
       startGame: startGame,
       gotoPage: gotoPage,
       handleChangeLanguage: handleChangeLanguage,
       activateGuestMode: activateGuestMode,
       setIsLoggedIn: setIsLoggedIn,
-      loginWithToken: loginWithToken,
+      updateToken: updateToken,
       logout: logout,
       openNeurotheka: openNeurotheka,
       setHeaderText: setHeaderText,
@@ -336,13 +348,14 @@ function App() {
 
    return (
       <>
-         <Header currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
+         <Header ref={headerRef} currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
             userFirstName={userFirstName} userLastName={userLastName} 
             headerText={headerText} headerTextMode={headerTextMode}
             headerScore={headerScore} headerErrors={headerErrors}
             headerStreak={headerStreak} headerTime={headerTime}
             viewerOptions={viewerOptions} />
+         <div ref={pageContainerRef} className="page-container">
          {currentPage === "welcome" && <>
             {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
             {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
@@ -360,7 +373,7 @@ function App() {
                isLoggedIn={isLoggedIn} authToken={authToken}
                userPublishToLeaderboard={userPublishToLeaderboard} />}
          {currentPage === "multiplayer-game" && <>
-            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
+            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}
                viewerOptions={viewerOptions}
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
@@ -382,21 +395,18 @@ function App() {
                preloadedBackgroundMNI={preloadedBackgroundMNI} 
                viewerOptions={viewerOptions}
                loadEnforcer={loadEnforcer} />}
+
+         <div className='lower-bar-phantom'></div>
+         </div>      
+         
          {currentPage === "welcome" && <>
             {showHelpOverlay && <div id="help-overlay" className="help-overlay">
                <div className="help-content" ref={helpContentRef}>
                   <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
-                  <h2 data-i18n="help_title">Help</h2>
+                  <h2 data-i18n="help_title">{t("help_title")}</h2>
                   <section>
                      <h3>{t("help_presentation_title")}</h3>
                      <p>{t("help_presentation_text")}</p>
-                  </section>
-                  <section>
-                     <h3>{t("help_atlases_title")}</h3>
-                     <p dangerouslySetInnerHTML={{ __html: t("help_atlases_text").replace(
-                        /\[doi:([^\]]+)\]/g,
-                        (_match, doi) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
-                        ) }}></p>
                   </section>
                   <section>
                      <h3>{t("help_modes_title")}</h3>
@@ -408,12 +418,82 @@ function App() {
                </div>
             </div>}
 
+
             <div ref={helpButtonRef}>
                <button id="help-button" className="help-button" onClick={() => setShowHelpOverlay(true)}>
                   <i className="fas fa-question"></i>
                </button>
             </div>
          </>}
+
+         {showLegalOverlay && <div id="legal-overlay" className="help-overlay">
+            <div className="help-content" ref={legalContentRef}>
+               <button id="close-help" className="close-button" onClick={() => setShowLegalOverlay(false)}>&times;</button>
+               <h2>{t("legal_mentions_title")}</h2>
+               <section>
+                  <h3>{t("legal_mentions_license_title")}</h3>
+                  <p dangerouslySetInnerHTML={{ __html: t("legal_mention_license") }}></p>
+                  <p>{t("legal_mention_atlas")}</p>
+                  <p dangerouslySetInnerHTML={{
+                     __html: t("help_atlases_text").replace(
+                        /\[doi:([^\]]+)\]/g,
+                        (_match, doi) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
+                     )
+                  }}></p>
+               </section>
+               <section>
+                  <h3>{t("legal_mentions_pedagogy_title")}</h3>
+                  <p>{t("legal_mentions_pedagogy")}</p>
+               </section>
+            </div>
+         </div>}
+
+         
+         <div ref={lowerBarRef} className='lower-bar'>
+            <a
+               href="https://github.com/FRramon/neuroguessr_web/"
+               target="_blank"
+               rel="noopener noreferrer"
+            >
+               <svg height="32" width="32" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+               </svg>
+            </a>
+            <a
+               href="https://www.ghu-paris.fr/"
+               target="_blank"
+               rel="noopener noreferrer"
+            >
+               <img src="assets/interface/logo-ghu-64.png" alt="GHU Paris"
+               style={{
+                  height:32
+               }}/>
+            </a>
+            <a
+               href="https://ipnp.paris5.inserm.fr/"
+               target="_blank"
+               rel="noopener noreferrer"
+            >
+               <img src="assets/interface/logo-ipnp-64.png" alt="IPNP"
+               style={{
+                  height:42
+               }}/>
+            </a>
+            <a
+               href="https://u-paris.fr/"
+               target="_blank"
+               rel="noopener noreferrer"
+            >
+               <img src="assets/interface/logo-upc-64.png" alt="Université Paris Cité"
+               style={{
+                  height:38
+               }}/>
+            </a>
+            <a onClick={(e) => setShowLegalOverlay(true)}>
+               <span role="img" aria-label="legal">⚖️</span>
+               {t("legal_mentions_title")}
+            </a>
+         </div>
       </>
    )
 }

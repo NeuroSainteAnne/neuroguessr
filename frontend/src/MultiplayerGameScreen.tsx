@@ -6,9 +6,10 @@ import { getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 
-const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSessionCode, askedSessionToken, loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
+const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, askedSessionCode, askedSessionToken, 
+  loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
   {
-    t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string,
+    t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, isLoggedIn: boolean, userUsername: string,
     askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number,
     viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null, currentLanguage: string
   }) => {
@@ -54,6 +55,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }
 
   const connectWS = (inputCode: string) => {
+    if (!isLoggedIn) return;
     const ws = new WebSocket(`/websocket`);
     wsRef.current = ws;
     ws.onopen = () => {
@@ -127,7 +129,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   };
 
   const tryLaunchGame = () => {
-    if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken){
+    if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken && isLoggedIn){
       wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: askedSessionCode, sessionToken: askedSessionToken }))
     }
   }
@@ -210,7 +212,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }
 
   useEffect(() => {
-    if (askedSessionCode) {
+    if (isLoggedIn && askedSessionCode) {
       clearInterface()
       setLobbyUsers([])
       setPlayerScores({})
@@ -220,13 +222,18 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
     }
-  }, [askedSessionCode, askedSessionToken])
+  }, [askedSessionCode, askedSessionToken, isLoggedIn])
 
   useEffect(()=>{
     tryLaunchGame()
   }, [askedSessionToken])
 
+  const checkToken = async () => {
+    callback.updateToken(await refreshToken())
+  }
+
   useEffect(() => {
+    checkToken()
     initNiivue(niivue.current, viewerOptions, ()=>{
         setIsLoadedNiivue(true);
     })
@@ -286,7 +293,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
   }
 
   return (
-    <div className="page-container">
+    <>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" 
           onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
@@ -297,7 +304,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           </button>
         </div>
       </div>
-      {!connected && <>
+      {isLoggedIn && !connected && <>
         <h2>{t("join_multiplayer_lobby")}</h2>
         <input
           type="text"
@@ -308,7 +315,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         />
         <button style={{ marginLeft: 16, fontSize: 18 }} onClick={handleConnect}>{t("join_multiplayer_button")}</button>
       </>}
-      {connected && <div style={{ marginTop: 24 }}>
+      {isLoggedIn && connected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]
@@ -334,6 +341,10 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
       </div>}
+      {!isLoggedIn && 
+        <div className="multiplayer-please-login" 
+            dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
+            .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
 
       
       {showMultiplayerOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
@@ -366,7 +377,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, userUsername, askedSess
         </div>
       </div>}
       {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
-    </div>
+    </>
   )
 }
 

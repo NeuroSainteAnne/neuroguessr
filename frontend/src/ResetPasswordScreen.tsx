@@ -113,7 +113,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
 
             if (response.ok) {
               setRecoverySuccessText(t('password_reset_success'));
-              callback.loginWithToken(result.token);
+              callback.updateToken(result.token);
               callback.gotoPage("welcome");
             } else {
               setRecoveryErrorText(result.message || t('password_reset_failed'));
@@ -124,7 +124,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
           }
     }
     return(
-    <div className="page-container">
+    <>
         <form id="reset-password-form" onSubmit={handleResetPassword}>
           <div className="register-box">
               <h2>{t("reset_password_header")}</h2>
@@ -159,7 +159,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
               {isCheckedToken && <button type="submit" className="password-reset-units">{t("reset_password_button")}</button>}
           </div>
       </form>
-    </div>
+    </>
     )
 }
 
