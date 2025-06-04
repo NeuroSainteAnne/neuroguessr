@@ -1,10 +1,12 @@
 import type { TFunction } from 'i18next';
+import "./MultiplayerGameScreen.css"
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
+import config from "../config.json"
 
 const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, askedSessionCode, askedSessionToken, 
   loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
@@ -51,16 +53,33 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
       setError("Please enter a valid 8-digit code.");
       return;
     }
+    if(!isLoggedIn && config.activateAnonymousMode){
+      if(!anonUsername){
+        setError(t("temp_username_or_connect"));
+        return;
+      }
+    }
     connectWS(inputCode)
   }
+  const anonUsernameInputRef = useRef<HTMLInputElement>(null);
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
+  const [anonUsername, setAnonUsername] = useState<string>("");
+
 
   const connectWS = (inputCode: string) => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn && !config.activateAnonymousMode) return;
     const ws = new WebSocket(`/websocket`);
     wsRef.current = ws;
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'join', sessionCode: inputCode, token: authToken }));
-    };
+    if(isLoggedIn){
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'join', sessionCode: inputCode, token: authToken }));
+      };
+    } else {
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'join-anonymous', sessionCode: inputCode, 
+                                username: anonUsername }));
+      };
+    }
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'error') {
@@ -68,6 +87,9 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
       } else if (data.type === 'lobby-users' && Array.isArray(data.users)) {
         setConnected(true)
         setLobbyUsers(data.users);
+        if(!isLoggedIn){
+          setIsAnonymous(true)
+        }
         tryLaunchGame()
       } else if (data.type === 'player-joined' && data.userName) {
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
@@ -221,6 +243,16 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
       wsRef.current = null
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
+    } else if(askedSessionCode && config.activateAnonymousMode){
+      setIsAnonymous(false)
+      clearInterface()
+      setLobbyUsers([])
+      setPlayerScores({})
+      setShowMultiplayerOverlay(false)
+      if(wsRef.current) wsRef.current.close()
+      wsRef.current = null
+      setInputCode(askedSessionCode)
+      if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
     }
   }, [askedSessionCode, askedSessionToken, isLoggedIn])
 
@@ -304,18 +336,31 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
           </button>
         </div>
       </div>
-      {isLoggedIn && !connected && <>
-        <h2>{t("join_multiplayer_lobby")}</h2>
-        <input
-          type="text"
-          value={inputCode}
-          onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-          placeholder={t("multi_8_digits")}
-          style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
-        />
-        <button style={{ marginLeft: 16, fontSize: 18 }} onClick={handleConnect}>{t("join_multiplayer_button")}</button>
+      {(isLoggedIn || config.activateAnonymousMode) && !connected && <>
+        <div className="join-multiplayer-box">
+          <h2>{t("join_multiplayer_lobby")}</h2>
+          <input
+            type="text"
+            value={inputCode}
+            onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            placeholder={t("multi_8_digits")}
+            style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
+          />
+          {!isLoggedIn && config.activateAnonymousMode &&
+            <input
+              type="text"
+              value={anonUsername}
+              ref={anonUsernameInputRef}
+              onChange={e => setAnonUsername(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16))}
+              placeholder={t("placeholder_tempusername")}
+              style={{ fontSize: 18, letterSpacing: 4, textAlign: 'center', 
+                width: 250, border:"1px solid white" }}
+            />
+          }
+          <button className="join-multiplayer-button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
+        </div>
       </>}
-      {isLoggedIn && connected && <div style={{ marginTop: 24 }}>
+      {(isLoggedIn ||isAnonymous) && connected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]
@@ -341,11 +386,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
       </div>}
-      {!isLoggedIn && 
-        <div className="multiplayer-please-login" 
+      {!isLoggedIn && !config.activateAnonymousMode && 
+          <div className="multiplayer-please-login" 
             dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
-            .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
-
+            .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>
+      }
       
       {showMultiplayerOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
         <div className="overlay-content" ref={multiplayerOverlayRef}>
@@ -362,7 +407,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
                 return scoreB - scoreA;
               })
               .map((u) => (
-                <li key={u} style={u === userUsername ? { color: 'green', fontWeight: 'bold' } : {}}>
+                <li key={u} style={(u === userUsername || u === anonUsername) ? { color: 'green', fontWeight: 'bold' } : {}}>
                   {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
                 </li>
               ))

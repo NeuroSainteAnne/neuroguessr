@@ -197,5 +197,7 @@
   "publish_to_leaderboard_header": "Publier vos résultats",
   "publish_to_leaderboard_explanation": "Souhaitez-vous publier votre classement publiquement ?<br />Cette option peut être changée à tout moment depuis votre panneau de configuration",
   "publish_yes": "Publier",
-  "publish_no": "Ne pas publier"
+  "publish_no": "Ne pas publier",
+  "placeholder_tempusername": "Nom utilisateur",
+  "temp_username_or_connect": "Merci de définir un nom d'utilisateur temporaire ou de vous connecter."
 }
