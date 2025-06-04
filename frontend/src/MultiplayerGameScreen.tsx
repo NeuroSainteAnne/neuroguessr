@@ -359,6 +359,9 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
           }
           <button className="join-multiplayer-button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
         </div>
+        {!isLoggedIn && <div className="multiplayer-suggest-login" 
+          dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
+          .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
       </>}
       {(isLoggedIn ||isAnonymous) && connected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>

@@ -44,6 +44,7 @@
   "create_multiplayer_game": "Create multiplayer game",
   "create_multiplayer_button": "Create",
   "multi_unavailable_login": "Please <a href='/#/login'>log in</a> to access multiplayer features",
+  "multi_suggest_login": "For an optimal experience, we suggest you to <a href='/#/login'>log in</a> for multiplayer features",
   "streak_description": "Test consecutive accuracy",
   "time_attack_mode": "Time Attack",
   "time_attack_description": "Race against time",
