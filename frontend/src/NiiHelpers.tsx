@@ -56,21 +56,14 @@ export const loadAtlasNii = (myniivue: Niivue, preloadedBackgroundMNI: NVImage|n
 export function getClickedRegion(myniivue: Niivue, canvasObj: HTMLCanvasElement, cMap: ColorMap, e: any){
     const isTouch = e.type === 'touchstart';
     const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
-    const mouseEvt = isTouch
-      ? ({
-        ...e, layerX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        layerY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY,
-        offsetX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        offsetY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY
-      } as unknown as MouseEvent)
-      : e;
     const rect = canvasObj.getBoundingClientRect();
     const x = touch.clientX - rect.left;
     const y = touch.clientY - rect.top;
 
     // Check if touch/click is within canvas bounds
     if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
-      const pos = myniivue.getNoPaddingNoBorderCanvasRelativeMousePosition(mouseEvt as MouseEvent, myniivue.gl.canvas);
+      const pos = myniivue.getNoPaddingNoBorderCanvasRelativeMousePosition(touch as unknown as MouseEvent, myniivue.gl.canvas);
+      console.log(pos)
       if (!pos) return; // If position is not valid, exit early
       const frac = myniivue.canvasPos2frac([pos.x * (myniivue.uiData?.dpr ?? 1), pos.y * (myniivue.uiData?.dpr ?? 1)]);
       if (frac[0] >= 0) {
