@@ -131,54 +131,6 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
             {sessionCode && (
                 <div style={{ marginTop: 24 }}>
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
-                        <div>
-                            <h3>{t("game_code")}</h3>
-                            <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
-                                <button
-                                    title="Copy game number"
-                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
-                                    onClick={() => {
-                                        if (sessionCode && sessionToken) {
-                                            navigator.clipboard.writeText(sessionCode);
-                                            setCopiedIcon("code");
-                                            setTimeout(() => setCopiedIcon(null), 1000);
-                                        }
-                                    }}
-                                >
-                                    {/* Simple copy icon SVG */}
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                    </svg>
-                                </button>
-                                <button
-                                    title="Copy game link (link icon)"
-                                    style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
-                                    onClick={() => {
-                                        if (sessionCode && sessionToken) {
-                                            const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
-                                            navigator.clipboard.writeText(url);
-                                            setCopiedIcon("link");
-                                            setTimeout(() => setCopiedIcon(null), 1000);
-                                        }
-                                    }}
-                                >
-                                    {/* Link icon SVG */}
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
-                                        <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <QRCodeSVG value={`${window.location.origin}/#/multiplayer-game/${sessionCode}`} 
-                                bgColor="#00000000" fgColor="#FFFFFF" />
-                        </div>
-                        <div style={{ marginTop: 24 }}>
-                            <h4>{t("players_in_lobby")}</h4>
-                            <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
-                                {lobbyUsers.map(u => <li key={u}>{u}</li>)}
-                            </ul>
-                        </div>
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="atlas-selection">
@@ -239,16 +191,69 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                     {t("gameover_first_error")}
                                 </label>
                             </div>}
-                            <button
-                                className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
-                                onClick={() => {
-                                    if(!loading && selectedAtlas && lobbyUsers.length > 1) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
-                                }}
-                                disabled={loading}
-                            >
-                                {t("start_game_button")}
-                            </button>
                         </section>
+                    </div>
+                    <div id="single-player-options" className="single-player-options-container">
+                        <section className="lobby-wait">
+                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
+                            <div>
+                                <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
+                                    <button
+                                        title="Copy game number"
+                                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
+                                        onClick={() => {
+                                            if (sessionCode && sessionToken) {
+                                                navigator.clipboard.writeText(sessionCode);
+                                                setCopiedIcon("code");
+                                                setTimeout(() => setCopiedIcon(null), 1000);
+                                            }
+                                        }}
+                                    >
+                                        {/* Simple copy icon SVG */}
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        title="Copy game link (link icon)"
+                                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
+                                        onClick={() => {
+                                            if (sessionCode && sessionToken) {
+                                                const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
+                                                navigator.clipboard.writeText(url);
+                                                setCopiedIcon("link");
+                                                setTimeout(() => setCopiedIcon(null), 1000);
+                                            }
+                                        }}
+                                    >
+                                        {/* Link icon SVG */}
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
+                                            <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <QRCodeSVG value={`${window.location.origin}/#/multiplayer-game/${sessionCode}`}
+                                    bgColor="#00000000" fgColor="#FFFFFF" />
+                                <h3>{t("game_code")}</h3>
+                            </div>
+                        </section>
+                        <div>
+                            <h2>&nbsp;</h2>
+                            <h3>{t("players_in_lobby")}</h3>
+                            <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
+                                {lobbyUsers.map(u => <li key={u}>{u}</li>)}
+                            </ul>
+                            <button
+                            className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
+                            onClick={() => {
+                                if(!loading && selectedAtlas && lobbyUsers.length > 1) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
+                            }}
+                            disabled={loading}
+                        >
+                            {t("start_game_button")}
+                        </button></div>
                     </div>
                 </div>
             )}

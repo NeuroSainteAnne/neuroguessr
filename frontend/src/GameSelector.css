@@ -197,7 +197,8 @@
 
 /* Styles for icons next to h2 titles */
 .atlas-selection h2 img,
-.mode-selection h2 img {
+.mode-selection h2 img,
+.lobby-wait h2 img {
     vertical-align: middle;
     margin-right: 0.5rem;
     height: 1.5em;

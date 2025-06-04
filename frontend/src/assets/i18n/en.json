@@ -183,6 +183,7 @@
   "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime",
   "game_code": "Your sharing game code",
   "players_in_lobby": "Players in lobby",
+  "wait_players_in_lobby": "Wait for players to join lobby",
   "parameters": "Configuration",
   "parameters_atlas": "Atlas",
   "number_regions": "Number of regions",
