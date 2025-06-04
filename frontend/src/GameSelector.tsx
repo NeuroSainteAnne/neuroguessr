@@ -106,7 +106,9 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcom
                 <div><button className="play-button enabled" onClick={handleCreateMultiplayer}>{t("create_multiplayer_button")}</button></div>
               </div>
             </>}
-            {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")}}></div>}
+            {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
+               .replace("#",`?redirect=welcome&redirect_subpage=multiplayer#`)
+            }}></div>}
           </div>}
         {welcomeSubpage == "multiplayer-create" && <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />}
         

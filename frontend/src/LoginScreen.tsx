@@ -60,6 +60,9 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
                 const askedSC = urlParams.get('redirect_asked_session_code') || "";
                 const askedST = urlParams.get('redirect_asked_session_token') || undefined;
                 callback.launchMultiPlayerGame(askedSC, askedST)
+              } else if(redirectParam == "welcome"){
+                const askedSubpage = urlParams.get('redirect_subpage') || "";
+                callback.gotoWelcomeSubpage(askedSubpage)
               } else {
                 callback.gotoPage(redirectParam);
               }
