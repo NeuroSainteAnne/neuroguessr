@@ -1,9 +1,15 @@
+.canvas-container{
+    width: 100%;
+    height: calc(100% - 110px);
+}
+
 /* Styles for Buttons Below Canvas (viewer page) - Keep existing */
 .button-container {
     /*position: absolute;
     bottom: 2vh;
     left: 50%;
     transform: translateX(-50%);*/
+    margin-top: 10px;
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;

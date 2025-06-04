@@ -1,27 +1,20 @@
-.navbar {
+.navbar-container {
     /* This seems to be used for the index page header */
     width: 100%;
     background-color: rgba(54, 54, 54, 0.9);
     padding: 0.75rem 2vw;
     box-sizing: border-box;
     display: flex;
-    justify-content: center;
+    justify-content: left;
     align-items: center;
     flex-shrink: 0;
+    flex-wrap: wrap;
     position: relative;
     top: 0;
+    gap: 10px;
     margin-bottom: 10px;
     z-index: 1000;
     /* border-bottom: 1px solid #555; /* Removed border here */
-}
-
-.navbar-container {
-    /* Used in index page header */
-    display: flex;
-    align-items: center;
-    width: 100%;
-    max-width: 95vw;
-    justify-content: space-between;
 }
 
 .navbar-left.logo-title-container-navbar {
@@ -113,7 +106,7 @@
     }
 
     .logo {
-        display: none;
+        height: 2rem;
         /* Hide logo completely on smallest screens */
     }
 
@@ -184,6 +177,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    min-width: fit-content;
     flex: 1;
     flex-direction: column;
     flex-grow: 1;

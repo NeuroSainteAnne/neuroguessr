@@ -875,8 +875,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}
-      <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
-        onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+      <div className="canvas-container">
+        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
+          onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+      </div>
       <div className="button-container">
         <button className="return-button" onClick={() => callback.gotoPage("welcome")}>{t("return_button")}</button>
         {gameMode == "navigation" && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}

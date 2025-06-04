@@ -19,8 +19,7 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
 
     return (
         <>
-        <header className="navbar" ref={ref}>
-            <div className="navbar-container">
+            <div className="navbar-container" ref={ref}>
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
                     onClick={()=>{callback.gotoPage("welcome")}}>
                     <img src="assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
@@ -89,7 +88,6 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
                     }
                 </div>
             </div>
-        </header>
         </>
     )
 }

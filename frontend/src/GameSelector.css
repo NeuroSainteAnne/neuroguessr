@@ -10,63 +10,19 @@
     max-width: 1600px;
     /* Increased max width for content on large screens */
     text-align: center;
-    padding-top: 4rem;
+    padding-top: 1rem;
     /* Increased padding below search bar to move buttons lower */
 }
-
-@media (max-width: 1023px) and (min-width: 481px) {
-    .centered-container {
-        padding-top: 1rem;
-        /* Increased padding below search bar */
-    }
-}
-
-@media (max-width: 480px) {
-    .centered-container {
-        padding-top: 1rem;
-        /* Increased padding below search bar */
-    }
-}
-
-@media (min-width: 1024px) {
-    .centered-container {
-        padding-top: 1rem;
-        /* Increased padding below search bar */
-    }
-}
-
-@media (min-width: 1601px) {
-    .centered-container {
-        max-width: 100%;
-        /* Allow full width of the viewport */
-    }
-}
-
-@media (max-width: 768px) {
-    .centered-container {
-        padding-top: 1rem;
-        /* Increased padding below search bar */
-    }
-}
-
 
 /* Player Selection Button Styles (Modified to match play-button) */
 .player-selection-buttons {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
     margin-bottom: 0.5rem;
     /* Increased margin below player selection buttons */
-}
-
-@media (max-width: 768px) {
-    .player-selection-buttons {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-    }
 }
 
 /* New styles for Single/Multiplayer buttons */
@@ -88,6 +44,13 @@
     /* Apply blur */
     -webkit-backdrop-filter: blur(5px);
     /* For Safari support */
+}
+
+@media (max-width: 480px) {
+    .player-mode-button {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
 }
 
 .player-mode-button:hover:not(.selected) {
@@ -185,12 +148,9 @@
 
 /* Atlas Selection Section Styles - Keep existing but adjust margins and flex-basis */
 .atlas-selection {
-    flex: 1;
     width: auto;
-    max-width: 700px;
     margin: 0;
     text-align: left;
-    min-height: auto;
     display: flex;
     flex-direction: column;
 }
@@ -199,14 +159,6 @@
     .atlas-selection {
         padding: 0.75rem;
         /* Added padding */
-    }
-}
-
-@media (max-width: 1023px) and (min-width: 481px) {
-    .atlas-selection {
-        /* Consider adjusting this if you want them to stack or adjust more responsively on tablets */
-        flex-basis: 100%;
-        /* Example: if you want them to stack on tablets */
     }
 }
 
@@ -257,39 +209,14 @@
 .atlas-layout {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     gap: 0;
-    width: 100%;
     border: 1px solid #808588;
     border-radius: 0.5rem;
-    min-height: auto;
-    max-height: 25vh;
     background: rgba(47, 47, 47, 0.9);
     /* Add opacity */
     overflow: hidden;
-    flex-grow: 1;
-}
-
-@media (min-width: 1024px) {
-    .atlas-layout {
-        min-height: 20vh;
-        max-height: none;
-        /* Remove max height constraint on wider screens */
-    }
-}
-
-@media (max-width: 768px) {
-    .atlas-layout {
-        min-height: auto;
-        border: 1px solid #555;
-        margin: 0.5rem;
-        border-radius: 0.5rem;
-        padding: 0.75rem 1rem;
-    }
-
-    .atlas-layout {
-        min-height: auto;
-        max-height: 60vh;
-    }
+    justify-content: center;
 }
 
 /* Column 1: Category List - Keep existing */
@@ -297,37 +224,20 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    flex-basis: 250px;
-    flex-shrink: 0;
+    flex-grow: 1;
     padding: 0.5rem;
     overflow-y: auto;
+    border: 1px white solid;
+    max-width: 450px;
 }
 
-@media (min-width: 1024px) {
-    .category-list {
-        border-right: 1px solid #808588;
-        /* Add border between columns */
-        border-bottom: none;
-        /* Remove bottom border */
-        max-height: none;
-        /* Remove max height constraint */
-    }
-}
-
-@media (max-width: 480px) {
-    .category-list {
-        flex-basis: auto;
-        border-right: none;
-        border-bottom: 1px solid #808588;
-        max-height: 30vh;
-    }
-}
 
 /* Column 2: Atlas Choices Display Area - Keep existing */
 .atlas-choices-display {
-    flex-grow: 1;
+    max-width: 450px;
     padding: 0.5rem;
     display: flex;
+    flex-grow: 1;
     flex-direction: column;
     gap: 0.5rem;
     overflow-y: auto;

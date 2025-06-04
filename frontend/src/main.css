@@ -57,22 +57,6 @@ body {
     */
 }
 
-.page-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  padding: 0 2vw 0 2vw;
-  /* Adjusted padding top */
-  box-sizing: border-box;
-  flex-grow: 1;
-  min-height: calc(100vh - 150px);
-  /* Adjust min-height as header is smaller */
-  position: relative;
-  background: transparent !important;
-  /* Background handled by body pseudo-element */
-}
-
 .grecaptcha-badge {
   z-index: 100;
 }
