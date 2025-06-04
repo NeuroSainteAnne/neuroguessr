@@ -264,7 +264,6 @@
 .mode-selection {
     min-width: 0; /* Allow shrinking if necessary, default to 0 */
     text-align: center;
-    min-height: 50vh;
     display: flex;
     flex-direction: column;
     align-items: center;
