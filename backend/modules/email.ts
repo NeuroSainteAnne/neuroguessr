@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
-import fs from 'fs'
-import path from "path";
+import type { SentMessageInfo } from "nodemailer";
 import { __dirname } from "./utils.ts";
 import {google} from 'googleapis';
 import http from 'http';
@@ -8,7 +7,18 @@ import url from 'url';
 import open from 'open';
 import destroyer from 'server-destroy';
 import {OAuth2Client} from 'google-auth-library';
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
+import type { Config } from "../interfaces/config.interfaces.ts";
+import configJson from '../config.json' with { type: "json" };
+import path from "path";
+import fs from "fs";
+const config: Config = configJson;
+
+// Read and encode the image as base64
+const logoPath = path.join(__dirname, "../assets/neuroguessr_logo.png");
+const logoData = fs.readFileSync(logoPath);
+const logoBase64 = logoData.toString("base64");
+const logoMime = "image/png";
+export const logoString = `data:${logoMime};base64,${logoBase64}`
 
 /**
 * Create a new OAuth2Client, and go through the OAuth2 content
@@ -68,60 +78,69 @@ if(config.email.type == "gmail_api"){
     google.options({auth:oAuth2Client});
 } 
 
-export const sendEmail = async (email, subject, message) => {
-    try {
-        if(config.email.type == "gmail_api"){
-            const transporter = nodemailer.createTransport({
-                streamTransport: true,
-                buffer: true, // return Buffer instead of Stream
-                newline: "unix", // LF (\n)
-            });
-            transporter.sendMail({
-                from: config.email.mail_address,
-                to: email,
-                subject: subject,
-                html: message
+export const sendEmail = async (
+  email: string,
+  subject: string,
+  message: string
+): Promise<void | Error> => {
+  try {
+    if (config.email.type == "gmail_api") {
+      const transporter = nodemailer.createTransport({
+        streamTransport: true,
+        buffer: true, // return Buffer instead of Stream
+        newline: "unix", // LF (\n)
+      });
+      transporter.sendMail(
+        {
+          from: config.email.mail_address,
+          to: email,
+          subject: subject,
+          html: message,
+        },
+        async (err: Error | null, info: SentMessageInfo): Promise<void> => {
+          if (err) throw err;
+          const encodedMessage = (info.message as Buffer)
+            .toString("base64")
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+          const res = await gmail.users.messages.send({
+            userId: "me",
+            requestBody: {
+              raw: encodedMessage,
             },
-            async (err, info) => {
-              if (err) throw err;
-              const encodedMessage = info.message
-                .toString('base64')
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=+$/, '');
-              const res = await gmail.users.messages.send({
-                userId: 'me',
-                requestBody: {
-                  raw: encodedMessage,
-                },
-              });
-            }
-          );
-        } else {
-            const transporter = nodemailer.createTransport({
-                host: config.email.server,
-                port: config.email.port,
-                auth: {
-                    user: config.email.mail_address,
-                    pass: config.email.mail_password,
-                },
-                proxy: config.email.proxy
-            });
-
-            transporter.sendMail({
-                from: config.email.mail_address,
-                to: email,
-                subject: subject,
-                html: message
-            }).then(()=>{
-                console.log("Email sent Successfully")
-            }).catch((e)=>{
-                console.log(e)
-            })
+          });
         }
-    } catch (error) {
-        console.log("Email not sent")
-        console.log(error)
-        return error;
+      );
+    } else {
+      const transporter = nodemailer.createTransport({
+        // @ts-ignore
+        host: config.email.server,
+        port: config.email.port,
+        auth: {
+          user: config.email.mail_address,
+          pass: config.email.mail_password,
+        },
+        proxy: config.email.proxy,
+      });
+
+      transporter
+        .sendMail({
+          from: config.email.mail_address,
+          to: email,
+          subject: subject,
+          html: message,
+        })
+        .then(() => {
+          console.log("Email sent Successfully");
+        })
+        .catch((e: Error) => {
+          console.log(e);
+        });
     }
+  } catch (error) {
+    console.log("Email not sent");
+    console.log(error);
+    return error as Error;
+  }
 };

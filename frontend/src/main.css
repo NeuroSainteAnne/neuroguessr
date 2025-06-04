@@ -62,24 +62,27 @@ body {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 0 2vw 2vh 2vw;
+  padding: 0 2vw 0 2vw;
   /* Adjusted padding top */
   box-sizing: border-box;
   flex-grow: 1;
-  min-height: calc(100vh - 6rem);
+  min-height: calc(100vh - 150px);
   /* Adjust min-height as header is smaller */
   position: relative;
-  background: transparent;
+  background: transparent !important;
   /* Background handled by body pseudo-element */
 }
 
+.grecaptcha-badge {
+  z-index: 100;
+}
+
 a {
-  display: block;
+  /*display: block;*/
   margin-top: 15px;
   color: #A2B9F0;
   /* Lighter, more visible link color */
   text-decoration: none;
-  font-size: 0.9em;
   transition: color 0.3s ease;
   cursor: pointer;
 }

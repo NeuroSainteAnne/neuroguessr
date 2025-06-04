@@ -39,23 +39,17 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 1. Configure your server
 
-- copy `server/config-example.json` to `server/config.json` and change parameters accordingly
+- copy `backend/config-example.json` to `backend/config.json` and change parameters accordingly
+- copy `frontend/config-example.json` to `frontend/config.json` and change parameters accordingly
 - (HTTPS only) Put your server certificates in `server/server.crt` and `server/server.key`
 
-2. Transpile the neuroguessr frontend:
+2. Run the following commands:
 
 ```
-cd frontend
-npm install
-npm run build
-cd ..
-```
-
-3. Launch the server
-
-```
-npm install 
-node --experimental-strip-types .\server\server.ts
+npm run install-backend
+npm run install-frontend
+npm run build-frontend
+npm run start-backend
 ```
 
 ## License

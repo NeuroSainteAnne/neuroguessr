@@ -286,3 +286,23 @@
     /* Small space between icon and number */
 }
 
+
+.lang-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0 0;
+    border-radius: 15px;
+    transition: background-color 0.2s ease;
+}
+
+.lang-icon-btn img {
+    width: 30px;
+    height: 30px;
+    vertical-align: middle;
+}
+
+.lang-icon-btn-active{
+    border: white solid 2px;
+}

@@ -1,15 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 import './Header.css'
 import type { TFunction } from 'i18next';
 import LoginDropdownMenu from './LoginDropdownMenu';
 import SearchBar from './SearchBar';
 import OptionsDropdown from './OptionsDropdown';
 
-function Header({currentLanguage, currentPage, atlasRegions, t, callback, 
+function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback, 
     isLoggedIn, userFirstName, userLastName, 
     headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
     viewerOptions}: 
-    { currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
+    { ref:RefObject<HTMLDivElement | null>, currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
     t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, 
     userFirstName: string, userLastName: string, 
     headerText: string, headerTextMode: string, 
@@ -19,7 +19,7 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
 
     return (
         <>
-        <header className="navbar">
+        <header className="navbar" ref={ref}>
             <div className="navbar-container">
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
                     onClick={()=>{callback.gotoPage("welcome")}}>
@@ -53,15 +53,34 @@ function Header({currentLanguage, currentPage, atlasRegions, t, callback,
                         </p>}
                         {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
                     </div>}
+                    { currentPage == "multiplayer-game" && <div className="score-error-container">
+                        {headerScore && <p id="score-label">{headerScore}</p>}
+                        {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
+                        {headerTime && <p id="time-label">{headerTime}</p>}
+                    </div>}
                 </div>
         
                 <div className="navbar-right">
                     {(currentPage == "neurotheka" || currentPage == "singleplayer") && <OptionsDropdown
                         currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
-                    {!isLoggedIn && 
-                    <button id="guest-sign-in-button" className="guest-sign-in-button"
-                        onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
-                    }
+                    {!isLoggedIn && <>
+                        <button id="guest-sign-in-button" className="guest-sign-in-button"
+                            onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
+                        <span className={currentLanguage=="fr"?
+                                    "lang-icon-btn lang-icon-btn-active":
+                                    "lang-icon-btn"}
+                                data-lang="fr" aria-label="Français" 
+                                onClick={()=>{callback.handleChangeLanguage('fr')}}>
+                            <img src="assets/interface/fr.png" alt="FR" />
+                        </span>
+                        <span className={currentLanguage=="en"?
+                                    "lang-icon-btn lang-icon-btn-active":
+                                    "lang-icon-btn"}
+                                data-lang="en" aria-label="English"
+                                onClick={()=>{callback.handleChangeLanguage('en')}}>
+                            <img src="assets/interface/en.png" alt="EN" />
+                        </span>
+                    </>}
                     {isLoggedIn && 
                         <LoginDropdownMenu 
                             currentLanguage={currentLanguage}

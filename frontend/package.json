@@ -1,7 +1,6 @@
 {
-  "name": "neuroguessr",
+  "name": "neuroguessr_frontend",
   "private": true,
-  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@niivue/workspace": "github:niivue/niivue",
+    "@niivue/niivue": "^0.57.0",
     "i18next": "^25.2.0",
+    "jwt-decode": "^4.0.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-google-recaptcha-v3": "^1.11.0",
     "react-i18next": "^15.5.1",
     "vite-plugin-static-copy": "^3.0.0"
   },

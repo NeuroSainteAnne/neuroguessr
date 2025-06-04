@@ -6,7 +6,7 @@ type AppCallback = {
   handleChangeLanguage: (lang: string) => void;
   activateGuestMode: () => void;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
-  loginWithToken: (token: string) => void;
+  updateToken: (token: string|null) => void;
   openNeurotheka: (region: AtlasRegion) => void;
   logout: () => void;
   setHeaderText: (text: string) => void;
@@ -17,6 +17,9 @@ type AppCallback = {
   setHeaderErrors: (errors: string) => void;
   setViewerOption: (option: DisplayOptions) => void;
   launchSinglePlayerGame: (atlas: string, mode: string) => void;
+  launchMultiPlayerGame: (sessionCode: string, sessionToken: string|undefined) => void;
+  setWelcomeSubpage: (subpage: string) => void;
+  gotoWelcomeSubpage: (subpage: string) => void;
 };
 
 type AtlasRegion = {
@@ -31,4 +34,31 @@ type DisplayOptions = {
   radiologicalOrientation: boolean;
   displayAtlas: boolean;
   displayOpacity: number;
+}
+
+interface MultiplayerParametersType {
+    atlas?: string
+    regionsNumber: number;
+    durationPerRegion: number;
+    gameoverOnError: boolean;
+}
+
+type ColorMap = {
+  R: number[];
+  G: number[];
+  B: number[];
+  A: number[];
+  I: number[];
+  min?: number;
+  max?: number;
+  labels?: string[];
+  centers?: number[][];
+};
+
+
+interface CustomTokenPayload {
+  username?: string;
+  firstname?: string;
+  lastname?: string;
+  publishToLeaderboard?: boolean|null;
 }

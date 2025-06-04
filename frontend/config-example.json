@@ -1,0 +1,7 @@
+{
+    "recaptcha" : {
+        "activate": false,
+        "siteKey": ""
+    },
+    "activateAnonymousMode": true
+}

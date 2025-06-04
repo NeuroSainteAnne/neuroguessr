@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './UserConfig.css'
 import type { TFunction } from 'i18next';
-import { getTokenPayload } from './helper_login';
 
 function UserConfig({t, callback, authToken}: 
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string }) {
@@ -102,8 +101,10 @@ function UserConfig({t, callback, authToken}:
         let formData : Record<string,string|boolean|null> = {
             firstname: firstname.trim(),
             lastname: lastname.trim(),
-            publishToLeaderboard: publishToLeaderboard
         };
+        if (publishToLeaderboard !== null) {
+            formData.publishToLeaderboard = publishToLeaderboard;
+        }
         if (password) {
             formData.password = password.trim();
         }
@@ -123,6 +124,7 @@ function UserConfig({t, callback, authToken}:
 
             if (response.ok) {
                 setReconfigureSuccessText(t('reconfigure_success'));
+                callback.updateToken(result.token);
             } else {
                 setReconfigureErrorText(result.message || t('reconfigure_failed'));
             }
@@ -134,7 +136,7 @@ function UserConfig({t, callback, authToken}:
     }
     
     return(
-    <div className="page-container">
+    <>
         <form id="reconfigure_form" onSubmit={handleReconfigure}>
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>
@@ -220,7 +222,7 @@ function UserConfig({t, callback, authToken}:
                 <button type="submit">{t("reconfigure_button")}</button>
             </div>
         </form>
-    </div>
+    </>
     )
 }
 

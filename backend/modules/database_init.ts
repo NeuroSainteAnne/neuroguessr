@@ -2,11 +2,12 @@ import sqlite3 from "better-sqlite3";
 import path from "path";
 import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
-import fs from 'fs'
-var config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf-8'))
+type Config = import("../interfaces/config.interfaces.ts").Config;
+import configJson from '../config.json' with { type: "json" };
+const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const db = new sqlite3(path.join(__dirname, "database.db"));
+export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "..", "database.db"));
 
 export const database_init = async () => {
     try {
@@ -55,10 +56,28 @@ export const database_init = async () => {
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
                 score INTEGER NOT NULL,
-                accuracy REAL NOT NULL,
+                attempts INTEGER,
+                correct INTEGER,
+                incorrect INTEGER,
+                minTimePerRegion INTEGER,
+                maxTimePerRegion INTEGER,
+                avgTimePerRegion INTEGER,
+                minTimePerCorrectRegion INTEGER,
+                maxTimePerCorrectRegion INTEGER,
+                avgTimePerCorrectRegion INTEGER,
+                quitReason TEXT,
+                multiplayerGamesWon INTEGER DEFAULT 0,
                 duration INTEGER NOT NULL,
                 createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (userId) REFERENCES users (id)
+            );
+            CREATE TABLE IF NOT EXISTS multisessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessionCode INTEGER NOT NULL,
+                sessionToken TEXT NOT NULL,
+                creatorId INTEGER NOT NULL,
+                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
+                FOREIGN KEY (creatorId) REFERENCES users (id)
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
         `);
@@ -74,7 +93,7 @@ export const database_init = async () => {
             console.log("Test user added successfully.");
         }
     } catch (err) {
-        console.error("Error initializing database schema:", err.message);
+        console.error("Error initializing database schema:", (err instanceof Error ? err.message : err));
     }
 }
 
@@ -89,6 +108,43 @@ export const cleanExpiredTokens = () => {
             console.log(`Cleaned up ${result.changes} expired tokens.`);
         }
     } catch (err) {
-        console.error("Error cleaning expired tokens:", err.message);
+        console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };
+
+export const cleanOldGameSessions = () => {
+    try {
+        const suppressionDelay = 60 * 60 * 1000; // in ms 
+        // Delete from gameprogress where the session is older than 1 hour
+        const deleteGameProgressStmt = db.prepare(`
+            DELETE FROM gameprogress
+            WHERE sessionId IN (
+                SELECT id FROM gamesessions WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+            )
+        `);
+        const resultProgress = deleteGameProgressStmt.run();
+        if(resultProgress.changes !== 0){
+            console.log(`Cleaned up ${resultProgress.changes} old gameprogress entries.`);
+        }
+        // Delete from gamesessions older than 1 hour
+        const deleteGameSessionsStmt = db.prepare(`
+            DELETE FROM gamesessions
+            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        `);
+        const resultSessions = deleteGameSessionsStmt.run();
+        if(resultSessions.changes !== 0){
+            console.log(`Cleaned up ${resultSessions.changes} old gamesessions.`);
+        }
+        // Delete from multisessions older than 1 hour
+        const deleteMultiSessionsStmt = db.prepare(`
+            DELETE FROM multisessions
+            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        `);
+        const resultMultiSessions = deleteMultiSessionsStmt.run();
+        if(resultMultiSessions.changes !== 0){
+            console.log(`Cleaned up ${resultMultiSessions.changes} old multisessions.`);
+        }
+    } catch (err) {
+        console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
+    }
+}

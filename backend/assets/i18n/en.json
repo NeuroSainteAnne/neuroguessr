@@ -1,0 +1,8 @@
+{
+    "register_email_subject": "Please Validate Email",
+    "register_email_greeting": "Hello",
+    "register_email_thanks": "Thanks for registering to Neuroguessr.",
+    "register_email_validate": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to validate your email",
+    "reset_password_subject": "Password Reset",
+    "reset_password_link": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to reset your password"
+}

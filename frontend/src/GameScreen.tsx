@@ -1,11 +1,12 @@
 import type { TFunction } from 'i18next';
 import './GameScreen.css'
 import './Help.css'
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { Niivue, SHOW_RENDER, type NVImage } from '@niivue/niivue';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import { isTokenValid, refreshToken } from './helper_login';
+import { defineNiiOptions, getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 
 type GameScreenProps = {
   t: TFunction<"translation", undefined>;
@@ -20,17 +21,7 @@ type GameScreenProps = {
   loadEnforcer: number;
   isLoggedIn: boolean;
   authToken: string;
-};
-type ColorMap = {
-  R: number[];
-  G: number[];
-  B: number[];
-  A: number[];
-  I: number[];
-  min?: number;
-  max?: number;
-  labels?: string[];
-  centers?: number[][];
+  userPublishToLeaderboard: boolean | null;
 };
 
 async function startOnlineSession(token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -72,7 +63,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
 
 
 function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, gameMode,
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken }: GameScreenProps) {
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard }: GameScreenProps) {
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
   const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -127,7 +118,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
-    initNiivue()
+    initNiivue(niivue.current, viewerOptions, () => {
+      setIsLoadedNiivue(true);
+    })
     checkLoading();
   }, [])
 
@@ -164,38 +157,13 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
-
-  const initNiivue = () => {
-    niivue.current.attachTo('gl1').then(() => {
-      setIsLoadedNiivue(true);
-      niivue.current.setInterpolation(true);
-      niivue.current.opts.crosshairGap = 0;
-      niivue.current.opts.dragMode = niivue.current.dragModes.slicer3D;
-      niivue.current.opts.yoke3Dto2DZoom = true;
-      defineNiiOptions()
-    })
-  }
-  const loadAtlasNii = () => {
-    if (niivue.current && askedAtlas && preloadedAtlas && preloadedBackgroundMNI) {
-      for (let i = 1; i < niivue.current.volumes.length; i++) {
-        niivue.current.removeVolume(niivue.current.volumes[i]);
-      }
-      // Load volumes
-      if (niivue.current.volumes.length == 0) {
-        niivue.current.addVolume(preloadedBackgroundMNI);
-      }
-      niivue.current.addVolume(preloadedAtlas);
-      niivue.current.setClipPlane([2, 270, 0]);
-      niivue.current.opts.isSliceMM = true;
-    }
-  }
-  function generateRandomInts(quantity: number, max: number){
+  function generateRandomInts(quantity: number, max: number) {
     const arr = []
-    while(arr.length < quantity){
+    while (arr.length < quantity) {
       var candidateInt = Math.floor(Math.random() * max) + 1
-      if(arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
+      if (arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
     }
-    return(arr)
+    return (arr)
   }
   const loadAtlasData = async () => {
     try {
@@ -205,48 +173,14 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
         niivue.current.volumes[1].setColormapLabel(cMap.current)
         niivue.current.volumes[1].setColormapLabel({
-          "R":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "G":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "B":generateRandomInts(cMap.current.labels?.length || 0, 255),
-          "A":Array(1).fill(0).concat(Array((cMap.current.labels?.length || 0)-1).fill(255)),
-          "I":Array.from(Array(cMap.current.labels?.length || 0).keys()),
-          "labels":cMap.current.labels || [],
+          "R": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "G": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "B": generateRandomInts(cMap.current.labels?.length || 0, 255),
+          "A": Array(1).fill(0).concat(Array((cMap.current.labels?.length || 0) - 1).fill(255)),
+          "I": Array.from(Array(cMap.current.labels?.length || 0).keys()),
+          "labels": cMap.current.labels || [],
         });
         cLut.current = niivue.current.volumes[1].colormapLabel?.lut || new Uint8ClampedArray();
-        /*const numRegions = Object.keys(cMap.current.labels || []).length;
-        console.log(`num regions : ${numRegions}`, cMap.current.labels?.length, cMap.current.R.length, selectedAtlasFiles.json)
-        cLut.current = new Uint8Array(numRegions * 4);
-
-        if (askedAtlas === 'aal') {
-          cLut.current[0] = Math.floor(Math.random() * 256);
-          cLut.current[1] = Math.floor(Math.random() * 256);
-          cLut.current[2] = Math.floor(Math.random() * 256);
-          cLut.current[3] = 255;
-          cLut.current[4] = Math.floor(Math.random() * 256);
-          cLut.current[5] = Math.floor(Math.random() * 256);
-          cLut.current[6] = Math.floor(Math.random() * 256);
-          cLut.current[7] = 255;
-        }
-        else if (askedAtlas === 'glasser') {
-          //   console.log('Atlas cmap.labels:', cmap.labels);
-        } else {
-          cLut.current[0] = 0;
-          cLut.current[1] = 0;
-          cLut.current[2] = 0;
-          cLut.current[3] = 0;
-          cLut.current[4] = Math.floor(Math.random() * 256);
-          cLut.current[5] = Math.floor(Math.random() * 256);
-          cLut.current[6] = Math.floor(Math.random() * 256);
-          cLut.current[7] = 255;
-        }
-        for (let i = 2; i < numRegions; i++) {
-          cLut.current[i * 4 + 0] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 1] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 2] = Math.floor(Math.random() * 256);
-          cLut.current[i * 4 + 3] = 255;
-        }
-
-        if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice()); */
         niivue.current.setOpacity(1, viewerOptions.displayOpacity);
         niivue.current.updateGLVolume();
 
@@ -281,9 +215,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, gameMode, askedAtlas, loadEnforcer])
 
   const checkLoading = async () => {
-    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue) {
+    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
       setIsLoading(false);
-      loadAtlasNii();
+      loadAtlasNii(niivue.current, preloadedBackgroundMNI, preloadedAtlas);
       await loadAtlasData();
       startGame();
     } else {
@@ -291,13 +225,13 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     currentStreakRef.current = currentStreak
   }, [currentStreak])
-  useEffect(()=>{
+  useEffect(() => {
     currentScoreRef.current = currentScore
   }, [currentScore])
-  useEffect(()=>{
+  useEffect(() => {
     currentAttemptsRef.current = currentAttempts
   }, [currentAttempts])
 
@@ -348,7 +282,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
     if (niivue.current) {
-      defineNiiOptions()
+      defineNiiOptions(niivue.current, viewerOptions)
       niivue.current.drawScene();
     }
   }
@@ -389,7 +323,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
       // Start the first round
       selectNewTarget();
-      setForceDisplayUpdate((u)=>u+1);
+      setForceDisplayUpdate((u) => u + 1);
     })
 
   }
@@ -403,13 +337,42 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     }, 500);
   }
 
+  const manualClotureGameSession = async (): Promise<number> => {
+    try {
+      const response = await fetch('/api/cloture-game-session', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || "Unknown error");
+      }
+      const result = await response.json();
+      return result.finalScore;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   const refreshTimer = () => {
     const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
     //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
-    callback.setHeaderTime(`${minutes}:${seconds}`);
-    if (remaining <= 0) endTimeAttack(currentScoreRef.current); // Call endTimeAttack to show the window // TODO CALL SERVER IF CONNECTED
+    callback.setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
+    if (remaining <= 0) {
+      if (isLoggedIn) {
+        manualClotureGameSession().then((finalScore) => {
+          endTimeAttack(finalScore);
+        })
+      } else {
+        endTimeAttack(currentScoreRef.current);
+      }
+    }
   }
 
   function endTimeAttack(givenFinalScore: number) {
@@ -458,12 +421,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         console.error("Error occured during next region fetching:", error);
         return false;
       }
-    } else if (validRegions.current && usedRegions.current){
+    } else if (validRegions.current && usedRegions.current) {
       let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
       if (gameMode === 'time-attack' && availableRegions.length === 0) {
         // if no region remaining, we'll take a random region
         availableRegions = validRegions.current
-      } 
+      }
       if (availableRegions.length !== 0) {
         regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
@@ -471,8 +434,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         }
       }
     }
-    
-    if(regionId === -1){ // did not found region
+
+    if (regionId === -1) { // did not found region
       if (gameMode === 'time-attack') {
         // TODO take into account server response = -1
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
@@ -492,9 +455,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     currentTarget.current = regionId
 
     if (currentTarget.current) {
-      setForceDisplayUpdate((u)=>u+1); // Update display with the new target label
+      setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
       selectedVoxel.current = null; // Reset selected voxel
-      if(gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
+      if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
       if (cLut.current && niivue.current) {
         if (niivue.current.volumes[1].colormapLabel) niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
         niivue.current.updateGLVolume();
@@ -517,57 +480,31 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue.current || !niivue.current.gl || !niivue.current.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
-    const isTouch = e.type === 'touchstart';
-    const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
-    const mouseEvt = isTouch
-      ? ({
-        ...e, layerX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        layerY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY,
-        offsetX: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientX,
-        offsetY: (e as React.TouchEvent<HTMLCanvasElement>).touches[0].clientY
-      } as unknown as MouseEvent)
-      : e;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    // Check if touch/click is within canvas bounds
-    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
-      const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(mouseEvt as MouseEvent, niivue.current.gl.canvas);
-      if (!pos) return; // If position is not valid, exit early
-      const frac = niivue.current.canvasPos2frac([pos.x * (niivue.current.uiData?.dpr ?? 1), pos.y * (niivue.current.uiData?.dpr ?? 1)]);
-      if (frac[0] >= 0) {
-        const mm = niivue.current.frac2mm(frac);
-        const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
-        const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
-        if (isFinite(idx) && idx > 0 && idx in (cMap.current?.labels ?? [])) { // Ensure valid region ID > 0
-          selectedVoxel.current = Array.from(vox);
-          if (gameMode === 'navigation') {
-            callback.setHeaderText(cMap.current.labels?.[idx] || t('no_region_selected'));
-            setHighlightedRegion(idx);
-            if (tooltip) {
-              setTooltip({ ...tooltip, visible: false });
-            }
-            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-            niivue.current.drawScene();
-          } else {
-            if (guessButtonRef.current) {
-              guessButtonRef.current.disabled = false;
-            }
-            niivue.current.opts.crosshairColor = [1, 1, 1, 1];
-            niivue.current.drawScene();
-          }
-          console.log(`Clicked voxel: ${vox}, Region ID: ${idx}, Region Name: ${cMap.current.labels?.[idx] || t('unknown_region')}`);
-        } else { // invalid region selected
-          selectedVoxel.current = null;
-          if (gameMode === 'navigation') {
-            callback.setHeaderText(t('no_region_selected'));
-            setHighlightedRegion(null);
-          } else {
-            if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-          }
-          console.log(`Clicked voxel: ${vox}, Invalid or background region ID: ${idx}`);
+    const clickedRegionLocation = getClickedRegion(niivue.current, canvasRef.current, cMap.current, e)
+    if (clickedRegionLocation) {
+      selectedVoxel.current = clickedRegionLocation.vox;
+      if (gameMode === 'navigation') {
+        callback.setHeaderText(cMap.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
+        setHighlightedRegion(clickedRegionLocation.idx);
+        if (tooltip) {
+          setTooltip({ ...tooltip, visible: false });
         }
+        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.current.drawScene();
+      } else {
+        if (guessButtonRef.current) {
+          guessButtonRef.current.disabled = false;
+        }
+        niivue.current.opts.crosshairColor = [1, 1, 1, 1];
+        niivue.current.drawScene();
+      }
+    } else {
+      selectedVoxel.current = null;
+      if (gameMode === 'navigation') {
+        callback.setHeaderText(t('no_region_selected'));
+        setHighlightedRegion(null);
+      } else {
+        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       }
     }
   }
@@ -610,7 +547,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     } else {
       clickedRegion = Math.round(niivue.current.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
       guessSuccess = clickedRegion === currentTarget.current;
-      if(gameMode === 'time-attack') {
+      if (gameMode === 'time-attack') {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
       }
       if (gameMode === 'streak') {
@@ -618,22 +555,35 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
     }
 
+    let previousScore = currentScoreRef.current;
+    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }).scoreIncrement
+
+    if (isEndgame) {
+      performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
+    }
+  }
+
+  const getUpdatedScore = ({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }:
+    { isEndgame: boolean, clickedRegion: number, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
+    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
+      console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
+      return { scoreIncrement };
+    }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
     const clickedRegionName = clickedRegion && cMap.current && cMap.current.labels?.[clickedRegion] ? cMap.current.labels[clickedRegion] : t('unknown_region');
 
     if (guessSuccess) {
       // Correct Guess
       setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
-      
+
       if (gameMode === 'time-attack') {
         // Add full points for correct guess
-        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION)); 
+        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION));
       }
       if (gameMode === 'streak') {
         // Increment streak for correct guess
-        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1)); 
+        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1));
       }
-
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
       } else {
@@ -650,10 +600,11 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
 
       // Move to the next target after a short delay to show feedback
-      setTimeout(() => {
-        selectNewTarget();
-      }, 100);
-
+      if (!isEndgame) {
+        setTimeout(() => {
+          selectNewTarget();
+        }, 100);
+      }
     } else { // Incorrect Guess
       setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
       setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
@@ -666,7 +617,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
         console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
-
         console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
         if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
@@ -678,7 +628,6 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           callback.setHeaderText(findPrefix + targetName);
           callback.setHeaderTextMode("normal")
         }, 3000); // Increased delay to 3 seconds
-
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
@@ -692,12 +641,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
               Math.pow(correctCenter[1] - clickedCenter[1], 2) +
               Math.pow(correctCenter[2] - clickedCenter[2], 2)
             );
-            
+
             // Calculate score based on distance
             if (distance <= MAX_PENALTY_DISTANCE) {
-                scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
-                scoreIncrement = 0; // No points for too far away
+              scoreIncrement = 0; // No points for too far away
             }
 
             console.log(`Time Attack Error:`);
@@ -723,28 +672,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         callback.setHeaderText(incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg);
         callback.setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
-        setForceDisplayUpdate((u)=>u+1); // Update display immediately after incorrect guess
-
         // Automatically move to the next target after a short delay
-        setTimeout(() => {
-          selectNewTarget();
-        }, 100); // Adjust delay as needed
-
-      } else if (gameMode === 'streak') {
-        // Streak ends on incorrect guess
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        // The streak label will be updated by updateGameDisplay called below
-
-        // Display Streak End Overlay instead of redirecting
-        setShowStreakOverlay(true);
-
-        callback.setHeaderTextMode("failure"); // Indicate streak ended visually
-
-        // Stop the game
-        setIsGameRunning(false);
-
-        // Do not call selectNewTarget or redirect automatically here
+        if (!isEndgame) {
+          setTimeout(() => {
+            selectNewTarget();
+          }, 100);
+        }
       }
 
       selectedVoxel.current = null;
@@ -752,23 +685,31 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
       // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
       if (gameMode !== 'practice') {
-        setForceDisplayUpdate((u)=>u+1);
+        setForceDisplayUpdate((u) => u + 1);
       }
     }
+    return { scoreIncrement }
+  }
 
-    if(isEndgame){
-      if(gameMode === 'time-attack'){
-        if(!isLoggedIn){
-          const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-          givenFinalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
-        }
-        endTimeAttack(givenFinalScore)
-      } else if (gameMode === 'streak') {
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        setShowStreakOverlay(true);
-        return;
+  function performEndGame({ finalScore }: { finalScore: number }) {
+    if (gameMode === 'streak') {
+      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+      setShowStreakOverlay(true);
+      callback.setHeaderTextMode("failure"); // Indicate streak ended visually
+      setIsGameRunning(false);
+    }
+    if (gameMode === 'time-attack') {
+      if (!isLoggedIn) {
+        const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+        finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
       }
+      endTimeAttack(finalScore)
+    } else if (gameMode === 'streak') {
+      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+      setShowStreakOverlay(true);
+      return;
     }
   }
 
@@ -853,19 +794,19 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     } else {
       // Use 'find' translation key directly
       callback.setHeaderText(t('find') + t('unknown_region')); // Use translated "Find:" and "Unknown"
-      console.error(`No label for currentTarget ${currentTarget}`, cMap.current?.labels);
+      console.error(`No label for currentTarget ${currentTarget.current}`, cMap.current?.labels);
     }
   }
 
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isGameRunning || !canvasRef.current || !niivue.current || gameMode !== 'navigation' || highlightedRegion !== null){
+    if (!isGameRunning || !canvasRef.current || !niivue.current || gameMode !== 'navigation' || highlightedRegion !== null) {
       setTooltip({ ...tooltip, visible: false });
       return;
-    } 
+    }
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.pageX;
     const y = e.clientY - rect.top;
-    const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(e as unknown as MouseEvent, niivue.current.gl.canvas);
+    const pos = niivue.current.getNoPaddingNoBorderCanvasRelativeMousePosition(e.nativeEvent, niivue.current.gl.canvas);
 
     // Check if mouse is within canvas bounds
     if (x >= 0 && x < rect.width && y >= 0 && y < rect.height && pos && cMap.current && cMap.current.labels && niivue.current.uiData && niivue.current.uiData.dpr) {
@@ -875,8 +816,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         const vox = niivue.current.volumes[1].mm2vox(Array.from(mm));
         const idx = Math.round(niivue.current.volumes[1].getValue(vox[0], vox[1], vox[2]));
         if (isFinite(idx) && idx > 0 && idx in cMap.current.labels) { // Ensure valid region ID > 0
-          setTooltip({visible: true, text: cMap.current.labels[idx] || t('unknown_region'),
-             x:x+10, y: y+10});
+          setTooltip({
+            visible: true, text: cMap.current.labels[idx] || t('unknown_region'),
+            x: x + 10, y: y + 10
+          });
         } else {
           setTooltip({ ...tooltip, visible: false });
         }
@@ -892,7 +835,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 
   useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
+    const handleClick = (event: Event) => {
       if (
         showHelpOverlay &&
         helpContentRef.current &&
@@ -923,37 +866,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     };
   }, [showHelpOverlay])
 
-  const defineNiiOptions = () => {
-    if (niivue.current) {
-      if (viewerOptions.displayType === "Axial") niivue.current.setSliceType(niivue.current.sliceTypeAxial);
-      if (viewerOptions.displayType === "Coronal") niivue.current.setSliceType(niivue.current.sliceTypeCoronal);
-      if (viewerOptions.displayType === "Sagittal") niivue.current.setSliceType(niivue.current.sliceTypeSagittal);
-      if (viewerOptions.displayType === "Render") {
-        niivue.current.setSliceType(niivue.current.sliceTypeRender);
-        niivue.current.setClipPlane(niivue.current.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
-      }
-      if (viewerOptions.displayType === "MultiPlanar") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
-      }
-      if (viewerOptions.displayType === "MultiPlanarRender") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
-      }
-      if (niivue.current.volumes.length > 1) {
-        niivue.current.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
-      }
-      niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
-      niivue.current.updateGLVolume();
-    }
-  }
-
   useEffect(() => {
-    defineNiiOptions()
+    defineNiiOptions(niivue.current, viewerOptions)
   }, [viewerOptions])
 
   return (
-    <div className="page-container">
+    <>
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}
@@ -1007,6 +925,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         <div className="overlay-content" ref={streakOverlayRef}>
           <h2>{t("streak_ended_title")}</h2>
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
+          {userPublishToLeaderboard === null && <PublishToLeaderboardBox t={t} callback={callback} />}
           <div className="overlay-buttons">
             <button id="go-back-menu-button-streak" className="home-button" onClick={() => callback.gotoPage("welcome")}>
               <i className="fas fa-home"></i>
@@ -1024,6 +943,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           <p><span>{t("time_attack_ended_time")}</span>
             <span id="final-time-attack-time">{finalElapsed}</span></p>
           <p><span>{t("time_attack_ended_score")}</span></p>
+          {userPublishToLeaderboard === null && <PublishToLeaderboardBox t={t} callback={callback} />}
           <div className="score-progress-bar w3-light-grey w3-round">
             <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
               style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
@@ -1041,7 +961,74 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         </div>
       </div>}
 
-    </div>
+    </>
+  )
+}
+
+const PublishToLeaderboardBox = ({ t, callback }:
+  { t: TFunction<"translation", undefined>, callback: AppCallback }) => {
+  const [published, setPublished] = useState<boolean | null>(null);
+  const [publishErrorText, setPublishErrorText] = useState<string>("");
+  const handleClick = async (val: boolean) => {
+    setPublished(val);
+    try {
+      // Send the data to the server
+      const response = await fetch('/api/config-user', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publishToLeaderboard: val }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        callback.updateToken(result.token);
+      } else {
+        setPublishErrorText(result.message);
+      }
+    } catch (error) {
+      // Handle network or other errors
+      console.error('Error updating publish mode:', error);
+      setPublishErrorText(t('server_error'))
+    }
+  }
+  return (
+    <>
+      <h2>{t("publish_to_leaderboard_header")}</h2>
+      <p dangerouslySetInnerHTML={{ __html: t("publish_to_leaderboard_explanation") }}></p>
+      <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
+        <button
+          type="button" className="publish-btn"
+          style={{
+            padding: "0.5em 1.5em",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+          onClick={() => handleClick(true)}
+        >
+          {t("publish_yes")}
+        </button>
+        <button
+          type="button" className="publish-btn"
+          style={{
+            padding: "0.5em 1.5em",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+          onClick={() => handleClick(false)}
+        >
+          {t("publish_no")}
+        </button>
+      </div>
+      {publishErrorText && <div style={{ color: "red" }}>
+        {publishErrorText}
+      </div>}
+    </>
   )
 }
 
