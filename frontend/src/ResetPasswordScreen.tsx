@@ -113,7 +113,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
 
             if (response.ok) {
               setRecoverySuccessText(t('password_reset_success'));
-              callback.loginWithToken(result.token);
+              callback.updateToken(result.token);
               callback.gotoPage("welcome");
             } else {
               setRecoveryErrorText(result.message || t('password_reset_failed'));

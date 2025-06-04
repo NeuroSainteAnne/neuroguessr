@@ -96,6 +96,8 @@ function App() {
          const token = parts[2] || undefined;
          if(code) {  
             launchMultiPlayerGame(code, token);
+         } else {
+            gotoPage("multiplayer-game")
          }
       } else if (page === "welcome"){
          setCurrentPage(page);
@@ -110,15 +112,15 @@ function App() {
       }
    }
 
-   const gotoPage = (page: string) => {
-      checkToken();
+   const gotoPage = async (page: string) => {
+      updateToken(await refreshToken());
       setCurrentPage(page);
       setHeaderText("");
       setHeaderTextMode("normal"); 
       window.location.hash = `#/${page}`;
    }
-   const gotoWelcomeSubpage = (subpage: string) => {
-      checkToken();
+   const gotoWelcomeSubpage = async (subpage: string) => {
+      updateToken(await refreshToken());
       setCurrentPage("welcome");
       setWelcomeSubpage(subpage)
    }
@@ -204,23 +206,15 @@ function App() {
       setTimeout(() => {setNotificationMessage("")}, 3000);
    }
 
-   const loginWithToken = async (token: string) => {
-      localStorage.setItem('authToken', token);
-      setAuthToken(token);
-      setIsLoggedIn(true);
-   }
-
-   const checkToken = async () => {
-      if(authToken){
-         if (isTokenValid(authToken)) {
-            setIsLoggedIn(true);
-            refreshToken();
-         } else {
-            setIsLoggedIn(false);
-            localStorage.removeItem('authToken');
-            setAuthToken("");
-            showNotification('invalid_token', false);
-         }
+   const updateToken = (token: string|null) => {
+      if(token){
+         localStorage.setItem('authToken', token);
+         setAuthToken(token);
+         setIsLoggedIn(true);
+      } else {
+         localStorage.removeItem('authToken');
+         setAuthToken("");
+         setIsLoggedIn(false);
       }
    }
 
@@ -230,8 +224,8 @@ function App() {
       setIsLoggedIn(false);
    }
 
-   const openNeurotheka = (region: AtlasRegion) => {
-      checkToken();
+   const openNeurotheka = async (region: AtlasRegion) => {
+      updateToken(await refreshToken());
       targetPage.current  ="neurotheka"
       setHeaderText(t("loading"));
       setAskedAtlas(region.atlas);
@@ -251,9 +245,9 @@ function App() {
       }
    }, [askedSessionCode, askedSessionToken])
 
-   const launchSinglePlayerGame = (atlas: string, mode: string) => {
+   const launchSinglePlayerGame = async (atlas: string, mode: string) => {
       targetPage.current = "singleplayer"
-      checkToken();
+      updateToken(await refreshToken());
       setHeaderText(t("loading"));
       setAskedAtlas(atlas);
       setGameMode(mode);
@@ -336,7 +330,7 @@ function App() {
       handleChangeLanguage: handleChangeLanguage,
       activateGuestMode: activateGuestMode,
       setIsLoggedIn: setIsLoggedIn,
-      loginWithToken: loginWithToken,
+      updateToken: updateToken,
       logout: logout,
       openNeurotheka: openNeurotheka,
       setHeaderText: setHeaderText,
@@ -379,7 +373,7 @@ function App() {
                isLoggedIn={isLoggedIn} authToken={authToken}
                userPublishToLeaderboard={userPublishToLeaderboard} />}
          {currentPage === "multiplayer-game" && <>
-            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} 
+            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}
                viewerOptions={viewerOptions}
                preloadedBackgroundMNI={preloadedBackgroundMNI} 

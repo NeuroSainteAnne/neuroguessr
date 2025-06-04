@@ -51,8 +51,21 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
             // Handle successful login
             setLoginErrorText('');
             setLoginSuccessText(t('login_success'));
-            callback.loginWithToken(result.token);
-            callback.gotoPage("welcome");
+            callback.updateToken(result.token);
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectParam = urlParams.get('redirect');
+            if (redirectParam) {
+              window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
+              if(redirectParam == "multiplayer-game"){
+                const askedSC = urlParams.get('redirect_asked_session_code') || "";
+                const askedST = urlParams.get('redirect_asked_session_token') || undefined;
+                callback.launchMultiPlayerGame(askedSC, askedST)
+              } else {
+                callback.gotoPage(redirectParam);
+              }
+            } else {
+              callback.gotoPage("welcome");
+            }
           } else {
             // Handle login failure
             setLoginErrorText(result.message || t('login_failed'));

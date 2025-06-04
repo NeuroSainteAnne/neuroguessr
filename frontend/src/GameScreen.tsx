@@ -983,7 +983,7 @@ const PublishToLeaderboardBox = ({ t, callback }:
       });
       const result = await response.json();
       if (response.ok) {
-        callback.loginWithToken(result.token);
+        callback.updateToken(result.token);
       } else {
         setPublishErrorText(result.message);
       }

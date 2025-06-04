@@ -124,7 +124,7 @@ function UserConfig({t, callback, authToken}:
 
             if (response.ok) {
                 setReconfigureSuccessText(t('reconfigure_success'));
-                callback.loginWithToken(result.token);
+                callback.updateToken(result.token);
             } else {
                 setReconfigureErrorText(result.message || t('reconfigure_failed'));
             }

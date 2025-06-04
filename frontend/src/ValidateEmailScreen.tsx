@@ -37,7 +37,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
           } else {
             setValidatedSuccessText(t('success_email_verified'));
             setTimeout( () => {
-              callback.loginWithToken(result.token);
+              callback.updateToken(result.token);
               callback.gotoPage("welcome");
             }, 1000);
           }
