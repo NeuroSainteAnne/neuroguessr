@@ -25,6 +25,7 @@ interface WSGame extends WebSocket {
   gameRef?: MultiplayerGame;
   sessionCode?: string;
   lastActivity?: number;
+  isAnonymous?: boolean;
 } 
 
 interface MultiplayerParametersType {
@@ -54,6 +55,7 @@ interface MultiplayerGame {
   individualSuccesses: Record<string,number>;
   individualDurations: Record<string,number[]>;
   individualCorrectDurations: Record<string,number[]>;
+  anonymousUsernames: string[];
 } 
 
 interface AtlasLUT {
@@ -116,24 +118,7 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
     });
 };
 
-function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
-  let jwtpayload: any;
-  try {
-    jwtpayload = jwt.verify(usertoken, config.jwt_secret);
-  } catch (err) {
-    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token.' }));
-    ws.close();
-    return;
-  }
-  const userName = String(jwtpayload.username);
-  (ws as WSGame).userName = userName;
-  const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(sessionCode);
-  if (!session) {
-    ws.send(JSON.stringify({ type: 'error', message: 'Lobby does not exist.' }));
-    ws.close();
-    return;
-  }
-  if (!games[sessionCode]){
+function createEmptySession(sessionCode: string){
     games[sessionCode] = {
       lobby: new Set(),
       sessionCode: sessionCode,
@@ -154,18 +139,12 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
       individualAttempts: {},
       individualSuccesses: {},
       individualDurations: {},
-      individualCorrectDurations: {}
+      individualCorrectDurations: {},
+      anonymousUsernames: []
     }
-  }
-  const gameRef = games[sessionCode];
+}
 
-  // Prevent duplicate user in lobby
-  const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === userName);
-  if (userAlreadyInLobby) {
-    ws.send(JSON.stringify({ type: 'error', message: 'User already in lobby.' }));
-    return;
-  }
-  
+function initUserInLobby(ws: WebSocket, userName: string, gameRef: MultiplayerGame, sessionCode: string){
   gameRef.lobby.add(ws);
   gameRef.individualScores[userName] = 0;
   gameRef.individualAttempts[userName] = 0;
@@ -188,6 +167,72 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
       client.send(JSON.stringify({ type: 'player-joined', userName: userName }));
     }
   });
+}
+
+function joinLobbyAnonymous(ws: WebSocket, username: string, sessionCode: string){
+  if (!config.allowAnonymousInMultiplayer) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Anonymous mode is not allowed.' }));
+    ws.close();
+    return;
+  }
+  const userRow = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
+  if (userRow) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Username already exists.' }));
+    ws.close();
+    return;
+  }
+  let gameRef;
+  if (!games[sessionCode]){
+    createEmptySession(sessionCode)
+    gameRef = games[sessionCode]
+  } else {
+    gameRef = games[sessionCode]
+    const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === username)
+    || gameRef.anonymousUsernames.includes(username);
+    if (userAlreadyInLobby) {
+      ws.send(JSON.stringify({ type: 'error', message: 'Username already in use in this lobby.' }));
+      ws.close();
+      return;
+    }
+  }
+
+  gameRef.anonymousUsernames.push(username);
+  (ws as WSGame).userName = username;
+  (ws as WSGame).isAnonymous = true;
+  initUserInLobby(ws, username, gameRef, sessionCode)
+}
+
+function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
+  let jwtpayload: any;
+  try {
+    jwtpayload = jwt.verify(usertoken, config.jwt_secret);
+  } catch (err) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token.' }));
+    ws.close();
+    return;
+  }
+  const userName = String(jwtpayload.username);
+  (ws as WSGame).userName = userName;
+  (ws as WSGame).isAnonymous = false;
+  const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(sessionCode);
+  if (!session) {
+    ws.send(JSON.stringify({ type: 'error', message: 'Lobby does not exist.' }));
+    ws.close();
+    return;
+  }
+  if (!games[sessionCode]){
+    createEmptySession(sessionCode)
+  }
+  const gameRef = games[sessionCode];
+
+  // Prevent duplicate user in lobby
+  const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === userName);
+  if (userAlreadyInLobby) {
+    ws.send(JSON.stringify({ type: 'error', message: 'User already in lobby.' }));
+    return;
+  }
+
+  initUserInLobby(ws, userName, gameRef, sessionCode)
 }
 
 function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
@@ -477,6 +522,8 @@ wss.on('connection', (ws, req) => {
       const data = JSON.parse(message.toString());
       if (data.type === 'join' && data.sessionCode && data.token) {
         joinLobby(ws, data.token, data.sessionCode)
+      } else if (data.type === 'join-anonymous' && data.sessionCode && data.username) {
+        joinLobbyAnonymous(ws, data.username, data.sessionCode)
       } else if (data.type === 'launch-game' && data.sessionToken) {
         launchGame(ws, data.sessionToken)
       } else if (data.type === 'update-parameters' && (ws as WSGame).gameRef && typeof data.parameters === 'object') {

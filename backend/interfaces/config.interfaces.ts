@@ -39,6 +39,7 @@ export interface Config {
     server: ServerConfig;
     addTestUser: boolean;
     captcha: CaptchaConfig;
+    allowAnonymousInMultiplayer: boolean;
     salt: string;
     jwt_secret: string;
 }
