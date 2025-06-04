@@ -12,6 +12,7 @@
     "@niivue/niivue": "^0.57.0",
     "i18next": "^25.2.0",
     "jwt-decode": "^4.0.0",
+    "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-google-recaptcha-v3": "^1.11.0",

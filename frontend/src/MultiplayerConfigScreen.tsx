@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { GameSelectorAtlas } from './GameSelector';
+import {QRCodeSVG} from 'qrcode.react';
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -169,6 +170,8 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                     </svg>
                                 </button>
                             </div>
+                            <QRCodeSVG value={`${window.location.origin}/#/multiplayer-game/${sessionCode}`} 
+                                bgColor="#00000000" fgColor="#FFFFFF" />
                         </div>
                         <div style={{ marginTop: 24 }}>
                             <h4>{t("players_in_lobby")}</h4>
