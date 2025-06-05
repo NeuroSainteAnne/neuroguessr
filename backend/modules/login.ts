@@ -113,21 +113,25 @@ export const authenticateToken = (
 ): void => {
     const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
     const token: string | undefined = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-        res.status(401).send({ message: "No token provided" });
-        return;
-    }
-
-    jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
-        if (err) {
-            return res.status(403).send({ message: "Invalid or expired token" });
+    try {
+        if (!token) {
+            res.status(401).send({ message: "No token provided" });
+            return;
         }
 
-        // Attach the user information to the request object
-        (req as AuthenticatedRequest).user = decoded as User;
-        next(); // Proceed to the next middleware or route handler
-    });
+        jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
+            if (err) {
+                return res.status(403).send({ message: "Invalid or expired token" });
+            }
+
+            // Attach the user information to the request object
+            (req as AuthenticatedRequest).user = decoded as User;
+            next(); // Proceed to the next middleware or route handler
+        });
+    } catch (error) {
+        console.error("Error authenticating token:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+    }
 };
 
 

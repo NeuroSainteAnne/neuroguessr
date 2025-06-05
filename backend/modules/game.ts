@@ -85,343 +85,363 @@ export const getNextRegion = async (
     req: GetNextRegionRequest,
     res: Response
 ): Promise<void> => {
-    const { sessionId, sessionToken } = req.body;
-    // Validate the session token
-    const getSessionStmt = db.prepare(
-        `SELECT * FROM gamesessions WHERE id = ? AND token = ?`
-    );
-    const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-    if (!session) {
-        res
-            .status(403)
-            .send({ message: "Invalid session or token mismatch" });
-        return;
-    }
-    // Get the atlas length
-    const atlasValidRegions = validRegions[session.atlas];
-    if (!atlasValidRegions) {
-        res
-            .status(400)
-            .send({ message: "Invalid atlas specified in the session." });
-        return;
-    }
+    try {
+        const { sessionId, sessionToken } = req.body;
+        // Validate the session token
+        const getSessionStmt = db.prepare(
+            `SELECT * FROM gamesessions WHERE id = ? AND token = ?`
+        );
+        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
+        if (!session) {
+            res
+                .status(403)
+                .send({ message: "Invalid session or token mismatch" });
+            return;
+        }
+        // Get the atlas length
+        const atlasValidRegions = validRegions[session.atlas];
+        if (!atlasValidRegions) {
+            res
+                .status(400)
+                .send({ message: "Invalid atlas specified in the session." });
+            return;
+        }
 
-    // --- TIME-ATTACK: Check if time is up before selecting a new region ---
-    if (session.mode === "time-attack") {
-        const elapsedTime = Date.now() - session.createdAt;
-        if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
-            // Time is up, end the game and notify frontend
-            let {finalScore} = endGame({ session, quitReason: "timeout" });
+        // --- TIME-ATTACK: Check if time is up before selecting a new region ---
+        if (session.mode === "time-attack") {
+            const elapsedTime = Date.now() - session.createdAt;
+            if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
+                // Time is up, end the game and notify frontend
+                let {finalScore} = endGame({ session, quitReason: "timeout" });
+                res.status(200).send({
+                    message: "Time is up! Game over.",
+                    regionId: -1,
+                    isCorrect: false,
+                    voxelValue: -1,
+                    scoreIncrement: 0,
+                    finalScore,
+                    endgame: true
+                });
+                return;
+            }
+        }
+
+        // Check if there is already an active gameprogress element; if yes, return the ongoing region
+        const getActiveProgressStmt = db.prepare(
+            `SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1`
+        );
+        const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress | undefined;
+        if (activeProgress) {
+            // There is already an active region, return it
             res.status(200).send({
-                message: "Time is up! Game over.",
-                regionId: -1,
-                isCorrect: false,
-                voxelValue: -1,
-                scoreIncrement: 0,
-                finalScore,
-                endgame: true
+                message: "Ongoing region found.",
+                regionId: activeProgress.regionId,
+                newRegion: false
             });
             return;
         }
-    }
 
-    // Check if there is already an active gameprogress element; if yes, return the ongoing region
-    const getActiveProgressStmt = db.prepare(
-        `SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1`
-    );
-    const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress | undefined;
-    if (activeProgress) {
-        // There is already an active region, return it
-        res.status(200).send({
-            message: "Ongoing region found.",
-            regionId: activeProgress.regionId,
-            newRegion: false
-        });
-        return;
-    }
-
-    let randomRegionId: number | null = null;
-    if (session.mode == "time-attack") {
-        // we have to select region that has not already been answered
-        const getSessionStmt = db.prepare(
-            `SELECT * FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`
-        );
-        const answeredRegions = getSessionStmt.all(sessionId) as GameProgress[];
-        const answeredRegionIds = answeredRegions.map(
-            (region) => region.regionId
-        );
-        let remainingRegionIds = atlasValidRegions.filter(
-            (regionId) => !answeredRegionIds.includes(regionId)
-        );
-        if (remainingRegionIds.length === 0) {
-            // if no region remaining, we'll take a random region
-            remainingRegionIds = atlasValidRegions;
+        let randomRegionId: number | null = null;
+        if (session.mode == "time-attack") {
+            // we have to select region that has not already been answered
+            const getSessionStmt = db.prepare(
+                `SELECT * FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`
+            );
+            const answeredRegions = getSessionStmt.all(sessionId) as GameProgress[];
+            const answeredRegionIds = answeredRegions.map(
+                (region) => region.regionId
+            );
+            let remainingRegionIds = atlasValidRegions.filter(
+                (regionId) => !answeredRegionIds.includes(regionId)
+            );
+            if (remainingRegionIds.length === 0) {
+                // if no region remaining, we'll take a random region
+                remainingRegionIds = atlasValidRegions;
+            }
+            // Select a random region from the remaining regions
+            const randomIndex = Math.floor(
+                Math.random() * remainingRegionIds.length
+            );
+            randomRegionId = remainingRegionIds[randomIndex];
+        } else {
+            // Select a random region from all regions
+            const randomIndex = Math.floor(Math.random() * atlasValidRegions.length);
+            randomRegionId = atlasValidRegions[randomIndex];
         }
-        // Select a random region from the remaining regions
-        const randomIndex = Math.floor(
-            Math.random() * remainingRegionIds.length
-        );
-        randomRegionId = remainingRegionIds[randomIndex];
-    } else {
-        // Select a random region from all regions
-        const randomIndex = Math.floor(Math.random() * atlasValidRegions.length);
-        randomRegionId = atlasValidRegions[randomIndex];
-    }
-    if (randomRegionId !== null) {
-        db.exec(`
-            UPDATE gameprogress SET isActive = 0 WHERE sessionId = ${sessionId} AND isActive = 1;
-            INSERT INTO gameprogress (sessionId, sessionToken, regionId, timeTaken, isActive, isCorrect)
-            VALUES (${sessionId}, '${sessionToken}', ${randomRegionId}, 0, 1, 0);
-        `);
-        res.status(200).send({
-            message: "Next region selected successfully.",
-            regionId: randomRegionId,
-            newRegion: true
-        });
+        if (randomRegionId !== null) {
+            db.exec(`
+                UPDATE gameprogress SET isActive = 0 WHERE sessionId = ${sessionId} AND isActive = 1;
+                INSERT INTO gameprogress (sessionId, sessionToken, regionId, timeTaken, isActive, isCorrect)
+                VALUES (${sessionId}, '${sessionToken}', ${randomRegionId}, 0, 1, 0);
+            `);
+            res.status(200).send({
+                message: "Next region selected successfully.",
+                regionId: randomRegionId,
+                newRegion: true
+            });
+        }
+    }  catch (error: unknown) {
+        console.log(error);
+        res.status(500).send({ message: "Internal Server Error" });
     }
 };
 
 export const validateRegion = async (req: ValidateRegionRequest, res: Response): Promise<void> => {
-    const { sessionId, sessionToken, coordinates } = req.body;
-    // Validate the session token
-    const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-    const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-    if (!session) {
-        res.status(403).send({ message: "Invalid session or token mismatch" });
-        return
-    }
-    // get time elapsed from session start
-    let elapsedTime = Math.floor((Date.now() - session.createdAt)); // Time in milliseconds
-
-    // Retrieve the active gameprogress entry
-    const getActiveProgressStmt = db.prepare(`
-        SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
-    `);
-    const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress;
-    if (!activeProgress) {
-        res.status(400).send({ message: "No active region to validate." });
-        return;
-    }
-    const { regionId } = activeProgress;
-    // Validate the coordinates
-    if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 3) {
-        res.status(400).send({ message: "Invalid coordinates provided." });
-        return;
-    }
-    const [x, y, z] = coordinates;
-    // Get the atlas data for the session
-    const atlasImage: NVImage = imageRef[session.atlas];
-    const atlasMetadata = imageMetadata[session.atlas];
-    if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
-        res.status(400).send({ message: "Coordinates are out of bounds." });
-        return;
-    }
-    const voxelValue: number = atlasImage.getValue(x, y, z);
-    // Check if the voxel value matches the active region ID
-    const isCorrect: boolean = voxelValue === regionId;
-
-    // update the score
-    let scoreIncrement = 0;
-    if (session.mode == "streak") {
-        if (isCorrect) {
-            scoreIncrement = 1;
+    try {
+        const { sessionId, sessionToken, coordinates } = req.body;
+        // Validate the session token
+        const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
+        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
+        if (!session) {
+            res.status(403).send({ message: "Invalid session or token mismatch" });
+            return
         }
-    } else if (session.mode == "time-attack" && elapsedTime < MAX_TIME_IN_SECONDS*1000) {
-        if (isCorrect) {
-            scoreIncrement = MAX_POINTS_PER_REGION;
-        } else {
-            if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                const center: number[] = regionCenters[session.atlas][regionId];
-                const distance = Math.sqrt(
-                    Math.pow(center[0] - x, 2) +
-                    Math.pow(center[1] - y, 2) +
-                    Math.pow(center[2] - z, 2)
-                );
-                // Calculate score based on distance
-                if (distance <= MAX_PENALTY_DISTANCE) {
-                    scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
-                } else {
-                    scoreIncrement = 0; // No points for too far away
+        // get time elapsed from session start
+        let elapsedTime = Math.floor((Date.now() - session.createdAt)); // Time in milliseconds
+
+        // Retrieve the active gameprogress entry
+        const getActiveProgressStmt = db.prepare(`
+            SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
+        `);
+        const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress;
+        if (!activeProgress) {
+            res.status(400).send({ message: "No active region to validate." });
+            return;
+        }
+        const { regionId } = activeProgress;
+        // Validate the coordinates
+        if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 3) {
+            res.status(400).send({ message: "Invalid coordinates provided." });
+            return;
+        }
+        const [x, y, z] = coordinates;
+        // Get the atlas data for the session
+        const atlasImage: NVImage = imageRef[session.atlas];
+        const atlasMetadata = imageMetadata[session.atlas];
+        if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
+            res.status(400).send({ message: "Coordinates are out of bounds." });
+            return;
+        }
+        const voxelValue: number = atlasImage.getValue(x, y, z);
+        // Check if the voxel value matches the active region ID
+        const isCorrect: boolean = voxelValue === regionId;
+
+        // update the score
+        let scoreIncrement = 0;
+        if (session.mode == "streak") {
+            if (isCorrect) {
+                scoreIncrement = 1;
+            }
+        } else if (session.mode == "time-attack" && elapsedTime < MAX_TIME_IN_SECONDS*1000) {
+            if (isCorrect) {
+                scoreIncrement = MAX_POINTS_PER_REGION;
+            } else {
+                if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
+                    const center: number[] = regionCenters[session.atlas][regionId];
+                    const distance = Math.sqrt(
+                        Math.pow(center[0] - x, 2) +
+                        Math.pow(center[1] - y, 2) +
+                        Math.pow(center[2] - z, 2)
+                    );
+                    // Calculate score based on distance
+                    if (distance <= MAX_PENALTY_DISTANCE) {
+                        scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                    } else {
+                        scoreIncrement = 0; // No points for too far away
+                    }
                 }
             }
         }
-    }
 
-    const updateProgressStmt = db.prepare(`
-        UPDATE gameprogress
-        SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?
-        WHERE id = ?
-    `);
-    let isActive = 0
-    if(session.mode == "practice"){
-        isActive = isCorrect ? 0 : 1
-    }
-    const timeTaken = Math.floor((Date.now() - activeProgress.createdAt)); // Time in milliseconds
-    updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
+        const updateProgressStmt = db.prepare(`
+            UPDATE gameprogress
+            SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?
+            WHERE id = ?
+        `);
+        let isActive = 0
+        if(session.mode == "practice"){
+            isActive = isCorrect ? 0 : 1
+        }
+        const timeTaken = Math.floor((Date.now() - activeProgress.createdAt)); // Time in milliseconds
+        updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
 
-    let endgame = false;
-    let quitReason = ""
-    let bonusTime = 0
-    if (!isCorrect && session.mode == "streak") {
-        endgame = true;
-        quitReason = "streak-ended"
-    } else if (session.mode == "time-attack") {
-        // Check time elapsed since session start
-        // Check if all regions have been answered
-        const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
-        const answeredRegions = getAnsweredRegionsStmt.get(sessionId) as { count: number };
-        if (answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK) {
+        let endgame = false;
+        let quitReason = ""
+        let bonusTime = 0
+        if (!isCorrect && session.mode == "streak") {
             endgame = true;
-            quitReason = "all-answered"
-            if (elapsedTime < MAX_TIME_IN_SECONDS*1000) { // add bonus points if time is not over
-                bonusTime = MAX_TIME_IN_SECONDS*1000 - elapsedTime
-                scoreIncrement += Math.floor(bonusTime * BONUS_POINTS_PER_SECOND / 1000);
+            quitReason = "streak-ended"
+        } else if (session.mode == "time-attack") {
+            // Check time elapsed since session start
+            // Check if all regions have been answered
+            const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
+            const answeredRegions = getAnsweredRegionsStmt.get(sessionId) as { count: number };
+            if (answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK) {
+                endgame = true;
+                quitReason = "all-answered"
+                if (elapsedTime < MAX_TIME_IN_SECONDS*1000) { // add bonus points if time is not over
+                    bonusTime = MAX_TIME_IN_SECONDS*1000 - elapsedTime
+                    scoreIncrement += Math.floor(bonusTime * BONUS_POINTS_PER_SECOND / 1000);
+                }
+            }
+            if (elapsedTime >= MAX_TIME_IN_SECONDS*1000) {
+                endgame = true;
+                elapsedTime = MAX_TIME_IN_SECONDS*1000;
             }
         }
-        if (elapsedTime >= MAX_TIME_IN_SECONDS*1000) {
-            endgame = true;
-            elapsedTime = MAX_TIME_IN_SECONDS*1000;
+
+        // Save the score in the session
+        const finalScore = session.currentScore + scoreIncrement; // Add the last score increment
+        const updateSessionStmt = db.prepare(`
+            UPDATE gamesessions
+            SET currentScore = ?
+            WHERE id = ?
+        `);
+        updateSessionStmt.run(finalScore, sessionId);
+
+        // If the game is over, update the session status
+        if (endgame) {
+            endGame({session, finalScore, elapsedTime, quitReason, bonusTime})
         }
+        // Respond with the result
+        res.status(200).send({
+            message: isCorrect ? "Correct guess!" : "Incorrect guess.",
+            isCorrect,
+            regionId,
+            voxelValue,
+            endgame,
+            scoreIncrement,
+            finalScore,
+        });
+    } catch (error: unknown) {
+        console.log(error);
+        res.status(500).send({ message: "Internal Server Error" });
     }
-
-    // Save the score in the session
-    const finalScore = session.currentScore + scoreIncrement; // Add the last score increment
-    const updateSessionStmt = db.prepare(`
-        UPDATE gamesessions
-        SET currentScore = ?
-        WHERE id = ?
-    `);
-    updateSessionStmt.run(finalScore, sessionId);
-
-    // If the game is over, update the session status
-    if (endgame) {
-        endGame({session, finalScore, elapsedTime, quitReason, bonusTime})
-    }
-    // Respond with the result
-    res.status(200).send({
-        message: isCorrect ? "Correct guess!" : "Incorrect guess.",
-        isCorrect,
-        regionId,
-        voxelValue,
-        endgame,
-        scoreIncrement,
-        finalScore,
-    });
 }
 
 export const manualClotureGameSession = async (req: ClotureGameSessionRequest, res: Response): Promise<void> => {
-    const { sessionId, sessionToken } = req.body;
-    // Validate the session token
-    const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-    const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-    if (!session) {
-        res.status(403).send({ message: "Invalid session or token mismatch" });
-        return
+    try {
+        const { sessionId, sessionToken } = req.body;
+        // Validate the session token
+        const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
+        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
+        if (!session) {
+            res.status(403).send({ message: "Invalid session or token mismatch" });
+            return
+        }
+        
+        // Time is up, end the game and notify frontend
+        let {finalScore} = endGame({ session, quitReason: "timeout" });
+        res.status(200).send({
+            message: session.mode === "time-attack"?"Time is up! Game over.":"Game over.",
+            isCorrect: false,
+            regionId: -1,
+            voxelValue: -1,
+            endgame: true,
+            scoreIncrement: 0,
+            finalScore
+        });
+        return;
+    } catch (error: unknown) {
+        console.log(error);
+        res.status(500).send({ message: "Internal Server Error" });
     }
-    
-    // Time is up, end the game and notify frontend
-    let {finalScore} = endGame({ session, quitReason: "timeout" });
-    res.status(200).send({
-        message: session.mode === "time-attack"?"Time is up! Game over.":"Game over.",
-        isCorrect: false,
-        regionId: -1,
-        voxelValue: -1,
-        endgame: true,
-        scoreIncrement: 0,
-        finalScore
-    });
-    return;
 }
 
 const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} : 
     {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : {finalScore: number, elapsedTime: number} => {
-    if(finalScore === undefined){
-        const getScoreStmt = db.prepare(`SELECT currentScore FROM gamesessions WHERE id = ?`);
-        const scoreRow = getScoreStmt.get(session.id) as { currentScore: number };
-        finalScore = scoreRow ? scoreRow.currentScore : 0;
-    }
-    if(elapsedTime === undefined){
-        elapsedTime = Math.min(Math.floor((Date.now() - session.createdAt)), MAX_TIME_IN_SECONDS);
-    }
-    if(bonusTime === undefined) bonusTime = 0
-    if(quitReason === undefined) quitReason = ""
-    // calculate accuracy for time attack mode
-    let accurateClicks = 0
-    let incorrectClicks = 0
-    let totalClicks = 0
-    if (session.mode === "time-attack") {
-        // All correct answers
-        const getScoreStmt = db.prepare(`
-            SELECT COUNT(*) as count FROM gameprogress
-            WHERE sessionId = ? AND isCorrect = 1
+    try {
+        if(finalScore === undefined){
+            const getScoreStmt = db.prepare(`SELECT currentScore FROM gamesessions WHERE id = ?`);
+            const scoreRow = getScoreStmt.get(session.id) as { currentScore: number };
+            finalScore = scoreRow ? scoreRow.currentScore : 0;
+        }
+        if(elapsedTime === undefined){
+            elapsedTime = Math.min(Math.floor((Date.now() - session.createdAt)), MAX_TIME_IN_SECONDS);
+        }
+        if(bonusTime === undefined) bonusTime = 0
+        if(quitReason === undefined) quitReason = ""
+        // calculate accuracy for time attack mode
+        let accurateClicks = 0
+        let incorrectClicks = 0
+        let totalClicks = 0
+        if (session.mode === "time-attack") {
+            // All correct answers
+            const getScoreStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const accurateResults = getScoreStmt.get(session.id) as { count: number };
+            accurateClicks = accurateResults.count
+            // Accuracy: correct / total attempts
+            const getTotalStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 0
+            `);
+            const incorrectResults = getTotalStmt.get(session.id) as { count: number };
+            incorrectClicks = incorrectResults.count
+            totalClicks = accurateClicks + incorrectClicks
+        }
+        if (session.mode === "streak") {
+            const getScoreStmt = db.prepare(`
+                SELECT COUNT(*) as count FROM gameprogress
+                WHERE sessionId = ? AND isCorrect = 1
+            `);
+            const accurateResults = getScoreStmt.get(session.id) as { count: number };
+            accurateClicks = accurateResults.count
+            totalClicks = accurateClicks
+        }
+
+        // Compute time per region stats for this session
+        const getTimesStmt = db.prepare(`
+            SELECT timeTaken, isCorrect FROM gameprogress WHERE sessionId = ?
         `);
-        const accurateResults = getScoreStmt.get(session.id) as { count: number };
-        accurateClicks = accurateResults.count
-        // Accuracy: correct / total attempts
-        const getTotalStmt = db.prepare(`
-            SELECT COUNT(*) as count FROM gameprogress
-            WHERE sessionId = ? AND isCorrect = 0
+        const timesRows = getTimesStmt.all(session.id) as { timeTaken: number, isCorrect: number }[];
+        const times = timesRows.map(row => row.timeTaken).filter(t => typeof t === 'number' && !isNaN(t));
+
+        // time stats
+        let minTimePerRegion = null, maxTimePerRegion = null, avgTimePerRegion = null;
+        if (times.length > 0) {
+            minTimePerRegion = Math.min(...times);
+            maxTimePerRegion = Math.max(...times);
+            avgTimePerRegion = times.reduce((a, b) => a + b, 0) / times.length;
+        }
+
+        // time stats in correct regions
+        const correctTimes = timesRows.filter(row => row.isCorrect === 1).map(row => row.timeTaken);
+        let minTimeCorrect = null, maxTimeCorrect = null, avgTimeCorrect = null;
+        if (correctTimes.length > 0) {
+            minTimeCorrect = Math.min(...correctTimes);
+            maxTimeCorrect = Math.max(...correctTimes);
+            avgTimeCorrect = correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length;
+        }
+
+        // Insert into finishedsessions
+        const insertFinishedStmt = db.prepare(`
+            INSERT INTO finishedsessions (userId, mode, atlas, score, 
+                attempts, correct, incorrect, 
+                minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
+                minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
+                quitReason, duration)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        const incorrectResults = getTotalStmt.get(session.id) as { count: number };
-        incorrectClicks = incorrectResults.count
-        totalClicks = accurateClicks + incorrectClicks
-    }
-    if (session.mode === "streak") {
-        const getScoreStmt = db.prepare(`
-            SELECT COUNT(*) as count FROM gameprogress
-            WHERE sessionId = ? AND isCorrect = 1
-        `);
-        const accurateResults = getScoreStmt.get(session.id) as { count: number };
-        accurateClicks = accurateResults.count
-        totalClicks = accurateClicks
-    }
-
-    // Compute time per region stats for this session
-    const getTimesStmt = db.prepare(`
-        SELECT timeTaken, isCorrect FROM gameprogress WHERE sessionId = ?
-    `);
-    const timesRows = getTimesStmt.all(session.id) as { timeTaken: number, isCorrect: number }[];
-    const times = timesRows.map(row => row.timeTaken).filter(t => typeof t === 'number' && !isNaN(t));
-
-    // time stats
-    let minTimePerRegion = null, maxTimePerRegion = null, avgTimePerRegion = null;
-    if (times.length > 0) {
-        minTimePerRegion = Math.min(...times);
-        maxTimePerRegion = Math.max(...times);
-        avgTimePerRegion = times.reduce((a, b) => a + b, 0) / times.length;
-    }
-
-    // time stats in correct regions
-    const correctTimes = timesRows.filter(row => row.isCorrect === 1).map(row => row.timeTaken);
-    let minTimeCorrect = null, maxTimeCorrect = null, avgTimeCorrect = null;
-    if (correctTimes.length > 0) {
-        minTimeCorrect = Math.min(...correctTimes);
-        maxTimeCorrect = Math.max(...correctTimes);
-        avgTimeCorrect = correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length;
-    }
-
-    // Insert into finishedsessions
-    const insertFinishedStmt = db.prepare(`
-        INSERT INTO finishedsessions (userId, mode, atlas, score, 
-            attempts, correct, incorrect, 
+        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, 
+            totalClicks, accurateClicks, incorrectClicks,
             minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-            minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-            quitReason, duration)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, 
-        totalClicks, accurateClicks, incorrectClicks,
-        minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-        minTimeCorrect, maxTimeCorrect, avgTimeCorrect,
-        quitReason, elapsedTime);
+            minTimeCorrect, maxTimeCorrect, avgTimeCorrect,
+            quitReason, elapsedTime);
 
-    // Delete all gameprogress for this session
-    const deleteProgressStmt = db.prepare(`DELETE FROM gameprogress WHERE sessionId = ?`);
-    deleteProgressStmt.run(session.id);
+        // Delete all gameprogress for this session
+        const deleteProgressStmt = db.prepare(`DELETE FROM gameprogress WHERE sessionId = ?`);
+        deleteProgressStmt.run(session.id);
 
-    // Delete the gamesession itself
-    const deleteSessionStmt = db.prepare(`DELETE FROM gamesessions WHERE id = ?`);
-    deleteSessionStmt.run(session.id);
+        // Delete the gamesession itself
+        const deleteSessionStmt = db.prepare(`DELETE FROM gamesessions WHERE id = ?`);
+        deleteSessionStmt.run(session.id);
 
-    return {finalScore, elapsedTime}
+        return {finalScore, elapsedTime}
+    } catch (error: unknown) {
+        console.log(error);
+        return {finalScore:0, elapsedTime:0}
+    }
 }
