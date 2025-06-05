@@ -20,7 +20,7 @@ import MultiplayerGameScreen from './MultiplayerGameScreen';
 import { jwtDecode } from 'jwt-decode';
 
 function App() {
-   const niivue = new Niivue();
+   const niivue = new Niivue({logLevel: "warn"});
    const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
@@ -185,13 +185,13 @@ function App() {
                   atlasName: name
                }));
             loadingAtlasRegions.push(...regions);
-            console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+            //console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
          } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
             showNotification('error_loading_atlas', false, { atlas: name });
          }
       }
-      console.log('Total regions loaded:', atlasRegions.length);
+      //console.log('Total regions loaded:', atlasRegions.length);
       if (loadingAtlasRegions.length === 0) {
          showNotification('no_regions_loaded', false);
          setAtlasRegions([])

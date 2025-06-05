@@ -100,7 +100,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const niivue = useRef(new Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1]
+    crosshairColor: [1, 1, 1, 1],
+    logLevel: "warn"
   }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
@@ -188,21 +189,21 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         const dataRegions = [...new Set((atlasData as unknown as number[]).filter(val => val > 0).map(val => Math.round(val)))];
         validRegions.current = dataRegions.filter(val => cMap.current?.labels?.[val] !== undefined && Number.isInteger(val));
 
-        console.log(`Atlas: ${selectedAtlasFiles.name}`);
-        console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
-        console.log(`Data Regions (rounded):`, dataRegions);
-        console.log(`Valid Regions:`, validRegions);
-        if (validRegions.current) console.log(`Valid Region Labels:`, validRegions.current.map(id => cMap.current?.labels?.[id]));
+        //console.log(`Atlas: ${selectedAtlasFiles.name}`);
+        //console.log(`Atlas Data Sample:`, atlasData.slice(0, 10));
+        //console.log(`Data Regions (rounded):`, dataRegions);
+        //console.log(`Valid Regions:`, validRegions);
+        //if (validRegions.current) console.log(`Valid Region Labels:`, validRegions.current.map(id => cMap.current?.labels?.[id]));
 
         if (validRegions.current.length === 0) {
-          console.warn(`No valid regions found in ${selectedAtlasFiles.name} data.`);
+          //console.warn(`No valid regions found in ${selectedAtlasFiles.name} data.`);
           validRegions.current = Object.keys(cMap.current.labels || [])
             .map(Number)
             .filter(val => val > 0 && Number.isInteger(val));
           if (validRegions.current.length === 0) {
             throw new Error(`No valid regions available for ${selectedAtlasFiles.name}`);
           }
-          console.warn(`Fallback to cmap.labels keys:`, validRegions);
+          //console.warn(`Fallback to cmap.labels keys:`, validRegions);
         }
       }
     } catch (error) {
@@ -295,11 +296,10 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       if (session) {
         sessionToken.current = session.sessionToken;
         sessionId.current = session.sessionId;
-        console.log("Online session started:", session);
+        //console.log("Online session started:", session);
       } else {
         console.warn("Failed to start online session, proceeding in offline mode.");
       }
-      console.log("is logged in, starting session"); // TODO
     }).catch((error) => {
       console.error("Error starting online session:", error);
     }).finally(() => {
@@ -309,7 +309,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           if (validRegions.current.length >= TOTAL_REGIONS_TIME_ATTACK) {
             validRegions.current.sort(() => 0.5 - Math.random());
             validRegions.current = validRegions.current.slice(0, TOTAL_REGIONS_TIME_ATTACK);
-            console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
+            //console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
           } else if (validRegions.current.length > 0) {
             console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${validRegions.current.length} available regions.`);
             validRegions.current.sort(() => 0.5 - Math.random()); // Still shuffle available regions
@@ -615,9 +615,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
         callback.setHeaderText(incorrectMessage);
         callback.setHeaderTextMode("failure")
 
-        console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
+        //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
-        console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
+        //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
         if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
@@ -649,12 +649,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
               scoreIncrement = 0; // No points for too far away
             }
 
-            console.log(`Time Attack Error:`);
+            /*console.log(`Time Attack Error:`);
             console.log(`  Target Region ID: ${currentTarget} (${targetName}), Clicked Region ID: ${clickedRegion} (${clickedRegionName})`);
             console.log(`  Correct Center: ${correctCenter}`);
             console.log(`  Clicked Center: ${clickedCenter}`);
             console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
-            console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);
+            console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);*/
             // ***************************************************************************
 
           } else {
@@ -716,7 +716,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
 
   function highlightRegionFluorescentYellow() {
     if (gameMode === 'navigation' && highlightedRegion === 0) return;
-    console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
+    //console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
     if (cLut.current && niivue.current && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
       const lut = cLut.current.slice();
       // Make all regions transparent initially except region 0 if needed
@@ -790,7 +790,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       } else {
         callback.setHeaderText(prefix + cMap.current.labels[currentTarget.current]);
       }
-      console.log(`Displaying target: ${cMap.current.labels[currentTarget.current]} (ID: ${currentTarget.current})`);
+      //console.log(`Displaying target: ${cMap.current.labels[currentTarget.current]} (ID: ${currentTarget.current})`);
     } else {
       callback.setHeaderText(''); // No region : cleanup
     }

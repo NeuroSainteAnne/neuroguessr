@@ -18,7 +18,8 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
   const niivue = useRef(new Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1]
+    crosshairColor: [1, 1, 1, 1],
+    logLevel: "warn"
   }));
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);

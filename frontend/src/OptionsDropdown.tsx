@@ -19,9 +19,9 @@ function OptionsDropdown({ currentPage, t, callback, viewerOptions }:
                 {t("view_options")}
                 <span className="hamburger">
                     <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M0 1H24" stroke="white" stroke-width="1.5" />
-                        <path d="M0 9H24" stroke="white" stroke-width="1.5" />
-                        <path d="M0 17H24" stroke="white" stroke-width="1.5" />
+                        <path d="M0 1H24" stroke="white" strokeWidth="1.5" />
+                        <path d="M0 9H24" stroke="white" strokeWidth="1.5" />
+                        <path d="M0 17H24" stroke="white" strokeWidth="1.5" />
                     </svg>
                 </span>
             </button>

@@ -23,7 +23,7 @@ export async function refreshToken(): Promise<string|null> {
         if (response.ok) {
             const result = await response.json();
             localStorage.setItem('authToken', result.token); // Save the new token
-            console.log('Token refreshed successfully');
+            //console.log('Token refreshed successfully');
             return result.token;
         } else {
             console.error('Failed to refresh token:', response.status);

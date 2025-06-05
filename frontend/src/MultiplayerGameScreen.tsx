@@ -27,7 +27,8 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   const niivue = useRef(new Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1]
+    crosshairColor: [1, 1, 1, 1],
+    logLevel: "warn"
   }));
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
