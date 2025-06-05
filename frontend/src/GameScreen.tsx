@@ -792,9 +792,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
       }
       console.log(`Displaying target: ${cMap.current.labels[currentTarget.current]} (ID: ${currentTarget.current})`);
     } else {
-      // Use 'find' translation key directly
-      callback.setHeaderText(t('find') + t('unknown_region')); // Use translated "Find:" and "Unknown"
-      console.error(`No label for currentTarget ${currentTarget.current}`, cMap.current?.labels);
+      callback.setHeaderText(''); // No region : cleanup
     }
   }
 
