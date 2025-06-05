@@ -6,15 +6,17 @@ import { use, useEffect, useRef, useState } from 'react';
 import { Niivue, NVImage, SHOW_RENDER } from '@niivue/niivue';
 import { fetchJSON } from './helper_niivue';
 import { initNiivue } from './NiiHelpers';
+import { useNavigate, useParams } from 'react-router-dom';
 
-function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, askedAtlas,
+function Neurotheka({ t, callback, currentLanguage, atlasRegions, 
   preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer }:
   {
     t: TFunction<"translation", undefined>, currentLanguage: string, callback: AppCallback, atlasRegions: AtlasRegion[],
-    askedRegion: number | null, askedAtlas: string | null,
     preloadedAtlas: NVImage | null, preloadedBackgroundMNI: NVImage | null,
     viewerOptions: DisplayOptions, loadEnforcer: number
   }) {
+  const { askedAtlas, askedRegion } = useParams();
+  const navigate = useNavigate();
   const niivue = useRef(new Niivue({
     show3Dcrosshair: true,
     backColor: [0, 0, 0, 1],
@@ -58,7 +60,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       niivue.current.updateGLVolume();
 
       // Load colormap
-      const cmap = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      const cmap = await fetchJSON("/assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
 
       // Reset volumes
       for (let i = 1; i < niivue.current.volumes.length; i++) {
@@ -72,10 +74,10 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       let tractLabel = ""
       let tractUrl = ""
 
-      if (askedAtlas === 'xtract' && isFinite(askedRegion) && askedRegion in cmap.labels) {
-        const cmap_en = await fetchJSON("assets/atlas/descr/en/" + selectedAtlasFiles.json);
+      if (askedAtlas === 'xtract' && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
+        const cmap_en = await fetchJSON("/assets/atlas/descr/en/" + selectedAtlasFiles.json);
         tractLabel = cmap_en.labels[askedRegion].replace(/\s+/g, '_');
-        tractUrl = `assets/atlas/TOM_trackings/${tractLabel}.tck`;
+        tractUrl = `/assets/atlas/TOM_trackings/${tractLabel}.tck`;
         try {
           const response = await fetch(tractUrl, { method: 'HEAD' });
           if (response.ok) {
@@ -123,7 +125,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
         const numRegions = Object.keys(cmap.labels).length;
         const clut = new Uint8Array(numRegions * 4);
         for (let i = 0; i < numRegions; i++) {
-          if (i === askedRegion && isFinite(askedRegion) && askedRegion in cmap.labels) {
+          if (i === Number(askedRegion) && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
             clut[i * 4 + 0] = 43; // R
             clut[i * 4 + 1] = 111; // G
             clut[i * 4 + 2] = 161;   // B
@@ -144,7 +146,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
       niivue.current.opts.isSliceMM = true;
 
       // Update display
-      if (isFinite(askedRegion) && askedRegion in cmap.labels) {
+      if (isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
         callback.setHeaderText(`${cmap.labels[askedRegion] || "Unknown"} (${selectedAtlasFiles.name})`);
       } else {
         callback.setHeaderText(t('error_loading_data', { atlas: selectedAtlasFiles.name }));
@@ -177,6 +179,9 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
 
   useEffect(() => {
     checkLoading();
+    if(askedAtlas && askedRegion){
+      callback.launchNeurotheka({atlas: askedAtlas, id: Number(askedRegion)})
+    }
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, askedRegion, askedAtlas, loadEnforcer])
 
   useEffect(() => {
@@ -211,7 +216,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions, askedRegion, a
 
       <div className="button-container">
         <button id="return-button" className="return-button" 
-          onClick={()=>callback.gotoPage("welcome")}>{t("return_button")}</button>
+          onClick={()=>navigate("/welcome")}>{t("return_button")}</button>
       </div>
 
       {showHelpOverlay && <div id="help-overlay" className="help-overlay">

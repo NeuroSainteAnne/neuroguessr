@@ -1,13 +1,12 @@
 /// <reference types="vite/client" />
 
 type AppCallback = {
-  startGame: (game: string) => void;
-  gotoPage: (page: string) => void;
   handleChangeLanguage: (lang: string) => void;
   activateGuestMode: () => void;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
   updateToken: (token: string|null) => void;
-  openNeurotheka: (region: AtlasRegion) => void;
+  launchNeurotheka: (region: Partial<AtlasRegion>) => void;
+  launchSinglePlayerGame: (atlas: string, mode: string) => void;
   logout: () => void;
   setHeaderText: (text: string) => void;
   setHeaderTextMode: (mode: string) => void;
@@ -16,10 +15,6 @@ type AppCallback = {
   setHeaderScore: (score: string) => void;
   setHeaderErrors: (errors: string) => void;
   setViewerOption: (option: DisplayOptions) => void;
-  launchSinglePlayerGame: (atlas: string, mode: string) => void;
-  launchMultiPlayerGame: (sessionCode: string, sessionToken: string|undefined) => void;
-  setWelcomeSubpage: (subpage: string) => void;
-  gotoWelcomeSubpage: (subpage: string) => void;
 };
 
 type AtlasRegion = {

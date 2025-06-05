@@ -7,14 +7,13 @@ import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import { isTokenValid, refreshToken } from './helper_login';
 import { defineNiiOptions, getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
+import { useNavigate, useParams } from 'react-router-dom';
 
 type GameScreenProps = {
   t: TFunction<"translation", undefined>;
   callback: AppCallback;
   currentLanguage: string;
   atlasRegions: AtlasRegion[];
-  askedAtlas: string | null;
-  gameMode: string | null;
   preloadedAtlas: NVImage | null;
   preloadedBackgroundMNI: NVImage | null;
   viewerOptions: DisplayOptions;
@@ -62,7 +61,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
 }
 
 
-function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, gameMode,
+function GameScreen({ t, callback, currentLanguage, atlasRegions,
   preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard }: GameScreenProps) {
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -74,6 +73,8 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
 
+  const { askedAtlas, gameMode } = useParams();
+  const navigate = useNavigate();
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
@@ -170,7 +171,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
     try {
       if (!askedAtlas) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
-      cMap.current = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      cMap.current = await fetchJSON("/assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
         niivue.current.volumes[1].setColormapLabel(cMap.current)
         niivue.current.volumes[1].setColormapLabel({
@@ -213,6 +214,9 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
   }
   useEffect(() => {
     checkLoading();
+    if(askedAtlas && gameMode){
+      callback.launchSinglePlayerGame(askedAtlas, gameMode)
+    }
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, gameMode, askedAtlas, loadEnforcer])
 
   const checkLoading = async () => {
@@ -878,7 +882,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
       </div>
       <div className="button-container">
-        <button className="return-button" onClick={() => callback.gotoPage("welcome")}>{t("return_button")}</button>
+        <button className="return-button" onClick={() => navigate("/welcome")}>{t("return_button")}</button>
         {gameMode == "navigation" && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
         {gameMode != "navigation" && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
@@ -927,7 +931,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
           {userPublishToLeaderboard === null && <PublishToLeaderboardBox t={t} callback={callback} />}
           <div className="overlay-buttons">
-            <button id="go-back-menu-button-streak" className="home-button" onClick={() => callback.gotoPage("welcome")}>
+            <button id="go-back-menu-button-streak" className="home-button" onClick={() => navigate("/welcome")}>
               <i className="fas fa-home"></i>
             </button>
             <button id="restart-button-streak" className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
@@ -951,7 +955,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions, askedAtlas, ga
             <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
           </div>
           <div className="overlay-buttons">
-            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoPage("welcome")}>
+            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => navigate("/welcome")}>
               <i className="fas fa-home"></i>
             </button>
             <button id="restart-button-time-attack" className="restart-button" onClick={() => { setShowTimeattackOverlay(false); startGame() }}>

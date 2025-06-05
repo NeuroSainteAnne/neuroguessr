@@ -1,8 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import './LandingPage.css'
 import type { TFunction } from 'i18next';
 
 function LandingPage({t, callback}: 
     {t: TFunction<"translation", undefined>, callback: AppCallback }) {
+    const navigate = useNavigate();
 
     return (
         <div id="unlogged-landing-page" className="landing-content">
@@ -13,9 +15,9 @@ function LandingPage({t, callback}:
             <div className="sign-in-panel">
                 <div className="sign-in-options-container">
                     <button className="option-button sign-in-button" 
-                            onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
+                            onClick={()=>navigate("/login")}>{t("sign_in")}</button>
                     <button className="option-button sign-up-button"
-                            onClick={()=>callback.gotoPage("register")}>{t("sign_up")}</button>
+                            onClick={()=>navigate("/register")}>{t("sign_up")}</button>
                     <button className="option-button continue-button"
                             onClick={()=>callback.activateGuestMode()}>{t("no_sign_in")}</button>
                 </div>

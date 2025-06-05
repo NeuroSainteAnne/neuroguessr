@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import './ResetPasswordScreen.css'
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
     const [isCheckedToken, setIsCheckedToken] = useState<boolean>(false);
@@ -11,6 +12,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
     const [userId, setUserId] = useState<string|null>(null);
     const [resetToken, setResetToken] = useState<string|null>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         handleCheckToken()
@@ -114,7 +116,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
             if (response.ok) {
               setRecoverySuccessText(t('password_reset_success'));
               callback.updateToken(result.token);
-              callback.gotoPage("welcome");
+              navigate("/welcome");
             } else {
               setRecoveryErrorText(result.message || t('password_reset_failed'));
             }

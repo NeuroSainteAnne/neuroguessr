@@ -141,6 +141,7 @@ function UserConfig({t, callback, authToken}:
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>
                 <table className="login-element">
+                    <tbody>
                     <tr>
                         <td>
                             <label id="username-label" htmlFor="username">{t("login_username")}</label>
@@ -217,6 +218,7 @@ function UserConfig({t, callback, authToken}:
                             {reconfigureSuccessText}
                         </td>
                     </tr>}
+                    </tbody>
                 </table>
 
                 <button type="submit">{t("reconfigure_button")}</button>

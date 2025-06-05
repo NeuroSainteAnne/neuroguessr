@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { GameSelectorAtlas } from './GameSelector';
 import {QRCodeSVG} from 'qrcode.react';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -10,6 +11,7 @@ const DEFAULT_GAMEOVER_ON_ERROR = false;
 
 const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, userUsername: string }) => {
+    const navigate = useNavigate();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -134,12 +136,12 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="atlas-selection">
-                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
+                            <h2><img src="/assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
                             <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
                                 selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} />
                         </section>
                         <section className="mode-selection">
-                            <h2><img src="assets/interface/numero-2.png" alt="Parameters Icon" /> <span>{t("select_params")}</span></h2>
+                            <h2><img src="/assets/interface/numero-2.png" alt="Parameters Icon" /> <span>{t("select_params")}</span></h2>
                             <div className="mode-buttons">
                                 <div style={{ margin: '24px 0' }}>
                                 <label htmlFor="numRegionsSlider" style={{ fontSize: 18, marginRight: 12 }}>
@@ -195,7 +197,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="lobby-wait">
-                            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
+                            <h2><img src="/assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
                             <div>
                                 <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
                                     <button
@@ -220,7 +222,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
-                                                const url = `${window.location.origin}/#/multiplayer-game/${sessionCode}`;
+                                                const url = `${window.location.origin}/multiplayer-game/${sessionCode}`;
                                                 navigator.clipboard.writeText(url);
                                                 setCopiedIcon("link");
                                                 setTimeout(() => setCopiedIcon(null), 1000);
@@ -234,7 +236,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                                         </svg>
                                     </button>
                                 </div>
-                                <QRCodeSVG value={`${window.location.origin}/#/multiplayer-game/${sessionCode}`}
+                                <QRCodeSVG value={`${window.location.origin}/multiplayer-game/${sessionCode}`}
                                     bgColor="#00000000" fgColor="#FFFFFF" />
                                 <h3>{t("game_code")}</h3>
                             </div>
@@ -248,7 +250,8 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
                             <button
                             className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                             onClick={() => {
-                                if(!loading && selectedAtlas && lobbyUsers.length > 1) callback.launchMultiPlayerGame(sessionCode, sessionToken || "");
+                                if(!loading && selectedAtlas && lobbyUsers.length > 1) 
+                                    navigate(`/multiplayer-game/${sessionCode}${(sessionToken?"/"+sessionToken:"")}`);
                             }}
                             disabled={loading}
                         >

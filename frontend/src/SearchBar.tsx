@@ -2,10 +2,12 @@ import type { TFunction } from 'i18next'
 import './SearchBar.css'
 import atlasFiles from './atlas_files'
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Searchbar({ t, callback, atlasRegions }:
   { t: TFunction<"translation", undefined>, callback: AppCallback, atlasRegions: AtlasRegion[] }) {
   const searchInput = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const handleSearchUpdate = () => {
     searchAtlasRegions(searchInput.current?.value || "");
   }
@@ -36,6 +38,7 @@ function Searchbar({ t, callback, atlasRegions }:
             placeholder={t("search_placeholder")}
             onChange={handleSearchUpdate}
             ref={searchInput}
+            autoComplete="off" spellCheck="false"
           />
           {suggestionList.length > 0 && 
             <div id="search-suggestions" className="search-suggestions">
@@ -43,7 +46,7 @@ function Searchbar({ t, callback, atlasRegions }:
               <div
                 key={region.atlasName+"_"+region.name+"_"+region.id}
                 className="search-suggestion"
-                onClick={() => { callback.openNeurotheka(region); setSuggestionList([]); }}
+                onClick={() => { navigate(`/neurotheka/${region.atlas}/${region.id}`); setSuggestionList([]); }}
                 dangerouslySetInnerHTML={{
                   __html: `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`
                 }}

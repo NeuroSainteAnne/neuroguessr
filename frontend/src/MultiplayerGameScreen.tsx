@@ -2,19 +2,22 @@ import type { TFunction } from 'i18next';
 import "./MultiplayerGameScreen.css"
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { getClickedRegion, initNiivue, loadAtlasNii } from './NiiHelpers';
 import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import config from "../config.json"
 
-const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, askedSessionCode, askedSessionToken, 
+const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, 
   loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, isLoggedIn: boolean, userUsername: string,
-    askedSessionCode: string | null, askedSessionToken: string | null, loadEnforcer: number,
+    loadEnforcer: number,
     viewerOptions: DisplayOptions, preloadedBackgroundMNI: NVImage | null, currentLanguage: string
   }) => {
+  const { askedSessionCode, askedSessionToken } = useParams();
+  const navigate = useNavigate();
   const [inputCode, setInputCode] = useState<string>("");
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +214,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
     try {
       if (!askedAtlas || !askedLut) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
-      cMap.current = await fetchJSON("assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      cMap.current = await fetchJSON("/assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue.current && niivue.current.volumes.length > 1 && cMap.current) {
         niivue.current.volumes[1].setColormapLabel(cMap.current)
         niivue.current.volumes[1].setColormapLabel(askedLut);
@@ -235,6 +238,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   }
 
   useEffect(() => {
+    console.log(askedSessionCode)
     if (isLoggedIn && askedSessionCode) {
       clearInterface()
       setLobbyUsers([])
@@ -287,7 +291,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   if (askedAtlas) {
       const atlas = atlasFiles[askedAtlas];
       if (atlas) {
-        const niiFile = "assets/atlas/nii/" + atlas.nii;
+        const niiFile = "/assets/atlas/nii/" + atlas.nii;
         NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
             setLoadedAtlas(nvImage);
         }).catch((error) => {
@@ -419,7 +423,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
           </ul>
           <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
           <div className="overlay-buttons">
-            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => callback.gotoWelcomeSubpage("multiplayer")}>
+            <button id="go-back-menu-button-time-attack" className="home-button" onClick={() => navigate("/welcome/multiplayer")}>
               <i className="fas fa-home"></i>
             </button>
           </div>

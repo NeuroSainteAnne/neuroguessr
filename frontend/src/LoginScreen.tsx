@@ -3,8 +3,10 @@ import './LoginScreen.css'
 import { useCallback, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../config.json';
+import { useNavigate } from 'react-router-dom';
 
 function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translation", undefined>, callback: AppCallback, currentLanguage: string }) {
+    const navigate = useNavigate();
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const recoveryEmailInput = useRef<HTMLInputElement>(null);
@@ -59,15 +61,15 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
               if(redirectParam == "multiplayer-game"){
                 const askedSC = urlParams.get('redirect_asked_session_code') || "";
                 const askedST = urlParams.get('redirect_asked_session_token') || undefined;
-                callback.launchMultiPlayerGame(askedSC, askedST)
+                navigate(`multiplayer-game/${askedSC}${askedST?"/"+askedST:""}`)
               } else if(redirectParam == "welcome"){
                 const askedSubpage = urlParams.get('redirect_subpage') || "";
-                callback.gotoWelcomeSubpage(askedSubpage)
+                navigate(`/welcome/${askedSubpage}`)
               } else {
-                callback.gotoPage(redirectParam);
+                navigate(`/${redirectParam}`);
               }
             } else {
-              callback.gotoPage("welcome");
+              navigate("/welcome");
             }
           } else {
             // Handle login failure
@@ -145,6 +147,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
                 <div className="login-box">
                     <h2>{t("login_mode")}</h2>
                     <table className="login-element">
+                      <tbody>
                         <tr>
                             <td colSpan={2} id="login_error">
                                 {t("beta_version_login_message")}
@@ -176,9 +179,10 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
                                 {loginSuccessText}
                             </td>
                         </tr>}
+                      </tbody>
                     </table>
                     <button type="submit">{t("login_button")}</button>
-                    <div><a id="registration_link" onClick={()=>callback.gotoPage("register")}>
+                    <div><a id="registration_link" onClick={()=>navigate("/register")}>
                         {t("registration_link")}
                     </a></div>
                     <div>

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './App.css'
 import './Help.css'
 import Header from './Header'
@@ -24,7 +26,7 @@ function App() {
    const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
-   const [currentPage, setCurrentPage] = useState<string>("")
+   const location = useLocation();
    const [userUsername, setUserUsername] = useState<string>("")
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")
@@ -42,11 +44,6 @@ function App() {
    const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null)
    const [askedAtlas, setAskedAtlas] = useState<string|null>(null)
    const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null)
-   const [askedRegion, setAskedRegion] = useState<number|null>(null)
-   const [gameMode, setGameMode] = useState<string|null>(null)
-   const [askedSessionCode, setAskedSessionCode] = useState<string|null>(null)
-   const [askedSessionToken, setAskedSessionToken] = useState<string|null>(null)
-   const targetPage = useRef<string>("");
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
    const [headerTextMode, setHeaderTextMode] = useState<string>("")
@@ -65,78 +62,22 @@ function App() {
   const helpContentRef = useRef<HTMLDivElement>(null);
   const legalContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
-  const [welcomeSubpage, setWelcomeSubpage] = useState<string>("singleplayer")
    const headerRef = useRef<HTMLDivElement>(null);
    const lowerBarRef = useRef<HTMLDivElement>(null);
    const pageContainerRef = useRef<HTMLDivElement>(null);
 
-   const startGame = (game: string) => {
-      setCurrentPage(game);
-   }
-
-   function loadHash() {
-      // Load hash from URL
-      const hash = window.location.hash.replace(/^#\/?/, "");
-      const parts = hash.split("/");
-      const page = parts[0] || "welcome";
-      if (page === "neurotheka"){
-         const atlas = parts[1] || null;
-         const region = parts[2] ? Number(parts[2]) : null;
-         if(atlas && region) {  
-            openNeurotheka({ id: region, name: "", atlas, atlasName: "" });
-         }
-      } else if (page === "singleplayer"){
-         const mode = parts[1] || null;
-         const atlas = parts[2] || null;
-         if(mode && atlas) {  
-            launchSinglePlayerGame(atlas, mode);
-         }
-      } else if (page === "multiplayer-game"){
-         const code = parts[1] || null;
-         const token = parts[2] || undefined;
-         if(code) {  
-            launchMultiPlayerGame(code, token);
-         } else {
-            gotoPage("multiplayer-game")
-         }
-      } else if (page === "welcome"){
-         setCurrentPage(page);
-         const subpage = parts[1] || null;
-         if(subpage) {  
-            setWelcomeSubpage(subpage);
-         } else {
-            setWelcomeSubpage("singleplayer")
-         }
-      } else {
-         setCurrentPage(page);
-      }
-   }
-
-   const gotoPage = async (page: string) => {
+   useEffect(() => {
+      const cleanup = async () => {
       updateToken(await refreshToken());
-      setCurrentPage(page);
       setHeaderText("");
-      setHeaderTextMode("normal"); 
-      window.location.hash = `#/${page}`;
-   }
-   const gotoWelcomeSubpage = async (subpage: string) => {
-      updateToken(await refreshToken());
-      setCurrentPage("welcome");
-      setWelcomeSubpage(subpage)
-   }
-
-   useEffect(()=>{
-      if(currentPage == "welcome"){
-         if(welcomeSubpage){
-            window.location.hash = `#/${currentPage}/${welcomeSubpage}`;
-         }
-      }
-   }, [welcomeSubpage])
+      setHeaderTextMode("normal");
+      };
+      cleanup();
+   }, [location]); // This effect will run every time the location changes
 
    const activateGuestMode = () => {
       setIsGuest(true);
       localStorage.setItem('guestMode', 'true');
-      setCurrentPage("welcome");
    }
 
    useEffect(() => {
@@ -149,7 +90,7 @@ function App() {
          setIsGuest(false);
          setIsLoggedIn(true);
       }
-      const niiFile = "assets/atlas/mni152.nii.gz";
+      const niiFile = "/assets/atlas/mni152.nii.gz";
       niivue.loadFromUrl(niiFile).then((nvImage) => {
          setPreloadedBackgroundMNI(nvImage);
       }).catch((error) => {
@@ -157,10 +98,6 @@ function App() {
          showNotification('error_loading_atlas', false, { atlas: askedAtlas });
          setPreloadedBackgroundMNI(null)
       });
-      loadHash();
-      const onHashChange = () => { loadHash() }
-      window.addEventListener("hashchange", onHashChange);
-      return () => window.removeEventListener("hashchange", onHashChange);
    }, [])
 
    useEffect(() => {
@@ -172,7 +109,7 @@ function App() {
       const loadingAtlasRegions : AtlasRegion[] = [];
       for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
          try {
-            const jsonFile = "assets/atlas/descr/" + currentLanguage + "/" + json;
+            const jsonFile = "/assets/atlas/descr/" + currentLanguage + "/" + json;
             const response = await fetch(jsonFile);
             if (!response.ok) throw new Error(`HTTP ${response.status} for ${atlas}`);
             const labels = await response.json();
@@ -224,50 +161,21 @@ function App() {
       setIsLoggedIn(false);
    }
 
-   const openNeurotheka = async (region: AtlasRegion) => {
+   const launchNeurotheka = async (region: Partial<AtlasRegion>) => {
       updateToken(await refreshToken());
-      targetPage.current  ="neurotheka"
-      setHeaderText(t("loading"));
-      setAskedAtlas(region.atlas);
-      setAskedRegion(region.id);
-      setLoadEnforcer(prev => prev + 1);
-      window.location.hash = `#/neurotheka/${region.atlas}/${region.id}`;
+      if(region.atlas) setAskedAtlas(region.atlas);
    }
-   useEffect(() => {
-      if (askedAtlas) {
-         setCurrentPage(targetPage.current);
-      }
-   }, [askedAtlas, askedRegion, loadEnforcer, gameMode]);
-
-   useEffect(() => {
-      if (askedSessionCode){
-         setCurrentPage(targetPage.current);
-      }
-   }, [askedSessionCode, askedSessionToken])
 
    const launchSinglePlayerGame = async (atlas: string, mode: string) => {
-      targetPage.current = "singleplayer"
       updateToken(await refreshToken());
-      setHeaderText(t("loading"));
       setAskedAtlas(atlas);
-      setGameMode(mode);
-      setLoadEnforcer(prev => prev + 1);
-      window.location.hash = `#/singleplayer/${mode}/${atlas}`;
    }
-   const launchMultiPlayerGame = (sessionCode: string, sessionToken?: string) => {
-      targetPage.current = "multiplayer-game"
-      setAskedSessionCode(sessionCode);
-      setAskedSessionToken(sessionToken || null);
-      setLoadEnforcer(prev => prev + 1);
-      window.location.hash = `#/multiplayer-game/${sessionCode}${sessionToken ? `/${sessionToken}` : ``}`;
-   }
-
 
    useEffect(() => {
       if (askedAtlas) {
          const atlas = atlasFiles[askedAtlas];
          if (atlas) {
-            const niiFile = "assets/atlas/nii/" + atlas.nii;
+            const niiFile = "/assets/atlas/nii/" + atlas.nii;
             NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
                setPreloadedAtlas(nvImage);
             }).catch((error) => {
@@ -309,30 +217,13 @@ function App() {
       };
    }, [showHelpOverlay])
 
-   /*const updatePageContainerHeight = () => {
-      const headerHeight = headerRef.current?.offsetHeight || 0;
-      const lowerBarHeight = lowerBarRef.current?.offsetHeight || 0;
-      const vh = window.innerHeight;
-      if (pageContainerRef.current) {
-         pageContainerRef.current.style.height = `${vh - headerHeight - lowerBarHeight}px`;
-      }
-   };
-
-   useEffect(() => {
-      updatePageContainerHeight();
-      window.addEventListener('resize', updatePageContainerHeight);
-      return () => window.removeEventListener('resize', updatePageContainerHeight);
-   }, []);*/
-
    const callback: AppCallback = {
-      startGame: startGame,
-      gotoPage: gotoPage,
       handleChangeLanguage: handleChangeLanguage,
       activateGuestMode: activateGuestMode,
       setIsLoggedIn: setIsLoggedIn,
       updateToken: updateToken,
       logout: logout,
-      openNeurotheka: openNeurotheka,
+      launchNeurotheka: launchNeurotheka,
       setHeaderText: setHeaderText,
       setHeaderTextMode: setHeaderTextMode,
       setHeaderScore: setHeaderScore,
@@ -340,68 +231,64 @@ function App() {
       setHeaderStreak: setHeaderStreak,
       setHeaderTime: setHeaderTime,
       setViewerOption: setViewerOption,
-      launchSinglePlayerGame: launchSinglePlayerGame,
-      launchMultiPlayerGame: launchMultiPlayerGame,
-      setWelcomeSubpage: setWelcomeSubpage,
-      gotoWelcomeSubpage: gotoWelcomeSubpage
+      launchSinglePlayerGame: launchSinglePlayerGame
    }
 
    return (
       <>
       <div className="main-container">
-         <Header ref={headerRef} currentLanguage={currentLanguage} currentPage={currentPage} atlasRegions={atlasRegions}
+         <Header ref={headerRef} currentLanguage={currentLanguage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
             userFirstName={userFirstName} userLastName={userLastName} 
             headerText={headerText} headerTextMode={headerTextMode}
             headerScore={headerScore} headerErrors={headerErrors}
             headerStreak={headerStreak} headerTime={headerTime}
             viewerOptions={viewerOptions} />
-         <div ref={pageContainerRef} className="page-container">
-         {currentPage === "welcome" && <>
-            {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
-            {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
-               isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} 
-               welcomeSubpage={welcomeSubpage} />}
-         </>}
-         {currentPage === "singleplayer" && 
-            <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
-               atlasRegions={atlasRegions} 
-               askedAtlas={askedAtlas} gameMode={gameMode}
-               preloadedAtlas={preloadedAtlas}
-               preloadedBackgroundMNI={preloadedBackgroundMNI} 
-               viewerOptions={viewerOptions}
-               loadEnforcer={loadEnforcer}
-               isLoggedIn={isLoggedIn} authToken={authToken}
-               userPublishToLeaderboard={userPublishToLeaderboard} />}
-         {currentPage === "multiplayer-game" && <>
-            <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
-               askedSessionCode={askedSessionCode} askedSessionToken={askedSessionToken} loadEnforcer={loadEnforcer}
-               viewerOptions={viewerOptions}
-               preloadedBackgroundMNI={preloadedBackgroundMNI} 
-               currentLanguage={currentLanguage} />
-         </>}
-         {currentPage === "login" && <LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />}
-         {currentPage === "register" && <RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />}
-         {currentPage === "validate" && <ValidateEmailScreen t={t} callback={callback} />}
-         {currentPage === "resetpwd" && <ResetPasswordScreen t={t} callback={callback} />}
-         {currentPage === "config" && <UserConfig t={t} callback={callback} authToken={authToken} />}
-         {currentPage === "stats" && <Stats t={t} callback={callback} authToken={authToken} />}
-         {notificationMessage && 
-            <div id="notification" ref={notificationRef} className={notificationStatus}>{notificationMessage}</div>}
-         {currentPage === "neurotheka" && 
-            <Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
-               atlasRegions={atlasRegions} 
-               askedAtlas={askedAtlas} askedRegion={askedRegion}
-               preloadedAtlas={preloadedAtlas}
-               preloadedBackgroundMNI={preloadedBackgroundMNI} 
-               viewerOptions={viewerOptions}
-               loadEnforcer={loadEnforcer} />}
-
-         <div className='lower-bar-phantom'></div>
+            <div ref={pageContainerRef} className="page-container">
+               <Routes>
+                  <Route path="/" element={<Navigate to="/welcome" replace />} />
+                  <Route path="/welcome/*" element={ <>
+                     {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
+                     {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
+                        isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
+                  </>}>
+                  </Route>
+                  <Route path="/singleplayer/:askedAtlas/:gameMode" element={
+                     <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+                        atlasRegions={atlasRegions} 
+                        preloadedAtlas={preloadedAtlas}
+                        preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                        viewerOptions={viewerOptions}
+                        loadEnforcer={loadEnforcer}
+                        isLoggedIn={isLoggedIn} authToken={authToken}
+                        userPublishToLeaderboard={userPublishToLeaderboard} />} />
+                  <Route path="/multiplayer-game/:askedSessionCode/:askedSessionToken?" element={
+                     <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
+                        loadEnforcer={loadEnforcer}
+                        viewerOptions={viewerOptions}
+                        preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                        currentLanguage={currentLanguage} />} />
+                  <Route path="/login" element={<LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
+                  <Route path="/register" element={<RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
+                  <Route path="/validate" element={<ValidateEmailScreen t={t} callback={callback} />} />
+                  <Route path="/resetpwd" element={<ResetPasswordScreen t={t} callback={callback} />} />
+                  <Route path="/configuration" element={<UserConfig t={t} callback={callback} authToken={authToken} />} />
+                  <Route path="/stats" element={<Stats t={t} callback={callback} authToken={authToken} />} />
+                  <Route path="/neurotheka/:askedAtlas?/:askedRegion?" element={
+                     <Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
+                        atlasRegions={atlasRegions} 
+                        preloadedAtlas={preloadedAtlas}
+                        preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                        viewerOptions={viewerOptions}
+                        loadEnforcer={loadEnforcer} />} />
+               </Routes>
+            <div className='lower-bar-phantom'></div>
+            {notificationMessage && 
+               <div id="notification" ref={notificationRef} className={notificationStatus}>{notificationMessage}</div>}
          </div>     
       </div> 
          
-         {currentPage === "welcome" && <>
+         {location.pathname.includes("welcome") && <>
             {showHelpOverlay && <div id="help-overlay" className="help-overlay">
                <div className="help-content" ref={helpContentRef}>
                   <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
@@ -465,21 +352,21 @@ function App() {
                target="_blank"
                rel="noopener noreferrer"
             >
-               <img src="assets/interface/logo-ghu-64.png" alt="GHU Paris" className='lower-logo-ghu'/>
+               <img src="/assets/interface/logo-ghu-64.png" alt="GHU Paris" className='lower-logo-ghu'/>
             </a>
             <a
                href="https://ipnp.paris5.inserm.fr/"
                target="_blank"
                rel="noopener noreferrer"
             >
-               <img src="assets/interface/logo-ipnp-64.png" alt="IPNP" className='lower-logo-ipnp'/>
+               <img src="/assets/interface/logo-ipnp-64.png" alt="IPNP" className='lower-logo-ipnp'/>
             </a>
             <a
                href="https://u-paris.fr/"
                target="_blank"
                rel="noopener noreferrer"
             >
-               <img src="assets/interface/logo-upc-64.png" alt="Université Paris Cité"  className='lower-logo-upc'/>
+               <img src="/assets/interface/logo-upc-64.png" alt="Université Paris Cité"  className='lower-logo-upc'/>
             </a>
             <a onClick={(e) => setShowLegalOverlay(true)}>
                <span role="img" aria-label="legal" className='lower-legal-logo'>⚖️</span>

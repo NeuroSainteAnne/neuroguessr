@@ -2,9 +2,8 @@ import { useEffect } from 'react';
 import './OptionsDropdown.css'
 import type { TFunction } from 'i18next';
 
-function OptionsDropdown({ currentPage, t, callback, viewerOptions }:
+function OptionsDropdown({ t, callback, viewerOptions }:
     {
-        currentPage: string,
         t: TFunction<"translation", undefined>, callback: AppCallback, viewerOptions: DisplayOptions
     }) {
 

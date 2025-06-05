@@ -3,7 +3,6 @@ import { jwtDecode } from "jwt-decode"
 export async function refreshToken(): Promise<string|null> {
     const token = localStorage.getItem('authToken');
     if (!token) {
-        console.log('No token found');
         return null;
     }
     

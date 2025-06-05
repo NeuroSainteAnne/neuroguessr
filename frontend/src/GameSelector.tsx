@@ -3,30 +3,27 @@ import './GameSelector.css'
 import atlasFiles, { atlasCategories } from './atlas_files';
 import { useEffect, useState } from 'react';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
-function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcomeSubpage }: 
-    { t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, authToken: string, userUsername: string, welcomeSubpage: string }) {
+function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }: 
+    { t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, authToken: string, userUsername: string }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("cortical_regions");
   const [selectedAtlas, setSelectedAtlas] = useState<string>("");
   const [selectedMode, setSelectedMode] = useState<string>("");
   const [multiplayerInputCode, setMultiplayerInputCode] = useState<string>("")
-  const [createMultiplayerMode, setCreateMultiplayerMode] = useState<boolean>(false)
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLaunchSinglePlayerGame = () => {
-    if (welcomeSubpage == "singleplayer" && selectedAtlas && selectedMode) {
-      callback.launchSinglePlayerGame(selectedAtlas, selectedMode);
+    if (selectedAtlas && selectedMode) {
+      navigate(`/singleplayer/${selectedAtlas}/${selectedMode}`);
     }
   }
 
   const handleJoinMultiplayer = () =>  {
     if(parseInt(multiplayerInputCode) >= 10000000 && parseInt(multiplayerInputCode) <= 99999999){
-      console.log(multiplayerInputCode)
-      callback.launchMultiPlayerGame(multiplayerInputCode, undefined);
+      navigate(`/multiplayer-game/${multiplayerInputCode}`);
     }
-  }
-
-  const handleCreateMultiplayer = () => {
-    callback.setWelcomeSubpage("multiplayer-create")
   }
 
   return (
@@ -34,48 +31,52 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcom
       <div className="centered-container">
         <div className="player-selection-buttons">
           <button id="single-player-button" 
-              className={(welcomeSubpage=="singleplayer"?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>callback.setWelcomeSubpage("singleplayer")}>
+              className={(location.pathname.includes("singleplayer")?"player-mode-button selected":"player-mode-button")}
+              onClick={()=>navigate("/welcome/singleplayer")}>
                 {t("single_player_button")}
           </button>
           <button id="single-player-button" 
-              className={((welcomeSubpage=="multiplayer"||welcomeSubpage=="multiplayer-create")?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>{setCreateMultiplayerMode(false); callback.setWelcomeSubpage("multiplayer")}}>
+              className={(location.pathname.includes("multiplayer")?"player-mode-button selected":"player-mode-button")}
+              onClick={()=>{navigate("/welcome/multiplayer")}}>
                 {t("multiplayer_button")}
           </button>
         </div>
 
-        { welcomeSubpage=="singleplayer" && <div id="single-player-options" className="single-player-options-container hidden">
+        <Routes>
+        
+        <Route index element={<Navigate to="/welcome/singleplayer" replace />} />
+          
+        <Route path="singleplayer" element={<div id="single-player-options" className="single-player-options-container hidden">
           <section className="atlas-selection">
-            <h2><img src="assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
+            <h2><img src="/assets/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
             <GameSelectorAtlas t={t} selectedAtlas={selectedAtlas} setSelectedAtlas={setSelectedAtlas}
               selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}/>
           </section>
 
           <section className="mode-selection">
-            <h2><img src="assets/interface/numero-2.png" alt="Game Mode Icon" /> <span>{t("select_game_mode")}</span></h2>
+            <h2><img src="/assets/interface/numero-2.png" alt="Game Mode Icon" /> <span>{t("select_game_mode")}</span></h2>
             <div className="mode-buttons">
               <button className={selectedMode=="navigation"?"mode-button selected":"mode-button"}
                       onClick={() => setSelectedMode("navigation")}>
-                <img src="assets/interface/boussole.png" alt="Boussole Icon" />
+                <img src="/assets/interface/boussole.png" alt="Boussole Icon" />
                 <span>{t("navigation_mode")}</span>
                 <span className="mode-description">{t("navigation_description")}</span>
               </button>
               <button className={selectedMode=="practice"?"mode-button selected":"mode-button"}
                       onClick={() => setSelectedMode("practice")}>
-                <img src="assets/interface/practice.png" alt="Practice Icon" />
+                <img src="/assets/interface/practice.png" alt="Practice Icon" />
                 <span>{t("practice_mode")}</span>
                 <span className="mode-description">{t("practice_description")}</span>
               </button>
               <button className={selectedMode=="streak"?"mode-button selected":"mode-button"}
                       onClick={() => setSelectedMode("streak")}>
-                <img src="assets/interface/flame.png" alt="Flame Icon" />
+                <img src="/assets/interface/flame.png" alt="Flame Icon" />
                 <span>{t("streak_mode")}</span>
                 <span className="mode-description">{t("streak_description")}</span>
               </button>
               <button className={selectedMode=="time-attack"?"mode-button selected":"mode-button"}
                       onClick={() => setSelectedMode("time-attack")}>
-                <img src="assets/interface/chronometer.png" alt="Chronometer Icon" />
+                <img src="/assets/interface/chronometer.png" alt="Chronometer Icon" />
                 <span>{t("time_attack_mode")}</span>
                 <span className="mode-description">{t("time_attack_description")}</span>
               </button>
@@ -86,10 +87,10 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcom
               {t("play_button")}
             </button>
           </section>
-        </div>}
+        </div>} />
 
-        {welcomeSubpage == "multiplayer" && <div className="multiplayer-box">
-            {isLoggedIn && <>
+        <Route path="multiplayer" element={<div className="multiplayer-box">
+            <>
               <div className="multiplayer-box-join">
                 <h2>{t("join_multiplayer_lobby")}</h2>
                 <div><input
@@ -101,17 +102,19 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername, welcom
                 /></div>
                 <div><button className="play-button enabled" onClick={handleJoinMultiplayer}>{t("join_multiplayer_button")}</button></div>
               </div>
+              {isLoggedIn && 
               <div className="multiplayer-box-join">
                 <h2>{t("create_multiplayer_game")}</h2>
-                <div><button className="play-button enabled" onClick={handleCreateMultiplayer}>{t("create_multiplayer_button")}</button></div>
-              </div>
-            </>}
-            {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
-               .replace("#",`?redirect=welcome&redirect_subpage=multiplayer#`)
-            }}></div>}
-          </div>}
-        {welcomeSubpage == "multiplayer-create" && <MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />}
+                <div><button className="play-button enabled" onClick={()=>navigate(`/welcome/multiplayer-create`)}>{t("create_multiplayer_button")}</button></div>
+              </div> }
+              {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
+                .replace("/login",`/login?redirect=welcome&redirect_subpage=multiplayer`)
+              }}></div>}
+            </>
+          </div>} />
+        <Route path="multiplayer-create" element={<MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />} />
         
+        </Routes>
       </div>
     </>
   )
@@ -144,7 +147,7 @@ export const GameSelectorAtlas = ({t, selectedAtlas, setSelectedAtlas, selectedC
               {atlas.difficulty > 0 && (
                 <span className="difficulty-icons">
                   {[...Array(atlas.difficulty)].map((_, index) => (
-                    <img key={index} src="assets/interface/star.png" alt="Star" className="star-icon" />
+                    <img key={index} src="/assets/interface/star.png" alt="Star" className="star-icon" />
                   ))}
                 </span>
               )}

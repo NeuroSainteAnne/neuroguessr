@@ -4,26 +4,29 @@ import type { TFunction } from 'i18next';
 import LoginDropdownMenu from './LoginDropdownMenu';
 import SearchBar from './SearchBar';
 import OptionsDropdown from './OptionsDropdown';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
-function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback, 
+function Header({ref, currentLanguage, atlasRegions, t, callback, 
     isLoggedIn, userFirstName, userLastName, 
     headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
     viewerOptions}: 
-    { ref:RefObject<HTMLDivElement | null>, currentLanguage: string, currentPage: string, atlasRegions: AtlasRegion[],
+    { ref:RefObject<HTMLDivElement | null>, currentLanguage: string, atlasRegions: AtlasRegion[],
     t: TFunction<"translation", undefined>, callback: AppCallback, isLoggedIn: boolean, 
     userFirstName: string, userLastName: string, 
     headerText: string, headerTextMode: string, 
     headerStreak: string, headerTime: string, headerScore: string,
     headerErrors: string,
     viewerOptions: DisplayOptions }) {
+    const location = useLocation();
+    const navigate = useNavigate();
 
     return (
         <>
             <div className="navbar-container" ref={ref}>
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
-                    onClick={()=>{callback.gotoPage("welcome")}}>
-                    <img src="assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
-                    <h1>{currentPage=="neurotheka" ? t("neuroglossaire_title") : t("app_title")}</h1>
+                    onClick={()=>{navigate("/welcome")}}>
+                    <img src="/assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
+                    <h1>{location.pathname.includes("neurotheka") ? t("neuroglossaire_title") : t("app_title")}</h1>
                 </div>
                 <div className="navbar-middle">
                     { headerText != "" && <div className="target-label-container">
@@ -41,41 +44,44 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
                             }>{headerText}</span>
                         </p>
                     </div>}
-                    { currentPage == "neurotheka" && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
-                    { currentPage == "singleplayer" && <div className="score-error-container">
-                        {headerScore && <p id="score-label">{headerScore}</p>}
-                        {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
-                        {headerStreak && <p id="streak-label">
-                            <span>{t("streak_label")}: </span>
-                            <span id="streak-value">{headerStreak}</span>
-                            <img src="assets/interface/flame.png" alt="Streak Flame" className="streak-flame-icon-small" />
-                        </p>}
-                        {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
-                    </div>}
-                    { currentPage == "multiplayer-game" && <div className="score-error-container">
-                        {headerScore && <p id="score-label">{headerScore}</p>}
-                        {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
-                        {headerTime && <p id="time-label">{headerTime}</p>}
-                    </div>}
+                    <Routes>
+                        <Route path="/neurotheka/*" element={<SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />} />
+                        <Route path="/singleplayer/*" element={<div className="score-error-container">
+                            {headerScore && <p id="score-label">{headerScore}</p>}
+                            {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
+                            {headerStreak && <p id="streak-label">
+                                <span>{t("streak_label")}: </span>
+                                <span id="streak-value">{headerStreak}</span>
+                                <img src="/assets/interface/flame.png" alt="Streak Flame" className="streak-flame-icon-small" />
+                            </p>}
+                            {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
+                        </div>} />
+                        <Route path="/multiplayer-game/*" element={<div className="score-error-container">
+                            {headerScore && <p id="score-label">{headerScore}</p>}
+                            {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
+                            {headerTime && <p id="time-label">{headerTime}</p>}
+                        </div>} />
+                        <Route path="*" element={<></>} />
+                    </Routes>
                 </div>
         
                 <div className="navbar-right">
                     {!isLoggedIn && <>
                         <button id="guest-sign-in-button" className="guest-sign-in-button"
-                            onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
+                            onClick={()=>navigate("/login")}>{t("sign_in")}</button>
                         <span className={currentLanguage=="fr"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}
                                 data-lang="fr" aria-label="Français" 
                                 onClick={()=>{callback.handleChangeLanguage('fr')}}>
-                            <img src="assets/interface/fr.png" alt="FR" />
+                            <img src="/assets/interface/fr.png" alt="FR" />
                         </span>
                         <span className={currentLanguage=="en"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}
                                 data-lang="en" aria-label="English"
                                 onClick={()=>{callback.handleChangeLanguage('en')}}>
-                            <img src="assets/interface/en.png" alt="EN" />
+                            <img src="/assets/interface/en.png" alt="EN" />
                         </span>
                     </>}
                     {isLoggedIn && 
@@ -84,12 +90,16 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
                             t={t} callback={callback}
                             userFirstName={userFirstName} userLastName={userLastName} />
                     }
-                    {(currentPage == "neurotheka" || currentPage == "singleplayer" || currentPage == "multiplayer-game") && <OptionsDropdown
-                        currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
+                    <Routes>
+                        <Route path="/neurotheka/*" element={<OptionsDropdown t={t} callback={callback} viewerOptions={viewerOptions} />} />
+                        <Route path="/singleplayer/*" element={<OptionsDropdown t={t} callback={callback} viewerOptions={viewerOptions} />} />
+                        <Route path="/multiplayer-game/*" element={<OptionsDropdown t={t} callback={callback} viewerOptions={viewerOptions} />} />
+                        <Route path="*" element={<></>} />
+                    </Routes>
                 </div>
             </div>
         </>
     )
 }
 
-export default Header
+export default Header;

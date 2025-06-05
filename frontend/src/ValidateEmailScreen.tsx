@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import './ValidateEmailScreen.css'
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefined>, callback: AppCallback }) {
     const [isValidatedEmail, setIsValidatedEmail] = useState<boolean>(false);
@@ -10,6 +11,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
     useEffect(() => {
         handleValidateEmail()
     }, [])
+    const navigate = useNavigate();
 
     const handleValidateEmail = async () => {
         // Extract token from URL
@@ -38,7 +40,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
             setValidatedSuccessText(t('success_email_verified'));
             setTimeout( () => {
               callback.updateToken(result.token);
-              callback.gotoPage("welcome");
+              navigate("/welcome");
             }, 1000);
           }
         } catch (error) {

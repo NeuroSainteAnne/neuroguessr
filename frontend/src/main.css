@@ -24,7 +24,7 @@ body {
   /* Prevent horizontal scroll */
   position: relative;
   /* Fallback color */
-  background: url('assets/interface/background.png') no-repeat center center fixed;
+  background: url('/assets/interface/background.png') no-repeat center center fixed;
   background-size: cover;
   background-color: #363636;
 }
