@@ -100,7 +100,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
             ws.onclose = () => {
                 // Optionally handle disconnect
             };
-            return () => ws.close();
+            return () => { if(ws.readyState == ws.OPEN) ws.close(); }
         }
     }, [sessionCode, sessionToken]);
 
