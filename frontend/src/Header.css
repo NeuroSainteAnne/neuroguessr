@@ -96,6 +96,14 @@
         font-size: 2.5rem;
         /* Adjusted h1 size */
     }
+    .navbar-middle {
+        order: 3; /* Move navbar-middle to the bottom */
+        width: 100%; /* Ensure it takes full width */
+    }
+
+    .navbar-left, .navbar-right {
+        order: 1; /* Ensure left and right navbars are on top */
+    }
 }
 
 /* Mobile Layout (max-width 480px) */
@@ -124,34 +132,6 @@
     gap: 0.5rem;
 }
 
-.lang-icon-btn {
-    background-color: transparent;
-    border: 2px solid transparent;
-    padding: 5px;
-    cursor: pointer;
-    border-radius: 50px;
-    transition: border-color 0.3s ease;
-    margin: 0 3px;
-    opacity: 0.9;
-    /* Added opacity */
-}
-
-.lang-icon-btn img {
-    display: block;
-    width: 3rem;
-    height: 3rem;
-}
-
-.lang-icon-btn:hover,
-.lang-icon-btn:focus {
-    border-color: #808588;
-    outline: none;
-}
-
-.lang-icon-btn-active {
-    border-color: #808588;
-}
-
 /* Sign-in button for guest mode */
 .guest-sign-in-button {
     background-color: rgb(63, 109, 159);
@@ -169,6 +149,13 @@
 
 .guest-sign-in-button:hover {
     opacity: 0.85;
+}
+
+@media (max-width: 768px) {
+    .guest-sign-in-button {
+        font-size: 0.8em;
+        padding: 5px 10px;
+    }
 }
 
 /* Center box */
@@ -295,6 +282,16 @@
     width: 30px;
     height: 30px;
     vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .lang-icon-btn {
+        border-radius: 12.5px;
+    }
+    .lang-icon-btn img {
+        width: 25px;
+        height: 25px;
+    }
 }
 
 .lang-icon-btn-active{

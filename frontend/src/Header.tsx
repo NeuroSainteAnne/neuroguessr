@@ -60,8 +60,6 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
                 </div>
         
                 <div className="navbar-right">
-                    {(currentPage == "neurotheka" || currentPage == "singleplayer") && <OptionsDropdown
-                        currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
                     {!isLoggedIn && <>
                         <button id="guest-sign-in-button" className="guest-sign-in-button"
                             onClick={()=>callback.gotoPage("login")}>{t("sign_in")}</button>
@@ -86,6 +84,8 @@ function Header({ref, currentLanguage, currentPage, atlasRegions, t, callback,
                             t={t} callback={callback}
                             userFirstName={userFirstName} userLastName={userLastName} />
                     }
+                    {(currentPage == "neurotheka" || currentPage == "singleplayer" || currentPage == "multiplayer-game") && <OptionsDropdown
+                        currentPage={currentPage} t={t} callback={callback} viewerOptions={viewerOptions} />}
                 </div>
             </div>
         </>
