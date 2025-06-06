@@ -28,7 +28,7 @@ const config: Config = configJson;
 const app = express();
 const PORT = config.server.port;
 
-const frontendHtml = fs.readFileSync("../frontend/index.html", "utf-8")
+const frontendHtml = fs.readFileSync(path.join(htmlRoot, "frontend","index.html"), "utf-8")
 
 database_init()
 
