@@ -9,7 +9,12 @@ function WelcomeScreen({t, callback, atlasRegions, isLoggedIn, authToken, userUs
     isLoggedIn: boolean, authToken: string, userUsername: string }) {
    return (
     <>
-      <title>NeuroGuessr - Home Page</title>
+      <title>NeuroGuessr</title>
+      <meta name="description" content="Neuroguessr: a game for learning neuroanatomy." />
+      <meta property="og:title" content="NeuroGuessr" />
+      <meta property="og:image" content="https://neuroguessr.org/assets/interface/neuroguessr-128.png" />
+      <meta property="og:url" content="https://neuroguessr.org/" />
+      <meta property="og:type" content="website" />
       {atlasRegions.length > 0 && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
       <GameSelector t={t} callback={callback} isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
     </>
