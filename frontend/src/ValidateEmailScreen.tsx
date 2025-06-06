@@ -50,6 +50,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
     
   return (
     <>
+        <title>NeuroGuessr - {t("validate_email_header")}</title>
         <link rel="stylesheet" href="/assets/styles/ValidateEmailScreen.css" />
         <div className="register-box">
             <h2>{t("validate_email_header")}</h2>

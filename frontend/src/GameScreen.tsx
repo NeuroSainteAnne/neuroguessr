@@ -874,6 +874,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
 
   return (
     <>
+      <title>NeuroGuessr - single player</title>
       <link rel="stylesheet" href="/assets/styles/GameScreen.css" />
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 

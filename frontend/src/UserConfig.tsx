@@ -136,7 +136,9 @@ function UserConfig({t, callback, authToken}:
     
     return(
     <>
+        <title>NeuroGuessr - {t("reconfigure_mode")}</title>
         <link rel="stylesheet" href="/assets/styles/UserConfig.css" />
+        <link rel="stylesheet" href="/assets/styles/RegisterScreen.css" />
         <form id="reconfigure_form" onSubmit={handleReconfigure}>
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>

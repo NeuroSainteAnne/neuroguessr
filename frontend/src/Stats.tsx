@@ -5,6 +5,7 @@ function Stats({t, callback, authToken}:
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string }) {
 
     return(<>
+      <title>NeuroGuessr - Stats</title>
       <link rel="stylesheet" href="/assets/styles/Stats.css" />
       Placeholder for Stats module
     </>)

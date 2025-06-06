@@ -129,6 +129,7 @@ const MultiplayerConfigScreen = ({ t, callback, authToken, userUsername }:
 
     return (
         <div className="page-container">
+            <title>NeuroGuessr - Create multiplayer game</title>
             {!sessionCode && <div>'Creating multiplayer session...'</div>}
             {sessionCode && (
                 <div style={{ marginTop: 24 }}>

@@ -209,6 +209,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
 
   return (
     <>
+      <title>{t("neuroglossaire_title")}</title>
       <link rel="stylesheet" href="/assets/styles/Neurotheka.css" />
       {isLoading && <div className="loading-screen">Chargement...</div>}
       <canvas id="gl1"></canvas>

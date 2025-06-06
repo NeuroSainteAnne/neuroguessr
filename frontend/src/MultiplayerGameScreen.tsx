@@ -331,6 +331,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 
   return (
     <>
+      <title>NeuroGuessr - Multiplayer game</title>
       <link rel="stylesheet" href="/assets/styles/MultiplayerGameScreen.css" />
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" 

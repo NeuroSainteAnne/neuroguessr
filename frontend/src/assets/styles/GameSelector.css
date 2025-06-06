@@ -566,6 +566,7 @@
 }
 
 .play-button {
+    display: block;
     background: #363636;
     color: white;
     font-size: 1.5rem;
@@ -610,6 +611,8 @@
     backdrop-filter: blur(8px);
     /* Slightly more blur on hover */
     -webkit-backdrop-filter: blur(8px);
+    text-decoration: none;
+    color: inherit;
 }
 
 .play-button.enabled:active {

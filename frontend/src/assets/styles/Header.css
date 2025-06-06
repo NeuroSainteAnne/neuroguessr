@@ -22,11 +22,16 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    color: inherit
+}
+
+.logo-title-container-navbar:hover {
+    text-decoration: none;
+    color: inherit;
 }
 
 .logo-title-container-navbar h1 {
     font-size: 3.5rem;
-    /* Increased h1 size for navbar */
 }
 
 .navbar-right {

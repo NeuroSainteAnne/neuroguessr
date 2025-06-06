@@ -33,12 +33,14 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
         <div className="player-selection-buttons">
           <a id="single-player-button" 
               className={(location.pathname.includes("singleplayer")?"player-mode-button selected":"player-mode-button")}
-              href="/welcome/singleplayer">
+              href="/welcome/singleplayer"
+              onClick={(e)=>{e.preventDefault(); navigate("/welcome/singleplayer")}}>
                 {t("single_player_button")}
           </a>
           <a id="single-player-button" 
               className={(location.pathname.includes("multiplayer")?"player-mode-button selected":"player-mode-button")}
-              href="/welcome/multiplayer">
+              href="/welcome/multiplayer"
+              onClick={(e)=>{e.preventDefault(); navigate("/welcome/multiplayer")}}>
                 {t("multiplayer_button")}
           </a>
         </div>
@@ -101,12 +103,15 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
                   placeholder={t("multi_8_digits")}
                   style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
                 /></div>
-                <div><button className="play-button enabled" onClick={handleJoinMultiplayer}>{t("join_multiplayer_button")}</button></div>
+                <div><a className="play-button enabled" href="/multiplayer-game" onClick={(e)=>{e.preventDefault(); handleJoinMultiplayer()}}>
+                  {t("join_multiplayer_button")}</a></div>
               </div>
               {isLoggedIn && 
               <div className="multiplayer-box-join">
                 <h2>{t("create_multiplayer_game")}</h2>
-                <div><button className="play-button enabled" onClick={()=>navigate(`/welcome/multiplayer-create`)}>{t("create_multiplayer_button")}</button></div>
+                <div><a className="play-button enabled" 
+                    href="/welcome/multiplayer-create"
+                    onClick={(e)=>{e.preventDefault();navigate(`/welcome/multiplayer-create`)}}>{t("create_multiplayer_button")}</a></div>
               </div> }
               {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
                 .replace("/login",`/login?redirect=welcome&redirect_subpage=multiplayer`)

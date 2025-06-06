@@ -9,6 +9,7 @@ function WelcomeScreen({t, callback, atlasRegions, isLoggedIn, authToken, userUs
     isLoggedIn: boolean, authToken: string, userUsername: string }) {
    return (
     <>
+      <title>NeuroGuessr - Home Page</title>
       {atlasRegions.length > 0 && <SearchBar t={t} callback={callback} atlasRegions={atlasRegions} />}
       <GameSelector t={t} callback={callback} isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
     </>

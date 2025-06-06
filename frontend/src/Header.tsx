@@ -24,11 +24,12 @@ function Header({ref, currentLanguage, atlasRegions, t, callback,
         <>
             <link rel="stylesheet" href="/assets/styles/Header.css" />
             <div className="navbar-container" ref={ref}>
-                <div className="navbar-left logo-title-container-navbar logo-title-container" 
-                    onClick={()=>{navigate("/welcome")}}>
+                <a className="navbar-left logo-title-container-navbar logo-title-container" 
+                    href="/welcome"
+                    onClick={(e)=>{e.preventDefault(); navigate("/welcome")}}>
                     <img src="/assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
                     <h1>{location.pathname.includes("neurotheka") ? t("neuroglossaire_title") : t("app_title")}</h1>
-                </div>
+                </a>
                 <div className="navbar-middle">
                     { headerText != "" && <div className="target-label-container">
                         <p id="target-label">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { TFunction } from 'i18next';
 import { useCallback, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
@@ -143,6 +143,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
 
     const formContent = (
         <>
+            <title>NeuroGuessr - Login</title>
             <link rel="stylesheet" href="/assets/styles/LoginScreen.css" />
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
