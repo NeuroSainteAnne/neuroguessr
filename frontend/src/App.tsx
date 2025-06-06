@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header'
@@ -21,17 +21,11 @@ import { jwtDecode } from 'jwt-decode';
 
 function App(myi18n?: any) {
    const [niivueModule, setNiivueModule] = useState<any>(null);
-   const [niivue, setNiivue] = useState<any>(null);
    useEffect(() => {
       let isMounted = true;
       import('@niivue/niivue').then((mod) => {
          if (isMounted) {
             setNiivueModule(mod)
-            setNiivue(new mod.Niivue({
-               show3Dcrosshair: true,
-               backColor: [0, 0, 0, 1],
-               crosshairColor: [1, 1, 1, 1]
-            }));
          }
       });
       return () => { isMounted = false; };
@@ -107,9 +101,9 @@ function App(myi18n?: any) {
    }, [])
 
    useEffect(()=>{
-      if(niivue){
+      if(niivueModule){
          const niiFile = "/assets/atlas/mni152_downsampled.nii.gz";
-         niivue.loadFromUrl(niiFile).then((nvImage: any) => {
+         niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
             setPreloadedBackgroundMNI(nvImage);
          }).catch((error: any) => {
             console.error("Error loading NIfTI file:", error);
@@ -117,7 +111,7 @@ function App(myi18n?: any) {
             setPreloadedBackgroundMNI(null)
          });
       }
-   }, [niivue])
+   }, [niivueModule])
 
    useEffect(() => {
       loadAtlasLabels()
@@ -193,7 +187,7 @@ function App(myi18n?: any) {
    useEffect(() => {
       if (askedAtlas) {
          const atlas = atlasFiles[askedAtlas];
-         if (atlas && niivue && niivueModule) {
+         if (atlas && niivueModule) {
             const niiFile = "/assets/atlas/nii/" + atlas.nii;
             niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
                setPreloadedAtlas(nvImage);
@@ -204,7 +198,7 @@ function App(myi18n?: any) {
             });
          }
       }
-   }, [askedAtlas, niivue, niivueModule])
+   }, [askedAtlas, niivueModule])
 
    useEffect(() => {
       if (isLoggedIn) {
@@ -279,7 +273,7 @@ function App(myi18n?: any) {
                         isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
                   </>} />
                   <Route path="/singleplayer/:askedAtlas?/:gameMode?" element={
-                     <Suspense fallback={<LoadingScreen/>}><GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+                     <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
                         preloadedAtlas={preloadedAtlas}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
@@ -287,14 +281,14 @@ function App(myi18n?: any) {
                         loadEnforcer={loadEnforcer}
                         isLoggedIn={isLoggedIn} authToken={authToken}
                         userPublishToLeaderboard={userPublishToLeaderboard}
-                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
+                        niivueModule={niivueModule} />} />
                   <Route path="/multiplayer-game/:askedSessionCode?/:askedSessionToken?" element={
                      <Suspense fallback={<LoadingScreen/>}><MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                         loadEnforcer={loadEnforcer}
                         viewerOptions={viewerOptions}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         currentLanguage={currentLanguage}
-                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
+                        niivueModule={niivueModule} /></Suspense>} />
                   <Route path="/login" element={<LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/register" element={<RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/validate" element={<ValidateEmailScreen t={t} callback={callback} />} />
@@ -308,7 +302,7 @@ function App(myi18n?: any) {
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         viewerOptions={viewerOptions}
                         loadEnforcer={loadEnforcer}
-                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
+                        niivueModule={niivueModule} /></Suspense>} />
                   <Route path="*" element={<div>Page not found</div>} />
                </Routes>
             <div className='lower-bar-phantom'></div>

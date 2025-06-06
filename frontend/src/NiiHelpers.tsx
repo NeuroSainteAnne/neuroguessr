@@ -1,7 +1,6 @@
 import React from 'react';
-import { NVImage, SHOW_RENDER, type Niivue } from "@niivue/niivue";
 
-export const defineNiiOptions = (myniivue: Niivue, viewerOptions: DisplayOptions) => {
+export const defineNiiOptions = (myniivue: any, viewerOptions: DisplayOptions) => {
     if (myniivue) {
         if (viewerOptions.displayType === "Axial") myniivue.setSliceType(myniivue.sliceTypeAxial);
         if (viewerOptions.displayType === "Coronal") myniivue.setSliceType(myniivue.sliceTypeCoronal);
@@ -11,11 +10,11 @@ export const defineNiiOptions = (myniivue: Niivue, viewerOptions: DisplayOptions
             myniivue.setClipPlane(myniivue.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
         }
         if (viewerOptions.displayType === "MultiPlanar") {
-            myniivue.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
+            myniivue.opts.multiplanarShowRender = 0;
             myniivue.setSliceType(myniivue.sliceTypeMultiplanar);
         }
         if (viewerOptions.displayType === "MultiPlanarRender") {
-            myniivue.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
+            myniivue.opts.multiplanarShowRender = 1;
             myniivue.setSliceType(myniivue.sliceTypeMultiplanar);
         }
         if (myniivue.volumes.length > 1) {
@@ -26,8 +25,8 @@ export const defineNiiOptions = (myniivue: Niivue, viewerOptions: DisplayOptions
     }
 }
 
-export const initNiivue = (myniivue: Niivue, viewerOptions: DisplayOptions, callback: () => void) => {
-    myniivue.attachTo('gl1').then(() => {
+export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, callback: () => void) => {
+    myniivue.attachToCanvas(canvas).then(() => {
         myniivue.setInterpolation(false);
         const myCustomCmap = {
             min: 40,
@@ -45,10 +44,12 @@ export const initNiivue = (myniivue: Niivue, viewerOptions: DisplayOptions, call
         myniivue.opts.yoke3Dto2DZoom = true;
         defineNiiOptions(myniivue, viewerOptions)
         callback()
-    })
+    }).catch((error:any) => {
+        console.error('Error attaching Niivue to canvas:', error);
+  });
 }
 
-export const loadAtlasNii = (myniivue: Niivue, preloadedBackgroundMNI: NVImage|null, preloadedAtlas?: NVImage) => {
+export const loadAtlasNii = (myniivue: any, preloadedBackgroundMNI: any|null, preloadedAtlas?: any) => {
     if (myniivue) {
         for (let i = 1; i < myniivue.volumes.length; i++) {
             myniivue.removeVolume(myniivue.volumes[i]);
@@ -67,7 +68,7 @@ export const loadAtlasNii = (myniivue: Niivue, preloadedBackgroundMNI: NVImage|n
     }
 }
 
-export function getClickedRegion(myniivue: Niivue, canvasObj: HTMLCanvasElement, cMap: ColorMap, e: any){
+export function getClickedRegion(myniivue: any, canvasObj: HTMLCanvasElement, cMap: ColorMap, e: any){
     const isTouch = e.type === 'touchstart';
     const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
     const rect = canvasObj.getBoundingClientRect();
@@ -84,7 +85,7 @@ export function getClickedRegion(myniivue: Niivue, canvasObj: HTMLCanvasElement,
         const vox = myniivue.volumes[1].mm2vox(Array.from(mm));
         const idx = Math.round(myniivue.volumes[1].getValue(vox[0], vox[1], vox[2]));
         if (isFinite(idx) && idx > 0 && idx in (cMap?.labels ?? [])) { // Ensure valid region ID > 0
-            return {vox: Array.from(vox), idx}
+            return {vox: Array.from(vox) as number[], idx}
         }
       }
     }

@@ -7,12 +7,12 @@ import atlasFiles from './atlas_files';
 import { fetchJSON } from './helper_niivue';
 import config from "../config.json"
 
-const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage, niivue, niivueModule }:
+const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsername, loadEnforcer, viewerOptions, preloadedBackgroundMNI, currentLanguage, niivueModule }:
   {
     t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string, isLoggedIn: boolean, userUsername: string,
     loadEnforcer: number,
     viewerOptions: DisplayOptions, preloadedBackgroundMNI: any | null, currentLanguage: string,
-    niivue: any, niivueModule: any
+    niivueModule: any
   }) => {
   const { askedSessionCode, askedSessionToken } = useParams();
   const navigate = useNavigate();
@@ -61,9 +61,25 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
 
+  const [niivue, setNiivue] = useState<any>(null);
+    useEffect(() => {
+      let isMounted = true;
+      import('@niivue/niivue').then((mod) => {
+          if (isMounted) {
+            setNiivue(new mod.Niivue({
+                logLevel: "error",
+                show3Dcrosshair: true,
+                backColor: [0, 0, 0, 1],
+                crosshairColor: [1, 1, 1, 1]
+            }));
+          }
+      });
+      return () => { isMounted = false; };
+    }, []);
 
   const connectWS = (inputCode: string) => {
     if (!isLoggedIn && !config.activateAnonymousMode) return;
+    if (wsRef.current) return;
     const ws = new WebSocket(`/websocket`);
     wsRef.current = ws;
     if(isLoggedIn){
@@ -235,8 +251,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
       setLobbyUsers([])
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
-      if(wsRef.current) wsRef.current.close()
-      wsRef.current = null
       setInputCode(askedSessionCode)
       connectWS(askedSessionCode)
     } else if(askedSessionCode && config.activateAnonymousMode){
@@ -262,7 +276,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 
   useEffect(() => {
     return () => {
-      if (wsRef.current) {
+      if (wsRef.current && wsRef.current.readyState === wsRef.current.OPEN) {
         wsRef.current.close();
         wsRef.current = null;
       }
@@ -274,13 +288,13 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   }, [])
 
   useEffect(()=>{
-    if(niivue && canvasRef.current){
-      initNiivue(niivue, viewerOptions, ()=>{
+    if(niivue && canvasRef.current && hasStarted){
+      initNiivue(niivue, canvasRef.current, viewerOptions, ()=>{
           setIsLoadedNiivue(true);
       })
       loadAtlasNii(niivue, preloadedBackgroundMNI);
     }
-  }, [niivue, canvasRef.current])
+  }, [niivue, canvasRef.current, hasStarted])
 
   useEffect(() => {
   if (askedAtlas) {
@@ -298,11 +312,11 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 }, [askedAtlas, niivueModule])
 
   useEffect(() => {
-    if(niivue && preloadedBackgroundMNI && canvasRef.current){
+    if(niivue && preloadedBackgroundMNI && canvasRef.current && hasStarted){
       loadAtlasNii(niivue, preloadedBackgroundMNI, loadedAtlas);
       loadAtlasData();
     }
-  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, canvasRef.current, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
+  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, hasStarted, canvasRef.current, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
 
   useLayoutEffect(() => {
   if (niivue && canvasRef.current && hasStarted) {
@@ -336,9 +350,12 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
     <>
       <title>NeuroGuessr - Multiplayer game</title>
       <link rel="stylesheet" href="/assets/styles/MultiplayerGameScreen.css" />
+      <link rel="stylesheet" href="/assets/styles/GameScreen.css" />
+      
+      <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
+        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
+      </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
-        <canvas id="gl1" 
-          onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
         <div className="button-container">
           <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
             <span className="confirm-text">{t("confirm_guess")}</span>

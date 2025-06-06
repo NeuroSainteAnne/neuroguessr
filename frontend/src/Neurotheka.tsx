@@ -7,12 +7,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { LoadingScreen } from './App';
 
 function Neurotheka({ t, callback, currentLanguage, atlasRegions, 
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, niivue, niivueModule }:
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, niivueModule }:
   {
     t: TFunction<"translation", undefined>, currentLanguage: string, callback: AppCallback, atlasRegions: AtlasRegion[],
     preloadedAtlas: any | null, preloadedBackgroundMNI: any | null,
     viewerOptions: DisplayOptions, loadEnforcer: number,
-    niivue: any, niivueModule: any
+    niivueModule: any
   }) {
   const { askedAtlas, askedRegion } = useParams();
   const navigate = useNavigate();
@@ -23,6 +23,22 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
   const helpButtonRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  const [niivue, setNiivue] = useState<any>(null);
+    useEffect(() => {
+      let isMounted = true;
+      import('@niivue/niivue').then((mod) => {
+          if (isMounted) {
+            setNiivue(new mod.Niivue({
+                logLevel: "error",
+                show3Dcrosshair: true,
+                backColor: [0, 0, 0, 1],
+                crosshairColor: [1, 1, 1, 1]
+            }));
+          }
+      });
+      return () => { isMounted = false; };
+    }, []);
+    
   useEffect(()=>{
     const handleClick = (event: MouseEvent) => {
         if (
@@ -169,9 +185,11 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
   }
 
   useEffect(() => {
-    initNiivue(niivue, viewerOptions, ()=>{setIsLoadedNiivue(true);})
-    checkLoading();
-  }, [])
+    if(niivue && canvasRef.current){
+      initNiivue(niivue, canvasRef.current, viewerOptions, ()=>{setIsLoadedNiivue(true);})
+      checkLoading();
+    }
+  }, [niivue, canvasRef.current])
 
   useEffect(() => {
     checkLoading();

@@ -20,7 +20,6 @@ type GameScreenProps = {
   isLoggedIn: boolean;
   authToken: string;
   userPublishToLeaderboard: boolean | null;
-  niivue: any;
   niivueModule: any;
 };
 
@@ -63,7 +62,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
 
 
 function GameScreen({ t, callback, currentLanguage, atlasRegions,
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard, niivue, niivueModule }: GameScreenProps) {
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, isLoggedIn, authToken, userPublishToLeaderboard, niivueModule }: GameScreenProps) {
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
   const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -114,12 +113,30 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   const timeattackOverlayRef = useRef<HTMLDivElement>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
+  const [niivue, setNiivue] = useState<any>(null);
+   useEffect(() => {
+      let isMounted = true;
+      import('@niivue/niivue').then((mod) => {
+         if (isMounted) {
+            setNiivue(new mod.Niivue({
+               logLevel: "error",
+               show3Dcrosshair: true,
+               backColor: [0, 0, 0, 1],
+               crosshairColor: [1, 1, 1, 1]
+            }));
+         }
+      });
+      return () => { isMounted = false; };
+   }, []);
+
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions, () => {
-      setIsLoadedNiivue(true);
-    })
-    checkLoading();
-  }, [niivue])
+    if(niivue && canvasRef.current){
+      initNiivue(niivue, canvasRef.current, viewerOptions, () => {
+        setIsLoadedNiivue(true);
+      })
+      checkLoading();
+    }
+  }, [niivue, canvasRef.current])
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
@@ -714,7 +731,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
 
   function highlightRegionFluorescentYellow() {
     if (gameMode === 'navigation' && highlightedRegion === 0) return;
-    console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
+    //console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
     if (cLut.current && niivue && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
       const lut = cLut.current.slice();
       // Make all regions transparent initially except region 0 if needed

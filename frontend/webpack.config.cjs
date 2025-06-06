@@ -1,5 +1,6 @@
 // webpack.config.js
 const path = require('path');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 module.exports = {
   entry: './src/client.js', // Path to your client-side entry file
   output: {
@@ -23,4 +24,11 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx'], // Resolve these extensions
   },
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'src/assets', to: 'assets' }, // Copy the assets directory to the dist directory
+      ],
+    }),
+  ],
 };

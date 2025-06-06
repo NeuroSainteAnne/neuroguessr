@@ -80,8 +80,8 @@ app.use(
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 if(config.server.serverSideRendering){
-    app.use("/assets", express.static(path.join(htmlRoot, "frontend", "src", "assets")));
-    app.use("/bundle.js", express.static(path.join(htmlRoot, "frontend", "dist", "bundle.js")));
+    //app.use("/assets", express.static(path.join(htmlRoot, "frontend", "src", "assets")));
+    app.use(express.static(path.join(htmlRoot, "frontend", "dist")));
 
     // Middleware to detect bots
     const isBot = (req: any) => {
