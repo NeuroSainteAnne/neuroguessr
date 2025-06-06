@@ -4,21 +4,12 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "install-backend": "cd backend && npm install",
-        "install-frontend": "cd frontend && npm install",
         "build-frontend": "cd frontend && npm run build",
-        "start-backend": "cd backend && node --experimental-strip-types server.ts",
-        "build-frontend-then-start-backend": "cd frontend && npm run build && cd ../backend && node --experimental-strip-types server.ts"
+        "start-backend": "cd backend && npx tsx server.tsx",
+        "dev-frontend": "cd frontend && npm run dev"
     },
     "dependencies": {
-        "@babel/preset-react": "^7.27.1",
-        "@babel/preset-typescript": "^7.27.1",
         "@niivue/niivue": "^0.57.0",
-        "@types/joi-password-complexity": "^3.1.0",
-        "@types/react": "^19.1.6",
-        "@types/react-dom": "^19.1.6",
-        "@types/ws": "^8.18.1",
-        "babel-loader": "^10.0.0",
         "bcrypt": "^6.0.0",
         "better-sqlite3": "^11.10.0",
         "copy-webpack-plugin": "^13.0.0",
@@ -70,6 +61,8 @@
         "@types/react-helmet": "^6.1.11",
         "@types/server-destroy": "^1.0.4",
         "@vitejs/plugin-react": "^4.4.1",
+        "@types/joi-password-complexity": "^3.1.0",
+        "@types/ws": "^8.18.1",
         "ajv": "^8.17.1",
         "eslint": "^9.25.0",
         "eslint-plugin-react-hooks": "^5.2.0",
