@@ -264,15 +264,19 @@ function App(myi18n?: any) {
             <div ref={pageContainerRef} className="page-container">
                <Routes>
                   <Route path="/" element={<Navigate to="/welcome" replace />} />
-                  <Route path="/welcome" element={ <>
-                     {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
-                     {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
-                        isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
-                  </>} />
-                  <Route path="/welcome/*" element={ <>
-                     <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
-                        isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
-                  </>} />
+                  {(isClientSide ?
+                     <Route path="/welcome/*" element={ <>
+                        {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
+                        {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
+                           isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
+                     </>} />
+                     :
+                     <Route path="/welcome/*" element={ <>
+                        <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
+                           isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
+                     </>} />
+                  )}
+                  
                   <Route path="/singleplayer/:askedAtlas?/:gameMode?" element={
                      (isClientSide?
                         <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
