@@ -28,7 +28,18 @@ export const defineNiiOptions = (myniivue: Niivue, viewerOptions: DisplayOptions
 
 export const initNiivue = (myniivue: Niivue, viewerOptions: DisplayOptions, callback: () => void) => {
     myniivue.attachTo('gl1').then(() => {
-        myniivue.setInterpolation(true);
+        myniivue.setInterpolation(false);
+        const myCustomCmap = {
+            min: 40,
+            max: 80,
+            R: [0, 255],   // Red channel values at control points
+            G: [0, 255],   // Green channel values at control points
+            B: [0, 255],     // Blue channel values at control points
+            A: [0, 255], // Alpha values
+            I: [40, 80], // Intensity values corresponding to R,G,B,A points
+        };
+        // 2. Add the colormap to Niivue with a unique name
+        myniivue.addColormap('MNI_Cmap', myCustomCmap);
         myniivue.opts.crosshairGap = 0;
         myniivue.opts.dragMode = myniivue.dragModes.slicer3D;
         myniivue.opts.yoke3Dto2DZoom = true;
@@ -45,6 +56,8 @@ export const loadAtlasNii = (myniivue: Niivue, preloadedBackgroundMNI: NVImage|n
         // Load volumes
         if (myniivue.volumes.length == 0 && preloadedBackgroundMNI) {
             myniivue.addVolume(preloadedBackgroundMNI);
+            const firstVolumeId = myniivue.volumes[0].id;
+            myniivue.setColormap(firstVolumeId, 'MNI_Cmap');
         }
         if(preloadedAtlas){
             myniivue.addVolume(preloadedAtlas);

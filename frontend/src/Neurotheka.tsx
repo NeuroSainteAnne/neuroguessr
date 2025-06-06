@@ -1,31 +1,27 @@
 import { init, type TFunction } from 'i18next'
 import atlasFiles from './atlas_files'
-import React, { use, useEffect, useRef, useState } from 'react';
-import { Niivue, NVImage, SHOW_RENDER } from '@niivue/niivue';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { fetchJSON } from './helper_niivue';
 import { initNiivue } from './NiiHelpers';
 import { useNavigate, useParams } from 'react-router-dom';
+import { LoadingScreen } from './App';
 
 function Neurotheka({ t, callback, currentLanguage, atlasRegions, 
-  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer }:
+  preloadedAtlas, preloadedBackgroundMNI, viewerOptions, loadEnforcer, niivue, niivueModule }:
   {
     t: TFunction<"translation", undefined>, currentLanguage: string, callback: AppCallback, atlasRegions: AtlasRegion[],
-    preloadedAtlas: NVImage | null, preloadedBackgroundMNI: NVImage | null,
-    viewerOptions: DisplayOptions, loadEnforcer: number
+    preloadedAtlas: any | null, preloadedBackgroundMNI: any | null,
+    viewerOptions: DisplayOptions, loadEnforcer: number,
+    niivue: any, niivueModule: any
   }) {
   const { askedAtlas, askedRegion } = useParams();
   const navigate = useNavigate();
-  const niivue = useRef(new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1],
-    logLevel: "warn"
-  }));
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const helpContentRef = useRef<HTMLDivElement>(null);
   const helpButtonRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(()=>{
     const handleClick = (event: MouseEvent) => {
@@ -54,18 +50,18 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
       const selectedAtlasFiles = atlasFiles[askedAtlas];
 
       // Clear existing meshes
-      niivue.current.meshes = [];
-      niivue.current.updateGLVolume();
+      niivue.meshes = [];
+      niivue.updateGLVolume();
 
       // Load colormap
       const cmap = await fetchJSON("/assets/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
 
       // Reset volumes
-      for (let i = 1; i < niivue.current.volumes.length; i++) {
-        niivue.current.removeVolume(niivue.current.volumes[i]);
+      for (let i = 1; i < niivue.volumes.length; i++) {
+        niivue.removeVolume(niivue.volumes[i]);
       }
-      for (let i = 1; i < niivue.current.meshes.length; i++) {
-        niivue.current.removeMesh(niivue.current.meshes[i]);
+      for (let i = 1; i < niivue.meshes.length; i++) {
+        niivue.removeMesh(niivue.meshes[i]);
       }
       let useTractography = false;
       let tractographyLoaded = false;
@@ -87,25 +83,27 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
       }
 
       // Load volumes
-      if (niivue.current.volumes.length == 0) {
-        niivue.current.addVolume(preloadedBackgroundMNI);
+      if (niivue.volumes.length == 0) {
+        niivue.addVolume(preloadedBackgroundMNI);
+        const firstVolumeId = niivue.volumes[0].id;
+        niivue.setColormap(firstVolumeId, 'MNI_Cmap');
       }
       if (!useTractography) {
-        niivue.current.addVolume(preloadedAtlas);
+        niivue.addVolume(preloadedAtlas);
       }
 
       if (useTractography) {
         try {
-          await niivue.current.loadMeshes([
+          await niivue.loadMeshes([
             {
               url: tractUrl,
               rgba255: [0, 255, 255, 255]
             }
           ]);
-          if (niivue.current.meshes.length > 0) {
-            niivue.current.meshes[0].colormap = 'blue';
-            //niivue.current.meshes[0].fiberRadius = 0.2;
-            niivue.current.meshes[0].fiberColor = 'Local';
+          if (niivue.meshes.length > 0) {
+            niivue.meshes[0].colormap = 'blue';
+            //niivue.meshes[0].fiberRadius = 0.2;
+            niivue.meshes[0].fiberColor = 'Local';
           }
           console.log(`Loaded tractography: ${tractUrl}`);
           tractographyLoaded = true;
@@ -113,13 +111,13 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
         } catch (error) {
           console.error(`Failed to load tractography for ${tractLabel}:`, error);
           callback.setHeaderText(t('error_loading_data', { atlas: selectedAtlasFiles.name }));
-          niivue.current.addVolume(preloadedAtlas);
+          niivue.addVolume(preloadedAtlas);
           useTractography = false;
         }
       }
 
-      if (!useTractography && niivue.current.volumes.length > 1) {
-        niivue.current.volumes[1].setColormapLabel(cmap);
+      if (!useTractography && niivue.volumes.length > 1) {
+        niivue.volumes[1].setColormapLabel(cmap);
         const numRegions = Object.keys(cmap.labels).length;
         const clut = new Uint8Array(numRegions * 4);
         for (let i = 0; i < numRegions; i++) {
@@ -132,16 +130,16 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
             clut[i * 4 + 3] = 0; // Transparent
           }
         }
-        if (niivue.current.volumes[1] && niivue.current.volumes[1].colormapLabel) {
-          niivue.current.volumes[1].colormapLabel.lut = new Uint8ClampedArray(clut);
+        if (niivue.volumes[1] && niivue.volumes[1].colormapLabel) {
+          niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(clut);
         }
-        niivue.current.setOpacity(1, viewerOptions.displayOpacity);
-        niivue.current.updateGLVolume();
+        niivue.setOpacity(1, viewerOptions.displayOpacity);
+        niivue.updateGLVolume();
       }
 
       // Set initial clip plane
-      niivue.current.setClipPlane(tractographyLoaded ? [-0.1, 270, 0] : [2, 270, 0]);
-      niivue.current.opts.isSliceMM = true;
+      niivue.setClipPlane(tractographyLoaded ? [-0.1, 270, 0] : [2, 270, 0]);
+      niivue.opts.isSliceMM = true;
 
       // Update display
       if (isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
@@ -151,12 +149,12 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
         console.error(`Invalid region ID: ${askedRegion}`);
       }
 
-      niivue.current.drawScene();
+      niivue.drawScene();
     } catch (error) {
       console.error(`Failed to update visualization for ${askedAtlas}:`, error);
       callback.setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
-      if (niivue.current.volumes.length > 0) {
-        niivue.current.drawScene();
+      if (niivue.volumes.length > 0) {
+        niivue.drawScene();
       }
     }
   }
@@ -171,7 +169,7 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
   }
 
   useEffect(() => {
-    initNiivue(niivue.current, viewerOptions, ()=>{setIsLoadedNiivue(true);})
+    initNiivue(niivue, viewerOptions, ()=>{setIsLoadedNiivue(true);})
     checkLoading();
   }, [])
 
@@ -183,36 +181,43 @@ function Neurotheka({ t, callback, currentLanguage, atlasRegions,
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, askedRegion, askedAtlas, loadEnforcer])
 
   useEffect(() => {
-    if (niivue.current) {
-      if (viewerOptions.displayType === "Axial") niivue.current.setSliceType(niivue.current.sliceTypeAxial);
-      if (viewerOptions.displayType === "Coronal") niivue.current.setSliceType(niivue.current.sliceTypeCoronal);
-      if (viewerOptions.displayType === "Sagittal") niivue.current.setSliceType(niivue.current.sliceTypeSagittal);
+    if (niivue) {
+      if (viewerOptions.displayType === "Axial") niivue.setSliceType(niivue.sliceTypeAxial);
+      if (viewerOptions.displayType === "Coronal") niivue.setSliceType(niivue.sliceTypeCoronal);
+      if (viewerOptions.displayType === "Sagittal") niivue.setSliceType(niivue.sliceTypeSagittal);
       if (viewerOptions.displayType === "Render") {
-        niivue.current.setSliceType(niivue.current.sliceTypeRender);
-        niivue.current.setClipPlane(niivue.current.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
+        niivue.setSliceType(niivue.sliceTypeRender);
+        niivue.setClipPlane(niivue.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
       }
       if (viewerOptions.displayType === "MultiPlanar") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
+        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.NEVER;
+        niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
       if (viewerOptions.displayType === "MultiPlanarRender") {
-        niivue.current.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
-        niivue.current.setSliceType(niivue.current.sliceTypeMultiplanar);
+        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.ALWAYS;
+        niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
-      if (niivue.current.volumes.length > 1) {
-        niivue.current.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
+      if (niivue.volumes.length > 1) {
+        niivue.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
       }
-      niivue.current.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
-      niivue.current.updateGLVolume();
+      niivue.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
+      niivue.updateGLVolume();
     }
   }, [viewerOptions])
+
+  useLayoutEffect(() => {
+  if (niivue && canvasRef.current && !isLoading) {
+    // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+    niivue.resizeListener();
+  }
+}, [niivue, isLoading]);
 
   return (
     <>
       <title>{t("neuroglossaire_title")}</title>
       <link rel="stylesheet" href="/assets/styles/Neurotheka.css" />
-      {isLoading && <div className="loading-screen">Chargement...</div>}
-      <canvas id="gl1"></canvas>
+      {isLoading && <LoadingScreen />}
+      <canvas id="gl1" ref={canvasRef}></canvas>
 
       <div className="button-container">
         <button id="return-button" className="return-button" 

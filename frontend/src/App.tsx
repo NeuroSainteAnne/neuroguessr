@@ -1,13 +1,11 @@
-import React from 'react'
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header'
 import WelcomeScreen from './WelcomeScreen'
 import i18n from 'i18next';
 import { useTranslation } from "react-i18next";
-import { initReactI18next } from 'react-i18next';
-import GameScreen from './GameScreen';
+const GameScreen = lazy(() => import('./GameScreen'));
 import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
 import ValidateEmailScreen from './ValidateEmailScreen';
@@ -17,13 +15,28 @@ import { isTokenValid, refreshToken } from './helper_login';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import UserConfig from './UserConfig';
 import atlasFiles from './atlas_files'
-import {Niivue, NVImage} from '@niivue/niivue';
-import Neurotheka from './Neurotheka';
-import MultiplayerGameScreen from './MultiplayerGameScreen';
+const Neurotheka = lazy(() => import('./Neurotheka'));
+const MultiplayerGameScreen = lazy(() => import('./MultiplayerGameScreen'));
 import { jwtDecode } from 'jwt-decode';
 
 function App(myi18n?: any) {
-   const niivue = useRef<Niivue|null>(null);
+   const [niivueModule, setNiivueModule] = useState<any>(null);
+   const [niivue, setNiivue] = useState<any>(null);
+   useEffect(() => {
+      let isMounted = true;
+      import('@niivue/niivue').then((mod) => {
+         if (isMounted) {
+            setNiivueModule(mod)
+            setNiivue(new mod.Niivue({
+               show3Dcrosshair: true,
+               backColor: [0, 0, 0, 1],
+               crosshairColor: [1, 1, 1, 1]
+            }));
+         }
+      });
+      return () => { isMounted = false; };
+   }, []);
+
    const [isGuest, setIsGuest] = useState<boolean>(typeof localStorage !== 'undefined' && localStorage && localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : "")
@@ -42,9 +55,9 @@ function App(myi18n?: any) {
    const notificationRef = useRef<HTMLInputElement>(null);
    const [notificationMessage, setNotificationMessage] = useState<string|null>(null)
    const [notificationStatus, setNotificationStatus] = useState<"error"|"success">("success")
-   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null)
+   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<any|null>(null)
    const [askedAtlas, setAskedAtlas] = useState<string|null>(null)
-   const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null)
+   const [preloadedAtlas, setPreloadedAtlas] = useState<any|null>(null)
    const [loadEnforcer, setLoadEnforcer] = useState<number>(0)
    const [headerText, setHeaderText] = useState<string>("")
    const [headerTextMode, setHeaderTextMode] = useState<string>("")
@@ -91,16 +104,20 @@ function App(myi18n?: any) {
          setIsGuest(false);
          setIsLoggedIn(true);
       }
-      const niiFile = "/assets/atlas/mni152.nii.gz";
-      niivue.current = new Niivue({logLevel: "warn"})
-      niivue.current.loadFromUrl(niiFile).then((nvImage) => {
-         setPreloadedBackgroundMNI(nvImage);
-      }).catch((error) => {
-         console.error("Error loading NIfTI file:", error);
-         showNotification('error_loading_atlas', false, { atlas: askedAtlas });
-         setPreloadedBackgroundMNI(null)
-      });
    }, [])
+
+   useEffect(()=>{
+      if(niivue){
+         const niiFile = "/assets/atlas/mni152_downsampled.nii.gz";
+         niivue.loadFromUrl(niiFile).then((nvImage: any) => {
+            setPreloadedBackgroundMNI(nvImage);
+         }).catch((error: any) => {
+            console.error("Error loading NIfTI file:", error);
+            showNotification('error_loading_atlas', false, { atlas: askedAtlas });
+            setPreloadedBackgroundMNI(null)
+         });
+      }
+   }, [niivue])
 
    useEffect(() => {
       loadAtlasLabels()
@@ -176,18 +193,18 @@ function App(myi18n?: any) {
    useEffect(() => {
       if (askedAtlas) {
          const atlas = atlasFiles[askedAtlas];
-         if (atlas) {
+         if (atlas && niivue && niivueModule) {
             const niiFile = "/assets/atlas/nii/" + atlas.nii;
-            NVImage.loadFromUrl({url: niiFile}).then((nvImage) => {
+            niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
                setPreloadedAtlas(nvImage);
-            }).catch((error) => {
+            }).catch((error: any) => {
                console.error("Error loading NIfTI file:", error);
                showNotification('error_loading_atlas', false, { atlas: askedAtlas });
                setPreloadedAtlas(null)
             });
          }
       }
-   }, [askedAtlas])
+   }, [askedAtlas, niivue, niivueModule])
 
    useEffect(() => {
       if (isLoggedIn) {
@@ -262,20 +279,22 @@ function App(myi18n?: any) {
                         isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
                   </>} />
                   <Route path="/singleplayer/:askedAtlas?/:gameMode?" element={
-                     <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+                     <Suspense fallback={<LoadingScreen/>}><GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
                         preloadedAtlas={preloadedAtlas}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         viewerOptions={viewerOptions}
                         loadEnforcer={loadEnforcer}
                         isLoggedIn={isLoggedIn} authToken={authToken}
-                        userPublishToLeaderboard={userPublishToLeaderboard} />} />
+                        userPublishToLeaderboard={userPublishToLeaderboard}
+                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
                   <Route path="/multiplayer-game/:askedSessionCode?/:askedSessionToken?" element={
-                     <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
+                     <Suspense fallback={<LoadingScreen/>}><MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                         loadEnforcer={loadEnforcer}
                         viewerOptions={viewerOptions}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
-                        currentLanguage={currentLanguage} />} />
+                        currentLanguage={currentLanguage}
+                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
                   <Route path="/login" element={<LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/register" element={<RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/validate" element={<ValidateEmailScreen t={t} callback={callback} />} />
@@ -283,12 +302,13 @@ function App(myi18n?: any) {
                   <Route path="/configuration" element={<UserConfig t={t} callback={callback} authToken={authToken} />} />
                   <Route path="/stats" element={<Stats t={t} callback={callback} authToken={authToken} />} />
                   <Route path="/neurotheka/:askedAtlas?/:askedRegion?" element={
-                     <Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
+                     <Suspense fallback={<LoadingScreen/>}><Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
                         preloadedAtlas={preloadedAtlas}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         viewerOptions={viewerOptions}
-                        loadEnforcer={loadEnforcer} />} />
+                        loadEnforcer={loadEnforcer}
+                        niivue={niivue} niivueModule={niivueModule} /></Suspense>} />
                   <Route path="*" element={<div>Page not found</div>} />
                </Routes>
             <div className='lower-bar-phantom'></div>
@@ -383,6 +403,25 @@ function App(myi18n?: any) {
             </a>
          </div>
       </>
+   )
+}
+
+export const LoadingScreen = () => {
+   return (
+   <div id="loading-screen-inside">
+    <div className="loader-container">
+      <div className="loader">
+        <div className="sk-chase">
+          <div className="sk-chase-dot"></div>
+          <div className="sk-chase-dot"></div>
+          <div className="sk-chase-dot"></div>
+          <div className="sk-chase-dot"></div>
+          <div className="sk-chase-dot"></div>
+          <div className="sk-chase-dot"></div>
+        </div>
+      </div>
+    </div>
+   </div>
    )
 }
 

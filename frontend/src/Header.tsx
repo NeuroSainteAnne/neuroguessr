@@ -27,7 +27,7 @@ function Header({ref, currentLanguage, atlasRegions, t, callback,
                 <a className="navbar-left logo-title-container-navbar logo-title-container" 
                     href="/welcome"
                     onClick={(e)=>{e.preventDefault(); navigate("/welcome")}}>
-                    <img src="/assets/interface/neuroguessr.png" alt="NeuroGuessr Logo" className="logo" />
+                    <img src="/assets/interface/neuroguessr-64.png" alt="NeuroGuessr Logo" className="logo" />
                     <h1>{location.pathname.includes("neurotheka") ? t("neuroglossaire_title") : t("app_title")}</h1>
                 </a>
                 <div className="navbar-middle">
@@ -77,14 +77,14 @@ function Header({ref, currentLanguage, atlasRegions, t, callback,
                                     "lang-icon-btn"}
                                 data-lang="fr" aria-label="Français" 
                                 onClick={()=>{callback.handleChangeLanguage('fr')}}>
-                            <img src="/assets/interface/fr.png" alt="FR" />
+                            <img src="/assets/interface/fr-64.png" alt="FR" />
                         </span>
                         <span className={currentLanguage=="en"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}
                                 data-lang="en" aria-label="English"
                                 onClick={()=>{callback.handleChangeLanguage('en')}}>
-                            <img src="/assets/interface/en.png" alt="EN" />
+                            <img src="/assets/interface/en-64.png" alt="EN" />
                         </span>
                     </>}
                     {isLoggedIn && 

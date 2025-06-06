@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NeuroGuessr</title>
   <style>
-    #loading-screen {
+    #loading-screen, #loading-screen-inside {
       width: 100%;
       z-index: 1000;
     }
@@ -18,6 +18,13 @@
       justify-content: center;
       width: 100%;
     }
+     #loading-screen-inside .loader-container {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+     }
 
     .sk-chase {
       width: 40px;
