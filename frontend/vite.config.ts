@@ -33,5 +33,12 @@ export default defineConfig({
       usePolling: true, // Optional: Use polling if file changes are not detected
       interval: 1000, // Optional: Polling interval in milliseconds
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/bundle.js`,
+      }
+    }
   }
 })

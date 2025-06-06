@@ -114,20 +114,17 @@ if(config.server.serverSideRendering){
         await i18next.changeLanguage(lng); // Change language for the current request
         // Create a context for StaticRouter
         const context = {};
-
-        // Render the React application to a string
-        const jsx = (
-            <StaticRouter location={req.url} >
-                <App myi18n={{t:i18n, i18n:i18next}} />
-            </StaticRouter>
-        );
-
-        // Render the React app to HTML
-        const reactDom = renderToString(jsx);
         const botRequest = isBot(req);
-        
         let html;
         if(botRequest){
+            // Render the React application to a string
+            const jsx = (
+                <StaticRouter location={req.url} >
+                    <App myi18n={{t:i18n, i18n:i18next}} />
+                </StaticRouter>
+            );
+            // Render the React app to HTML
+            const reactDom = renderToString(jsx);
             html = frontendHtml.replace(
                 `<script type="module" src="/src/main.tsx"></script>`,
                 ``
@@ -143,14 +140,10 @@ if(config.server.serverSideRendering){
                 `<script type="module" src="/src/main.tsx"></script>`,
                 `<script>
                         window.i18n = {
-                        language: '${i18next.language}',
-                        translations: ${JSON.stringify(i18next.services.resourceStore.data)}
+                            defaultLanguage: '${i18next.language}'
                         };
                 </script>
-                <script src="/bundle.js"></script>`
-            ).replace(
-                `<div id="root" style="opacity: 0;">`,
-                `<div id="root" style="opacity: 0;">${reactDom}`
+                <script type="module" src="/assets/bundle.js"></script>`
             );
         }
         // Send the modified HTML to the client

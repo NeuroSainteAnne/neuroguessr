@@ -31,6 +31,7 @@ function App(myi18n?: any) {
       return () => { isMounted = false; };
    }, []);
 
+   const isClientSide = typeof document !== 'undefined';
    const [isGuest, setIsGuest] = useState<boolean>(typeof localStorage !== 'undefined' && localStorage && localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
    const [authToken, setAuthToken] = useState<string>(typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : "")
@@ -273,22 +274,45 @@ function App(myi18n?: any) {
                         isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
                   </>} />
                   <Route path="/singleplayer/:askedAtlas?/:gameMode?" element={
-                     <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
-                        atlasRegions={atlasRegions} 
-                        preloadedAtlas={preloadedAtlas}
-                        preloadedBackgroundMNI={preloadedBackgroundMNI} 
-                        viewerOptions={viewerOptions}
-                        loadEnforcer={loadEnforcer}
-                        isLoggedIn={isLoggedIn} authToken={authToken}
-                        userPublishToLeaderboard={userPublishToLeaderboard}
-                        niivueModule={niivueModule} />} />
+                     (isClientSide?
+                        <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+                           atlasRegions={atlasRegions} 
+                           preloadedAtlas={preloadedAtlas}
+                           preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                           viewerOptions={viewerOptions}
+                           loadEnforcer={loadEnforcer}
+                           isLoggedIn={isLoggedIn} authToken={authToken}
+                           userPublishToLeaderboard={userPublishToLeaderboard}
+                           niivueModule={niivueModule} />
+                        :
+                        <Suspense fallback={<LoadingScreen/>}>
+                           <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
+                              atlasRegions={atlasRegions} 
+                              preloadedAtlas={preloadedAtlas}
+                              preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                              viewerOptions={viewerOptions}
+                              loadEnforcer={loadEnforcer}
+                              isLoggedIn={isLoggedIn} authToken={authToken}
+                              userPublishToLeaderboard={userPublishToLeaderboard}
+                              niivueModule={niivueModule} />
+                        </Suspense>)
+                     } />
                   <Route path="/multiplayer-game/:askedSessionCode?/:askedSessionToken?" element={
-                     <Suspense fallback={<LoadingScreen/>}><MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
+                     (isClientSide?
+                        <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                         loadEnforcer={loadEnforcer}
                         viewerOptions={viewerOptions}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         currentLanguage={currentLanguage}
-                        niivueModule={niivueModule} /></Suspense>} />
+                        niivueModule={niivueModule} />
+                        : <Suspense fallback={<LoadingScreen/>}>
+                           <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
+                           loadEnforcer={loadEnforcer}
+                           viewerOptions={viewerOptions}
+                           preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                           currentLanguage={currentLanguage}
+                           niivueModule={niivueModule} /></Suspense>)
+                     } />
                   <Route path="/login" element={<LoginScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/register" element={<RegisterScreen t={t} callback={callback} currentLanguage={currentLanguage} />} />
                   <Route path="/validate" element={<ValidateEmailScreen t={t} callback={callback} />} />
@@ -296,13 +320,23 @@ function App(myi18n?: any) {
                   <Route path="/configuration" element={<UserConfig t={t} callback={callback} authToken={authToken} />} />
                   <Route path="/stats" element={<Stats t={t} callback={callback} authToken={authToken} />} />
                   <Route path="/neurotheka/:askedAtlas?/:askedRegion?" element={
+                     (isClientSide?
+                        <Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
+                        atlasRegions={atlasRegions} 
+                        preloadedAtlas={preloadedAtlas}
+                        preloadedBackgroundMNI={preloadedBackgroundMNI} 
+                        viewerOptions={viewerOptions}
+                        loadEnforcer={loadEnforcer}
+                        niivueModule={niivueModule} />
+                        :
                      <Suspense fallback={<LoadingScreen/>}><Neurotheka t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
                         preloadedAtlas={preloadedAtlas}
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         viewerOptions={viewerOptions}
                         loadEnforcer={loadEnforcer}
-                        niivueModule={niivueModule} /></Suspense>} />
+                        niivueModule={niivueModule} /></Suspense>)
+                  } />
                   <Route path="*" element={<div>Page not found</div>} />
                </Routes>
             <div className='lower-bar-phantom'></div>
