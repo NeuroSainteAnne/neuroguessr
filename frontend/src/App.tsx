@@ -261,7 +261,7 @@ function App(myi18n?: any) {
                      <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
                         isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
                   </>} />
-                  <Route path="/singleplayer/:askedAtlas/:gameMode" element={
+                  <Route path="/singleplayer/:askedAtlas?/:gameMode?" element={
                      <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
                         preloadedAtlas={preloadedAtlas}
@@ -270,7 +270,7 @@ function App(myi18n?: any) {
                         loadEnforcer={loadEnforcer}
                         isLoggedIn={isLoggedIn} authToken={authToken}
                         userPublishToLeaderboard={userPublishToLeaderboard} />} />
-                  <Route path="/multiplayer-game/:askedSessionCode/:askedSessionToken?" element={
+                  <Route path="/multiplayer-game/:askedSessionCode?/:askedSessionToken?" element={
                      <MultiplayerGameScreen t={t} callback={callback} authToken={authToken} isLoggedIn={isLoggedIn} userUsername={userUsername} 
                         loadEnforcer={loadEnforcer}
                         viewerOptions={viewerOptions}
@@ -289,6 +289,7 @@ function App(myi18n?: any) {
                         preloadedBackgroundMNI={preloadedBackgroundMNI} 
                         viewerOptions={viewerOptions}
                         loadEnforcer={loadEnforcer} />} />
+                  <Route path="*" element={<div>Page not found</div>} />
                </Routes>
             <div className='lower-bar-phantom'></div>
             {notificationMessage && 

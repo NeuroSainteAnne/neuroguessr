@@ -184,7 +184,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
                       </tbody>
                     </table>
                     <button type="submit">{t("login_button")}</button>
-                    <div><a id="registration_link" onClick={()=>navigate("/register")}>
+                    <div><a id="registration_link" href="/register" onClick={(e)=>{e.preventDefault(); navigate("/register")}}>
                         {t("registration_link")}
                     </a></div>
                     <div>

@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../config.json';
+import { useNavigate } from 'react-router';
 
 function RegisterScreen({ t, callback, currentLanguage }: 
     { t: TFunction<"translation", undefined>, callback: AppCallback, currentLanguage:string }) {
@@ -16,6 +17,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
   const activateCaptcha = config.recaptcha.activate;
   const captchaKey = config.recaptcha.siteKey;
   const [captchaToken, setCaptchaToken] = useState<string>("");
+  const navigate = useNavigate();
 
   const onCaptchaVerify = useCallback((token: string) => {
     setCaptchaToken(token);
@@ -104,7 +106,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success_no_verification'));
                 setTimeout(() => {
-                    callback.gotoPage("login");
+                    navigate("/login");
                 }, 2000);
             } else {
                 setRegisterErrorText("");
@@ -128,6 +130,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
         <div className="register-box">
           <h2>{t("register_mode")}</h2>
           <table className="login-element">
+            <tbody>
             <tr>
                 <td colSpan={2} id="login_error">
                     {t("beta_version_login_message")}
@@ -196,6 +199,7 @@ function RegisterScreen({ t, callback, currentLanguage }:
                 {registerSuccessText}
               </td>
             </tr>}
+            </tbody>
           </table>
           {activateCaptcha && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
           {registerSuccessText == "" && <button type="submit">{t("register_button")}</button>}

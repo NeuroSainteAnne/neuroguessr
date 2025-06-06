@@ -149,11 +149,14 @@
     font-size: 1em;
     transition: background-color 0.3s ease;
     margin-left: 15px;
+    margin-top: 0;
     /* Spacing from language switcher */
 }
 
 .guest-sign-in-button:hover {
     opacity: 0.85;
+    text-decoration: none;
+    color: inherit;
 }
 
 @media (max-width: 768px) {

@@ -84,11 +84,12 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
                 <span className="mode-description">{t("time_attack_description")}</span>
               </button>
             </div>
-            <button id="play-button" 
+            <a id="play-button" 
+                    href="/singleplayer"
                     className={(selectedAtlas=="" || selectedMode == "")?"play-button disabled":"play-button enabled"}
-                    onClick={()=>handleLaunchSinglePlayerGame()}>
+                    onClick={(e)=>{e.preventDefault(); handleLaunchSinglePlayerGame()}}>
               {t("play_button")}
-            </button>
+            </a>
           </section>
         </div>} />
 
@@ -113,9 +114,11 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
                     href="/welcome/multiplayer-create"
                     onClick={(e)=>{e.preventDefault();navigate(`/welcome/multiplayer-create`)}}>{t("create_multiplayer_button")}</a></div>
               </div> }
-              {!isLoggedIn && <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
-                .replace("/login",`/login?redirect=welcome&redirect_subpage=multiplayer`)
-              }}></div>}
+              {!isLoggedIn && <>
+                <div className="multiplayer-please-login" dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
+                  .replace("/login",`/login?redirect=welcome&redirect_subpage=multiplayer`)
+                }}></div>
+                <a href="/welcome/multiplayer-create" style={{display: "none"}}>{t("create_multiplayer_button")}</a></>}
             </>
           </div>} />
         <Route path="multiplayer-create" element={<MultiplayerConfigScreen t={t} callback={callback} authToken={authToken} userUsername={userUsername} />} />

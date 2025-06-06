@@ -232,7 +232,6 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   }
 
   useEffect(() => {
-    console.log(askedSessionCode)
     if (isLoggedIn && askedSessionCode) {
       clearInterface()
       setLobbyUsers([])

@@ -69,8 +69,9 @@ function Header({ref, currentLanguage, atlasRegions, t, callback,
         
                 <div className="navbar-right">
                     {!isLoggedIn && <>
-                        <button id="guest-sign-in-button" className="guest-sign-in-button"
-                            onClick={()=>navigate("/login")}>{t("sign_in")}</button>
+                        <a id="guest-sign-in-button" className="guest-sign-in-button"
+                            href="/login"
+                            onClick={(e)=>{e.preventDefault(); navigate("/login")}}>{t("sign_in")}</a>
                         <span className={currentLanguage=="fr"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}

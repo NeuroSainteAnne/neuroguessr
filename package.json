@@ -69,6 +69,7 @@
         "@types/react-helmet": "^6.1.11",
         "@types/server-destroy": "^1.0.4",
         "@vitejs/plugin-react": "^4.4.1",
+        "ajv": "^8.17.1",
         "eslint": "^9.25.0",
         "eslint-plugin-react-hooks": "^5.2.0",
         "eslint-plugin-react-refresh": "^0.4.19",

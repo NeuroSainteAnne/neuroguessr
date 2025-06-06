@@ -83,6 +83,16 @@ if(config.server.serverSideRendering){
     app.use("/assets", express.static(path.join(htmlRoot, "frontend", "src", "assets")));
     app.use("/bundle.js", express.static(path.join(htmlRoot, "frontend", "dist", "bundle.js")));
 
+    // Middleware to detect bots
+    const isBot = (req: any) => {
+        const userAgent = req.get('user-agent') || '';
+        const botUserAgents = [
+            'googlebot', 'bingbot', 'slurp', 'duckduckbot',
+            'baiduspider', 'yandexbot', 'facebot', 'ia_archiver'
+        ];
+        return botUserAgents.some(botUA => userAgent.toLowerCase().includes(botUA));
+    };
+
     const i18n = await i18next.use(LanguageDetector).use(FsBackend).init({
         fallbackLng: 'fr',
         preload: ["en","fr"],
@@ -114,21 +124,35 @@ if(config.server.serverSideRendering){
 
         // Render the React app to HTML
         const reactDom = renderToString(jsx);
-
-        // Send the rendered HTML to the client
-        let html = frontendHtml.replace(
-            `<script type="module" src="/src/main.tsx"></script>`,
-            `<script>
-                    window.i18n = {
-                    language: '${i18next.language}',
-                    translations: ${JSON.stringify(i18next.services.resourceStore.data)}
-                    };
-            </script>
-            <script src="/bundle.js"></script>`
-        ).replace(
-            `<div id="root" style="opacity: 0;">`,
-            `<div id="root" style="opacity: 0;">${reactDom}`
-        );
+        const botRequest = isBot(req);
+        
+        let html;
+        if(botRequest){
+            html = frontendHtml.replace(
+                `<script type="module" src="/src/main.tsx"></script>`,
+                ``
+            ).replace(
+                `<div id="root" style="opacity: 0;">`,
+                `<div id="root">${reactDom}`
+            ).replace(
+                `<div id="loading-screen">`,
+                `<div id="loading-screen" style="display:none">`
+            );
+        } else {
+            html = frontendHtml.replace(
+                `<script type="module" src="/src/main.tsx"></script>`,
+                `<script>
+                        window.i18n = {
+                        language: '${i18next.language}',
+                        translations: ${JSON.stringify(i18next.services.resourceStore.data)}
+                        };
+                </script>
+                <script src="/bundle.js"></script>`
+            ).replace(
+                `<div id="root" style="opacity: 0;">`,
+                `<div id="root" style="opacity: 0;">${reactDom}`
+            );
+        }
         // Send the modified HTML to the client
         res.send(html);
     });

@@ -586,6 +586,11 @@
     cursor: default;
 }
 
+.play-button:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
 @media (max-width: 480px) {
     .play-button {
         font-size: 1.1rem;
