@@ -1,5 +1,5 @@
+import React from 'react';
 import type { TFunction } from 'i18next';
-import './LoginScreen.css'
 import { useCallback, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../config.json';
@@ -143,6 +143,7 @@ function LoginScreen({ t, callback, currentLanguage }: { t: TFunction<"translati
 
     const formContent = (
         <>
+            <link rel="stylesheet" href="/assets/styles/LoginScreen.css" />
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
                     <h2>{t("login_mode")}</h2>

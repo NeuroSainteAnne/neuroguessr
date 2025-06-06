@@ -1,3 +1,4 @@
+import React from 'react';
 import { NVImage, SHOW_RENDER, type Niivue } from "@niivue/niivue";
 
 export const defineNiiOptions = (myniivue: Niivue, viewerOptions: DisplayOptions) => {

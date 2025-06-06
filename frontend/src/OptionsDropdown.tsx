@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import './OptionsDropdown.css'
+import React, { useEffect } from 'react';
 import type { TFunction } from 'i18next';
 
 function OptionsDropdown({ t, callback, viewerOptions }:
@@ -13,6 +12,7 @@ function OptionsDropdown({ t, callback, viewerOptions }:
     }
 
     return (<>
+        <link rel="stylesheet" href="/assets/styles/OptionsDropdown.css" />
         <div className="dropdown">
             <button className="dropbtn">
                 {t("view_options")}

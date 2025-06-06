@@ -1,5 +1,5 @@
+import React from 'react'
 import { useEffect, type RefObject } from 'react';
-import './Header.css'
 import type { TFunction } from 'i18next';
 import LoginDropdownMenu from './LoginDropdownMenu';
 import SearchBar from './SearchBar';
@@ -22,6 +22,7 @@ function Header({ref, currentLanguage, atlasRegions, t, callback,
 
     return (
         <>
+            <link rel="stylesheet" href="/assets/styles/Header.css" />
             <div className="navbar-container" ref={ref}>
                 <div className="navbar-left logo-title-container-navbar logo-title-container" 
                     onClick={()=>{navigate("/welcome")}}>

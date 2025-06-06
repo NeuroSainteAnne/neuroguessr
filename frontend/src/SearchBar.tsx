@@ -1,5 +1,5 @@
+import React from 'react';
 import type { TFunction } from 'i18next'
-import './SearchBar.css'
 import atlasFiles from './atlas_files'
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,7 @@ function Searchbar({ t, callback, atlasRegions }:
 
   return (
     <>
+      <link rel="stylesheet" href="/assets/styles/SearchBar.css" />
       <div className="search-bar-container-main">
         <div className="search-container main-search">
           <input

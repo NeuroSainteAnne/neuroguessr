@@ -1,5 +1,5 @@
+import React from 'react';
 import type { TFunction } from 'i18next';
-import './GameSelector.css'
 import atlasFiles, { atlasCategories } from './atlas_files';
 import { useEffect, useState } from 'react';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
@@ -28,18 +28,19 @@ function GameSelector({ t, callback, isLoggedIn, authToken, userUsername }:
 
   return (
     <>
+      <link rel="stylesheet" href="/assets/styles/GameSelector.css" />
       <div className="centered-container">
         <div className="player-selection-buttons">
-          <button id="single-player-button" 
+          <a id="single-player-button" 
               className={(location.pathname.includes("singleplayer")?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>navigate("/welcome/singleplayer")}>
+              href="/welcome/singleplayer">
                 {t("single_player_button")}
-          </button>
-          <button id="single-player-button" 
+          </a>
+          <a id="single-player-button" 
               className={(location.pathname.includes("multiplayer")?"player-mode-button selected":"player-mode-button")}
-              onClick={()=>{navigate("/welcome/multiplayer")}}>
+              href="/welcome/multiplayer">
                 {t("multiplayer_button")}
-          </button>
+          </a>
         </div>
 
         <Routes>
@@ -124,7 +125,7 @@ export const GameSelectorAtlas = ({t, selectedAtlas, setSelectedAtlas, selectedC
   { t: TFunction<"translation", undefined>; selectedAtlas: string; setSelectedAtlas: React.Dispatch<React.SetStateAction<string>>; 
     selectedCategory: string; setSelectedCategory: React.Dispatch<React.SetStateAction<string>> }
 ) => {
-  return (
+  return (<>
     <div className="atlas-layout">
       <div className="category-list">
         {atlasCategories.map((category) => (
@@ -155,7 +156,7 @@ export const GameSelectorAtlas = ({t, selectedAtlas, setSelectedAtlas, selectedC
           ))}
       </div>
     </div>
-  )
+  </>)
 }
 
 export default GameSelector

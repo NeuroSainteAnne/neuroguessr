@@ -1,6 +1,5 @@
-
+import React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import './LoginDropdownMenu.css'
 import type { TFunction } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,7 +31,8 @@ function LoginDropdownMenu({currentLanguage, t, callback, userFirstName, userLas
         };
     }, [isVisibleDropdown])
 
-    return (
+    return (<>
+        <link rel="stylesheet" href="/assets/styles/LoginDropdownMenu.css" />
         <div id="user-dropdown-container" className="user-dropdown-container" ref={dropdownMenuRef}>
             <button id="user-menu-button" className="user-menu-button" onClick={()=>toggleDropdown()}>
                 <img src="/assets/interface/user_brain.png" alt="User Icon" className="user-icon" />
@@ -73,6 +73,6 @@ function LoginDropdownMenu({currentLanguage, t, callback, userFirstName, userLas
                 </button>
             </div> }
         </div>
-    )
+    </>)
 }
 export default LoginDropdownMenu

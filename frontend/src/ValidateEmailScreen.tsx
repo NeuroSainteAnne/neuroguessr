@@ -1,5 +1,4 @@
 import type { TFunction } from 'i18next';
-import './ValidateEmailScreen.css'
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -51,6 +50,7 @@ function ValidateEmailScreen({t, callback}:{ t: TFunction<"translation", undefin
     
   return (
     <>
+        <link rel="stylesheet" href="/assets/styles/ValidateEmailScreen.css" />
         <div className="register-box">
             <h2>{t("validate_email_header")}</h2>
             <table className="login-element">

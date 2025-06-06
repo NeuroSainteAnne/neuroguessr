@@ -1,6 +1,5 @@
 import type { TFunction } from 'i18next';
-import './ResetPasswordScreen.css'
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", undefined>, callback: AppCallback }) {
@@ -127,6 +126,7 @@ function ResetPasswordScreen({ t, callback }: { t: TFunction<"translation", unde
     }
     return(
     <>
+        <link rel="stylesheet" href="/assets/styles/ResetPasswordScreen.css" />
         <form id="reset-password-form" onSubmit={handleResetPassword}>
           <div className="register-box">
               <h2>{t("reset_password_header")}</h2>

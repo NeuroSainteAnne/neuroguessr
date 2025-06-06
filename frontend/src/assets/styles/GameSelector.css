@@ -53,6 +53,11 @@
     }
 }
 
+.player-mode-button:hover{
+    text-decoration: none;
+    color: initial;
+}
+
 .player-mode-button:hover:not(.selected) {
     background: #345a85;
     color: white;

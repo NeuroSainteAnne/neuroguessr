@@ -1,11 +1,12 @@
+import React from 'react'
 import { useEffect, useRef, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import './App.css'
-import './Help.css'
 import Header from './Header'
 import WelcomeScreen from './WelcomeScreen'
+import i18n from 'i18next';
 import { useTranslation } from "react-i18next";
+import { initReactI18next } from 'react-i18next';
 import GameScreen from './GameScreen';
 import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
@@ -21,18 +22,18 @@ import Neurotheka from './Neurotheka';
 import MultiplayerGameScreen from './MultiplayerGameScreen';
 import { jwtDecode } from 'jwt-decode';
 
-function App() {
-   const niivue = new Niivue({logLevel: "warn"});
-   const [isGuest, setIsGuest] = useState<boolean>(localStorage.getItem('guestMode') == "true" || false)
+function App(myi18n?: any) {
+   const niivue = useRef<Niivue|null>(null);
+   const [isGuest, setIsGuest] = useState<boolean>(typeof localStorage !== 'undefined' && localStorage && localStorage.getItem('guestMode') == "true" || false)
    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
-   const [authToken, setAuthToken] = useState<string>(localStorage.getItem('authToken') || "")
+   const [authToken, setAuthToken] = useState<string>(typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : "")
    const location = useLocation();
    const [userUsername, setUserUsername] = useState<string>("")
    const [userFirstName, setUserFirstName] = useState<string>("")
    const [userLastName, setUserLastName] = useState<string>("")
    const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean|null>(null)
    const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([])
-   const { t, i18n } = useTranslation();
+   const { t, i18n } = myi18n?.myi18n || useTranslation();
    const [currentLanguage, setCurrentLanguage] = useState(i18n.language)
    const handleChangeLanguage = (lang: string) => {
       setCurrentLanguage(lang);
@@ -91,7 +92,8 @@ function App() {
          setIsLoggedIn(true);
       }
       const niiFile = "/assets/atlas/mni152.nii.gz";
-      niivue.loadFromUrl(niiFile).then((nvImage) => {
+      niivue.current = new Niivue({logLevel: "warn"})
+      niivue.current.loadFromUrl(niiFile).then((nvImage) => {
          setPreloadedBackgroundMNI(nvImage);
       }).catch((error) => {
          console.error("Error loading NIfTI file:", error);
@@ -236,6 +238,9 @@ function App() {
 
    return (
       <>
+      <link rel="stylesheet" href="/assets/styles/main.css" />
+      <link rel="stylesheet" href="/assets/styles/App.css" />
+      <link rel="stylesheet" href="/assets/styles/Help.css" />
       <div className="main-container">
          <Header ref={headerRef} currentLanguage={currentLanguage} atlasRegions={atlasRegions}
             isLoggedIn={isLoggedIn} t={t} callback={callback}
@@ -247,12 +252,15 @@ function App() {
             <div ref={pageContainerRef} className="page-container">
                <Routes>
                   <Route path="/" element={<Navigate to="/welcome" replace />} />
-                  <Route path="/welcome/*" element={ <>
+                  <Route path="/welcome" element={ <>
                      {!isGuest && !isLoggedIn && <LandingPage t={t} callback={callback} />}
                      {(isGuest || isLoggedIn) && <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
                         isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />}
-                  </>}>
-                  </Route>
+                  </>} />
+                  <Route path="/welcome/*" element={ <>
+                     <WelcomeScreen t={t} callback={callback} atlasRegions={atlasRegions} 
+                        isLoggedIn={isLoggedIn} authToken={authToken} userUsername={userUsername} />
+                  </>} />
                   <Route path="/singleplayer/:askedAtlas/:gameMode" element={
                      <GameScreen t={t} callback={callback} currentLanguage={currentLanguage}
                         atlasRegions={atlasRegions} 
@@ -325,7 +333,7 @@ function App() {
                   <p dangerouslySetInnerHTML={{
                      __html: t("help_atlases_text").replace(
                         /\[doi:([^\]]+)\]/g,
-                        (_match, doi) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
+                        (_match: string, doi: string) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
                      )
                   }}></p>
                </section>

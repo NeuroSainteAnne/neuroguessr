@@ -1,6 +1,8 @@
 .canvas-container{
     width: 100%;
     height: calc(100% - 110px);
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Styles for Buttons Below Canvas (viewer page) - Keep existing */

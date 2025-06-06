@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import './Stats.css'
+import React, { useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
 function Stats({t, callback, authToken}: 
     { t: TFunction<"translation", undefined>, callback: AppCallback, authToken: string }) {
 
-    return(<>Placeholder for Stats module</>)
+    return(<>
+      <link rel="stylesheet" href="/assets/styles/Stats.css" />
+      Placeholder for Stats module
+    </>)
 
 }
 

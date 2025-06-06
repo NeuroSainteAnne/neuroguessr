@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import './UserConfig.css'
+import React, { useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
 function UserConfig({t, callback, authToken}: 
@@ -137,6 +136,7 @@ function UserConfig({t, callback, authToken}:
     
     return(
     <>
+        <link rel="stylesheet" href="/assets/styles/UserConfig.css" />
         <form id="reconfigure_form" onSubmit={handleReconfigure}>
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>

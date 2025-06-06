@@ -98,6 +98,8 @@
 .option-button:hover {
     /*            transform: translateY(-2px);*/
     opacity: 0.85;
+    text-decoration: none;
+    color: initial;
     /* Slightly reduce opacity on hover */
 }
 

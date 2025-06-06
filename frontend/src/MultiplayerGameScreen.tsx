@@ -1,5 +1,4 @@
 import type { TFunction } from 'i18next';
-import "./MultiplayerGameScreen.css"
 import React, { useEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from './helper_login';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -27,12 +26,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
   const wsRef = useRef<WebSocket | null>(null);
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
-  const niivue = useRef(new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1],
-    logLevel: "warn"
-  }));
+  const niivue = useRef<Niivue|null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
   const [stepCountdown, setStepCountdown] = useState<number | null>(null);
@@ -271,6 +265,12 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 
   useEffect(() => {
     checkToken()
+    niivue.current = new Niivue({
+      show3Dcrosshair: true,
+      backColor: [0, 0, 0, 1],
+      crosshairColor: [1, 1, 1, 1],
+      logLevel: "warn"
+    })
     initNiivue(niivue.current, viewerOptions, ()=>{
         setIsLoadedNiivue(true);
     })
@@ -303,7 +303,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 }, [askedAtlas])
 
   useEffect(() => {
-    loadAtlasNii(niivue.current, preloadedBackgroundMNI, loadedAtlas);
+    if(niivue.current) loadAtlasNii(niivue.current, preloadedBackgroundMNI, loadedAtlas);
     loadAtlasData();
   }, [preloadedBackgroundMNI, isLoadedNiivue, loadEnforcer, loadedAtlas, askedAtlas, askedLut])
 
@@ -331,6 +331,7 @@ const MultiplayerGameScreen = ({ t, callback, authToken, isLoggedIn, userUsernam
 
   return (
     <>
+      <link rel="stylesheet" href="/assets/styles/MultiplayerGameScreen.css" />
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" 
           onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>

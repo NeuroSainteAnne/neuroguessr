@@ -27,6 +27,11 @@ export default defineConfig({
         secure: false,   
         ws: true,
       }
-    }
+    },
+    watch: {
+      // Watch the /assets/styles directory for changes
+      usePolling: true, // Optional: Use polling if file changes are not detected
+      interval: 1000, // Optional: Polling interval in milliseconds
+    },
   }
 })

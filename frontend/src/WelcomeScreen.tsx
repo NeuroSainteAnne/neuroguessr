@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import SearchBar from './SearchBar'
 import type { TFunction } from 'i18next';

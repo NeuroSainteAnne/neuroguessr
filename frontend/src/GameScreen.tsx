@@ -1,6 +1,5 @@
+import React from 'react';
 import type { TFunction } from 'i18next';
-import './GameScreen.css'
-import './Help.css'
 import { useEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { Niivue, SHOW_RENDER, type NVImage } from '@niivue/niivue';
 import atlasFiles from './atlas_files';
@@ -98,12 +97,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
   const cMap = useRef<ColorMap | null>(null);
   const cLut = useRef<Uint8ClampedArray | null>(null);
-  const niivue = useRef(new Niivue({
-    show3Dcrosshair: true,
-    backColor: [0, 0, 0, 1],
-    crosshairColor: [1, 1, 1, 1],
-    logLevel: "warn"
-  }));
+  const niivue = useRef<Niivue|null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const guessButtonRef = useRef<HTMLButtonElement>(null);
   const startTime = useRef<number | null>(null);
@@ -120,6 +114,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
   useEffect(() => {
+    niivue.current = new Niivue({
+      show3Dcrosshair: true,
+      backColor: [0, 0, 0, 1],
+      crosshairColor: [1, 1, 1, 1],
+      logLevel: "warn"
+    })
     initNiivue(niivue.current, viewerOptions, () => {
       setIsLoadedNiivue(true);
     })
@@ -220,7 +220,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, gameMode, askedAtlas, loadEnforcer])
 
   const checkLoading = async () => {
-    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
+    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas && niivue.current) {
       setIsLoading(false);
       loadAtlasNii(niivue.current, preloadedBackgroundMNI, preloadedAtlas);
       await loadAtlasData();
@@ -514,7 +514,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   }
 
   const validateGuess = async () => {
-    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
+    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current || !niivue.current) {
       console.warn('Cannot validate guess:', { selectedVoxel, isGameRunning, currentTarget });
       return;
     }
@@ -749,7 +749,7 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   }
 
   const handleRecolorization = () => {
-    if (isGameRunning && gameMode === 'navigation') {
+    if (isGameRunning && gameMode === 'navigation' && niivue.current) {
       if (cLut.current && niivue.current && niivue.current.volumes.length > 1 && niivue.current.volumes[1].colormapLabel) {
         niivue.current.volumes[1].colormapLabel.lut = cLut.current;
         niivue.current.updateGLVolume();
@@ -869,11 +869,12 @@ function GameScreen({ t, callback, currentLanguage, atlasRegions,
   }, [showHelpOverlay])
 
   useEffect(() => {
-    defineNiiOptions(niivue.current, viewerOptions)
+    if(niivue.current) defineNiiOptions(niivue.current, viewerOptions)
   }, [viewerOptions])
 
   return (
     <>
+      <link rel="stylesheet" href="/assets/styles/GameScreen.css" />
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}
