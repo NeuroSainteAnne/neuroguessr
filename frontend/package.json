@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vike dev",
+    "build": "vike build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vike preview"
   }
 }

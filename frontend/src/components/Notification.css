@@ -1,0 +1,19 @@
+#notification {
+    position: fixed;
+    top: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+#notification.success {
+    background: #4ade80;
+    color: #1a3c1f;
+}
+#notification.error {
+    background: #f87171;
+    color: #3c1a1a;
+}

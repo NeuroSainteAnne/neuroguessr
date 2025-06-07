@@ -1,0 +1,1 @@
+export default '/singleplayer/@atlas/@mode'

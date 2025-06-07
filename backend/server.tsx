@@ -22,13 +22,12 @@ import { LanguageDetector, handle } from 'i18next-http-middleware'
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { StaticRouter } from 'react-router';
-import App from "../frontend/src/App.tsx"
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
 
-const frontendHtml = fs.readFileSync(path.join(htmlRoot, "frontend","index.html"), "utf-8")
+// const frontendHtml = fs.readFileSync(path.join(htmlRoot, "frontend","index.html"), "utf-8")
 
 database_init()
 
@@ -79,7 +78,7 @@ app.use(
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
-if(config.server.serverSideRendering){
+/*if(config.server.serverSideRendering){
     //app.use("/assets", express.static(path.join(htmlRoot, "frontend", "src", "assets")));
     app.use(express.static(path.join(htmlRoot, "frontend", "dist")));
 
@@ -160,7 +159,7 @@ if(config.server.serverSideRendering){
     });
     
     app.use("/assets", express.static(path.join(reactRoot, "assets")));
-}
+}*/
 
 setInterval(() => {
     cleanExpiredTokens();

@@ -1,0 +1,177 @@
+export { onRenderHtml }
+
+import React from 'react'
+import { renderToString } from 'react-dom/server'
+import { PageLayout } from './PageLayout'
+import { escapeInject, dangerouslySkipEscape } from 'vike/server'
+import type { OnRenderHtmlAsync } from 'vike/types'
+import { StaticRouter } from 'react-router-dom'
+
+const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
+  const { Page } = pageContext
+  if (!Page) throw new Error('My onRenderHtml() hook expects pageContext.Page to be defined')
+  const PageComponent = Page as React.ComponentType<any>
+  // Important: Use StaticRouter for server-side rendering
+  const pageHtml = renderToString(
+    <StaticRouter location={pageContext.urlPathname}>
+        <PageLayout pageContext={pageContext}>
+            <PageComponent />
+        </PageLayout>
+    </StaticRouter>
+  )
+
+  return escapeInject`<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${(pageContext.config as { title?: string })?.title || 'NeuroGuessr'}</title>
+  <style>
+    #loading-screen, #loading-screen-inside {
+      width: 100%;
+      z-index: 1000;
+    }
+    #loading-screen .loader-container {
+      background-color: #363636;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+     #loading-screen-inside .loader-container {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+     }
+
+    .sk-chase {
+      width: 40px;
+      height: 40px;
+      position: relative;
+      animation: sk-chase 2.5s infinite linear both;
+    }
+
+    .sk-chase-dot {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      animation: sk-chase-dot 2s infinite ease-in-out both;
+    }
+
+    .sk-chase-dot:before {
+      content: "";
+      display: block;
+      width: 25%;
+      height: 25%;
+      background-color: #fff;
+      border-radius: 100%;
+      animation: sk-chase-dot-before 2s infinite ease-in-out both;
+    }
+
+    .sk-chase-dot:nth-child(1) {
+      animation-delay: -1.1s;
+    }
+
+    .sk-chase-dot:nth-child(2) {
+      animation-delay: -1s;
+    }
+
+    .sk-chase-dot:nth-child(3) {
+      animation-delay: -0.9s;
+    }
+
+    .sk-chase-dot:nth-child(4) {
+      animation-delay: -0.8s;
+    }
+
+    .sk-chase-dot:nth-child(5) {
+      animation-delay: -0.7s;
+    }
+
+    .sk-chase-dot:nth-child(6) {
+      animation-delay: -0.6s;
+    }
+
+    .sk-chase-dot:nth-child(1):before {
+      animation-delay: -1.1s;
+    }
+
+    .sk-chase-dot:nth-child(2):before {
+      animation-delay: -1s;
+    }
+
+    .sk-chase-dot:nth-child(3):before {
+      animation-delay: -0.9s;
+    }
+
+    .sk-chase-dot:nth-child(4):before {
+      animation-delay: -0.8s;
+    }
+
+    .sk-chase-dot:nth-child(5):before {
+      animation-delay: -0.7s;
+    }
+
+    .sk-chase-dot:nth-child(6):before {
+      animation-delay: -0.6s;
+    }
+
+    @keyframes sk-chase {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes sk-chase-dot {
+
+      80%,
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes sk-chase-dot-before {
+      50% {
+        transform: scale(0.4);
+      }
+
+      100%,
+      0% {
+        transform: scale(1);
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/favicon/site.webmanifest">
+</head>
+
+<body>
+  <div id="loading-screen" style="display:none">
+    <div class="loader-container">
+      <div class="loader">
+        <div class="sk-chase">
+          <div class="sk-chase-dot"></div>
+          <div class="sk-chase-dot"></div>
+          <div class="sk-chase-dot"></div>
+          <div class="sk-chase-dot"></div>
+          <div class="sk-chase-dot"></div>
+          <div class="sk-chase-dot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="root" style="opacity: 100;">${dangerouslySkipEscape(pageHtml)}</div>
+</body>
+
+</html>
+`
+}

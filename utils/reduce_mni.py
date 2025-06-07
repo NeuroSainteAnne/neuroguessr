@@ -8,8 +8,8 @@ import nibabel as nib
 import numpy as np
 from nilearn.image import resample_img, crop_img
 
-input_path = "../frontend/src/assets/atlas/mni152.nii.gz"
-output_path = "../frontend/src/assets/atlas/mni152_downsampled.nii.gz"
+input_path = "../frontend/src/atlas/mni152.nii.gz"
+output_path = "../frontend/src/atlas/mni152_downsampled.nii.gz"
 new_voxel_size = 1.2  # or 4.0, etc.
 target_dtype = np.uint8
 
