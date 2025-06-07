@@ -62,7 +62,7 @@ export function Help() {
                 <div className="help-content" ref={helpContentRef}>
                   <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
                   {isWelcome && <>
-                    <h2 data-i18n="help_title">{t("help_title")}</h2>
+                    <h2>{t("help_title")}</h2>
                     <section>
                         <h3>{t("help_presentation_title")}</h3>
                         <p>{t("help_presentation_text")}</p>
@@ -76,7 +76,7 @@ export function Help() {
                     </section>
                   </>}
                   {isNeurotheka && <>
-                    <h2 data-i18n="help_title">{t("help_title")}</h2>
+                    <h2>{t("help_title")}</h2>
                     <section>
                         <h3>{t("neurotheka_principle_title")}</h3>
                         <p>{t("neurotheka_principle_text")}</p>

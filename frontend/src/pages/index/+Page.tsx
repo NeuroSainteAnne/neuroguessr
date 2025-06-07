@@ -13,7 +13,7 @@ function LandingPage() {
         <div id="unlogged-landing-page" className="landing-content">
             <div className="welcome-section">
                 <h2 className="welcome-message">{t("welcome_unlogged")}</h2>
-                <p data-i18n="welcome_text_unlogged">{t("welcome_text_unlogged")}</p>
+                <p>{t("welcome_text_unlogged")}</p>
             </div>
             <div className="sign-in-panel">
                 <div className="sign-in-options-container">

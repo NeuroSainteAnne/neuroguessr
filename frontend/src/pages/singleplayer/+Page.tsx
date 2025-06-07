@@ -1,5 +1,4 @@
 import React, { use } from 'react';
-import type { TFunction } from 'i18next';
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { isTokenValid, refreshToken } from '../../utils/helper_login';
 import { defineNiiOptions, fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';

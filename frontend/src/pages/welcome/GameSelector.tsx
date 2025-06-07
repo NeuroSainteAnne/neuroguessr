@@ -1,8 +1,3 @@
-import React from 'react';
-import type { TFunction } from 'i18next';
-import atlasFiles, { atlasCategories } from '../../utils/atlas_files';
-import { useEffect, useState } from 'react';
-//import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 import { useApp } from '../../context/AppContext';
 import './GameSelector.css';
 

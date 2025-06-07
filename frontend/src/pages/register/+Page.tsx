@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../../../config.json';

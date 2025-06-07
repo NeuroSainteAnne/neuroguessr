@@ -18,16 +18,11 @@ import { getLeaderboard } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { LanguageDetector, handle } from 'i18next-http-middleware'
-import React from 'react';
-import { renderToString } from 'react-dom/server';
-import { StaticRouter } from 'react-router';
+import { renderPage } from 'vike/server';
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
-
-// const frontendHtml = fs.readFileSync(path.join(htmlRoot, "frontend","index.html"), "utf-8")
 
 database_init()
 
@@ -62,7 +57,7 @@ app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayer
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
-    res.sendFile("favicon.ico", { root: path.join(reactRoot, "assets", "favicon") });
+    res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
 });
 
 
@@ -78,77 +73,74 @@ app.use(
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
-/*if(config.server.serverSideRendering){
-    //app.use("/assets", express.static(path.join(htmlRoot, "frontend", "src", "assets")));
-    app.use(express.static(path.join(htmlRoot, "frontend", "dist")));
+import "../frontend/dist/server/entry.mjs"
+if(config.server.serverSideRendering){
+    app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
+    app.use('/atlas', express.static(path.join(reactRoot, 'client', 'atlas')));
+    app.use('/favicon', express.static(path.join(reactRoot, 'client', 'favicon')));
+    app.use('/interface', express.static(path.join(reactRoot, 'client', 'interface')));
 
-    // Middleware to detect bots
-    const isBot = (req: any) => {
-        const userAgent = req.get('user-agent') || '';
-        const botUserAgents = [
-            'googlebot', 'bingbot', 'slurp', 'duckduckbot',
-            'baiduspider', 'yandexbot', 'facebot', 'ia_archiver'
-        ];
-        return botUserAgents.some(botUA => userAgent.toLowerCase().includes(botUA));
-    };
+    await i18next
+            .use(FsBackend)
+            .init({
+                fallbackLng: 'fr',
+                preload: ["en", "fr"],
+                ns: ['translation'],
+                defaultNS: 'translation',
+                backend: {
+                    loadPath: path.join(htmlRoot, "frontend", "src", "i18n", "{{lng}}.json"),
+                },
+                react: {
+                    useSuspense: false
+                },
+                // Critical for SSR to work properly
+                initImmediate: false
+            });
 
-    const i18n = await i18next.use(LanguageDetector).use(FsBackend).init({
-        fallbackLng: 'fr',
-        preload: ["en","fr"],
-        backend: {
-            loadPath: path.join(htmlRoot, "frontend", "src", "assets", "i18n", "{{lng}}.json"),
-        }
-    });
+    app.get(/(.*)/, async (req, res, next) => {
+        // Detect language from request (simplified)
+        const acceptLanguage = req.headers['accept-language'] || '';
+        const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
+        i18next.changeLanguage(preferredLang)
 
-    app.use(
-        handle(i18next, {
-            ignoreRoutes: ['/assets','/api'],
-            removeLngFromUrl: false 
-        })
-    )
-
-    // Handle all routes with server-side rendering
-    app.get(/(.*)/, async (req, res) => {
-        const lng = req.language || 'fr'; // Get language from request or default to 'en'
-        await i18next.changeLanguage(lng); // Change language for the current request
-        // Create a context for StaticRouter
-        const context = {};
-        const botRequest = isBot(req);
-        let html;
-        if(botRequest){
-            // Render the React application to a string
-            const jsx = (
-                <StaticRouter location={req.url} >
-                    <App myi18n={{t:i18n, i18n:i18next}} />
-                </StaticRouter>
-            );
-            // Render the React app to HTML
-            const reactDom = renderToString(jsx);
-            html = frontendHtml.replace(
-                `<script type="module" src="/src/main.tsx"></script>`,
-                ``
-            ).replace(
-                `<div id="root" style="opacity: 0;">`,
-                `<div id="root">${reactDom}`
-            ).replace(
-                `<div id="loading-screen">`,
-                `<div id="loading-screen" style="display:none">`
-            );
-        } else {
-            html = frontendHtml.replace(
-                `<script type="module" src="/src/main.tsx"></script>`,
+        const pageContextInit = {
+            urlOriginal: req.originalUrl,
+            i18n: {
+                language: preferredLang
+            }
+        };
+        try {
+            const pageContext = await renderPage(pageContextInit);
+            const { httpResponse } = pageContext;
+            
+            if (!httpResponse) {
+                return next();
+            }
+            
+            const { body, statusCode, headers } = httpResponse;
+            //console.log(body)
+            // Add i18n configuration script to the HTML
+            const htmlWithI18n = body.replace(
+                '</head>',
                 `<script>
-                        window.i18n = {
-                            defaultLanguage: '${i18next.language}'
-                        };
+                    window.i18n = {
+                        defaultLanguage: '${preferredLang}'
+                    };
                 </script>
-                <script type="module" src="/assets/bundle.js"></script>`
+                </head>`
             );
+            if (headers) {
+                Object.entries(headers).forEach(([name, value]) => {
+                    res.setHeader(name, value);
+                });
+            }
+            
+            res.status(statusCode).send(htmlWithI18n);
+        } catch (error) {
+            console.error("Error rendering page:", error);
+            res.status(500).send('Internal Server Error');
         }
-        // Send the modified HTML to the client
-        res.send(html);
-    });
-
+    })
 } else {
     app.get("/", (req: express.Request, res: express.Response) => {
         res.sendFile("index.html", { root: reactRoot });
@@ -159,7 +151,7 @@ import FsBackend from 'i18next-fs-backend'
     });
     
     app.use("/assets", express.static(path.join(reactRoot, "assets")));
-}*/
+}
 
 setInterval(() => {
     cleanExpiredTokens();

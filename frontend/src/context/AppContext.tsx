@@ -1,12 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useTranslation } from "react-i18next";
+//import { useTranslation } from "react-i18next";
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
 import type { AtlasRegion, DisplayOptions, CustomTokenPayload } from '../types';
-import { TFunction } from 'i18next';
-import './i18n';
+//import { TFunction } from 'i18next';
+import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
+//import { useTranslationSafe } from './i18n';
+//import { I18nProvider } from './I18nProvider';
+import i18nStub, { t as tStub } from './i18n-stub';
+import { useTranslation } from 'react-i18next';
 
 // Define the shape of our context
 type AppContextType = {
@@ -70,7 +74,7 @@ type AppContextType = {
   setAskedRegion: (region: number | null) => void;
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
-  t: TFunction<"translation", undefined>;
+  t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
 };
 
 // Create the context
@@ -78,8 +82,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Create a provider component
 export function AppProvider({ children, pageContext }: { children: React.ReactNode, pageContext: PageContext }) {
-  const { t, i18n } = useTranslation();
-  
+  const { t, i18n } = useTranslation("translation", { i18n: i18nInstance });
+  ///const t = (key: string, params?: Record<string, any>): string => {
+  ///  return tStub(key, params);
+  ///};
+  ///const i18n = { language: "fr" }
   // Niivue module state
   const [niivueModule, setNiivueModule] = useState<any>(null);
   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<any|null>(null);
@@ -221,7 +228,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // Language handler
   const handleChangeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
-    i18n.changeLanguage(lang);
+    //i18n.changeLanguage(lang);
   };
   
   // Authentication handlers

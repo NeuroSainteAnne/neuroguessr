@@ -2,12 +2,19 @@ export { onRenderHtml }
 
 import React from 'react'
 import { renderToString } from 'react-dom/server'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '../context/i18n'
 import { PageLayout } from './PageLayout'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
 import { StaticRouter } from 'react-router-dom'
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
+  // Initialize i18n with language given from the server if available
+  if ((pageContext as any).i18n) {
+    i18n.changeLanguage((pageContext as any).i18n.language)
+  }
+
   const { Page } = pageContext
   if (!Page) throw new Error('My onRenderHtml() hook expects pageContext.Page to be defined')
   const PageComponent = Page as React.ComponentType<any>
@@ -20,6 +27,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
     </StaticRouter>
   )
 
+  // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
 <html lang="en">
 
@@ -172,6 +180,5 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   <div id="root" style="opacity: 100;">${dangerouslySkipEscape(pageHtml)}</div>
 </body>
 
-</html>
-`
+</html>`
 }

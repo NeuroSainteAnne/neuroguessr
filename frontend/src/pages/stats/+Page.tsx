@@ -1,5 +1,3 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { TFunction } from 'i18next';
 import "./Stats.css"
 
 function Stats() {

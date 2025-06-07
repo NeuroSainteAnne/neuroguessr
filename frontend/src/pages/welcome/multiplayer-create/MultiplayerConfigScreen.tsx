@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { GameSelectorAtlas } from '../GameSelectorAtlas';
 import { QRCodeSVG } from 'qrcode.react';
