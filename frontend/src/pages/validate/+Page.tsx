@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import "./ValidateEmailScreen.css"
+import { navigate } from 'vike/client/router'
 
 function ValidateEmailScreen() {
     const { t, pageContext, updateToken } = useApp();
@@ -34,7 +35,7 @@ function ValidateEmailScreen() {
             setValidatedSuccessText(t('success_email_verified'));
             updateToken(result.token);
             setTimeout( () => {
-              window.location.href = "/welcome";
+              navigate("/welcome");
             }, 1000);
           }
         } catch (error) {

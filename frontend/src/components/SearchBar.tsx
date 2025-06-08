@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { AtlasRegion } from '../types';
 import "./SearchBar.css"
+import { navigate } from 'vike/client/router'
 
 function Searchbar() {
   const { t, atlasRegions, pageContext, setAskedAtlas, setAskedRegion } = useApp();
@@ -38,7 +39,7 @@ function Searchbar() {
       window.history.pushState(null, '', `/neurotheka/${atlas}/${region}`);
     } else {
       // If not already on neurotheka page, do a full page navigation
-      window.location.href = `/neurotheka/${atlas}/${region}`;
+      navigate(`/neurotheka/${atlas}/${region}`);
     }
   }
 

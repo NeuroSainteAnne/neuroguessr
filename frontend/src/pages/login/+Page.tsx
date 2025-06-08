@@ -4,6 +4,7 @@ import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha
 import config from '../../../config.json';
 import { useApp } from '../../context/AppContext';
 import './LoginScreen.css';
+import { navigate } from 'vike/client/router'
 
 function LoginScreen() {
     const { t, currentLanguage, updateToken } = useApp();
@@ -61,15 +62,15 @@ function LoginScreen() {
               if(redirectParam == "multiplayer-game"){
                 const askedSC = urlParams.get('redirect_asked_session_code') || "";
                 const askedST = urlParams.get('redirect_asked_session_token') || undefined;
-                window.location.href = `multiplayer-game/${askedSC}${askedST?"/"+askedST:""}`
+                navigate(`multiplayer-game/${askedSC}${askedST?"/"+askedST:""}`);
               } else if(redirectParam == "welcome"){
                 const askedSubpage = urlParams.get('redirect_subpage') || "";
-                window.location.href = `/welcome/${askedSubpage}`
+                navigate(`/welcome/${askedSubpage}`);
               } else {
-                window.location.href = `/${redirectParam}`;
+                navigate(`/${redirectParam}`);
               }
             } else {
-              window.location.href = "/welcome";
+              navigate("/welcome");
             }
           } else {
             // Handle login failure
@@ -124,7 +125,7 @@ function LoginScreen() {
 
           if (response.ok) {
             if(result.preverified){
-                window.location.href = result.redirect_url;
+                navigate(result.redirect_url);
             } else {
               setRecoverySuccessText(t('recovery_email_sent'));
               setTimeout(()=>{

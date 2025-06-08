@@ -3,6 +3,7 @@ import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha
 import config from '../../../config.json';
 import "./RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
+import { navigate } from 'vike/client/router';
 
 function RegisterScreen() {
   const { t, currentLanguage } = useApp();
@@ -105,8 +106,8 @@ function RegisterScreen() {
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success_no_verification'));
                 setTimeout(() => {
-                    window.location.href = "/login";
-                }, 2000);
+                    navigate("/login");
+                }, 1000);
             } else {
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success'));

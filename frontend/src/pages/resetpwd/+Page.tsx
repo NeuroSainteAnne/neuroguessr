@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import './ResetPasswordScreen.css';
 import '../register/RegisterScreen.css';
+import { navigate } from 'vike/client/router';
 
 function ResetPasswordScreen() {
     const { t, updateToken, pageContext } = useApp();
@@ -108,7 +109,7 @@ function ResetPasswordScreen() {
               setRecoverySuccessText(t('password_reset_success'));
               updateToken(result.token);
               setTimeout(() => {
-                window.location.href = "/welcome";
+                navigate("/welcome");
               }, 500);
             } else {
               setRecoveryErrorText(result.message || t('password_reset_failed'));
