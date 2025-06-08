@@ -12,6 +12,7 @@ export function Page() {
   
   return (
     <>
+      <title>NeuroGuessr</title>
       {atlasRegions.length > 0 && <SearchBar />}
       <GameSelector />
       <MultiBox />

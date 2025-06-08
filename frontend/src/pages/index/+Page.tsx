@@ -5,11 +5,6 @@ function LandingPage() {
     const { t, activateGuestMode } = useApp();
     return (<>
         <title>NeuroGuessr</title>
-        <meta name="description" content="Neuroguessr: a game for learning neuroanatomy." />
-        <meta property="og:title" content="NeuroGuessr" />
-        <meta property="og:image" content="https://neuroguessr.org/interface/neuroguessr-128.png" />
-        <meta property="og:url" content="https://neuroguessr.org/" />
-        <meta property="og:type" content="website" />
         <div id="unlogged-landing-page" className="landing-content">
             <div className="welcome-section">
                 <h2 className="welcome-message">{t("welcome_unlogged")}</h2>

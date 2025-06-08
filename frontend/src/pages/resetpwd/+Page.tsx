@@ -120,6 +120,7 @@ function ResetPasswordScreen() {
     }
     return(
     <>
+      <title>{`NeuroGuessr - ${t("reset_password_header")}`}</title>
         <form id="reset-password-form" onSubmit={handleResetPassword}>
           <div className="register-box">
               <h2>{t("reset_password_header")}</h2>

@@ -2,17 +2,19 @@ export { onRenderHtml }
 
 import React from 'react'
 import { renderToString } from 'react-dom/server'
-import { I18nextProvider } from 'react-i18next'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n from '../context/i18n'
 import { PageLayout } from './PageLayout'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
-import { StaticRouter } from 'react-router-dom'
+import neuroGuessrImage from "../../public/interface/neuroguessr-128.png"
+import i18nInstance from '../context/i18n'
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
+  const language = (pageContext as any).i18n?.language || 'en';
   if ((pageContext as any).i18n) {
-    i18n.changeLanguage((pageContext as any).i18n.language)
+    i18n.changeLanguage(language)
   }
 
   const { Page } = pageContext
@@ -20,21 +22,28 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   const PageComponent = Page as React.ComponentType<any>
   // Important: Use StaticRouter for server-side rendering
   const pageHtml = renderToString(
-    <StaticRouter location={pageContext.urlPathname}>
-        <PageLayout pageContext={pageContext}>
-            <PageComponent />
-        </PageLayout>
-    </StaticRouter>
+    <PageLayout pageContext={pageContext}>
+        <PageComponent />
+    </PageLayout>
   )
 
-  // Create the complete HTML document
+ const { t } = i18nInstance
+ const title = t((pageContext.config as any).title || 'NeuroGuessr', { lng: language })
+ const description = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language })
+ const image = (pageContext.config as any).image || neuroGuessrImage
+  
+ // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
-<html lang="en">
+<html lang="${language}">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${(pageContext.config as { title?: string })?.title || 'NeuroGuessr'}</title>
+  <title>${title}</title>
+  <meta name="description" content="${description}" />
+  <meta property="og:image" content="${image}" />
+  <meta property="og:url" content="https://neuroguessr.org${pageContext.urlPathname || ""}" />
+  <meta property="og:type" content="website" />
   <style>
     #loading-screen, #loading-screen-inside {
       width: 100%;

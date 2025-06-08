@@ -33,7 +33,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
     if (!response.ok) {
       console.error("Failed to online game session on the backend.");
       const result = await response.json();
-      alert(result.message || "Failed to start game session.");
+      console.error(result.message || "Failed to start game session.");
       return null;
     }
 
@@ -41,7 +41,7 @@ async function startOnlineSession(token: string, mode: string, atlas: string): P
     return { sessionToken: result.sessionToken, sessionId: result.sessionId };
   } catch (error) {
     console.error("Error starting online game session:", error);
-    alert("An error occurred while starting online game session. Please try again later.");
+    console.error("An error occurred while starting online game session. Please try again later.");
     return null;
   }
 }
@@ -65,7 +65,8 @@ export function Page() {
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
   
-  const [gameMode, setGameMode] = useState<string>("");
+  const { routeParams } = pageContext;
+  const gameMode = routeParams?.mode;
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
@@ -108,9 +109,7 @@ export function Page() {
       crosshairColor: [1, 1, 1, 1]
   }): null);
    useEffect(() => {
-      const { routeParams } = pageContext;
       setAskedAtlas(routeParams?.atlas);
-      setGameMode(routeParams?.mode);
    }, []);
 
   useEffect(() => {
@@ -860,14 +859,16 @@ export function Page() {
   
   useLayoutEffect(() => {
   if (niivue && canvasRef.current && !isLoading) {
-    // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
-    niivue.resizeListener();
-  }
-}, [niivue, isLoading]);
+      // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+      niivue.resizeListener();
+    }
+  }, [niivue, isLoading]);
+
+  const myTitle = gameMode ? `NeuroGuessr - ${t(gameMode+"_mode")}` : t('neuroguessr_singleplayer_title')
 
   return (
     <>
-      <title>NeuroGuessr - single player</title>
+      <title>{myTitle}</title>
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       {isLoading && <div className="loading-screen"></div>}

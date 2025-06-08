@@ -202,5 +202,19 @@
   "publish_yes": "Publish",
   "publish_no": "Do not publish",
   "placeholder_tempusername": "Username",
-  "temp_username_or_connect": "Please enter a temporary username or connect."
+  "temp_username_or_connect": "Please enter a temporary username or connect.",
+  "neuroguessr_index_description": "Challenge your knowledge of neuroanatomy with NeuroGuessr. Perfect for students, educators, and anyone passionate about neuroscience!",
+  "neuroguessr_short_description": "Neuroguessr: a game for learning neuroanatomy.",
+  "neuroguessr_multiplayer_description": "Join multiplayer games to compete with friends or other players in real-time. Test your skills and see who can identify brain regions the fastest!",
+  "neuroguessr_neurotheka_description": "NeuroGlossary: Search and visualize specific brain regions in a standard template. Ideal for quick reference and learning.",
+  "neuroguessr_login_description": "Log in to NeuroGuessr access multiplayer features, save your progress, and customize your experience.",
+  "neuroguessr_register_description": "Create an account in NeuroGuessr to track your progress, participate in multiplayer games, and access exclusive features.",
+  "neuroguessr_singleplayer_description": "Play NeuroGuessr in single-player mode to practice your neuroanatomy skills at your own pace. Perfect for learning and mastering brain regions.",
+  "neuroguessr_stats_description": "View your personal statistics in NeuroGuessr, including your scores across different game modes and atlases. Track your progress and improve your skills.",
+  "neuroguessr_multiplayer_title": "NeuroGuessr - Multiplayer",
+  "neuroguessr_register_title": "NeuroGuessr - Register",
+  "neuroguessr_singleplayer_title": "NeuroGuessr - Game",
+  "neuroguessr_stats_title": "NeuroGuessr - Statistics",
+  "neuroguessr_login_title": "NeuroGuessr - Login",
+  "construction_in_progress": "This page is under construction"
 }

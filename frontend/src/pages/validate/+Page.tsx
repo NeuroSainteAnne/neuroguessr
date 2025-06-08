@@ -45,7 +45,7 @@ function ValidateEmailScreen() {
     
   return (
     <>
-        <title>NeuroGuessr - {t("validate_email_header")}</title>
+        <title>{`NeuroGuessr - ${t("validate_email_header")}`}</title>
         <div className="register-box">
             <h2>{t("validate_email_header")}</h2>
             <table className="login-element">

@@ -124,6 +124,7 @@ function RegisterScreen() {
 
   const formContent =     
   (<>
+      <title>{t("neuroguessr_register_title")}</title>
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
           <h2>{t("register_mode")}</h2>

@@ -206,9 +206,10 @@ function Neurotheka() {
   }
 }, [niivue, isLoading]);
 
+  const myTitle = t("neuroglossaire_title");
   return (
     <>
-      <title>{t("neuroglossaire_title")}</title>
+      <title>{myTitle}</title>
       {isLoading && <LoadingScreen />}
       <canvas id="gl1" ref={canvasRef}></canvas>
 

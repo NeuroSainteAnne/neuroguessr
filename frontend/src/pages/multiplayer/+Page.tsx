@@ -345,9 +345,10 @@ const MultiplayerGameScreen = () => {
     }));
   }
 
+  const title = t("neuroguessr_multiplayer_title")
   return (
     <>
-      <title>NeuroGuessr - Multiplayer game</title>
+      <title>{title}</title>
       
       <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>

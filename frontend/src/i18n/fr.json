@@ -201,5 +201,19 @@
   "publish_yes": "Publier",
   "publish_no": "Ne pas publier",
   "placeholder_tempusername": "Nom utilisateur",
-  "temp_username_or_connect": "Merci de définir un nom d'utilisateur temporaire ou de vous connecter."
+  "temp_username_or_connect": "Merci de définir un nom d'utilisateur temporaire ou de vous connecter.",
+  "neuroguessr_index_description": "NeuroGuessr est un jeu éducatif en ligne qui vous permet d'apprendre l'anatomie cérébrale en identifiant des régions cérébrales à partir de différents atlas. Jouez en solo ou en multijoueur, et testez vos connaissances dans divers modes de jeu.",
+  "neuroguessr_short_description": "Neuroguessr: un jeu pour apprendre la neuroanatomie.",
+  "neuroguessr_multiplayer_description": "Rejoignez des parties multijoueurs pour affronter vos amis ou d'autres joueurs en temps réel. Testez vos compétences et découvrez qui peut identifier les régions cérébrales le plus rapidement !",
+  "neuroguessr_neurotheka_description": "NeuroGlossaire : Recherchez et visualisez des régions cérébrales spécifiques dans un modèle standard. Idéal pour une référence rapide et l'apprentissage.",
+  "neuroguessr_login_description": "Connectez-vous à NeuroGuessr pour accéder aux fonctionnalités multijoueurs, sauvegarder votre progression et personnaliser votre expérience.",
+  "neuroguessr_register_description": "Créez un compte sur NeuroGuessr pour suivre votre progression, participer à des jeux multijoueurs et accéder à des fonctionnalités exclusives.",
+  "neuroguessr_singleplayer_description": "Jouez à NeuroGuessr en mode solo pour pratiquer vos compétences en neuroanatomie à votre propre rythme. Parfait pour apprendre et maîtriser les régions cérébrales.",
+  "neuroguessr_stats_description": "Consultez vos statistiques personnelles dans NeuroGuessr, y compris vos scores dans différents modes de jeu et atlas. Suivez votre progression et améliorez vos compétences.",
+  "neuroguessr_multiplayer_title": "NeuroGuessr - Multijoueur",
+  "neuroguessr_register_title": "NeuroGuessr - Inscription",
+  "neuroguessr_singleplayer_title": "NeuroGuessr - Jeu",
+  "neuroguessr_stats_title": "NeuroGuessr - Statistiques",
+  "neuroguessr_login_title": "NeuroGuessr - Connexion",
+  "construction_in_progress": "Construction en cours ! Merci de votre patience."
 }
