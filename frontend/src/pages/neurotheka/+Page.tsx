@@ -13,6 +13,7 @@ function Neurotheka() {
         setHeaderText } = useApp();
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const currentlyLoadedAtlas = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [niivue, setNiivue] = useState<any>(null);
@@ -46,14 +47,15 @@ function Neurotheka() {
 
       // Clear existing meshes
       niivue.meshes = [];
-      niivue.updateGLVolume();
 
       // Load colormap
       const cmap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
 
       // Reset volumes
-      for (let i = 1; i < niivue.volumes.length; i++) {
-        niivue.removeVolume(niivue.volumes[i]);
+      if(preloadedAtlas != currentlyLoadedAtlas.current){
+        for (let i = 1; i < niivue.volumes.length; i++) {
+          niivue.removeVolume(niivue.volumes[i]);
+        }
       }
       for (let i = 1; i < niivue.meshes.length; i++) {
         niivue.removeMesh(niivue.meshes[i]);
@@ -83,8 +85,9 @@ function Neurotheka() {
         const firstVolumeId = niivue.volumes[0].id;
         niivue.setColormap(firstVolumeId, 'MNI_Cmap');
       }
-      if (!useTractography) {
+      if (!useTractography && preloadedAtlas != currentlyLoadedAtlas.current) {
         niivue.addVolume(preloadedAtlas);
+        currentlyLoadedAtlas.current = preloadedAtlas;
       }
 
       if (useTractography) {
