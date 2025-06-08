@@ -23,7 +23,7 @@
             "username": "test",
             "password": "test"
         },
-        "serverSideRendering": true
+        "renderingMode": "ssg" // ssg or ssr or csr
     },
     "captcha" : {
         "activate": false,

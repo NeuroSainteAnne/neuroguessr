@@ -73,8 +73,8 @@ app.use(
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
-import "../frontend/dist/server/entry.mjs"
-if(config.server.serverSideRendering){
+//import "../frontend/dist/server/entry.mjs"
+if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
     app.use('/atlas', express.static(path.join(reactRoot, 'client', 'atlas')));
     app.use('/favicon', express.static(path.join(reactRoot, 'client', 'favicon')));
@@ -97,30 +97,101 @@ if(config.server.serverSideRendering){
                 initImmediate: false
             });
 
-    app.get(/(.*)/, async (req, res, next) => {
-        // Detect language from request (simplified)
-        const acceptLanguage = req.headers['accept-language'] || '';
-        const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
-        i18next.changeLanguage(preferredLang)
+    if(config.server.renderingMode == "ssr"){
+        // Dynamically import the Vike rendering module only for SSR
+        const { renderPage } = await import('vike/server');
+        await import("../frontend/dist/server/entry.mjs" as any);
 
-        const pageContextInit = {
-            urlOriginal: req.originalUrl,
-            i18n: {
-                language: preferredLang
+        app.get(/(.*)/, async (req, res, next) => {
+            // Detect language from request (simplified)
+            const acceptLanguage = req.headers['accept-language'] || '';
+            const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
+            i18next.changeLanguage(preferredLang)
+
+            console.log("Rendering page for URL:", req.originalUrl);
+
+            const pageContextInit = {
+                urlOriginal: req.originalUrl,
+                i18n: {
+                    language: preferredLang
+                }
+            };
+            try {
+                const pageContext = await renderPage(pageContextInit);
+                const { httpResponse } = pageContext;
+                
+                if (!httpResponse) {
+                    return next();
+                }
+                
+                const { body, statusCode, headers } = httpResponse;
+                //console.log(body)
+                // Add i18n configuration script to the HTML
+                const htmlWithI18n = body.replace(
+                    '</head>',
+                    `<script>
+                        window.i18n = {
+                            defaultLanguage: '${preferredLang}'
+                        };
+                    </script>
+                    </head>`
+                );
+                if (headers) {
+                    Object.entries(headers).forEach(([name, value]) => {
+                        res.setHeader(name, value);
+                    });
+                }
+                
+                res.status(statusCode).send(htmlWithI18n);
+            } catch (error) {
+                console.error("Error rendering page:", error);
+                res.status(500).send('Internal Server Error');
             }
-        };
-        try {
-            const pageContext = await renderPage(pageContextInit);
-            const { httpResponse } = pageContext;
+        })
+    } else if(config.server.renderingMode == "ssg"){
+        app.get(/(.*)/, (req, res) => {
+            // Extract the path from the URL
+            const url = req.originalUrl.split('?')[0];
             
-            if (!httpResponse) {
-                return next();
+            // Normalize URL path for file system lookup
+            let fsPath;
+            if (url === '/') {
+                // Root path - look for index.html at the root
+                fsPath = path.join(reactRoot, 'client', 'index.html');
+            } else {
+                // Remove leading slash and check multiple possibilities
+                const urlNoLeadingSlash = url.replace(/^\//, '');
+            
+                // Try multiple possible locations for the HTML file
+                const possiblePaths = [
+                    // 1. Direct .html file (e.g., /about.html)
+                    path.join(reactRoot, 'client', `${urlNoLeadingSlash}.html`),
+                    
+                    // 2. Directory with index.html (e.g., /about/index.html)
+                    path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html'),
+                    
+                    // 3. URL path as-is (e.g., /neurotheka/harvard_oxford/123/index.html)
+                    path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html')
+                ];
+                
+                // Find the first path that exists
+                fsPath = possiblePaths.find(p => fs.existsSync(p));
+                
+                // If none found, default to index.html
+                if (!fsPath) {
+                    fsPath = path.join(reactRoot, 'client', 'index.html');
+                }
             }
+            console.log("Serving static file:", fsPath);
             
-            const { body, statusCode, headers } = httpResponse;
-            //console.log(body)
-            // Add i18n configuration script to the HTML
-            const htmlWithI18n = body.replace(
+            // Read the HTML file
+            let html = fs.readFileSync(fsPath, 'utf8');
+            
+            // Inject language preference
+            const acceptLanguage = req.headers['accept-language'] || '';
+            const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
+            
+            html = html.replace(
                 '</head>',
                 `<script>
                     window.i18n = {
@@ -129,18 +200,11 @@ if(config.server.serverSideRendering){
                 </script>
                 </head>`
             );
-            if (headers) {
-                Object.entries(headers).forEach(([name, value]) => {
-                    res.setHeader(name, value);
-                });
-            }
             
-            res.status(statusCode).send(htmlWithI18n);
-        } catch (error) {
-            console.error("Error rendering page:", error);
-            res.status(500).send('Internal Server Error');
-        }
-    })
+            res.send(html);
+        });
+    }
+
 } else {
     app.get("/", (req: express.Request, res: express.Response) => {
         res.sendFile("index.html", { root: reactRoot });
