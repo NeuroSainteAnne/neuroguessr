@@ -7,7 +7,8 @@ import i18n from '../context/i18n'
 import { PageLayout } from './PageLayout'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
 import type { OnRenderHtmlAsync } from 'vike/types'
-import neuroGuessrImage from "../../public/interface/neuroguessr-128.png"
+import neuroGuessrImage from "../../public/interface/neuroguessr-360.png"
+import neuroGuessrLogo from "../../public/interface/neuroguessr-128.png"
 import i18nInstance from '../context/i18n'
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
@@ -44,6 +45,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   <meta property="og:image" content="${image}" />
   <meta property="og:url" content="https://neuroguessr.org${pageContext.urlPathname || ""}" />
   <meta property="og:type" content="website" />
+  <meta property="og:logo" content="${neuroGuessrLogo}" />
   <style>
     #loading-screen, #loading-screen-inside {
       width: 100%;

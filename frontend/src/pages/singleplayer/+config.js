@@ -1,4 +1,4 @@
-import neuroGuessrImage from "../../../public/interface/neuroguessr-128.png"
+import neuroGuessrImage from "../../../public/interface/neuroguessr-360.png"
 
 export default {
   title: 'neuroguessr_singleplayer_title',
