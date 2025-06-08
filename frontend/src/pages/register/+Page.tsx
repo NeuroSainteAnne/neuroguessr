@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { use, useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../../../config.json';
 import "./RegisterScreen.css";
@@ -15,14 +15,19 @@ function RegisterScreen() {
   const confirmPasswordInput = useRef<HTMLInputElement>(null);
   const [registerErrorText, setRegisterErrorText] = useState<string>("");
   const [registerSuccessText, setRegisterSuccessText] = useState<string>("");
-  const activateCaptcha = config.recaptcha.activate;
-  const captchaKey = config.recaptcha.siteKey;
+  const [captchaLoad, setCaptchaLoad] = useState(false);
+  const activateCaptcha = config.recaptcha.activate || false;
+  const captchaKey = config.recaptcha.siteKey || '';
   const [captchaToken, setCaptchaToken] = useState<string>("");
 
   const onCaptchaVerify = useCallback((token: string) => {
     setCaptchaToken(token);
   }, []);
 
+  useEffect(() => {
+    setCaptchaLoad(true)
+  }, []);
+  
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const username = usernameInput.current?.value;
@@ -80,12 +85,14 @@ function RegisterScreen() {
         lastname: string;
         password: string;
         captcha_token?: string;
+        language?: string;
     } = {
         username: username.trim(),
         email: email.trim(),
         firstname: firstname.trim(),
         lastname: lastname.trim(),
         password: password.trim(),
+        language: currentLanguage
     };
     if(activateCaptcha){
       formData.captcha_token = captchaToken;
@@ -201,16 +208,22 @@ function RegisterScreen() {
             </tr>}
             </tbody>
           </table>
-          {activateCaptcha && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
+          {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
           {registerSuccessText == "" && <button type="submit">{t("register_button")}</button>}
         </div>
       </form>
     </>)
 
-  return activateCaptcha ? (
+  return (activateCaptcha && captchaLoad) ? (
     <GoogleReCaptchaProvider
       reCaptchaKey={captchaKey}
       language={currentLanguage}
+      scriptProps={{
+        async: true, // Load script asynchronously
+        defer: true, // Defer script execution
+        appendTo: 'body', // Append to body
+        nonce: undefined // Add nonce if you use CSP
+      }}
     >
       {formContent}
     </GoogleReCaptchaProvider>

@@ -17,12 +17,17 @@ function LoginScreen() {
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
     const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true);
-    const activateCaptcha = config.recaptcha.activate;
-    const captchaKey = config.recaptcha.siteKey;
+    const [captchaLoad, setCaptchaLoad] = useState(false);
+    const activateCaptcha = config.recaptcha.activate || false;
+    const captchaKey = config.recaptcha.siteKey || '';
     const [captchaToken, setCaptchaToken] = useState<string>("");
 
     const onCaptchaVerify = useCallback((token: string) => {
       setCaptchaToken(token);
+    }, []);
+
+    useEffect(() => {
+      setCaptchaLoad(true)
     }, []);
     
     const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -202,7 +207,7 @@ function LoginScreen() {
 
                         <input type="email" id="recovery-email" className="form-field" 
                             placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
-                        {activateCaptcha && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
+                        {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
 
                         {showRecoveryButton && 
                           <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
@@ -214,7 +219,7 @@ function LoginScreen() {
             }
         </>
     )
-    return activateCaptcha ? (
+    return (activateCaptcha && captchaLoad) ? (
       <GoogleReCaptchaProvider
         reCaptchaKey={captchaKey}
         language={currentLanguage}
