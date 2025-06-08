@@ -1,7 +1,7 @@
 import { db } from "./database_init.ts";
 import type { Response } from "express";
 import type { GameProgress, GameSession } from "../interfaces/database.interfaces.ts";
-import type { GetLeaderboardRequest } from "../interfaces/requests.interfaces.ts";
+import type { GetLeaderboardRequest, GetMostUsedAtlasRequest } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
@@ -37,6 +37,10 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
         if (mode) {
             innerWhere += ' AND mode = ?';
             params.push(mode);
+        } else {
+            // If no mode specified, exclude multiplayer results
+            innerWhere += ' AND mode != ?';
+            params.push('multiplayer');
         }
         if (timeLimit) {
             const now = Date.now();
@@ -84,3 +88,50 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
         res.status(500).send({ message: "Internal Server Error" });
     }
 }
+
+
+// Add this interface
+interface AtlasUsage {
+    atlas: string;
+    count: number;
+}
+
+// Add this new function
+export const getMostUsedAtlases = async (req: GetMostUsedAtlasRequest, res: Response): Promise<void> => {
+    try {
+        // Query to get the most used atlases
+        const query = `
+            SELECT 
+                atlas,
+                COUNT(DISTINCT userId) as count
+            FROM finishedsessions
+            WHERE atlas IS NOT NULL AND atlas != ''
+            GROUP BY atlas
+            ORDER BY count DESC
+        `;
+        
+        const stmt = db.prepare(query);
+        let rows = stmt.all();
+        // Create a manually formatted result
+        const atlases: AtlasUsage[] = (rows as any[]).map(row => ({
+            atlas: row.atlas,
+            count: row.count
+        }));
+        
+        // Add 'total' atlas as first option (for combined scores)
+        const result = [
+            ...atlases
+        ];
+        
+        res.status(200).json({
+            success: true,
+            atlases: result
+        });
+    } catch (error) {
+        console.error('Error fetching most used atlases:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching most used atlases'
+        });
+    }
+};

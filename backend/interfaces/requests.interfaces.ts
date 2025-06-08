@@ -131,6 +131,13 @@ export interface GetLeaderboardRequest {
     body: GetLeaderboardBody
 }
 
+interface GetMostUsedAtlasBody {
+}
+
+export interface GetMostUsedAtlasRequest {
+    body: GetMostUsedAtlasBody
+}
+
 /* STATS request */
 
 

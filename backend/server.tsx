@@ -14,7 +14,7 @@ import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
-import { getLeaderboard } from "./modules/leaderboard.ts";
+import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
@@ -42,6 +42,7 @@ app.post("/api/verify-email", verifyEmail)
 app.get('/api/user-info', authenticateToken, getUserInfo);
 app.post('/api/config-user', authenticateToken, configUser);
 app.post('/api/get-leaderboard', getLeaderboard);
+app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
 

@@ -5,6 +5,7 @@ import SearchBar from '../../../components/SearchBar';
 import { GameSelectorProvider } from '../../../context/GameSelectorContext';
 import { SingleSelector } from './SingleSelector';
 import { Help } from '../../../components/Help';
+import Leaderboard from '../../../components/Leaderboard';
 
 export function Page() {
    const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();
