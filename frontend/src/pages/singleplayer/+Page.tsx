@@ -9,9 +9,9 @@ import "./GameScreen.css"
 import { Niivue } from '@niivue/niivue';
 import { Help } from '../../components/Help';
 
-async function startOnlineSession(token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
+async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
   // Check if the player is logged in
-  if (!token) {
+  if (!isLoggedIn || !token) {
     return null;
   }
   if (!isTokenValid(token)) {
@@ -290,7 +290,7 @@ export function Page() {
     setIsGameRunning(true);
     resetGameState();
 
-    startOnlineSession(authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
+    startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
       if (session) {
         sessionToken.current = session.sessionToken;
         sessionId.current = session.sessionId;
