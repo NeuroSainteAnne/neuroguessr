@@ -152,33 +152,68 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
         app.get(/(.*)/, (req, res) => {
             // Extract the path from the URL
             const url = req.originalUrl.split('?')[0];
-            
+            const queryString = req.originalUrl.includes('?') ? req.originalUrl.split('?')[1] : '';
+
             // Normalize URL path for file system lookup
             let fsPath;
+            let routeParams = {};
             if (url === '/') {
                 // Root path - look for index.html at the root
                 fsPath = path.join(reactRoot, 'client', 'index.html');
             } else {
-                // Remove leading slash and check multiple possibilities
-                const urlNoLeadingSlash = url.replace(/^\//, '');
-            
-                // Try multiple possible locations for the HTML file
-                const possiblePaths = [
-                    // 1. Direct .html file (e.g., /about.html)
-                    path.join(reactRoot, 'client', `${urlNoLeadingSlash}.html`),
-                    
-                    // 2. Directory with index.html (e.g., /about/index.html)
-                    path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html'),
-                    
-                    // 3. URL path as-is (e.g., /neurotheka/harvard_oxford/123/index.html)
-                    path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html')
-                ];
+                // For parameterized routes, we need to check the base route first
+                // Extract the first segment of the path
+                const segments = url.split('/').filter(Boolean);
+                const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/harvard-oxford/navigation"
                 
-                // Find the first path that exists
-                fsPath = possiblePaths.find(p => fs.existsSync(p));
+                // Define a list of routes that should load their index.html
+                const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'resetpwd'];
+                if (clientRoutedPaths.includes(baseRoute)) {
+                    // This is a client-routed path, serve the base route's index.html
+                    fsPath = path.join(reactRoot, 'client', baseRoute, 'index.html');
+                    console.log(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
+                    if (segments.length > 1) {
+                        const baseRoute = segments[0];
+                        if (baseRoute === 'neurotheka') {
+                            routeParams = {
+                                atlas: segments[1] || "",
+                                region: segments[2] || ""
+                            };
+                        } else if (baseRoute === 'singleplayer') {
+                            routeParams = {
+                                atlas: segments[1] || "",
+                                mode: segments[2] || ""
+                            };
+                        } else if (baseRoute === 'multiplayer') {
+                            routeParams = {
+                                askedSessionCode: segments[1] || "",
+                                askedSessionToken: segments[2] || ""
+                            };
+                        } else if (baseRoute === 'resetpwd') {
+                            routeParams = {
+                                userId: segments[1] || "",
+                                token: segments[2] || ""
+                            };
+                        } else if (baseRoute === 'validate') {
+                            routeParams = {
+                                userId: segments[1] || "",
+                                token: segments[2] || ""
+                            };
+                        }
+                    }
+                } else {
+                    const urlNoLeadingSlash = url.replace(/^\//, '');
+                    // Try multiple possible locations for the HTML file
+                    const possiblePaths = [
+                        path.join(reactRoot, 'client', `${urlNoLeadingSlash}.html`),
+                        path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html'),
+                        path.join(reactRoot, 'client', urlNoLeadingSlash, 'index.html')
+                    ];
+                    fsPath = possiblePaths.find(p => fs.existsSync(p))
+                }
                 
                 // If none found, default to index.html
-                if (!fsPath) {
+                if (!fsPath || !fs.existsSync(fsPath)) {
                     fsPath = path.join(reactRoot, 'client', 'index.html');
                 }
             }
@@ -196,6 +231,12 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 `<script>
                     window.i18n = {
                         defaultLanguage: '${preferredLang}'
+                    };
+                
+                    // Store the original URL for client-side routing
+                    window.__VIKE_INITIAL_STATE__ = {
+                        originalUrl: "${url}${queryString ? '?' + queryString : ''}",
+                        routeParams: ${JSON.stringify(routeParams)}
                     };
                 </script>
                 </head>`

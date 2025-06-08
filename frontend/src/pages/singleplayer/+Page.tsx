@@ -67,6 +67,7 @@ export function Page() {
   
   const { routeParams } = pageContext;
   const gameMode = routeParams?.mode;
+  const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
@@ -872,6 +873,10 @@ export function Page() {
     }
   }, [niivue, isLoading]);
 
+  useEffect(()=>{
+    setIsNavigationMode(gameMode === 'navigation');
+  }, [gameMode])
+
   const myTitle = gameMode ? `NeuroGuessr - ${t(gameMode+"_mode")}` : t('neuroguessr_singleplayer_title')
 
   return (
@@ -886,8 +891,8 @@ export function Page() {
       </div>
       <div className="button-container">
         <a className="return-button" href="/welcome">{t("return_button")}</a>
-        {gameMode == "navigation" && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
-        {gameMode != "navigation" && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+        {isNavigationMode && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
+        {isNavigationMode && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
       </div>
