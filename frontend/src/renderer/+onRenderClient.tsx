@@ -4,6 +4,8 @@ declare global {
   interface Window {
     __VIKE_INITIAL_STATE__?: any;
     __VIKE_STATE_APPLIED__?: boolean;
+    __INITIAL_LANGUAGE__?: string;
+    __NEEDS_LANGUAGE_SWITCH__?: boolean;
   }
 }
 
@@ -11,7 +13,6 @@ import React from 'react'
 import ReactDOM, { createRoot, hydrateRoot } from 'react-dom/client'
 import { PageLayout } from './PageLayout'
 import type { OnRenderClientAsync } from 'vike/types'
-import { getPageTitle } from './getPageTitle'
 
 let root: ReactDOM.Root | null = null;
 
@@ -85,6 +86,18 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
       setupLoadingScreen();
     });
   }
+  
+  const needsLanguageSwitch = window.__NEEDS_LANGUAGE_SWITCH__;
+  // After rendering completes, show content and hide loader
+  setTimeout(() => {
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      rootElement.classList.remove('i18n-content-hidden');
+      rootElement.classList.add('i18n-content-visible');
+    }
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) loadingScreen.style.display = 'none';
+  }, needsLanguageSwitch ? 100 : 0); // Small delay if switching language
 }
 
 // Set up loading screen size management

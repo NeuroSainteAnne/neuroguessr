@@ -134,6 +134,16 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     });
     return () => { isMounted = false; };
   }, []);
+
+  useEffect(() => {
+    if(typeof window !== 'undefined' && window.localStorage){
+      const lang = localStorage.getItem('language');
+      if(lang && lang !== i18n.language) {
+        setCurrentLanguage(lang);
+        i18n.changeLanguage(lang);
+      }
+    }
+  }, [i18n]);
   
   // Load MNI background when niivueModule is available
   useEffect(() => {
@@ -219,6 +229,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const handleChangeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
     i18n.changeLanguage(lang);
+    if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('language', lang);
   };
   
   // Authentication handlers

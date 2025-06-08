@@ -2,7 +2,6 @@ export { onRenderHtml }
 
 import React from 'react'
 import { renderToString } from 'react-dom/server'
-import { I18nextProvider, useTranslation } from 'react-i18next'
 import i18n from '../context/i18n'
 import { PageLayout } from './PageLayout'
 import { escapeInject, dangerouslySkipEscape } from 'vike/server'
@@ -13,7 +12,7 @@ import i18nInstance from '../context/i18n'
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
-  const language = (pageContext as any).i18n?.language || 'en';
+  let language = (pageContext as any).i18n?.language || 'en';
   if ((pageContext as any).i18n) {
     i18n.changeLanguage(language)
   }
@@ -163,10 +162,34 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
   <link rel="manifest" href="/favicon/site.webmanifest">
+  <style>
+    .i18n-content-hidden {
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .i18n-content-visible {
+      opacity: 1;
+    }
+  </style>
+    <script>
+    (function() {
+      // Check for stored language preference
+      var storedLang = localStorage.getItem('language');
+      
+      // Set initial language state
+      window.__INITIAL_LANGUAGE__ = storedLang || "fr";
+      
+      // Update html lang attribute
+      document.documentElement.lang = window.__INITIAL_LANGUAGE__;
+      
+      // Mark that we need to check language after hydration
+      window.__NEEDS_LANGUAGE_SWITCH__ = storedLang && storedLang !== "fr";
+    })();
+  </script>
 </head>
 
 <body>
-  <div id="loading-screen" style="display:none">
+  <div id="loading-screen">
     <div class="loader-container">
       <div class="loader">
         <div class="sk-chase">
@@ -180,7 +203,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
       </div>
     </div>
   </div>
-  <div id="root" style="opacity: 100;">${dangerouslySkipEscape(pageHtml)}</div>
+  <div id="root" class="i18n-content-hidden">${dangerouslySkipEscape(pageHtml)}</div>
 </body>
 
 </html>`
