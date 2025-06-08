@@ -114,7 +114,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         const tokenStmt = db.prepare("INSERT INTO tokens (userId, token) VALUES (?, ?)");
         tokenStmt.run(lastID, tokenValue);
 
-        const url = `${config.server.external_address}/\#/validate/${lastID}/${tokenValue}`;
+        const url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
         const lang = req.body.language ? req.body.language : 'fr';
 
         const subject = i18next.t('register_email_subject', { lng: lang });
@@ -271,7 +271,7 @@ export const passwordLink = async (
             tokenValue = token.token;
         }
         
-        const url = `${config.server.external_address}/#/resetpwd/${user.id}/${tokenValue}`;
+        const url = `${config.server.external_address}/resetpwd/${user.id}/${tokenValue}`;
 
         // debug mode: no email sending
         if(config.email.type == "none"){

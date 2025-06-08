@@ -22,7 +22,8 @@
             "enabled": false,
             "username": "test",
             "password": "test"
-        }
+        },
+        "serverSideRendering": true
     },
     "captcha" : {
         "activate": false,

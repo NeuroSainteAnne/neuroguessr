@@ -1,0 +1,1 @@
+export default '/neurotheka/@atlas/@region'

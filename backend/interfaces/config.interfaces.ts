@@ -25,6 +25,7 @@ export interface ServerConfig {
     serverKey: string;
     serverCert: string;
     globalAuthentication: GlobalAuthenticationConfig;
+    serverSideRendering: boolean;
 }
 
 export interface CaptchaConfig {
