@@ -34,15 +34,8 @@ function Searchbar() {
       setAskedAtlas(atlas)
       setAskedRegion(region)
       setSuggestionList([])
-      
       // Use history.pushState to update URL without page reload
-      const newUrl = `/neurotheka/${atlas}/${region}`;
-      window.history.pushState({ atlas, region }, '', newUrl);
-      
-      // Dispatch a custom event to notify other components about the URL change
-      window.dispatchEvent(new CustomEvent('urlchange', { 
-        detail: { atlas, region } 
-      }));
+      window.history.pushState(null, '', `/neurotheka/${atlas}/${region}`);
     } else {
       // If not already on neurotheka page, do a full page navigation
       window.location.href = `/neurotheka/${atlas}/${region}`;
