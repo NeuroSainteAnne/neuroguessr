@@ -129,12 +129,17 @@ function Neurotheka() {
           niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(clut);
         }
         niivue.setOpacity(1, viewerOptions.displayOpacity);
-        niivue.updateGLVolume();
       }
 
       // Set initial clip plane
       niivue.setClipPlane(tractographyLoaded ? [-0.1, 270, 0] : [2, 270, 0]);
       niivue.opts.isSliceMM = true;
+
+      // set crosshair position
+      let center = cmap.centers ? cmap.centers[askedRegion] : [0,0,0]
+      niivue.scene.crosshairPos = niivue.mm2frac(center);
+      niivue.createOnLocationChange()
+      niivue.updateGLVolume();
 
       // Update display
       if (isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {

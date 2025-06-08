@@ -28,13 +28,23 @@ function Searchbar() {
       });
     setSuggestionList(matches)
   }
-
   function handleSearchValidate(atlas: string, region: number) {
     if(isNeurotheka){
+      // Update state and URL without page reload
       setAskedAtlas(atlas)
       setAskedRegion(region)
       setSuggestionList([])
+      
+      // Use history.pushState to update URL without page reload
+      const newUrl = `/neurotheka/${atlas}/${region}`;
+      window.history.pushState({ atlas, region }, '', newUrl);
+      
+      // Dispatch a custom event to notify other components about the URL change
+      window.dispatchEvent(new CustomEvent('urlchange', { 
+        detail: { atlas, region } 
+      }));
     } else {
+      // If not already on neurotheka page, do a full page navigation
       window.location.href = `/neurotheka/${atlas}/${region}`;
     }
   }
