@@ -8,6 +8,7 @@ import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
 import { Niivue } from '@niivue/niivue';
 import { Help } from '../../components/Help';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
   // Check if the player is logged in
@@ -220,10 +221,10 @@ export function Page() {
 
   const checkLoading = async () => {
     if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas) {
-      setIsLoading(false);
       loadAtlasNii(niivue, preloadedBackgroundMNI, preloadedAtlas);
       await loadAtlasData();
       startGame();
+      setIsLoading(false);
     } else {
       setIsLoading(true);
     }
@@ -745,7 +746,7 @@ export function Page() {
 
       if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
 
-      if(cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
+      if(gameMode !== 'navigation' && cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
         const center = cMap.current.centers[highlightedRegion];
         niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
         niivue.createOnLocationChange();
@@ -893,9 +894,9 @@ export function Page() {
   return (
     <>
       <title>{myTitle}</title>
+      {isLoading && <LoadingScreen />}
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-      {isLoading && <div className="loading-screen"></div>}
       <div className="canvas-container">
         <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
           onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>

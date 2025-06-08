@@ -59,8 +59,12 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
       justify-content: center;
       width: 100%;
     }
+     #loading-screen-inside {
+      min-height: calc(100% - var(--header-height, 70px) - var(--footer-height, 50px) + 10px);
+      width: 100%;
+     }
      #loading-screen-inside .loader-container {
-      height: 100vh;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;

@@ -75,4 +75,31 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
     // Reuse the existing root for subsequent renders
     root.render(pageElement)
   }
+
+  if (typeof window !== 'undefined') {
+    // Set up loading screen size management
+    setupLoadingScreen();
+    
+    // Set up window resize handler
+    window.addEventListener('resize', () => {
+      setupLoadingScreen();
+    });
+  }
 }
+
+// Set up loading screen size management
+const setupLoadingScreen = () => {
+  // Get actual header and footer heights
+  const navbar = document.querySelector('.navbar-container') as HTMLElement;
+  const footer = document.querySelector('.lower-bar') as HTMLElement;
+  
+  if (navbar && footer) {
+    const navbarHeight = navbar.offsetHeight;
+    const footerHeight = footer.offsetHeight;
+    console.log('Navbar height:', navbarHeight, 'Footer height:', footerHeight);
+    
+    // Set CSS variables for the loading screen to use
+    document.documentElement.style.setProperty('--header-height', `${navbarHeight}px`);
+    document.documentElement.style.setProperty('--footer-height', `${footerHeight}px`);
+  }
+};
