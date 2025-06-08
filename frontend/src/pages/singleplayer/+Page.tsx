@@ -732,6 +732,12 @@ export function Page() {
       lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
 
       if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
+
+      if(cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
+        const center = cMap.current.centers[highlightedRegion];
+        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
+        niivue.createOnLocationChange();
+      }
       niivue.updateGLVolume();
       niivue.drawScene();
     } else {
