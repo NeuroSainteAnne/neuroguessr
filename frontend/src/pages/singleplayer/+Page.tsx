@@ -775,9 +775,7 @@ export function Page() {
       const lut = cLut.current.slice();
       // Make all regions transparent initially except region 0 if needed
       for (let i = 0; i < lut.length / 4; i++) {
-        if (i !== 0 || (askedAtlas === 'aal' || askedAtlas === 'glasser' || askedAtlas === 'destrieux' || askedAtlas === 'schaefer')) {
-          lut[i * 4 + 3] = 0; // Make transparent
-        }
+        lut[i * 4 + 3] = 0; // Make transparent
       }
       // Highlight the specific region in yellow
       lut[highlightedRegion * 4 + 0] = 255; // R
