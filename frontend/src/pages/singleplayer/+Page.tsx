@@ -515,6 +515,7 @@ export function Page() {
     let guessSuccess = null;
     let isEndgame = false;
     let clickedRegion = null;
+    let clickedPosition = niivue.vox2mm(selectedVoxel.current, niivue.volumes[1].matRAS!) as number[];;
     let scoreIncrement = 0;
     let givenFinalScore = 0;
     if (isLoggedIn) {
@@ -529,7 +530,7 @@ export function Page() {
           body: JSON.stringify({
             sessionId: sessionId.current,
             sessionToken: sessionToken.current,
-            coordinates: selectedVoxel.current
+            coordinates: clickedPosition
           }),
         });
         const result = await response.json();
@@ -554,15 +555,15 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, clickedRegion, guessSuccess, scoreIncrement }:
-    { isEndgame: boolean, clickedRegion: number, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
+  const getUpdatedScore = ({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }:
+    { isEndgame: boolean, clickedRegion: number, clickedPosition: number[]|null, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
     if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
       console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
       return { scoreIncrement };
@@ -630,7 +631,8 @@ export function Page() {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
           const correctCenter = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
-          const clickedCenter = cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion] : null;
+          const clickedCenter = clickedPosition ? clickedPosition :
+              cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion] : null;
 
           if (correctCenter && clickedCenter) {
             // Calculate Euclidean distance between centers
