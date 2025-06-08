@@ -1,0 +1,12 @@
+/* main loading screen elements are loaded in html render file */
+#loading-screen-inside {
+    min-height: calc(100% - var(--header-height, 70px) - var(--footer-height, 50px) + 40px);
+    width: 100%;
+}
+#loading-screen-inside .loader-container {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}

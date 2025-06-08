@@ -1,3 +1,5 @@
+import "./LoadingScreen.css";
+
 export const LoadingScreen = () => {
    return (
    <div id="loading-screen-inside">

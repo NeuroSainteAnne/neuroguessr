@@ -47,7 +47,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   <meta property="og:type" content="website" />
   <meta property="og:logo" content="${neuroGuessrLogo}" />
   <style>
-    #loading-screen, #loading-screen-inside {
+    #loading-screen {
       width: 100%;
       z-index: 1000;
     }
@@ -59,18 +59,6 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
       justify-content: center;
       width: 100%;
     }
-     #loading-screen-inside {
-      min-height: calc(100% - var(--header-height, 70px) - var(--footer-height, 50px) + 10px);
-      width: 100%;
-     }
-     #loading-screen-inside .loader-container {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-     }
-
     .sk-chase {
       width: 40px;
       height: 40px;
