@@ -6,7 +6,6 @@ import { useApp } from '../../context/AppContext';
 import { ColorMap } from '../../types';
 import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
-import { Niivue } from '@niivue/niivue';
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
 
@@ -311,6 +310,7 @@ export function Page() {
   const startGame = () => {
     setIsGameRunning(true);
     resetGameState();
+    niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
 
     startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
       if (session) {
@@ -499,6 +499,14 @@ export function Page() {
   }, [highlightedRegion]);
 
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Save the last touch event for later use in touchEnd
+    if (e.touches.length > 0) {
+      lastTouchEvent.current = e.touches[0];
+    }
+    handleCanvasInteraction(e);
+  };
+
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // Save the last touch event for later use in touchEnd
     if (e.touches.length > 0) {
@@ -509,7 +517,7 @@ export function Page() {
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // If we have a saved touch event, create a synthetic mouse event
     // and pass it to the handleCanvasInteraction function
-    if (lastTouchEvent.current && canvasRef.current) {
+    if (lastTouchEvent.current && canvasRef.current && gameMode !== 'navigation') {
       // Create a synthetic event using the last saved touch position
       const syntheticEvent = {
         ...e,
@@ -518,8 +526,8 @@ export function Page() {
       // Call the mouse event handler with our synthetic event
       handleCanvasInteraction(syntheticEvent);
       // Clear the saved touch event
-      lastTouchEvent.current = null;
     }
+    lastTouchEvent.current = null;
   };
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -932,7 +940,7 @@ export function Page() {
 
       <div className="canvas-container">
         <canvas id="gl1" onClick={handleCanvasInteraction} 
-          onTouchStart={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
+          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
           onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
       </div>
       <div className="button-container">

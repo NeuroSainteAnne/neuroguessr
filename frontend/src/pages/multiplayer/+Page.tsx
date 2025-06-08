@@ -301,6 +301,7 @@ const MultiplayerGameScreen = () => {
     if(niivue && canvasRef.current && hasStarted){
       initNiivue(niivue, canvasRef.current, viewerOptions, ()=>{
           setIsLoadedNiivue(true);
+          niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
       })
       loadAtlasNii(niivue, preloadedBackgroundMNI);
     }
@@ -334,6 +335,14 @@ const MultiplayerGameScreen = () => {
     niivue.resizeListener();
   }
 }, [niivue, hasStarted, connected]);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Save the last touch event for later use in touchEnd
+    if (e.touches.length > 0) {
+      lastTouchEvent.current = e.touches[0];
+    }
+    handleCanvasInteraction(e);
+  };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // Save the last touch event for later use in touchEnd
@@ -386,7 +395,7 @@ const MultiplayerGameScreen = () => {
       
       <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
         <canvas id="gl1" onClick={handleCanvasInteraction} 
-          onTouchStart={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
+          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">
