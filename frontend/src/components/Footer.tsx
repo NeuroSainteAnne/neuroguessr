@@ -37,7 +37,7 @@ const Footer = () => {
             >
                <img src="/interface/logo-upc-64.png" alt="Université Paris Cité"  className='lower-logo-upc'/>
             </a>
-            <a onClick={(e) => setShowLegalOverlay(true)}>
+            <a onClick={(e) => setShowLegalOverlay(true)} className='lower-legal-link'>
                <span role="img" aria-label="legal" className='lower-legal-logo'>⚖️</span>
                <span className='lower-legal-text'>{t("legal_mentions_title")}</span>
             </a>

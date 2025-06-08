@@ -118,7 +118,7 @@ export function Help() {
                </div>
             </div>}
 
-            <div ref={helpButtonRef}>
+            <div className="help-button-container" ref={helpButtonRef}>
                <button id="help-button" className="help-button" onClick={() => setShowHelpOverlay(true)}>
                   <i className="fas fa-question"></i>
                </button>

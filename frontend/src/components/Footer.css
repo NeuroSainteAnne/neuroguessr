@@ -31,7 +31,10 @@
 .lower-logo-upc{
     height: 38px;
 }
-@media (max-width: 480px) {
+.main-container:has(.help-button-container) .lower-legal-link {
+    margin-right: 80px;
+}
+@media (max-width: 650px) {
     .lower-bar {
         height: 28px;
     }
@@ -50,7 +53,7 @@
     .lower-legal-text{
         display: none;
     }
-    .lower-legal-logo {
+    .main-container:has(.help-button-container) .lower-legal-link {
         margin-right: 60px;
     }
 }

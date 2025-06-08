@@ -40,8 +40,8 @@
     /* Slightly transparent dark background */
     padding: 30px;
     border-radius: 8px;
-    width: 70%;
-    max-width: 1000px;
+    width: 100%;
+    max-width: 600px;
     box-sizing: border-box;
     color: #d9dddc;
 }
@@ -57,8 +57,8 @@
 .sign-in-options-container {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 15px;
-    /* Space between buttons */
 }
 
 .option-button {
