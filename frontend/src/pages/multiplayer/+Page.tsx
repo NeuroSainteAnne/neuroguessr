@@ -73,8 +73,17 @@ const MultiplayerGameScreen = () => {
             }));
           }
       });
-      return () => { isMounted = false; };
+      return () => { 
+        isMounted = false;
+        cleanHeader()
+      };
     }, []);
+
+  const cleanHeader = () => {
+    setHeaderText("");  
+    setHeaderTextMode("")
+    setHeaderTime("")
+  }
 
   const connectWS = (inputCode: string) => {
     if (!isLoggedIn && !config.activateAnonymousMode) return;
