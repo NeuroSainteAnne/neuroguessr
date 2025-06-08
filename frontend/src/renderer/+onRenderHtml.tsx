@@ -41,10 +41,10 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
-  <meta property="og:image" content="${image}" />
+  <meta property="og:image" content="https://neuroguessr.org${image}" />
   <meta property="og:url" content="https://neuroguessr.org${pageContext.urlPathname || ""}" />
   <meta property="og:type" content="website" />
-  <meta property="og:logo" content="${neuroGuessrLogo}" />
+  <meta property="og:logo" content="https://neuroguessr.org${neuroGuessrLogo}" />
   <style>
     #loading-screen {
       width: 100%;
