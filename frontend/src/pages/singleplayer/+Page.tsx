@@ -774,8 +774,11 @@ export function Page() {
     if (cLut.current && niivue && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
       const lut = cLut.current.slice();
       // Make all regions transparent initially except region 0 if needed
-      for (let i = 0; i < lut.length / 4; i++) {
-        lut[i * 4 + 3] = 0; // Make transparent
+      for (let i = 0; i < lut.length; i += 4) {
+        lut[i + 0] = 0;   // R
+        lut[i + 1] = 0;   // G
+        lut[i + 2] = 0;   // B
+        lut[i + 3] = 0;   // A (transparent)
       }
       // Highlight the specific region in yellow
       lut[highlightedRegion * 4 + 0] = 255; // R
