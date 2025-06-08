@@ -19,7 +19,10 @@ export function MultiBox() {
                 /></div>
                 <div><a className="play-button enabled" href={`/multiplayer-game/${multiplayerInputCode}`}
                     onClick={(e) => {
-                        if (!(parseInt(multiplayerInputCode) >= 10000000 && parseInt(multiplayerInputCode) <= 99999999)) { e.preventDefault(); }
+                        if (!(parseInt(multiplayerInputCode) >= 10000000 && parseInt(multiplayerInputCode) <= 99999999)) { 
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
                     }}>
                     {t("join_multiplayer_button")}</a></div>
             </div>

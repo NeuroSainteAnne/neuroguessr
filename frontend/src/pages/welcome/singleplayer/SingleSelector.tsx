@@ -42,6 +42,7 @@ export function SingleSelector() {
                 </div>
                 <a id="play-button"
                     href={`/singleplayer/${selectedAtlas}/${selectedMode}`}
+                    onClick={(e)=>{ if(selectedAtlas == "" || selectedMode == ""){ e.preventDefault(); e.stopPropagation(); }}}
                     className={(selectedAtlas == "" || selectedMode == "") ? "play-button disabled" : "play-button enabled"}>
                     {t("play_button")}
                 </a>

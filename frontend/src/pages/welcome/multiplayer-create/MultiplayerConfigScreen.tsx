@@ -250,7 +250,9 @@ const MultiplayerConfigScreen = () => {
                                 className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                                 href={`/multiplayer/${sessionCode}${(sessionToken?"/"+sessionToken:"")}`}
                                 onClick={(e)=>{
-                                    if(!loading && selectedAtlas && lobbyUsers.length > 1) e.preventDefault();
+                                    if(!loading && selectedAtlas && lobbyUsers.length > 1){
+                                        e.preventDefault(); e.stopPropagation();
+                                    } 
                                 }}
                             >
                                 {t("start_game_button")}
