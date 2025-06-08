@@ -385,8 +385,8 @@ const MultiplayerGameScreen = () => {
       <title>{title}</title>
       
       <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
-        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} 
-          onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
+        <canvas id="gl1" onClick={handleCanvasInteraction} 
+          onTouchStart={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">

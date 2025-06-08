@@ -931,8 +931,8 @@ export function Page() {
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className="canvas-container">
-        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} 
-          onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
+        <canvas id="gl1" onClick={handleCanvasInteraction} 
+          onTouchStart={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
           onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
       </div>
       <div className="button-container">
