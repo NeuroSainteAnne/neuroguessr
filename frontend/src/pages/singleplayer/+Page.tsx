@@ -109,8 +109,12 @@ export function Page() {
       backColor: [0, 0, 0, 1],
       crosshairColor: [1, 1, 1, 1]
   }): null);
+
    useEffect(() => {
       setAskedAtlas(routeParams?.atlas);
+      return () => {
+        cleanHeader();
+      }
    }, []);
 
   useEffect(() => {
@@ -234,6 +238,13 @@ export function Page() {
   useEffect(() => {
     currentAttemptsRef.current = currentAttempts
   }, [currentAttempts])
+
+  const cleanHeader = () => {
+      setHeaderText("");
+      setHeaderScore("");
+      setHeaderStreak("");
+      setHeaderErrors("");
+  }
 
   const resetGameState = () => {
     currentTarget.current = null;
@@ -892,7 +903,7 @@ export function Page() {
       <div className="button-container">
         <a className="return-button" href="/welcome">{t("return_button")}</a>
         {isNavigationMode && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
-        {isNavigationMode && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
       </div>

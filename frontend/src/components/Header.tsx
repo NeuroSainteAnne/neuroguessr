@@ -50,7 +50,7 @@ function Header() {
                                 <span id="streak-value">{headerStreak}</span>
                                 <img src="/interface/flame.png" alt="Streak Flame" className="streak-flame-icon-small" />
                             </p>}
-                            {headerTime && <p id="time-label">{t("time_label")}: {headerTime}</p>}
+                            {headerTime && <p id="time-label">{headerTime}</p>}
                         </div>}
                     {isMultiplayer && <div className="score-error-container">
                             {headerScore && <p id="score-label">{headerScore}</p>}

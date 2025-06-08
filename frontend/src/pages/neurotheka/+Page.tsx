@@ -34,7 +34,10 @@ function Neurotheka() {
             }));
           }
       });
-      return () => { isMounted = false; };
+      return () => { 
+        isMounted = false; 
+        setHeaderText("");
+      };
     }, []);
 
   async function updateVisualization() {
