@@ -218,7 +218,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // Language handler
   const handleChangeLanguage = (lang: string) => {
     setCurrentLanguage(lang);
-    //i18n.changeLanguage(lang);
+    i18n.changeLanguage(lang);
   };
   
   // Authentication handlers
