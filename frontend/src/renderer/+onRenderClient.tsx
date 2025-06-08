@@ -96,7 +96,6 @@ const setupLoadingScreen = () => {
   if (navbar && footer) {
     const navbarHeight = navbar.offsetHeight;
     const footerHeight = footer.offsetHeight;
-    console.log('Navbar height:', navbarHeight, 'Footer height:', footerHeight);
     
     // Set CSS variables for the loading screen to use
     document.documentElement.style.setProperty('--header-height', `${navbarHeight}px`);

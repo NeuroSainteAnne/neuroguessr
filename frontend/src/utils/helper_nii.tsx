@@ -81,7 +81,7 @@ export const loadAtlasNii = (myniivue: any, preloadedBackgroundMNI: any|null, pr
 }
 
 export function getClickedRegion(myniivue: any, canvasObj: HTMLCanvasElement, cMap: ColorMap, e: any){
-    const isTouch = e.type === 'touchstart';
+    const isTouch = e.type === 'touchstart' || e.type === 'touchend';
     const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
     const rect = canvasObj.getBoundingClientRect();
     const x = touch.clientX - rect.left;

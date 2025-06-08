@@ -10,6 +10,7 @@ import { Niivue } from '@niivue/niivue';
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
 
+
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
   // Check if the player is logged in
   if (!isLoggedIn || !token) {
@@ -103,20 +104,28 @@ export function Page() {
   const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
   const timeattackOverlayRef = useRef<HTMLDivElement>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
+  const lastTouchEvent = useRef<React.Touch | null>(null);
 
-  const [niivue, setNiivue] = useState<Niivue|null>(typeof window !== 'undefined' ? new Niivue({
-      logLevel: "error",
-      show3Dcrosshair: true,
-      backColor: [0, 0, 0, 1],
-      crosshairColor: [1, 1, 1, 1]
-  }): null);
-
-   useEffect(() => {
+  const [niivue, setNiivue] = useState<any>(null);
+    useEffect(() => {
       setAskedAtlas(routeParams?.atlas);
-      return () => {
-        cleanHeader();
-      }
-   }, []);
+      let isMounted = true;
+      import('@niivue/niivue').then((mod) => {
+          if (isMounted) {
+            setNiivue(new mod.Niivue({
+                logLevel: "error",
+                show3Dcrosshair: true,
+                backColor: [0, 0, 0, 1],
+                crosshairColor: [1, 1, 1, 1],
+                doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
+            }));
+          }
+      });
+      return () => { 
+        isMounted = false;
+        cleanHeader()
+      };
+    }, []);
 
   useEffect(() => {
     if(niivue && canvasRef.current){
@@ -488,6 +497,30 @@ export function Page() {
       }
     }
   }, [highlightedRegion]);
+
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Save the last touch event for later use in touchEnd
+    if (e.touches.length > 0) {
+      lastTouchEvent.current = e.touches[0];
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // If we have a saved touch event, create a synthetic mouse event
+    // and pass it to the handleCanvasInteraction function
+    if (lastTouchEvent.current && canvasRef.current) {
+      // Create a synthetic event using the last saved touch position
+      const syntheticEvent = {
+        ...e,
+        touches: [lastTouchEvent.current] as unknown as React.TouchList
+      } as React.TouchEvent<HTMLCanvasElement>;
+      // Call the mouse event handler with our synthetic event
+      handleCanvasInteraction(syntheticEvent);
+      // Clear the saved touch event
+      lastTouchEvent.current = null;
+    }
+  };
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
@@ -898,7 +931,8 @@ export function Page() {
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className="canvas-container">
-        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction}
+        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} 
+          onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
           onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
       </div>
       <div className="button-container">

@@ -35,6 +35,7 @@ const MultiplayerGameScreen = () => {
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const selectedVoxel = useRef<number[] | null>(null);
   const currentTarget = useRef<number | null>(null);
+  const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const cMap = useRef<ColorMap | null>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
@@ -69,7 +70,8 @@ const MultiplayerGameScreen = () => {
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
-                crosshairColor: [1, 1, 1, 1]
+                crosshairColor: [1, 1, 1, 1],
+                doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
             }));
           }
       });
@@ -333,6 +335,29 @@ const MultiplayerGameScreen = () => {
   }
 }, [niivue, hasStarted, connected]);
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Save the last touch event for later use in touchEnd
+    if (e.touches.length > 0) {
+      lastTouchEvent.current = e.touches[0];
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // If we have a saved touch event, create a synthetic mouse event
+    // and pass it to the handleCanvasInteraction function
+    if (lastTouchEvent.current && canvasRef.current) {
+      // Create a synthetic event using the last saved touch position
+      const syntheticEvent = {
+        ...e,
+        touches: [lastTouchEvent.current] as unknown as React.TouchList
+      } as React.TouchEvent<HTMLCanvasElement>;
+      // Call the mouse event handler with our synthetic event
+      handleCanvasInteraction(syntheticEvent);
+      // Clear the saved touch event
+      lastTouchEvent.current = null;
+    }
+  };
+
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
@@ -360,7 +385,8 @@ const MultiplayerGameScreen = () => {
       <title>{title}</title>
       
       <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
-        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} ref={canvasRef}></canvas>
+        <canvas id="gl1" onClick={handleCanvasInteraction} onTouchStart={handleCanvasInteraction} 
+          onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">
