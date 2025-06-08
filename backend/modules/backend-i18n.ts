@@ -3,7 +3,9 @@ import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 import { __dirname } from "./utils.ts";
 
-i18next.use(FsBackend).init({
+const backendI18n = i18next.createInstance();
+
+backendI18n.use(FsBackend).init({
   fallbackLng: 'fr',
   preload: ["en","fr"],
   backend: {
@@ -11,4 +13,4 @@ i18next.use(FsBackend).init({
   }
 });
 
-export default i18next;
+export default backendI18n;

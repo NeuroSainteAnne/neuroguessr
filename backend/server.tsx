@@ -167,7 +167,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/harvard-oxford/navigation"
                 
                 // Define a list of routes that should load their index.html
-                const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'resetpwd'];
+                const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'validate', 'resetpwd'];
                 if (clientRoutedPaths.includes(baseRoute)) {
                     // This is a client-routed path, serve the base route's index.html
                     fsPath = path.join(reactRoot, 'client', baseRoute, 'index.html');

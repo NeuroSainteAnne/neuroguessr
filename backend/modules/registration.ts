@@ -14,7 +14,7 @@ import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, Registe
     VerifyEmailBody} from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
-import i18next from "./i18n.ts";
+import backendI18n from "./backend-i18n.ts";
 const config: Config = configJson;
 
 export const register = async (req: RegisterRequest, res: Response): Promise<void> => {
@@ -25,7 +25,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 firstname: Joi.string().required().label("firstname"),
                 lastname: Joi.string().required().label("lastname"),
                 email: Joi.string().email().required().label("email"),
-                language: Joi.string().label("language"),
+                language: Joi.string().label("language").valid("fr", "en"),
                 // @ts-ignore
                 password: passwordComplexity().required().label("password"),
                 captcha_token: Joi.string().label("captcha_token")
@@ -51,6 +51,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
 
         // Vérifier si l'utilisateur existe déjà
         const email = req.body.email.toLowerCase();
+        const language = req.body.language ? req.body.language : 'fr';
         const getUserStmt = db.prepare("SELECT * FROM users WHERE email = ?");
         const user = getUserStmt.get(email);
         if (user){
@@ -84,13 +85,14 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         }
 
         // Insérer le nouvel utilisateur
-        const stmt = db.prepare("INSERT INTO users (username, firstname, lastname, email, password, verified) VALUES (?, ?, ?, ?, ?, ?)");
+        const stmt = db.prepare("INSERT INTO users (username, firstname, lastname, email, password, language, verified) VALUES (?, ?, ?, ?, ?, ?, ?)");
         const result = stmt.run(
             req.body.username,
             req.body.firstname,
             req.body.lastname,
             email,
             hashPassword,
+            language,
             preVerify
         );
         const lastID = result.lastInsertRowid;
@@ -115,9 +117,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         tokenStmt.run(lastID, tokenValue);
 
         const url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
-        const lang = req.body.language ? req.body.language : 'fr';
 
-        const subject = i18next.t('register_email_subject', { lng: lang });
+        console.log(language)
+        console.log(backendI18n.t('register_email_subject', { lng: language }))
+        console.log(backendI18n.t('register_email_subject', { lng: "fr" }))
+        console.log(backendI18n.t('register_email_subject', { lng: "en" }))
+        const subject = backendI18n.t('register_email_subject', { lng: language });
         const message = `
         <head>
             <style>
@@ -136,9 +141,9 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             </tr>
             <tr>
                 <td colspan=2>
-                    <h3 style="margin-top:15px">${i18next.t('register_email_greeting', { lng: lang })} ${req.body.firstname} ${req.body.lastname}</h3>
-                    <p>${i18next.t('register_email_thanks', { lng: lang })}</p>
-                    <p>${i18next.t('register_email_validate', { lng: lang, url })}</p>
+                    <h3 style="margin-top:15px">${backendI18n.t('register_email_greeting', { lng: language })} ${req.body.firstname} ${req.body.lastname}</h3>
+                    <p>${backendI18n.t('register_email_thanks', { lng: language })}</p>
+                    <p>${backendI18n.t('register_email_validate', { lng: language, url })}</p>
                 </td>
             </tr>
         </table>
@@ -275,7 +280,7 @@ export const passwordLink = async (
         }
 
         const lang = req.body.language ? req.body.language : 'fr';
-        const subject = i18next.t('reset_password_subject', { lng: lang });
+        const subject = backendI18n.t('reset_password_subject', { lng: lang });
         const message = `
         <head>
             <style>
@@ -294,8 +299,8 @@ export const passwordLink = async (
             </tr>
             <tr>
                 <td colspan=2>
-                    <h3 style="margin-top:15px">${i18next.t('register_email_greeting', { lng: lang })} ${user.firstname} ${user.lastname}</h3>
-                    <p>${i18next.t('reset_password_link', { lng: lang, url })}</p>
+                    <h3 style="margin-top:15px">${backendI18n.t('register_email_greeting', { lng: lang })} ${user.firstname} ${user.lastname}</h3>
+                    <p>${backendI18n.t('reset_password_link', { lng: lang, url })}</p>
                 </td>
             </tr>
         </table>

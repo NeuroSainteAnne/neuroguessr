@@ -226,10 +226,27 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [showLegalOverlay, setShowLegalOverlay] = useState<boolean>(false);
   
   // Language handler
-  const handleChangeLanguage = (lang: string) => {
+  const handleChangeLanguage = async (lang: string) => {
     setCurrentLanguage(lang);
     i18n.changeLanguage(lang);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('language', lang);
+    if(isLoggedIn && authToken) {
+        try {
+            // Send the data to the server
+            const response = await fetch('/api/config-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({"language": lang}),
+            });
+            await response.json();
+        } catch (error) {
+            // Handle network or other errors
+            console.error('Error updating language config:', error);
+        }
+    }
   };
   
   // Authentication handlers
