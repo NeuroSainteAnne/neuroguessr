@@ -194,3 +194,9 @@ label {
   background: transparent !important;
   /* Background handled by body pseudo-element */
 }
+
+.lower-bar-phantom {
+    height:60px;
+    min-height:60px;
+    width: 100%;
+}

@@ -27,6 +27,7 @@ function Content({ children }: { children: React.ReactNode }) {
     return (
         <main className="page-container">
             {children}
+            <div className="lower-bar-phantom"></div>
         </main>
     )
 }
