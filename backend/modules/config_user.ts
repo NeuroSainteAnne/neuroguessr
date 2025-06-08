@@ -3,7 +3,7 @@ import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import passwordComplexity from "joi-password-complexity";
-import { __dirname } from "./utils.ts";
+import { __dirname, getUserToken } from "./utils.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import type { Request, Response } from "express";
@@ -21,6 +21,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
                 // @ts-ignore
                 password: passwordComplexity().optional().label("password"),
                 publishToLeaderboard: Joi.boolean().optional(),
+                language: Joi.string().optional().label("language").valid("fr", "en")
             });
             return schema.validate(data);
         };
@@ -31,7 +32,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const { firstname, lastname, password, publishToLeaderboard } = req.body as ConfigUserBody;
+        const { firstname, lastname, password, publishToLeaderboard, language } = req.body as ConfigUserBody;
 
         // Dynamically construct the SQL query
         const updates: string[] = [];
@@ -56,6 +57,10 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             updates.push("publishToLeaderboard = ?");
             params.push(publishToLeaderboard === null ? "NULL" : (publishToLeaderboard ? "1" : "0"));
         }
+        if (language !== undefined) {
+            updates.push("language = ?");
+            params.push(language);
+        }
         if (updates.length === 0) {
             res.status(400).send({ message: "No fields to update" });
         }
@@ -69,14 +74,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
         // update token content
         const stmt = db.prepare("SELECT * FROM users WHERE id = ?");
         const user = stmt.get(userId) as User;
-        const token = jwt.sign({ 
-            username: user.username,
-            email: user.email, 
-            firstname: user.firstname, 
-            lastname: user.lastname,
-            publishToLeaderboard: user.publishToLeaderboard,
-            id: user.id 
-        }, config.jwt_secret, { expiresIn: "1h" });
+        const token = getUserToken(user);
         res.status(200).send({ message: "User updated successfully", token: token });
     } catch (error: unknown) {
         console.log(error);

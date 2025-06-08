@@ -8,8 +8,7 @@ export interface User {
     createdAt: string; // ISO date string
     verified: boolean;
     publishToLeaderboard: boolean | null;
-    // Add privacyMode if you add it to the schema
-    // privacyMode: number;
+    language: string;
 }
 
 export interface Token {

@@ -4,6 +4,8 @@ import fetch from "node-fetch";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import { HttpsProxyAgent } from "https-proxy-agent";
+import { User } from "interfaces/database.interfaces.ts";
+import jwt from "jsonwebtoken";
 const config: Config = configJson;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,4 +32,17 @@ export async function verifyCaptcha(token: string, secret: string): Promise<bool
         console.error("Error verifying captcha:", error);
         return false;
     }
+}
+
+export function getUserToken(user: User): string {
+    const token = jwt.sign({ 
+            username: user.username,
+            email: user.email, 
+            firstname: user.firstname, 
+            lastname: user.lastname,
+            language: user.language,
+            publishToLeaderboard: user.publishToLeaderboard,
+            id: user.id 
+        }, config.jwt_secret, { expiresIn: "1h" })
+    return token;
 }

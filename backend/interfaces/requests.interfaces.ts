@@ -114,6 +114,7 @@ export interface ConfigUserBody {
     lastname?: string;
     password?: string;
     publishToLeaderboard?: boolean | null;
+    language?: string;
 }
 
 /* LEADERBOARD INTERFACES */

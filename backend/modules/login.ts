@@ -2,7 +2,7 @@ import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { __dirname } from "./utils.ts";
+import { __dirname, getUserToken } from "./utils.ts";
 import type { User } from "../interfaces/database.interfaces.ts";
 import type { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest, LoginRequestBody } from "../interfaces/requests.interfaces.ts";
@@ -45,14 +45,7 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
             res.status(403).send({ message: "Please verify your e-mail." });
             return;
         }
-        const token = jwt.sign({ 
-            username: user.username,
-            email: user.email, 
-            firstname: user.firstname, 
-            lastname: user.lastname,
-            publishToLeaderboard: user.publishToLeaderboard,
-            id: user.id 
-        }, config.jwt_secret, { expiresIn: "1h" });
+        const token = getUserToken(user);
         res.status(200).send({ 
             token: token, 
             message: "user was successfully logged in" 
@@ -82,18 +75,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
             const user = decoded as User;
 
             // Generate a new token with a refreshed expiration time
-            const newToken: string = jwt.sign(
-                { 
-                    username: user.username,
-                    email: user.email, 
-                    firstname: user.firstname, 
-                    lastname: user.lastname, 
-                    publishToLeaderboard: user.publishToLeaderboard,
-                    id: user.id 
-                },
-                config.jwt_secret,
-                { expiresIn: "1h" }
-            );
+            const newToken = getUserToken(user);
 
             res.status(200).send({ 
                 token: newToken, 

@@ -5,7 +5,7 @@ import Joi from "joi";
 import { db } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { __dirname, verifyCaptcha } from "./utils.ts";
+import { __dirname, getUserToken, verifyCaptcha } from "./utils.ts";
 import type { Response } from "express";
 import type { Token, User } from "../interfaces/database.interfaces.ts";
 import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
@@ -191,14 +191,7 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
         const deleteTokenStmt = db.prepare("DELETE FROM tokens WHERE userId = ?");
         deleteTokenStmt.run(user.id);
 
-        const token = jwt.sign({ 
-            username: user.username,
-            email: user.email, 
-            firstname: user.firstname, 
-            lastname: user.lastname,
-            publishToLeaderboard: user.publishToLeaderboard,
-            id: user.id 
-        }, config.jwt_secret, { expiresIn: "1h" });
+        const token = getUserToken(user);
         res.status(200).send({ 
             token: token, 
             message: "success_email_verified" 
@@ -366,20 +359,9 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
         const deleteTokenStmt = db.prepare("DELETE FROM tokens WHERE userId = ? AND token = ?");
         deleteTokenStmt.run(user.id, req.body.token);
 
-        const new_token: string = jwt.sign(
-            {
-                username: user.username,
-                email: user.email,
-                firstname: user.firstname,
-                lastname: user.lastname,
-                publishToLeaderboard: user.publishToLeaderboard,
-                id: user.id
-            },
-            config.jwt_secret,
-            { expiresIn: "1h" }
-        );
+        const newToken = getUserToken(user);
         res.status(200).send({
-            token: new_token,
+            token: newToken,
             message: "password successfully reset"
         });
     } catch (error) {
