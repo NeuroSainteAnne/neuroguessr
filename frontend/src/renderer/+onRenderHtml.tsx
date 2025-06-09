@@ -51,6 +51,8 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
 const simpleAnalytics = config.simpleAnalytics ? dangerouslySkipEscape(`<!-- 100% privacy-first analytics -->
 <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>`) : escapeInject``;
 
+const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.customHeaderScript) : escapeInject``;
+
  // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
 <html lang="${language}">
@@ -58,6 +60,7 @@ const simpleAnalytics = config.simpleAnalytics ? dangerouslySkipEscape(`<!-- 100
 <head>
   <meta charset="UTF-8" />
   ${gtm}
+  ${customHeader}
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
