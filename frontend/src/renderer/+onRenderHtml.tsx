@@ -37,20 +37,6 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
  const description = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language })
  const image = (pageContext.config as any).image || neuroGuessrImage
 
- const gtm = config.googleTagManager ? dangerouslySkipEscape(`
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=${config.googleTagManager}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', '${config.googleTagManager}');
-</script>`) : escapeInject``;
-
-const simpleAnalytics = config.simpleAnalytics ? dangerouslySkipEscape(`<!-- 100% privacy-first analytics -->
-<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>`) : escapeInject``;
-
 const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.customHeaderScript) : escapeInject``;
 
  // Create the complete HTML document
@@ -59,7 +45,6 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
 
 <head>
   <meta charset="UTF-8" />
-  ${gtm}
   ${customHeader}
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
@@ -261,7 +246,6 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
     </div>
   </div>
   <div id="root" class="i18n-content-hidden">${dangerouslySkipEscape(pageHtml)}</div>
-  ${simpleAnalytics}
 </body>
 
 </html>`
