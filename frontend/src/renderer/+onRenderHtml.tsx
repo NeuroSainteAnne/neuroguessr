@@ -11,6 +11,7 @@ import neuroGuessrLogo from "../../public/interface/neuroguessr-128.png"
 import i18nInstance from '../context/i18n'
 import { PageContextProvider } from 'vike-react/usePageContext'
 import logoSvg from "../../public/interface/neuroguessr.svg?raw";
+import config from "../../config.json"  
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
@@ -36,6 +37,17 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
  const description = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language })
  const image = (pageContext.config as any).image || neuroGuessrImage
 
+ const gtm = config.googleTagManager ? dangerouslySkipEscape(`<!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','${config.googleTagManager}');</script>
+  <!-- End Google Tag Manager -->`) : escapeInject``;
+ const gtm2 = config.googleTagManager ? dangerouslySkipEscape(`<!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${config.googleTagManager}"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->`) : escapeInject``;
 
  // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
@@ -43,6 +55,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
 
 <head>
   <meta charset="UTF-8" />
+  ${gtm}
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
@@ -194,13 +207,6 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
         transform: scale(1);
       }
     }
-  </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
-  <link rel="manifest" href="/favicon/site.webmanifest">
-  <style>
     .i18n-content-hidden {
       opacity: 0;
       transition: opacity 0.2s ease-in-out;
@@ -209,6 +215,11 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
       opacity: 1;
     }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+  <link rel="manifest" href="/favicon/site.webmanifest">
     <script>
     (function() {
       // Check for stored language preference
@@ -227,6 +238,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
 </head>
 
 <body>
+  ${gtm2}
   <div id="loading-screen">
     <div class="loader-container">
       <div class="loading-logo-container">
