@@ -26,14 +26,17 @@ function LandingPage() {
             <div className="sign-in-panel">
                 <div className="sign-in-options-container">
                     <a href="/login" 
+                        data-umami-event="goto login button" data-umami-event-source="landing page"
                         className="option-button sign-in-button">
                         {t("sign_in")}
                     </a>
                     <a href="/register" 
+                        data-umami-event="goto register button" data-umami-event-source="landing page"
                         className="option-button sign-up-button">
                         {t("sign_up")}
                     </a>
                     <a href="/welcome/singleplayer" 
+                        data-umami-event="guest mode button"
                         className="option-button continue-button">
                         {t("no_sign_in")}
                     </a>

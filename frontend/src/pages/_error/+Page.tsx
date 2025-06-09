@@ -43,10 +43,10 @@ export function Page() {
         </h2>
         <p className="error-message">{errorMessage}</p>
         <div className="error-actions">
-          <a href="/" className="btn-home">
+          <a href="/" className="btn-home" data-umami-event="go back button" data-umami-event-gobacksource="error">
             <i className="fas fa-home"></i>&nbsp;{t('return_home')}
           </a>
-          <button onClick={() => window.history.back()} className="btn-back">
+          <button data-umami-event="go back button" data-umami-event-gobacksource="error" onClick={() => window.history.back()} className="btn-back">
             <i className="fas fa-arrow-left"></i> {t('go_back')}
           </button>
         </div>

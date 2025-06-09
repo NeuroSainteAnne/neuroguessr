@@ -36,5 +36,6 @@ export interface CustomTokenPayload {
   username?: string;
   firstname?: string;
   lastname?: string;
+  id?: number;
   publishToLeaderboard?: boolean|null;
 }

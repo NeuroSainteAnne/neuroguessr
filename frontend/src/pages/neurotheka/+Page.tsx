@@ -223,9 +223,6 @@ function Neurotheka() {
       <div className="button-container">
         <a id="return-button" className="return-button"  href="/welcome">{t("return_button")}</a>
       </div>
-
-      <Help />
-      
     </>
   )
 }

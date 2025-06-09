@@ -303,6 +303,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (isLoggedIn && authToken) {
       setIsGuest(false);
       if(localStorage !== undefined) localStorage.setItem('guestMode', 'false');
+
       
       try {
         const payload = jwtDecode<CustomTokenPayload>(authToken);
@@ -312,6 +313,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         setUserPublishToLeaderboard(
           payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard
         );
+        if (typeof window !== 'undefined' && (window as any).umami && payload.id) {
+          (window as any).umami.identify(payload.id, {username: payload.username || ""})
+        }
       } catch (error) {
         console.error("Error decoding token:", error);
         logout();

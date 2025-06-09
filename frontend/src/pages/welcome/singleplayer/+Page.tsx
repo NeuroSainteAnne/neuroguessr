@@ -23,7 +23,6 @@ export function Page() {
             <SingleSelector />
         </div>
       </GameSelectorProvider>
-      <Help />
     </>
   );
 }

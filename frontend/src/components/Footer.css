@@ -57,3 +57,18 @@
         margin-right: 60px;
     }
 }
+
+.lower-legal-link {
+    color: white;
+    text-decoration: none;
+    background-color: transparent;
+    padding: 0;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    gap: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border: 0;
+}

@@ -394,7 +394,7 @@ const MultiplayerGameScreen = () => {
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">
-          <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+          <button className="guess-button" ref={guessButtonRef} onClick={validateGuess} data-umami-event="multiplayer guess button">
             <span className="confirm-text">{t("confirm_guess")}</span>
             <span className="space-text">{t("space_key")}</span>
           </button>
@@ -421,7 +421,7 @@ const MultiplayerGameScreen = () => {
                 width: 250, border:"1px solid white" }}
             />
           }
-          <button className="join-multiplayer-button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
+          <button className="join-multiplayer-button"  data-umami-event="multiplayer join button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
         </div>
         {!isLoggedIn && <div className="multiplayer-suggest-login" 
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")

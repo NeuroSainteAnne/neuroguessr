@@ -1,12 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext"
 import './Help.css';
 
 export function Help() {
     const { t, showHelpOverlay, setShowHelpOverlay, showLegalOverlay, setShowLegalOverlay, pageContext } = useApp()
+    const [currentPage, setCurrentPage] = useState<string>('');
     const helpContentRef = useRef<HTMLDivElement>(null);
     const legalContentRef = useRef<HTMLDivElement>(null);
     const helpButtonRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setCurrentPage(pageContext.urlPathname.split("/")[1] || '');
+    }, []);
     
     // Parse URL pathname to determine page context
     const parts = pageContext.urlPathname.split('/');
@@ -119,7 +124,8 @@ export function Help() {
             </div>}
 
             <div className="help-button-container" ref={helpButtonRef}>
-               <button id="help-button" className="help-button" onClick={() => setShowHelpOverlay(true)}>
+               <button id="help-button" className="help-button" 
+                    data-umami-event="open help" data-umami-event-page={currentPage} onClick={() => setShowHelpOverlay(true)}>
                   <i className="fas fa-question"></i>
                </button>
             </div>
@@ -136,7 +142,10 @@ export function Help() {
                   <p dangerouslySetInnerHTML={{
                      __html: t("help_atlases_text").replace(
                         /\[doi:([^\]]+)\]/g,
-                        (_match: string, doi: string) => `<a href="https://doi.org/${doi}" target='_blank'>${doi}</a>`
+                        (_match: string, doi: string) => `<a href="https://doi.org/${doi}" target='_blank'
+                                                                data-umami-event="outbound link click"
+                                                                data-umami-event-target-website="doi"
+                                                                data-umami-event-target-doi="${doi}">${doi}</a>`
                      )
                   }}></p>
                </section>

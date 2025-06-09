@@ -21,6 +21,7 @@ function Header() {
         <>
             <div className="navbar-container">
                 <a className="navbar-left logo-title-container-navbar logo-title-container" 
+                    data-umami-event="header logo click"
                     href="/welcome">
                     <img src="/interface/neuroguessr-64.png" alt="NeuroGuessr Logo" className="logo" />
                     <h1>{isNeurotheka ? t("neuroglossaire_title") : t("app_title")}</h1>
@@ -62,21 +63,24 @@ function Header() {
                 <div className="navbar-right">
                     {!isLoggedIn && <>
                         <a id="guest-sign-in-button" className="guest-sign-in-button"
+                            data-umami-event="goto login button" data-umami-event-source="header"
                             href="/login">{t("sign_in")}</a>
-                        <span className={currentLanguage=="fr"?
+                        <button className={currentLanguage=="fr"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}
+                                data-umami-event="language switcher" data-umami-event-language="fr" data-umami-event-logged="no"
                                 data-lang="fr" aria-label="Français" 
                                 onClick={()=>{handleChangeLanguage('fr')}}>
                             <img src="/interface/fr-64.png" alt="FR" />
-                        </span>
-                        <span className={currentLanguage=="en"?
+                        </button>
+                        <button className={currentLanguage=="en"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}
+                                data-umami-event="language switcher" data-umami-event-language="en" data-umami-event-logged="no"
                                 data-lang="en" aria-label="English"
                                 onClick={()=>{handleChangeLanguage('en')}}>
                             <img src="/interface/en-64.png" alt="EN" />
-                        </span>
+                        </button>
                     </>}
                     {isLoggedIn && 
                         <LoginDropdownMenu />

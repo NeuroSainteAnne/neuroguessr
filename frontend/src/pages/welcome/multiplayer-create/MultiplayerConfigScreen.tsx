@@ -5,6 +5,7 @@ import { useApp } from '../../../context/AppContext';
 import { MultiplayerParametersType } from '../../../types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
+import { navigate } from 'vike/client/router';
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -201,6 +202,7 @@ const MultiplayerConfigScreen = () => {
                                 <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
                                     <button
                                         title="Copy game number"
+                                        data-umami-event="copy game code button"
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
@@ -218,6 +220,7 @@ const MultiplayerConfigScreen = () => {
                                     </button>
                                     <button
                                         title="Copy game link (link icon)"
+                                        data-umami-event="copy game link button"
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
@@ -246,17 +249,19 @@ const MultiplayerConfigScreen = () => {
                             <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
                             </ul>
-                            <a
+                            <button
                                 className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
-                                href={`/multiplayer/${sessionCode}${(sessionToken?"/"+sessionToken:"")}`}
+                                data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
+                                data-umami-event-start-multi-effective={loading && selectedAtlas && lobbyUsers.length > 1}
+                                data-umami-event-start-multi-lobbysize={lobbyUsers.length}
                                 onClick={(e)=>{
-                                    if(!loading && selectedAtlas && lobbyUsers.length > 1){
-                                        e.preventDefault(); e.stopPropagation();
+                                    if(loading && selectedAtlas && lobbyUsers.length > 1){
+                                        navigate(`/multiplayer/${sessionCode}${(sessionToken?"/"+sessionToken:"")}`)
                                     } 
                                 }}
                             >
                                 {t("start_game_button")}
-                        </a></div>
+                        </button></div>
                     </div>
                 </div>
             )}

@@ -155,7 +155,7 @@ function ResetPasswordScreen() {
                 </tbody>
               </table>
 
-              {isCheckedToken && <button type="submit" className="password-reset-units">{t("reset_password_button")}</button>}
+              {isCheckedToken && <button type="submit"  data-umami-event="reset password button" className="password-reset-units">{t("reset_password_button")}</button>}
           </div>
       </form>
     </>

@@ -9,6 +9,7 @@ import "./GameScreen.css"
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Niivue } from '@niivue/niivue';
+import { navigate } from 'vike/client/router';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -947,13 +948,15 @@ export function Page() {
       </div>
       <div className="button-container">
         <a className="return-button" href="/welcome">{t("return_button")}</a>
-        {isNavigationMode && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
-        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+        {isNavigationMode && <button className="return-button" 
+            data-umami-event="go back" data-umami-event-gobacksource={gameMode}
+            onClick={handleRecolorization}>{t("restore_color")}</button>}
+        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} 
+            data-umami-event="guess button" data-umami-event-guesssource={gameMode}
+            onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
       </div>
-
-      <Help />
 
       {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
         <div className="overlay-content" ref={streakOverlayRef}>
@@ -961,10 +964,14 @@ export function Page() {
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
           {userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
-            <a id="go-back-menu-button-streak" className="home-button" href="/welcome">
+            <button id="go-back-menu-button-streak" 
+                data-umami-event="go back button" data-umami-event-gobacksource="streak" 
+                className="home-button" onClick={() => { navigate("/welcome") }}>
               <i className="fas fa-home"></i>
-            </a>
-            <button id="restart-button-streak" className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
+            </button>
+            <button id="restart-button-streak" 
+                data-umami-event="restart button" data-umami-event-restartsource="streak" 
+                className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -985,10 +992,14 @@ export function Page() {
             <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
           </div>
           <div className="overlay-buttons">
-            <a id="go-back-menu-button-time-attack" className="home-button" href="/welcome">
+            <button id="go-back-menu-button-time-attack" className="home-button" 
+                data-umami-event="go back button" data-umami-event-gobacksource="time-attack" 
+                onClick={() => { navigate("/welcome") }}>
               <i className="fas fa-home"></i>
-            </a>
-            <button id="restart-button-time-attack" className="restart-button" onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
+            </button>
+            <button id="restart-button-time-attack" className="restart-button" 
+                data-umami-event="restart button" data-umami-event-gobacksource="time-attack" 
+                onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -1034,6 +1045,7 @@ const PublishToLeaderboardBox = () => {
       <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
         <button
           type="button" className="publish-btn"
+          data-umami-event="publish button" data-umami-event-publishchoice="yes" 
           style={{
             padding: "0.5em 1.5em",
             border: "none",
@@ -1047,6 +1059,7 @@ const PublishToLeaderboardBox = () => {
         </button>
         <button
           type="button" className="publish-btn"
+          data-umami-event="publish button" data-umami-event-publishchoice="no" 
           style={{
             padding: "0.5em 1.5em",
             border: "none",
