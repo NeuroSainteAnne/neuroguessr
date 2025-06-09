@@ -218,7 +218,6 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                     fsPath = path.join(reactRoot, 'client', 'index.html');
                 }
             }
-            console.log("Serving static file:", fsPath);
             
             // Read the HTML file
             let html = fs.readFileSync(fsPath, 'utf8');
