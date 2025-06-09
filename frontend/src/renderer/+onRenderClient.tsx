@@ -34,15 +34,8 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
       urlOriginal: initialState.originalUrl || pageContext.urlOriginal,
       routeParams: initialState.routeParams || pageContext.routeParams
     };
-    
-    // Log for debugging
-    console.log('Using server-injected state:', initialState);
   } else if (pageContext.isClientSideNavigation) {
-    // For client-side navigation, log the current context but don't override it
-    console.log('[Client Navigation] Using navigation state:', {
-      url: pageContext.urlOriginal,
-      params: pageContext.routeParams
-    });
+    // For client-side navigation, don't override it
   }
 
   const { Page } = pageContext
