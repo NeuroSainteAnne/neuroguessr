@@ -46,7 +46,17 @@ export interface FinishedSession {
     mode: string;
     atlas: string;
     score: number;
-    accuracy: number;
-    duration: number;
+    attempts?: number;
+    correct?: number;
+    incorrect?: number;
+    minTimePerRegion?: number;
+    maxTimePerRegion?: number;
+    avgTimePerRegion?: number;
+    minTimePerCorrectRegion?: number;
+    maxTimePerCorrectRegion?: number;
+    avgTimePerCorrectRegion?: number;
+    quitReason?: string;
+    multiplayerGamesWon?: number;
+    duration: number; // In milliseconds
     createdAt: number; // Unix ms timestamp
 }

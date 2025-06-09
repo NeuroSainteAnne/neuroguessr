@@ -3,6 +3,7 @@ import path from 'path';
 import { db } from "./database_init.ts";
 import type { AuthenticatedRequest, GetStatsRequest } from '../interfaces/requests.interfaces.ts';
 import type { Request, Response } from "express";
+import { FinishedSession } from 'interfaces/database.interfaces.ts';
 
 export const getUserStats = async (req: GetStatsRequest, res: Response): Promise<void> => {
     try {
@@ -38,8 +39,8 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
         ).get(userId) as { atlas?: string, count?: number } | undefined;
         const mostPlayedAtlas = mostPlayedAtlasRow?.atlas || null;
 
-        const sessions = db.prepare('SELECT mode, createdAt, score, correct, incorrect, avgTimePerRegion, attempts FROM finishedsessions WHERE userId = ? ORDER BY createdAt ASC')
-            .all(userId) as Array<{ mode: string, createdAt: number, score: number, correct: number; incorrect: number; avgTimePerRegion: number, attempts: number }>;
+        const sessions = db.prepare('SELECT * FROM finishedsessions WHERE userId = ? ORDER BY createdAt ASC')
+            .all(userId) as FinishedSession[];
 
         // Per-mode stats
         const perModeArr = db.prepare(
@@ -58,8 +59,8 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
                     maxScore: runningMax
                 };
                 if (row.mode === "time-attack") {
-                    const total = session.correct + session.incorrect;
-                    const errorRate = total > 0 ? session.incorrect / total : null;
+                    const total = (session.correct && session.incorrect) ? session.correct + session.incorrect : null;
+                    const errorRate = (total && total > 0 && session.incorrect) ? session.incorrect / total : null;
                     return { ...base, errorRate, avgTimePerRegion: session.avgTimePerRegion };
                 } else if (row.mode === "streak") {
                     return { ...base, avgTimePerRegion: session.avgTimePerRegion, bestStreak: session.attempts };
@@ -95,6 +96,7 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
             maxTimePerCorrectRegion,
             mostPlayedMode,
             mostPlayedAtlas,
+            sessions
         });
     } catch (error) {
         console.error("Error getting stats:", error);

@@ -664,7 +664,7 @@ export function Page() {
 
       if (gameMode === 'practice') {
         // Use i18next interpolation for the incorrect message
-        const incorrectMessage = t('incorrect', { region: clickedRegionName });
+        const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
         setHeaderText(incorrectMessage);
         setHeaderTextMode("failure")
 

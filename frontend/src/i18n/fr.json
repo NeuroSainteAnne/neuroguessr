@@ -47,6 +47,7 @@
   "streak_mode": "Série",
   "streak_description": "Maximum consécutif",
   "time_attack_mode": "Contre-la-Montre",
+  "time-attack_mode": "Contre-la-Montre",
   "time_attack_description": "Mimimum de temps",
   "play_button": "Jouer",
   "target_label": "Cible",
@@ -62,7 +63,7 @@
   "previous_game": "Jeu Précédent - Précision : {accuracy}%, Temps : {minutes}m {seconds}s",
   "previous_streak": "Série Précédente : {streak} régions",
   "find": "Trouver : ",
-  "incorrect": "Vous avez cliqué sur {{region}} !",
+  "incorrect_clicked": "Vous avez cliqué sur {{region}} !",
   "streak_ended": "Série Terminée ! Vous avez obtenu {streak} à la suite.",
   "streak_ended_title" : "Série Terminée!",
   "streak_ended_score": "Votre score :",
@@ -218,6 +219,9 @@
   "neuroguessr_login_title": "NeuroGuessr - Connexion",
   "construction_in_progress": "Construction en cours ! Merci de votre patience.",
 
+  
+  "*****LEADERBOARD*****":"",
+
   "neuroguessr_leaderboard_title": "NeuroGuessr - Classement",
   "neuroguessr_leaderboard_description": "Consultez le classement des joueurs de NeuroGuessr.",
   "leaderboard_button": "Classement",
@@ -242,5 +246,63 @@
   "all_time": "Tout temps",
   "error_loading_leaderboard": "Erreur lors du chargement des données de classement. Veuillez réessayer.",
   "try_again": "Réessayer",
-  "no_leaderboard_data": "Aucune donnée de classement disponible pour les filtres sélectionnés."
+  "no_leaderboard_data": "Aucune donnée de classement disponible pour les filtres sélectionnés.",
+
+  
+  "*****STATS*****":"",
+  "your_statistics": "Vos Statistiques",
+  "stats_from": "Du",
+  "to": "au",
+  "loading_stats": "Chargement de vos statistiques...",
+  "error_loading_stats": "Erreur lors du chargement des statistiques. Veuillez réessayer.",
+  "no_stats_available": "Aucune statistique disponible pour le moment. Jouez quelques parties pour voir vos statistiques !",
+  
+  "total_games": "Parties Totales",
+  "best_score": "Meilleur Score",
+  "correct_answers": "Réponses Correctes",
+  "accuracy": "Précision",
+  
+  "performance_metrics": "Métriques de Performance",
+  "avg_time_per_region": "Temps Moyen par Région",
+  "avg_time_per_correct": "Temps Moyen par Réponse Correcte",
+  "avg_session_duration": "Durée Moyenne de Session",
+  
+  "your_favorites": "Vos Favoris",
+  
+  "score_progression": "Progression du Score",
+  "activity_over_time": "Activité au Fil du Temps",
+  
+  "game_mode_details": "Détails par Mode de Jeu",
+  
+  "streak_progression": "Progression des Séries",
+  "time_attack_progression": "Progression Contre-la-Montre",
+  "multiplayer_progression": "Progression Multijoueur",
+  
+  "games_played": "Parties Jouées",
+  "avg_score": "Score Moyen",
+  "avg_duration": "Durée Moyenne",
+  
+  "recent_sessions": "Sessions Récentes",
+  "date_range": "Période",
+  
+  "date": "Date",
+  "correct": "Correct",
+  "incorrect": "Incorrect",
+  "duration": "Durée",
+  
+  "no_matching_sessions": "Aucune session ne correspond à vos filtres actuels.",
+  
+  "quit_reasons": "Raisons de Fin",
+  "completed": "Terminé",
+  "timeout": "Temps Écoulé",
+  "user_quit": "Abandon Manuel",
+  "unknown": "Inconnue",
+  
+  "min_time": "Temps Min",
+  "max_time": "Temps Max",
+  
+  "compare_with_others": "Comparer avec les Autres",
+  "your_rank": "Votre Classement",
+  "global_average": "Moyenne Globale",
+  "percentile": "Percentile"
 }
