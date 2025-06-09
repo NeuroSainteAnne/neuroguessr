@@ -8,6 +8,7 @@ import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { Niivue } from '@niivue/niivue';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -105,23 +106,17 @@ export function Page() {
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const lastTouchEvent = useRef<React.Touch | null>(null);
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
       setAskedAtlas(routeParams?.atlas);
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1],
                 doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
             }));
-          }
-      });
       return () => { 
-        isMounted = false;
         cleanHeader()
       };
     }, []);
@@ -310,7 +305,7 @@ export function Page() {
   const startGame = () => {
     setIsGameRunning(true);
     resetGameState();
-    niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
+    if(niivue) niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
 
     startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
       if (session) {

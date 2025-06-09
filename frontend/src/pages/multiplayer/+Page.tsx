@@ -7,11 +7,12 @@ import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
 import { fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
+import { Niivue, NVImage } from '@niivue/niivue';
 
 const MultiplayerGameScreen = () => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
-      preloadedBackgroundMNI, currentLanguage, niivueModule, pageContext,
+      preloadedBackgroundMNI, currentLanguage, pageContext,
       setHeaderText, setHeaderTextMode, setHeaderTime, updateToken
    } = useApp();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
@@ -61,22 +62,16 @@ const MultiplayerGameScreen = () => {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1],
                 doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
             }));
-          }
-      });
       return () => { 
-        isMounted = false;
         cleanHeader()
       };
     }, []);
@@ -310,9 +305,9 @@ const MultiplayerGameScreen = () => {
   useEffect(() => {
   if (askedAtlas) {
       const atlas = atlasFiles[askedAtlas];
-      if (atlas && niivueModule) {
+      if (atlas) {
         const niiFile = "/atlas/nii/" + atlas.nii;
-        niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
+        NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
             setLoadedAtlas(nvImage);
         }).catch((error: any) => {
             console.error("Error loading NIfTI file:", error);
@@ -320,7 +315,7 @@ const MultiplayerGameScreen = () => {
         });
       }
   }
-}, [askedAtlas, niivueModule])
+}, [askedAtlas, NVImage])
 
   useEffect(() => {
     if(niivue && preloadedBackgroundMNI && canvasRef.current && hasStarted){

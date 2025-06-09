@@ -6,42 +6,37 @@ import { fetchJSON } from '../../helper_niivue';
 import { initNiivue } from '../../utils/helper_nii';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Help } from '../../components/Help';
+import { Niivue, SHOW_RENDER } from '@niivue/niivue';
 
 function Neurotheka() {
   const { t, currentLanguage, askedAtlas, askedRegion,
-          preloadedAtlas, preloadedBackgroundMNI, viewerOptions, niivueModule, setAskedAtlas, setAskedRegion, pageContext,
+          preloadedAtlas, preloadedBackgroundMNI, viewerOptions, setAskedAtlas, setAskedRegion, pageContext,
         setHeaderText } = useApp();
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const currentlyLoadedAtlas = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
 
     useEffect(() => {
       const { routeParams } = pageContext;
       setAskedAtlas(routeParams?.atlas);
       setAskedRegion(parseInt(routeParams?.region));
 
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1]
             }));
-          }
-      });
       return () => { 
-        isMounted = false; 
         setHeaderText("");
       };
     }, []);
 
   async function updateVisualization() {
-    if (!askedRegion || !askedAtlas || !preloadedBackgroundMNI || !preloadedAtlas || !isLoadedNiivue) {
+    if (!askedRegion || !askedAtlas || !preloadedBackgroundMNI || !preloadedAtlas || !isLoadedNiivue || !niivue) {
       console.error("Invalid regionId or atlas");
       return;
     }
@@ -195,11 +190,11 @@ function Neurotheka() {
         niivue.setClipPlane(niivue.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
       }
       if (viewerOptions.displayType === "MultiPlanar") {
-        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.NEVER;
+        niivue.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
         niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
       if (viewerOptions.displayType === "MultiPlanarRender") {
-        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.ALWAYS;
+        niivue.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
         niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
       if (niivue.volumes.length > 1) {
