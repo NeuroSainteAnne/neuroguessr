@@ -256,53 +256,49 @@
   "loading_stats": "Chargement de vos statistiques...",
   "error_loading_stats": "Erreur lors du chargement des statistiques. Veuillez réessayer.",
   "no_stats_available": "Aucune statistique disponible pour le moment. Jouez quelques parties pour voir vos statistiques !",
-  
   "total_games": "Parties Totales",
   "best_score": "Meilleur Score",
   "correct_answers": "Réponses Correctes",
   "accuracy": "Précision",
-  
   "performance_metrics": "Métriques de Performance",
   "avg_time_per_region": "Temps Moyen par Région",
   "avg_time_per_correct": "Temps Moyen par Réponse Correcte",
   "avg_session_duration": "Durée Moyenne de Session",
-  
   "your_favorites": "Vos Favoris",
-  
   "score_progression": "Progression du Score",
   "activity_over_time": "Activité au Fil du Temps",
-  
   "game_mode_details": "Détails par Mode de Jeu",
-  
   "streak_progression": "Progression des Séries",
   "time_attack_progression": "Progression Contre-la-Montre",
   "multiplayer_progression": "Progression Multijoueur",
-  
   "games_played": "Parties Jouées",
   "avg_score": "Score Moyen",
   "avg_duration": "Durée Moyenne",
-  
   "recent_sessions": "Sessions Récentes",
   "date_range": "Période",
-  
   "date": "Date",
   "correct": "Correct",
   "incorrect": "Incorrect",
   "duration": "Durée",
-  
   "no_matching_sessions": "Aucune session ne correspond à vos filtres actuels.",
-  
   "quit_reasons": "Raisons de Fin",
   "completed": "Terminé",
   "timeout": "Temps Écoulé",
   "user_quit": "Abandon Manuel",
   "unknown": "Inconnue",
-  
   "min_time": "Temps Min",
   "max_time": "Temps Max",
-  
   "compare_with_others": "Comparer avec les Autres",
   "your_rank": "Votre Classement",
   "global_average": "Moyenne Globale",
-  "percentile": "Percentile"
+  "percentile": "Percentile",
+  
+  "*****ERROR*****":"",
+  "page_not_found": "Page Non Trouvée",
+  "error_occurred": "Une Erreur Est Survenue",
+  "authorization_error": "Vous n'êtes pas autorisé à accéder à cette page",
+  "unknown_error": "Une erreur inattendue s'est produite lors du chargement de la page",
+  "return_home": "Retour à l'Accueil",
+  "go_back": "Retour",
+  "error_details": "Détails Techniques"
 }

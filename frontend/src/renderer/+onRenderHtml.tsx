@@ -9,6 +9,7 @@ import type { OnRenderHtmlAsync } from 'vike/types'
 import neuroGuessrImage from "../../public/interface/neuroguessr-360.png"
 import neuroGuessrLogo from "../../public/interface/neuroguessr-128.png"
 import i18nInstance from '../context/i18n'
+import { PageContextProvider } from 'vike-react/usePageContext'
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
@@ -22,9 +23,11 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   const PageComponent = Page as React.ComponentType<any>
   // Important: Use StaticRouter for server-side rendering
   const pageHtml = renderToString(
-    <PageLayout pageContext={pageContext}>
-        <PageComponent />
-    </PageLayout>
+    <PageContextProvider pageContext={pageContext}>
+      <PageLayout pageContext={pageContext}>
+          <PageComponent />
+      </PageLayout>
+    </PageContextProvider>
   )
 
  const { t } = i18nInstance

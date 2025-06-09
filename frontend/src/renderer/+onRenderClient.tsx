@@ -13,7 +13,7 @@ import React from 'react'
 import ReactDOM, { createRoot, hydrateRoot } from 'react-dom/client'
 import { PageLayout } from './PageLayout'
 import type { OnRenderClientAsync } from 'vike/types'
-
+import { PageContextProvider } from 'vike-react/usePageContext'
 let root: ReactDOM.Root | null = null;
 
 // Check for server-injected state
@@ -51,9 +51,11 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
   if (!container) throw new Error('DOM element #root not found')
   const PageComponent = Page as React.ComponentType<any>
   const pageElement = (
+    <PageContextProvider pageContext={pageContext}>
       <PageLayout pageContext={pageContext}>
           <PageComponent />
       </PageLayout>
+    </PageContextProvider>
   )
   if (pageContext.isHydration) {
     try {
