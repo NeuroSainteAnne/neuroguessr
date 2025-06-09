@@ -4,5 +4,6 @@
         "siteKey": ""
     },
     "activateAnonymousMode": true,
-    "googleTagManager": ""
+    "googleTagManager": "",
+    "simpleAnalytics": false
 }
