@@ -1,11 +1,24 @@
+import { navigate } from 'vike/client/router';
 import { useApp } from '../../context/AppContext';
 import './LandingPage.css';
+import { useEffect } from 'react';
+import { LoadingScreen } from '../../components/LoadingScreen';
 
 function LandingPage() {
-    const { t, activateGuestMode } = useApp();
+    const { t, activateGuestMode, isLoggedIn } = useApp();
+    
+    // Add redirect effect for logged-in users
+    useEffect(() => {
+        if (isLoggedIn) {
+            // Redirect to dashboard or welcome page
+            navigate('/welcome');
+        }
+    }, [isLoggedIn]);
+    
     return (<>
         <title>NeuroGuessr</title>
-        <div id="unlogged-landing-page" className="landing-content">
+        {isLoggedIn && <LoadingScreen />}
+        {!isLoggedIn && <div id="unlogged-landing-page" className="landing-content">
             <div className="welcome-section">
                 <h2 className="welcome-message">{t("welcome_unlogged")}</h2>
                 <p>{t("welcome_text_unlogged")}</p>
@@ -26,7 +39,7 @@ function LandingPage() {
                     </a>
                 </div>
             </div>
-        </div>
+        </div>}
     </>)
 }
 
