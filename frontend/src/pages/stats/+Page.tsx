@@ -5,6 +5,7 @@ import { StatCard, MetricRow, FavoriteItem, StatItem, GameIcon, TrophyIcon, Chec
 import { formatTime, formatDate } from '../../utils/formatters';
 import './Stats.css';
 import { useApp } from '../../context/AppContext';
+import atlasFiles from '../../utils/atlas_files';
 
 enum GameMode {
   STREAK = 'streak',
@@ -274,6 +275,9 @@ export function Page() {
     { value: 'multiplayer', label: t('multiplayer_mode') }
   ];
 
+  const getAtlasName = (atlas: string): string => {
+    return atlasFiles[atlas].name || t('unknown_atlas');
+  }
   return (
     <div className="stats-page">
       <header className="stats-header">
@@ -319,12 +323,12 @@ export function Page() {
           <h3>{t('your_favorites')}</h3>
           <FavoriteItem 
             type="mode" 
-            value={mostPlayedMode} 
+            value={t(mostPlayedMode+"_mode")} 
             icon={getModeIcon(mostPlayedMode)} 
           />
           <FavoriteItem 
             type="atlas" 
-            value={mostPlayedAtlas} 
+            value={getAtlasName(mostPlayedAtlas)} 
             icon={getAtlasIcon(mostPlayedAtlas)} 
           />
         </div>
@@ -441,7 +445,7 @@ export function Page() {
       <section className="session-history">
         <h2>{t('recent_sessions')}</h2>
         <div className="filter-controls">
-          <div className="filter-select">
+          <div className="filter-select-stats">
             <label htmlFor="mode-filter">{t('mode')}</label>
             <select
               id="mode-filter"
@@ -458,7 +462,7 @@ export function Page() {
             </select>
           </div>
           
-          <div className="date-range-picker-container">
+          <div className="filter-select-stats">
             <label htmlFor="date-range-filter">{t('date_range')}</label>
             <select
               id="date-range-filter"
@@ -494,7 +498,7 @@ export function Page() {
                   <tr key={session.id}>
                     <td>{formatDate(session.createdAt)}</td>
                     <td>{t(session.mode + '_mode')}</td>
-                    <td>{session.atlas}</td>
+                    <td>{getAtlasName(session.atlas)}</td>
                     <td>{session.score}</td>
                     <td>{session.correct}</td>
                     <td>{session.incorrect}</td>

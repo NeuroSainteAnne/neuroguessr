@@ -126,12 +126,12 @@
   margin-bottom: 1.5rem;
 }
 
-.filter-select {
+.filter-select-stats {
   flex: 1;
   min-width: 200px;
 }
 
-.filter-select label, .date-range-picker-container label {
+.filter-select-stats label, .date-range-picker-container label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
