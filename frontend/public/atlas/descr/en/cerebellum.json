@@ -7,5 +7,5 @@
   ],
   "B": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 77, 115, 153, 191, 204, 204, 204,
     204, 204, 204, 191, 153, 115, 77, 38, 0],
-      "labels": ["Background","Left-I-IV","Right-I-IV","Left-V","Right-V","Left-VI","Vermis-VI","Right-VI","Left-Crus-I","Vermis-Crus-I","Right-Crus-I","Left-Crus-II","Vermis-Crus-II","Right-Crus-II","Left-VIIb","Vermis-VIIb","Right-VIIb","Left-VIIIa","Vermis-VIIIa","Right-VIIIa","Left-VIIIb","Vermis-VIIIb","Right-VIIIb","Left-IX","Vermis-IX","Right-IX","Left-X","Vermis-X","Right-X"]
+  "labels": ["Background","Left-I-IV","Right-I-IV","Left-V","Right-V","Left-VI","Vermis-VI","Right-VI","Left-Crus-I","Vermis-Crus-I","Right-Crus-I","Left-Crus-II","Vermis-Crus-II","Right-Crus-II","Left-VIIb","Vermis-VIIb","Right-VIIb","Left-VIIIa","Vermis-VIIIa","Right-VIIIa","Left-VIIIb","Vermis-VIIIb","Right-VIIIb","Left-IX","Vermis-IX","Right-IX","Left-X","Vermis-X","Right-X"]
 }

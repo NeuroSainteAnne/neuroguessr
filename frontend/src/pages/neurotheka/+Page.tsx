@@ -7,6 +7,7 @@ import { initNiivue } from '../../utils/helper_nii';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Help } from '../../components/Help';
 import { Niivue, SHOW_RENDER } from '@niivue/niivue';
+import { ColorMap } from '../../types';
 
 function Neurotheka() {
   const { t, currentLanguage, askedAtlas, askedRegion,
@@ -47,7 +48,7 @@ function Neurotheka() {
       niivue.meshes = [];
 
       // Load colormap
-      const cmap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      const cmap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json) as ColorMap;
 
       // Reset volumes
       if(preloadedAtlas != currentlyLoadedAtlas.current){
@@ -63,7 +64,7 @@ function Neurotheka() {
       let tractLabel = ""
       let tractUrl = ""
 
-      if (askedAtlas === 'xtract' && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
+      if (askedAtlas === 'xtract' && cmap.labels && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
         const cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
         tractLabel = cmap_en.labels[askedRegion].replace(/\s+/g, '_');
         tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
@@ -112,7 +113,7 @@ function Neurotheka() {
         }
       }
 
-      if (!useTractography && niivue.volumes.length > 1) {
+      if (!useTractography && cmap.labels && niivue.volumes.length > 1) {
         niivue.volumes[1].setColormapLabel(cmap);
         const numRegions = Object.keys(cmap.labels).length;
         const clut = new Uint8Array(numRegions * 4);
@@ -137,13 +138,13 @@ function Neurotheka() {
       niivue.opts.isSliceMM = true;
 
       // set crosshair position
-      let center = cmap.centers ? cmap.centers[askedRegion] : [0,0,0]
-      niivue.scene.crosshairPos = niivue.mm2frac(center);
+      let center = cmap.centers ? cmap.centers[askedRegion][0] : [0,0,0]
+      niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
       niivue.createOnLocationChange()
       niivue.updateGLVolume();
 
       // Update display
-      if (isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
+      if (isFinite(Number(askedRegion)) && cmap.labels && askedRegion in cmap.labels) {
         setHeaderText(`${cmap.labels[askedRegion] || "Unknown"} (${selectedAtlasFiles.name})`);
       } else {
         setHeaderText(t('error_loading_data', { atlas: selectedAtlasFiles.name }));

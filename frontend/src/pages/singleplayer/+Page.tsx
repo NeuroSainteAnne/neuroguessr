@@ -679,21 +679,27 @@ export function Page() {
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
-          const correctCenter = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
-          const clickedCenter = clickedPosition ? clickedPosition :
-              cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion] : null;
+          const correctCenters = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
+          const proposedCenter = clickedPosition ? clickedPosition :
+              cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion][0] : null;
 
-          if (correctCenter && clickedCenter) {
+          if (correctCenters && proposedCenter) {
             // Calculate Euclidean distance between centers
-            const distance = Math.sqrt(
-              Math.pow(correctCenter[0] - clickedCenter[0], 2) +
-              Math.pow(correctCenter[1] - clickedCenter[1], 2) +
-              Math.pow(correctCenter[2] - clickedCenter[2], 2)
-            );
+            let minDistance = Infinity;
+            for (const center of correctCenters) {
+              const centerDistance = Math.sqrt(
+                Math.pow(center[0] - proposedCenter[0], 2) +
+                Math.pow(center[1] - proposedCenter[1], 2) +
+                Math.pow(center[2] - proposedCenter[2], 2)
+              );
+              if (centerDistance < minDistance) {
+                minDistance = centerDistance;
+              }
+            }
 
             // Calculate score based on distance
-            if (distance <= MAX_PENALTY_DISTANCE) {
-              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+            if (minDistance <= MAX_PENALTY_DISTANCE) {
+              scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
               scoreIncrement = 0; // No points for too far away
             }
@@ -785,7 +791,7 @@ export function Page() {
 
       if(gameMode !== 'navigation' && cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
         const center = cMap.current.centers[highlightedRegion];
-        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
+        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center[0]));
         niivue.createOnLocationChange();
       }
       niivue.updateGLVolume();

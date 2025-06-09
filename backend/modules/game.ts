@@ -24,7 +24,7 @@ const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighti
 export const validRegions : Record<string,number[]> = {}
 export const imageRef : Record<string,NVImage> = {}
 export const imageMetadata : Record<string,any> = {}
-export const regionCenters : Record<string,number[][]> = {}
+export const regionCenters : Record<string,number[][][]> = {}
 for (const atlas in atlasFiles) {
     const atlasJsonPath = path.join(htmlRoot, "frontend", "public", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
@@ -237,15 +237,22 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 scoreIncrement = MAX_POINTS_PER_REGION;
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const center: number[] = regionCenters[session.atlas][regionId];
-                    const distance = Math.sqrt(
-                        Math.pow(center[0] - x, 2) +
-                        Math.pow(center[1] - y, 2) +
-                        Math.pow(center[2] - z, 2)
-                    );
+                    const centers: number[][] = regionCenters[session.atlas][regionId];
+                    // Find the minimum distance to any center of the region
+                    let minDistance = Infinity;
+                    for (const center of centers) {
+                        const distance = Math.sqrt(
+                            Math.pow(center[0] - x, 2) +
+                            Math.pow(center[1] - y, 2) +
+                            Math.pow(center[2] - z, 2)
+                        );
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                        }
+                    }
                     // Calculate score based on distance
-                    if (distance <= MAX_PENALTY_DISTANCE) {
-                        scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                    if (minDistance <= MAX_PENALTY_DISTANCE) {
+                        scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
                     } else {
                         scoreIncrement = 0; // No points for too far away
                     }
