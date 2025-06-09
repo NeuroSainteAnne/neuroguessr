@@ -1,0 +1,91 @@
+/* Canvas Styles - Keep existing */
+canvas {
+    cursor: crosshair;
+    display: block;
+    width: 100%;
+    max-width: 100vw;
+    height: auto;
+    max-height: 80vh;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+canvas:focus {
+    outline: 0;
+}
+
+@media (min-width: 1024px) {
+    canvas {
+        aspect-ratio: 2 / 1;
+        max-width: 90vw;
+    }
+}
+
+@media (max-width: 1023px) and (min-width: 481px) {
+    canvas {
+        aspect-ratio: 1 / 1;
+        max-width: 90vw;
+    }
+}
+
+@media (max-width: 480px) {
+    canvas {
+        aspect-ratio: 1 / 1;
+        max-width: 100vw;
+        max-height: 60vh;
+    }
+}
+
+/* Styles for Buttons Below Canvas (viewer page) - Keep existing */
+.button-container {
+    /*position: absolute;
+    bottom: 2vh;
+    left: 50%;
+    transform: translateX(-50%);*/
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    z-index: 10;
+    justify-content: center;
+}
+
+/* Return button style - Keep existing */
+.return-button {
+    background: #363636;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border: 1px solid #808588;
+    border-radius: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.9;
+    /* Added opacity */
+}
+
+.return-button:hover {
+    background: #2a2a2a;
+}
+
+.return-button:active {
+    background: #2a2a2a;
+    border: 1.5px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+    .return-button {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .return-button {
+        font-size: 0.9rem;
+        padding: 0.7rem 1.2rem;
+    }
+}

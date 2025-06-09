@@ -1,0 +1,19 @@
+.join-multiplayer-box{
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.join-multiplayer-button{
+    background-color: rgb(63, 109, 159);
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border: 1px solid #808588;
+    border-radius: 1rem;
+}
+
+.multiplayer-suggest-login{
+    margin-top: 25px;
+}

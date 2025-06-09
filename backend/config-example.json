@@ -1,0 +1,37 @@
+{
+    "email":{
+        "type": "gmail_api", // gmail_api or nodemailer or none (development only)
+        "server": "smtp.gmail.com", // only if nodemailer
+        "port": 465, // only if nodemailer
+        "mail_address": "xxx@gmail.com",
+        "mail_password": "xxx xxx xxx xxx", // only if nodemailer
+        "proxy": "http://localhost:3128", // only if nodemailer
+        "clientId": "xxx",  // only if gmail_api
+        "clientSecret": "xxx",  // only if gmail_api
+        "redirectPath": "http://localhost:4000/oauth2callback", // only if gmail_api
+        "scope": "https://mail.google.com/" // only if gmail_api
+    },
+    "server":{
+        "mode": "https",
+        "port": 3000,
+        "websocket_port": 3001,
+        "external_address": "https://localhost:3000",
+        "serverKey": "server.key",
+        "serverCert": "server.crt",
+        "globalAuthentication": {
+            "enabled": false,
+            "username": "test",
+            "password": "test"
+        },
+        "renderingMode": "ssg" // ssg or ssr or csr
+    },
+    "captcha" : {
+        "activate": false,
+        "siteKey": "",
+        "secretKey" : ""
+    },
+    "allowAnonymousInMultiplayer": false,
+    "addTestUser": true, // adds a user with name "test" and password "test" for testing purposes
+    "salt": "xxx",
+    "jwt_secret": "xxx"
+}

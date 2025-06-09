@@ -1,0 +1,59 @@
+
+.lower-bar {
+    background-color: #3a3a3a;
+    width: 100%;
+    height: 40px;
+    padding: 5px;
+    bottom: 0px;
+    position: fixed;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    z-index: 20;
+}
+
+.lower-bar a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    text-decoration: none;
+    color: white;
+    font-weight: 500;
+    margin-top: 0;
+}
+
+.lower-logo-github, .lower-logo-ghu {
+    height: 32px;
+}
+.lower-logo-ipnp{
+    height: 42px;
+}
+.lower-logo-upc{
+    height: 38px;
+}
+.main-container:has(.help-button-container) .lower-legal-link {
+    margin-right: 80px;
+}
+@media (max-width: 650px) {
+    .lower-bar {
+        height: 28px;
+    }
+    .lower-logo-github {
+        height: 22px;
+    }
+    .lower-logo-ghu {
+        height: 22px;
+    }
+    .lower-logo-ipnp{
+        height: 24px;
+    }
+    .lower-logo-upc{
+        height: 22px;
+    }
+    .lower-legal-text{
+        display: none;
+    }
+    .main-container:has(.help-button-container) .lower-legal-link {
+        margin-right: 60px;
+    }
+}

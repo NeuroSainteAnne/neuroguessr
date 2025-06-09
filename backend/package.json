@@ -1,0 +1,9 @@
+{
+  "name": "neuroguessr_backend",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}
