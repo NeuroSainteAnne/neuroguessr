@@ -48,6 +48,9 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   gtag('config', '${config.googleTagManager}');
 </script>`) : escapeInject``;
 
+const simpleAnalytics = config.simpleAnalytics ? dangerouslySkipEscape(`<!-- 100% privacy-first analytics -->
+<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>`) : escapeInject``;
+
  // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
 <html lang="${language}">
@@ -255,6 +258,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
     </div>
   </div>
   <div id="root" class="i18n-content-hidden">${dangerouslySkipEscape(pageHtml)}</div>
+  ${simpleAnalytics}
 </body>
 
 </html>`
