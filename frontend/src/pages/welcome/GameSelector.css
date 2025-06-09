@@ -26,7 +26,13 @@
     /* Increased margin below player selection buttons */
 }
 
-@media (max-width: 380px) {
+@media (max-width: 600px) {
+    .player-selection-buttons {
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 350px) {
     .player-selection-buttons {
         flex-direction: column;
     }
