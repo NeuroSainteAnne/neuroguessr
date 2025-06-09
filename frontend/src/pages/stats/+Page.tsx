@@ -166,7 +166,6 @@ export function Page() {
         setLoading(false);
       }
     };
-    console.log(historyDateRange)
     fetchStats();
   }, [t]);
 
@@ -203,7 +202,6 @@ export function Page() {
   
   // Generate data for the sessions progression chart
   const getAllSessionsProgression = () => {
-    console.log(stats)
     if (!stats || !stats.sessions || !Array.isArray(stats.sessions)) {
       return [];
     }
