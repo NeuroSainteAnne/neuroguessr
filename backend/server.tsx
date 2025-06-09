@@ -80,6 +80,8 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
     app.use('/atlas', express.static(path.join(reactRoot, 'client', 'atlas')));
     app.use('/favicon', express.static(path.join(reactRoot, 'client', 'favicon')));
     app.use('/interface', express.static(path.join(reactRoot, 'client', 'interface')));
+    app.use('/sitemap.xml', express.static(path.join(reactRoot, 'client', 'sitemap.xml')));
+    app.use('/robots.txt', express.static(path.join(reactRoot, 'client', 'robots.txt')));
 
     await i18next
             .use(FsBackend)
