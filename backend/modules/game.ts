@@ -210,11 +210,12 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         }
         const { regionId } = activeProgress;
         // Validate the coordinates
-        if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 3) {
+        if (!coordinates || !Array.isArray(coordinates.mm) || coordinates.mm.length < 3 || 
+                !Array.isArray(coordinates.vox) || coordinates.vox.length < 3) {
             res.status(400).send({ message: "Invalid coordinates provided." });
             return;
         }
-        const [x, y, z] = coordinates;
+        const [x, y, z] = coordinates.vox;
         // Get the atlas data for the session
         const atlasImage: NVImage = imageRef[session.atlas];
         const atlasMetadata = imageMetadata[session.atlas];
@@ -238,13 +239,14 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
                     const centers: number[][] = regionCenters[session.atlas][regionId];
+                    const [xMm, yMm, zMm] = coordinates.vox;
                     // Find the minimum distance to any center of the region
                     let minDistance = Infinity;
                     for (const center of centers) {
                         const distance = Math.sqrt(
-                            Math.pow(center[0] - x, 2) +
-                            Math.pow(center[1] - y, 2) +
-                            Math.pow(center[2] - z, 2)
+                            Math.pow(center[0] - xMm, 2) +
+                            Math.pow(center[1] - yMm, 2) +
+                            Math.pow(center[2] - zMm, 2)
                         );
                         if (distance < minDistance) {
                             minDistance = distance;

@@ -97,7 +97,7 @@ export function getClickedRegion(myniivue: any, canvasObj: HTMLCanvasElement, cM
         const vox = myniivue.volumes[1].mm2vox(Array.from(mm));
         const idx = Math.round(myniivue.volumes[1].getValue(vox[0], vox[1], vox[2]));
         if (isFinite(idx) && idx > 0 && idx in (cMap?.labels ?? [])) { // Ensure valid region ID > 0
-            return {vox: Array.from(vox) as number[], idx}
+            return {mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx}
         }
       }
     }

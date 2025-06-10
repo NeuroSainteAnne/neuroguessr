@@ -34,7 +34,7 @@ const MultiplayerGameScreen = () => {
   const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
   const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
   const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const selectedVoxel = useRef<number[] | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
   const currentTarget = useRef<number | null>(null);
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
@@ -365,20 +365,20 @@ const MultiplayerGameScreen = () => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if(clickedRegionLocation){
-      selectedVoxel.current = clickedRegionLocation.vox;
+      selectedVoxelProp.current = clickedRegionLocation;
     }
   }
 
   const validateGuess = () => {
-    if (!selectedVoxel.current || !hasStarted || !currentTarget.current || !wsRef.current) {
-      console.warn('Cannot validate guess:', { selectedVoxel, hasStarted, currentTarget });
+    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !wsRef.current) {
+      console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
     }
     setHeaderTextMode("")
     if(guessButtonRef.current) guessButtonRef.current.disabled = true
     wsRef.current.send(JSON.stringify({
       type: 'validate-guess',
-      voxel: selectedVoxel.current
+      voxelProp: selectedVoxelProp.current
     }));
   }
 
