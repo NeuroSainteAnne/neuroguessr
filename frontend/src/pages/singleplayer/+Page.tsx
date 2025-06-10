@@ -571,6 +571,7 @@ export function Page() {
     let clickedRegion = null;
     let scoreIncrement = 0;
     let givenFinalScore = 0;
+    let performHighlight = false;
     if (isLoggedIn) {
       try {
         const token = localStorage.getItem('authToken');
@@ -591,7 +592,8 @@ export function Page() {
         isEndgame = result.endgame;
         clickedRegion = result.voxelValue;
         scoreIncrement = result.scoreIncrement;
-        givenFinalScore = result.finalScore
+        givenFinalScore = result.finalScore;
+        performHighlight = result.performHighlight;
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
@@ -608,15 +610,15 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement }:
-    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
+  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight }:
+    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean }): { scoreIncrement: number } => {
     if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
       console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
       return { scoreIncrement };
@@ -670,7 +672,7 @@ export function Page() {
         //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
         //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
-        if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
+        if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1 || performHighlight) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
         // Increased timeout duration to make the incorrect message visible longer

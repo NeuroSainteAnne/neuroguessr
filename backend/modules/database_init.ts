@@ -48,6 +48,7 @@ export const database_init = async () => {
                 isActive BOOLEAN NOT NULL DEFAULT 1,
                 isCorrect BOOLEAN NOT NULL DEFAULT 0,
                 scoreIncrement INTEGER NOT NULL DEFAULT 0,
+                attempts INTEGER NOT NULL DEFAULT 0,
                 createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
                 FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
             );

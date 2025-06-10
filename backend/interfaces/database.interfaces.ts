@@ -37,6 +37,7 @@ export interface GameProgress {
     isActive: boolean;
     isCorrect: boolean;
     scoreIncrement: number;
+    attempts: number;
     createdAt: number; // Unix ms timestamp
 }
 

@@ -264,15 +264,20 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
 
         const updateProgressStmt = db.prepare(`
             UPDATE gameprogress
-            SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?
+            SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?, attempts = ?
             WHERE id = ?
         `);
         let isActive = 0
+        let attempts = activeProgress.attempts + 1; // Increment attempts
+        let performHighlight = false
         if(session.mode == "practice"){
-            isActive = isCorrect ? 0 : 1
+            isActive = isCorrect ? 0 : 1; // In practice mode, keep the region active if incorrect
+            if(!isCorrect && attempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT){
+                performHighlight = true; // Propose to highlight the region
+            }
         }
         const timeTaken = Math.floor((Date.now() - activeProgress.createdAt)); // Time in milliseconds
-        updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
+        updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, attempts, activeProgress.id);
 
         let endgame = false;
         let quitReason = ""
@@ -321,6 +326,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             endgame,
             scoreIncrement,
             finalScore,
+            performHighlight
         });
     } catch (error: unknown) {
         console.log(error);
