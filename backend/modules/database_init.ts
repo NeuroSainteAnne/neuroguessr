@@ -57,6 +57,7 @@ export const database_init = async () => {
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
                 is_correct BOOLEAN NOT NULL DEFAULT FALSE,
                 score_increment INTEGER NOT NULL DEFAULT 0,
+                attempts INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );`
         await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`
