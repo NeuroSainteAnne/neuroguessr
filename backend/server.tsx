@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs"
 import https from 'https';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
-import { db, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
+import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
@@ -24,8 +24,8 @@ const config: Config = configJson;
 const app = express();
 const PORT = config.server.port;
 
-database_init()
-
+await database_init()
+/*
 app.use(express.json());
 
 if(config.server.globalAuthentication.enabled){
@@ -259,7 +259,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
     
     app.use("/assets", express.static(path.join(reactRoot, "assets")));
 }
-
+*/
 setInterval(() => {
     cleanExpiredTokens();
 }, 60*1000); // each minute
@@ -286,3 +286,12 @@ if(config.server.mode == "https"){
         console.log(`Server is running on http://localhost:${PORT}`);
     });
 }
+
+process.on('SIGINT', async () => {
+  await sql.end();
+  process.exit(0);
+});
+process.on('SIGTERM', async () => {
+  await sql.end();
+  process.exit(0);
+});

@@ -1,4 +1,4 @@
-import sqlite3 from "better-sqlite3";
+import postgres from 'postgres';
 import path from "path";
 import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
@@ -7,14 +7,12 @@ import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "..", "database.db"));
-
+export const sql = postgres(config.pgConnectionString); 
 export const database_init = async () => {
     try {
-        db.exec(
-            `CREATE TABLE IF NOT EXISTS users (
+        await sql`
+            CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
                 username TEXT NOT NULL,
                 firstname TEXT NOT NULL,
                 lastname TEXT NOT NULL,
@@ -24,20 +22,20 @@ export const database_init = async () => {
                 verified BOOLEAN NOT NULL DEFAULT FALSE,
                 language TEXT NOT NULL DEFAULT 'fr',
                 publish_to_leaderboard BOOLEAN DEFAULT NULL
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
-
-            CREATE TABLE IF NOT EXISTS tokens (
+            );`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`
+            
+        await sql`CREATE TABLE IF NOT EXISTS tokens (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`
 
-            CREATE TABLE IF NOT EXISTS game_sessions (
+        await sql`CREATE TABLE IF NOT EXISTS game_sessions (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
@@ -45,12 +43,12 @@ export const database_init = async () => {
                 atlas TEXT NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 current_score INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);
-            CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);`
 
-            CREATE TABLE IF NOT EXISTS game_progress (
+        await sql`CREATE TABLE IF NOT EXISTS game_progress (
                 id SERIAL PRIMARY KEY,
                 session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
                 session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
@@ -60,13 +58,13 @@ export const database_init = async () => {
                 is_correct BOOLEAN NOT NULL DEFAULT FALSE,
                 score_increment INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);
-            CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);
-            CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);
-            CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`
 
-            CREATE TABLE IF NOT EXISTS finished_sessions (
+        await sql`CREATE TABLE IF NOT EXISTS finished_sessions (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
                 mode TEXT NOT NULL,
@@ -85,31 +83,31 @@ export const database_init = async () => {
                 multiplayer_games_won INTEGER DEFAULT 0,
                 duration INTEGER NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);
-            CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);
-            CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);
-            CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);`
 
-            CREATE TABLE IF NOT EXISTS multi_sessions (
+        await sql`CREATE TABLE IF NOT EXISTS multi_sessions (
                 id SERIAL PRIMARY KEY,
                 session_code INTEGER NOT NULL,
                 session_token TEXT NOT NULL,
                 creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);
-        `);
+            );`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
+        
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
             const hashedPassword = await bcrypt.hash("test", salt);
-            const stmt = db.prepare(`
-                INSERT OR IGNORE INTO users (username, firstname, lastname, email, password, verified)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `);
-            stmt.run("test", "Test", "User", "", hashedPassword, 1);
+            await sql`
+                INSERT INTO users (username, firstname, lastname, email, password, verified)
+                VALUES ('test', 'Test', 'User', '', ${hashedPassword}, ${true})
+                ON CONFLICT (username) DO NOTHING
+            `;
             console.log("Test user added successfully.");
         }
     } catch (err) {
@@ -117,52 +115,48 @@ export const database_init = async () => {
     }
 }
 
-export const cleanExpiredTokens = () => {
+export const cleanExpiredTokens = async () => {
     try {
-        const stmt = db.prepare(`
+        const result = await sql`
             DELETE FROM tokens
-            WHERE createdAt <= datetime('now', '-1 hour')
-        `);
-        const result = stmt.run();
-        if(result.changes !== 0){
-            console.log(`Cleaned up ${result.changes} expired tokens.`);
+            WHERE createdAt <= NOW() - INTERVAL '1 hour'
+        `;
+        if(result.count !== 0){
+            console.log(`Cleaned up ${result.count} expired tokens.`);
         }
     } catch (err) {
         console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };
 
-export const cleanOldGameSessions = () => {
+export const cleanOldGameSessions = async () => {
     try {
         const suppressionDelay = 60 * 60 * 1000; // in ms 
         // Delete from gameprogress where the session is older than 1 hour
-        const deleteGameProgressStmt = db.prepare(`
-            DELETE FROM gameprogress
-            WHERE sessionId IN (
-                SELECT id FROM gamesessions WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        const result = await sql`
+            DELETE FROM game_progress
+            WHERE session_id IN (
+                SELECT id FROM game_sessions WHERE created_at <= NOW() - INTERVAL '1 hour'
             )
-        `);
-        const resultProgress = deleteGameProgressStmt.run();
-        if(resultProgress.changes !== 0){
-            console.log(`Cleaned up ${resultProgress.changes} old gameprogress entries.`);
+        `;
+        if(result.count !== 0){
+            console.log(`Cleaned up ${result.count} old gameprogress entries.`);
         }
         // Delete from gamesessions older than 1 hour
-        const deleteGameSessionsStmt = db.prepare(`
-            DELETE FROM gamesessions
-            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
-        `);
-        const resultSessions = deleteGameSessionsStmt.run();
-        if(resultSessions.changes !== 0){
-            console.log(`Cleaned up ${resultSessions.changes} old gamesessions.`);
+        const resultSessions = await sql`
+            DELETE FROM game_sessions
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
+        `;
+        if (resultSessions.count !== 0) {
+            console.log(`Cleaned up ${resultSessions.count} old game_sessions.`);
         }
         // Delete from multisessions older than 1 hour
-        const deleteMultiSessionsStmt = db.prepare(`
-            DELETE FROM multisessions
-            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
-        `);
-        const resultMultiSessions = deleteMultiSessionsStmt.run();
-        if(resultMultiSessions.changes !== 0){
-            console.log(`Cleaned up ${resultMultiSessions.changes} old multisessions.`);
+        const resultMultiSessions = await sql`
+            DELETE FROM multi_sessions
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
+        `;
+        if (resultMultiSessions.count !== 0) {
+            console.log(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);
         }
     } catch (err) {
         console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
