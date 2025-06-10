@@ -672,7 +672,8 @@ export function Page() {
         //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
         //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
-        if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1 || performHighlight) {
+        if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) || 
+            (isLoggedIn && performHighlight)) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
         // Increased timeout duration to make the incorrect message visible longer
