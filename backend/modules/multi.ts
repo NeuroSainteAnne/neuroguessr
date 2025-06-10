@@ -462,7 +462,7 @@ const validateGuess = (ws: WebSocket, voxelProp: {mm: number[], vox: number[], i
     } else {
         if (regionCenters[gameRef.currentAtlas] && regionCenters[gameRef.currentAtlas][gameRef.currentRegionId]) {
             const centers: number[][] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId];
-            const [xMm, yMm, zMm] = voxelProp.vox;
+            const [xMm, yMm, zMm] = voxelProp.mm;
             // Find the minimum distance to any center of the region
             let minDistance = Infinity;
             for (const center of centers) {

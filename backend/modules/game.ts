@@ -239,7 +239,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
                     const centers: number[][] = regionCenters[session.atlas][regionId];
-                    const [xMm, yMm, zMm] = coordinates.vox;
+                    const [xMm, yMm, zMm] = coordinates.mm;
                     // Find the minimum distance to any center of the region
                     let minDistance = Infinity;
                     for (const center of centers) {
