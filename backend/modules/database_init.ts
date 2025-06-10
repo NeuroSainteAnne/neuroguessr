@@ -4,10 +4,11 @@ import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
+import { debug } from 'console';
 const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const sql = postgres(config.pgConnectionString); 
+export const sql = postgres(config.pgConnectionString, {debug: true}); 
 export const database_init = async () => {
     try {
         await sql`
@@ -120,7 +121,7 @@ export const cleanExpiredTokens = async () => {
     try {
         const result = await sql`
             DELETE FROM tokens
-            WHERE createdAt <= NOW() - INTERVAL '1 hour'
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
         `;
         if(result.count !== 0){
             console.log(`Cleaned up ${result.count} expired tokens.`);

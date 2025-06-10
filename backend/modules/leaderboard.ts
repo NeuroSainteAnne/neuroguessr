@@ -1,4 +1,4 @@
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import type { Response } from "express";
 import type { GameProgress, GameSession } from "../interfaces/database.interfaces.ts";
 import type { GetLeaderboardRequest, GetMostUsedAtlasRequest } from "../interfaces/requests.interfaces.ts";
@@ -31,50 +31,34 @@ function getSummedLeaderboard(leaderboard: LeaderboardEntry[]) {
 export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response): Promise<void> => {
     try {
         const { mode, atlas, appendTotal = true, numberLimit = 10, timeLimit = 7 } = req.body;
-        let innerWhere = '';
-        const params: any[] = [];
 
-        if (mode) {
-            innerWhere += ' AND mode = ?';
-            params.push(mode);
-        } else {
-            // If no mode specified, exclude multiplayer results
-            innerWhere += ' AND mode != ?';
-            params.push('multiplayer');
-        }
-        if (timeLimit) {
-            const now = Date.now();
-            const msInDay = 24 * 60 * 60 * 1000;
-            const minTimestamp = now - (Number(timeLimit) * msInDay);
-            innerWhere += ' AND createdAt >= ?';
-            params.push(minTimestamp);
-        }
-        const query = `
+        const innerQuery = sql`
+            SELECT
+                user_id,
+                mode,
+                atlas,
+                MAX(score) AS best_score
+            FROM finished_sessions
+            WHERE 1=1
+                ${mode ? sql` AND mode = ${mode}` : sql` AND mode != ${'multiplayer'}`}
+                ${timeLimit ? sql` AND NOW() - created_at <= ${`'${timeLimit} days'`}` : sql``}
+            GROUP BY user_id, mode, atlas
+        `;
+
+        // Execute query to get leaderboard
+        let leaderboard = await sql`
             SELECT
                 u.username,
                 fs.mode AS mode,
                 fs.atlas AS atlas,
                 fs.best_score AS best_score
-            FROM (
-                SELECT
-                    userId,
-                    mode,
-                    atlas,
-                    MAX(score) AS best_score
-                FROM finishedsessions
-                WHERE 1=1 ${innerWhere}
-                GROUP BY userId, mode, atlas
-            ) fs
-            JOIN users u ON fs.userId = u.id
-            WHERE u.publishToLeaderboard = 1
-            GROUP BY fs.userId, fs.mode, fs.atlas
+            FROM (${innerQuery}) fs
+            JOIN users u ON fs.user_id = u.id
+            WHERE u.publish_to_leaderboard = TRUE
             ORDER BY best_score DESC
-            LIMIT ?
-        `;
-        params.push(numberLimit);
+            LIMIT ${numberLimit}
+        ` as LeaderboardEntry[];
 
-        const stmt = db.prepare(query);
-        let leaderboard = stmt.all(...params) as LeaderboardEntry[];
         const summedLeaderboard = (appendTotal || atlas == "total") ? getSummedLeaderboard(leaderboard) : [];
         if (atlas == "total") {
             leaderboard = [];
@@ -100,20 +84,18 @@ interface AtlasUsage {
 export const getMostUsedAtlases = async (req: GetMostUsedAtlasRequest, res: Response): Promise<void> => {
     try {
         // Query to get the most used atlases
-        const query = `
+        const atlasResults = await sql`
             SELECT 
                 atlas,
-                COUNT(DISTINCT userId) as count
-            FROM finishedsessions
+                COUNT(DISTINCT user_id) as count
+            FROM finished_sessions
             WHERE atlas IS NOT NULL AND atlas != ''
             GROUP BY atlas
             ORDER BY count DESC
-        `;
+        ` as {atlas: string, count: number}[];
         
-        const stmt = db.prepare(query);
-        let rows = stmt.all();
         // Create a manually formatted result
-        const atlases: AtlasUsage[] = (rows as any[]).map(row => ({
+        const atlases: AtlasUsage[] = atlasResults.map(row => ({
             atlas: row.atlas,
             count: row.count
         }));

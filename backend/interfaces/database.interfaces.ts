@@ -43,7 +43,7 @@ export interface GameProgress {
 
 export interface FinishedSession {
     id: number;
-    userId: number;
+    user_id: number;
     mode: string;
     atlas: string;
     score: number;
@@ -60,4 +60,25 @@ export interface FinishedSession {
     multiplayer_games_won?: number;
     duration: number; // In milliseconds
     created_at: number; // Unix ms timestamp
+}
+
+export interface FinishedSessionCamelCase {
+    id: number;
+    userId: number;
+    mode: string;
+    atlas: string;
+    score: number;
+    attempts?: number;
+    correct?: number;
+    incorrect?: number;
+    minTimePerRegion?: number;
+    maxTimePerRegion?: number;
+    avgTimePerRegion?: number;
+    minTimePerCorrectRegion?: number;
+    maxTimePerCorrectRegion?: number;
+    avgTimePerCorrectRegion?: number;
+    quitReason?: string;
+    multiplayerGamesWon?: number;
+    duration: number; // In milliseconds
+    createdAt: number; // Unix ms timestamp
 }

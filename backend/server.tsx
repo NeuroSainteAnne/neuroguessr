@@ -19,33 +19,45 @@ import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
+import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
+
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
 
 await database_init()
-/*
+
 app.use(express.json());
+app.use(transformResponseToCamelCase);
 
 if(config.server.globalAuthentication.enabled){
     app.use(globalAuthentication);
 }
 
+// login.ts
 app.post('/api/login', login);
 app.post('/api/refresh-token', refreshToken);
+app.get('/api/user-info', authenticateToken, getUserInfo);
+
+// register.ts
 app.post('/api/register', register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
 app.post("/api/verify-email", verifyEmail)
-app.get('/api/user-info', authenticateToken, getUserInfo);
+
+// config_user.ts
 app.post('/api/config-user', authenticateToken, configUser);
+
+// leaderboard.ts
 app.post('/api/get-leaderboard', getLeaderboard);
 app.post('/api/get-most-used-atlases', getMostUsedAtlases);
+
+
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
-
+/*
 app.post('/api/start-game-session', authenticateToken, 
     (req, res) => startGameSession(req as StartGameSessionRequest, res));
 app.post('/api/get-next-region', authenticateToken, 
