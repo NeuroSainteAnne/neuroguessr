@@ -13,74 +13,93 @@ export const database_init = async () => {
     try {
         db.exec(
             `CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
+                id SERIAL PRIMARY KEY,
+                uuid UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
+                username TEXT NOT NULL,
                 firstname TEXT NOT NULL,
                 lastname TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
+                email TEXT NOT NULL,
                 password TEXT NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                verified BOOLEAN NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                verified BOOLEAN NOT NULL DEFAULT FALSE,
                 language TEXT NOT NULL DEFAULT 'fr',
-                publishToLeaderboard BOOLEAN DEFAULT NULL
+                publish_to_leaderboard BOOLEAN DEFAULT NULL
             );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
             CREATE TABLE IF NOT EXISTS tokens (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER KEY NOT NULL,
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE IF NOT EXISTS gamesessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER KEY NOT NULL,
+            CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);
+
+            CREATE TABLE IF NOT EXISTS game_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                currentScore INTEGER NOT NULL DEFAULT 0
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                current_score INTEGER NOT NULL DEFAULT 0
             );
-            CREATE TABLE IF NOT EXISTS gameprogress (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sessionId INTEGER NOT NULL,
-                sessionToken TEXT NOT NULL,
-                regionId INTEGER NOT NULL,
-                timeTaken INTEGER NOT NULL,
-                isActive BOOLEAN NOT NULL DEFAULT 1,
-                isCorrect BOOLEAN NOT NULL DEFAULT 0,
-                scoreIncrement INTEGER NOT NULL DEFAULT 0,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
+            CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);
+            CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);
+
+            CREATE TABLE IF NOT EXISTS game_progress (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
+                session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
+                region_id INTEGER NOT NULL,
+                time_taken INTEGER NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+                score_increment INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE IF NOT EXISTS finishedsessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER NOT NULL,
+            CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);
+            CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);
+            CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);
+            CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);
+
+            CREATE TABLE IF NOT EXISTS finished_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
-                score INTEGER NOT NULL,
+                score INTEGER NOT NULL CHECK (score >= 0),
                 attempts INTEGER,
                 correct INTEGER,
                 incorrect INTEGER,
-                minTimePerRegion INTEGER,
-                maxTimePerRegion INTEGER,
-                avgTimePerRegion INTEGER,
-                minTimePerCorrectRegion INTEGER,
-                maxTimePerCorrectRegion INTEGER,
-                avgTimePerCorrectRegion INTEGER,
-                quitReason TEXT,
-                multiplayerGamesWon INTEGER DEFAULT 0,
+                min_time_per_region INTEGER,
+                max_time_per_region INTEGER,
+                avg_time_per_region INTEGER,
+                min_time_per_correct_region INTEGER,
+                max_time_per_correct_region INTEGER,
+                avg_time_per_correct_region INTEGER,
+                quit_reason TEXT,
+                multiplayer_games_won INTEGER DEFAULT 0,
                 duration INTEGER NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (userId) REFERENCES users (id)
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE TABLE IF NOT EXISTS multisessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sessionCode INTEGER NOT NULL,
-                sessionToken TEXT NOT NULL,
-                creatorId INTEGER NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (creatorId) REFERENCES users (id)
+            CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);
+            CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);
+            CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);
+            CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);
+
+            CREATE TABLE IF NOT EXISTS multi_sessions (
+                id SERIAL PRIMARY KEY,
+                session_code INTEGER NOT NULL,
+                session_token TEXT NOT NULL,
+                creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);
         `);
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
