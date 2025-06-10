@@ -119,6 +119,10 @@ export function Page() {
             }));
       return () => { 
         cleanHeader()
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+          timerInterval.current = null;
+        }
       };
     }, []);
 
