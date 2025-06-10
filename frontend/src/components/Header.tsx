@@ -15,7 +15,7 @@ function Header() {
     const parts = currentPath.split('/');
     const isNeurotheka = parts[1] === 'neurotheka';
     const isSingleplayer = parts[1] === 'singleplayer'
-    const isMultiplayer = parts[1] === '/multiplayer';
+    const isMultiplayer = parts[1] === 'multiplayer';
 
     return (
         <>

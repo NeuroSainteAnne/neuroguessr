@@ -180,7 +180,7 @@
     flex-direction: column;
     flex-grow: 1;
     min-width: 200px;
-    max-width: 450px;
+    max-width: 600px;
     /* Allow it to grow and take available space */
 }
 

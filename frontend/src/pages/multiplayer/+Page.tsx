@@ -114,7 +114,6 @@ const MultiplayerGameScreen = () => {
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
         setParameters(data.parameters as MultiplayerParametersType);
-        console.log("parameters", data.parameters)
       } else if (data.type === 'game-start') {
         setHasStarted(true)
         setCurrentAttempts(0)
@@ -400,7 +399,7 @@ const MultiplayerGameScreen = () => {
           </button>
         </div>
       </div>
-      {(isLoggedIn || config.activateAnonymousMode) && !connected && <>
+      {(isLoggedIn || config.activateAnonymousMode) && !connected && !askedSessionToken  && <>
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
           <input
@@ -427,7 +426,7 @@ const MultiplayerGameScreen = () => {
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
           .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
       </>}
-      {(isLoggedIn ||isAnonymous) && connected && <div style={{ marginTop: 24 }}>
+      {(isLoggedIn || isAnonymous) && connected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]
