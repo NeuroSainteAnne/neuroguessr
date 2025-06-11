@@ -29,21 +29,36 @@ export const createSSEClient = async (req: Request, res: Response) => {
   const { sessionCode, userName } = req.params;
   const isAnonymous = req.query.anonymous === "true" || req.query.anonymous === "1";
   const token = typeof req.query.token === "string" ? req.query.token : undefined;
-
   let finalUserName = userName;
   let authenticated = false;
+
+  // Always set up SSE headers first
+  req.socket.setTimeout(0);
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+  res.flushHeaders();
+
+  // Helper to send error as SSE and close connection
+  const sendSSEErrorAndClose = (message: string) => {
+    res.write(`retry: 0\n`);
+    res.write(`data: ${JSON.stringify({ type: 'fatal-error', message })}\n\n`);
+    setTimeout(() => res.end(), 100);
+  };
 
   const sessionResult = await sql`
       SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
   ` as MultiSession[];
   if (!sessionResult.length){
-      res.status(403).send({ message: "Lobby does not exist" });
+      sendSSEErrorAndClose("Lobby does not exist" );
       return
   }
 
   if (!isAnonymous) {
     if(!token){
-      res.status(403).send({ message: "Please connect or choose anonymous mode" });
+      sendSSEErrorAndClose("Please connect or choose anonymous mode" );
       return
     }
     try {
@@ -53,19 +68,19 @@ export const createSSEClient = async (req: Request, res: Response) => {
         authenticated = true;
       }
     } catch (err) {
-      res.status(403).send({ message: "Error: invalid token provided" });
+      sendSSEErrorAndClose("Error: invalid token provided" );
       return
     }
   } else {
     if (!config.allowAnonymousInMultiplayer) {
-      res.status(403).send({ message: "Anonymous mode not allowed" });
+      sendSSEErrorAndClose("Anonymous mode not allowed" );
       return;
     }
     const userResult = await sql`
         SELECT id FROM users WHERE username = ${userName}
     `;
     if (userResult.length > 0) {
-      res.status(403).send({ message: "Username already exists" });
+      sendSSEErrorAndClose("Username already exists");
       return;
     }
     finalUserName = userName;
@@ -79,19 +94,11 @@ export const createSSEClient = async (req: Request, res: Response) => {
   // Prevent duplicate user in lobby
   const playerKey = `${sessionCode}:${finalUserName}`;
   if (playerInfo[playerKey]) {
-    res.status(403).send({ message: "User already in lobby." });
+    sendSSEErrorAndClose("User already in lobby.");
     return;
   }
 
   if(isAnonymous) gameRef.anonymousUsernames.push(finalUserName);
-
-  req.socket.setTimeout(0); // Keep connection open
-  res.set({
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive'
-  });
-  res.flushHeaders();
 
   // Register SSE client
   const key = `${sessionCode}:${userName}`;
@@ -108,7 +115,12 @@ export const createSSEClient = async (req: Request, res: Response) => {
   initUserInLobby(finalUserName, gameRef, sessionCode)
 
   req.on('close', () => {
-    sseClients[key] = sseClients[key].filter(r => r !== res);
+    if (sseClients[key]) {
+      sseClients[key] = sseClients[key].filter(r => r !== res);
+      if (sseClients[key].length === 0) {
+        delete sseClients[key];
+      }
+    }
     delete playerInfo[key]; // Cleanup player info
     broadcastSSE(sessionCode, { type: 'player-left', userName: finalUserName });
   });

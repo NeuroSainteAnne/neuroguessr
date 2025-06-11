@@ -72,7 +72,7 @@ app.post('/api/multi/launch-game', authenticateToken,
     (req, res) => launchGame(req as LaunchMultiGameRequest, res))
 app.post('/api/multi/update-parameters', authenticateToken, 
     (req, res) => updateParameters(req as UpdateMultiGameRequest, res))
-app.post('/api/multi/validate-guess', authenticateToken, 
+app.post('/api/multi/validate-guess', 
     (req, res) => validateGuess(req as MultiValidateGuessRequest, res))
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
