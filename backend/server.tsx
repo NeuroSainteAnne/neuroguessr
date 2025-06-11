@@ -83,10 +83,10 @@ app.use(
     pathRewrite: { '^/websocket': '' }, // optional: remove /websocket prefix if needed
   })
 );
-/*
+
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
-//import "../frontend/dist/server/entry.mjs"
+
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
     app.use('/atlas', express.static(path.join(reactRoot, 'client', 'atlas')));
@@ -271,7 +271,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
     
     app.use("/assets", express.static(path.join(reactRoot, "assets")));
 }
-*/
+
 setInterval(() => {
     cleanExpiredTokens();
 }, 60*1000); // each minute
