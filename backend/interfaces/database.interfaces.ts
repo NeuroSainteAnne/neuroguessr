@@ -82,3 +82,11 @@ export interface FinishedSessionCamelCase {
     duration: number; // In milliseconds
     createdAt: number; // Unix ms timestamp
 }
+
+export interface MultiSession {
+  id: number;
+  session_code: number;
+  session_token: string;
+  creator_id: number | null;
+  created_at: Date;
+}

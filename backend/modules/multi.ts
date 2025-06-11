@@ -1,5 +1,5 @@
 import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 type Config = import("../interfaces/config.interfaces.ts").Config;
@@ -10,6 +10,7 @@ import http from 'http';
 import express from 'express';
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
+import { MultiSession } from "interfaces/database.interfaces.ts";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -87,11 +88,16 @@ function generateCode(): string {
 
 async function getUniqueCode(): Promise<string> {
     let code: string;
-    let exists: { count: number };
+    let exists: boolean = true;
     do {
         code = generateCode();
-        exists = db.prepare("SELECT COUNT(*) as count FROM multisessions WHERE sessionCode = ?").get(code) as { count: number };
-    } while (exists.count > 0);
+        const result = await sql`
+            SELECT COUNT(*) as count 
+            FROM multi_sessions 
+            WHERE session_code = ${code}
+        `;
+        exists = result[0]?.count > 0;
+    } while (exists);
     return code;
 }
 
@@ -109,12 +115,15 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).user.id; 
     const sessionCode = await getUniqueCode();
     const sessionToken = jwt.sign({ userId, sessionCode, type: "multiplayer-creator" }, config.jwt_secret, { expiresIn: "1h" });
-    const stmt = db.prepare("INSERT INTO multisessions (sessionCode, sessionToken, creatorId, createdAt) VALUES (?, ?, ?, ?)");
-    const result = stmt.run(sessionCode, sessionToken, userId, Date.now());
+    const result = await sql`
+        INSERT INTO multi_sessions (session_code, session_token, creator_id, created_at)
+        VALUES (${sessionCode}, ${sessionToken}, ${userId}, NOW())
+        RETURNING id
+    ` as { id: number }[];
     res.status(200).send({
         message: "Multiplayer session created.",
         sessionCode,
-        sessionId: result.lastInsertRowid,
+        sessionId: result[0].id,
         sessionToken
     });
   } catch (error) {
@@ -179,15 +188,17 @@ function initUserInLobby(ws: WebSocket, userName: string, gameRef: MultiplayerGa
   }
 }
 
-function joinLobbyAnonymous(ws: WebSocket, username: string, sessionCode: string){
+async function joinLobbyAnonymous(ws: WebSocket, username: string, sessionCode: string){
   try {
     if (!config.allowAnonymousInMultiplayer) {
       ws.send(JSON.stringify({ type: 'error', message: 'Anonymous mode is not allowed.' }));
       ws.close();
       return;
     }
-    const userRow = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
-    if (userRow) {
+    const userResult = await sql`
+        SELECT id FROM users WHERE username = ${username}
+    `;
+    if (userResult.length > 0) {
       ws.send(JSON.stringify({ type: 'error', message: 'Username already exists.' }));
       ws.close();
       return;
@@ -217,7 +228,7 @@ function joinLobbyAnonymous(ws: WebSocket, username: string, sessionCode: string
   }
 }
 
-function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
+async function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
   try {
     let jwtpayload: any;
     try {
@@ -230,8 +241,10 @@ function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
     const userName = String(jwtpayload.username);
     (ws as WSGame).userName = userName;
     (ws as WSGame).isAnonymous = false;
-    const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(sessionCode);
-    if (!session) {
+    const sessionResult = await sql`
+        SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
+    ` as MultiSession[];
+    if (!sessionResult.length) {
       ws.send(JSON.stringify({ type: 'error', message: 'Lobby does not exist.' }));
       ws.close();
       return;
@@ -301,7 +314,7 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   }
 }
 
-function launchGame(ws: WebSocket, sessionToken: string){
+async function launchGame(ws: WebSocket, sessionToken: string){
   try {
     const lobby = (ws as WSGame).gameRef?.lobby;
     const userName = (ws as WSGame).userName;
@@ -316,8 +329,10 @@ function launchGame(ws: WebSocket, sessionToken: string){
     }
     const gameRef = games[sessionCode];
     // Check that the sessionToken matches the one in the multisessions table
-    const session = db.prepare("SELECT sessionToken FROM multisessions WHERE sessionCode = ?").get(sessionCode) as { sessionToken: string };
-    if (!session || session.sessionToken !== sessionToken) {
+    const sessionResult = await sql`
+        SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+    ` as { session_token: string }[];
+    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
       ws.send(JSON.stringify({ type: 'error', message: 'Invalid session token for this lobby.' }));
       return;
     }
@@ -461,7 +476,7 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
       scoreIncrement = MAX_POINTS_PER_REGION + bonus;
     } else {
         if (regionCenters[gameRef.currentAtlas] && regionCenters[gameRef.currentAtlas][gameRef.currentRegionId]) {
-            const center: number[] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId];
+            const center: number[] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId][0];
             const distance = Math.sqrt(
                 Math.pow(center[0] - x, 2) +
                 Math.pow(center[1] - y, 2) +
@@ -492,28 +507,19 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
   }
 }
 
-function clotureMultiplayerGame(gameRef: MultiplayerGame) {
+async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
   try {
     const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
     const allScores = Object.values(gameRef.individualScores);
     const maxScore = Math.max(...allScores);
 
-    // Prepare SQL statements
-    const insertFinishedStmt = db.prepare(`
-      INSERT INTO finishedsessions (
-        userId, mode, atlas, score, attempts, correct, incorrect,
-        minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-        minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-        quitReason, multiplayerGamesWon, duration
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    // Map usernames to userIds
-    const getUserIdStmt = db.prepare('SELECT id FROM users WHERE username = ?');
-
     for (const username in gameRef.individualScores) {
-      const userRow = getUserIdStmt.get(username) as {id: number};
-      if (!userRow) continue;
-      const userId = userRow.id;
+      // TODO MANAGE ANONYMOUS USERS
+      const userResult = await sql`
+        SELECT id FROM users WHERE username = ${username}
+      ` as { id: number }[];
+      if (userResult.length === 0) continue;
+      const userId = userResult[0].id;
       const mode = 'multiplayer';
       const atlas = gameRef.currentAtlas;
       const score = gameRef.individualScores[username] || 0;
@@ -530,16 +536,25 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a,b)=>a+b,0)/correctDurations.length) : null;
       const quitReason = 'end';
       const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
-      insertFinishedStmt.run(
-        userId, mode, atlas, score, attempts, correct, incorrect,
-        minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-        minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-        quitReason, multiplayerGamesWon, gameDuration
-      );
+
+      // Insert into finished_sessions
+      await sql`
+        INSERT INTO finished_sessions (
+          user_id, mode, atlas, score, attempts, correct, incorrect,
+          min_time_per_region, max_time_per_region, avg_time_per_region,
+          min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+          quit_reason, multiplayer_games_won, duration, created_at
+        ) VALUES (
+          ${userId}, ${mode}, ${atlas}, ${score}, ${attempts}, ${correct}, ${incorrect},
+          ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
+          ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
+          ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()
+        )
+      `;
     }
 
     const sessionCode = gameRef.sessionCode 
-    db.prepare('DELETE FROM multisessions WHERE sessionCode = ?').run(sessionCode);
+    await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`;
     gameRef.lobby.forEach(client => {
       try {
         client.close();

@@ -57,7 +57,7 @@ app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
-/*
+
 app.post('/api/start-game-session', authenticateToken, 
     (req, res) => startGameSession(req as StartGameSessionRequest, res));
 app.post('/api/get-next-region', authenticateToken, 
@@ -83,7 +83,7 @@ app.use(
     pathRewrite: { '^/websocket': '' }, // optional: remove /websocket prefix if needed
   })
 );
-
+/*
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 //import "../frontend/dist/server/entry.mjs"

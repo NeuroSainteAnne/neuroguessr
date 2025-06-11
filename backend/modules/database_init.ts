@@ -8,7 +8,20 @@ import { debug } from 'console';
 const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const sql = postgres(config.pgConnectionString, {debug: true}); 
+export const sql = postgres(
+    config.pgConnectionString, 
+    {debug: true,
+        types: {
+            date: {
+                // Ensure dates are properly parsed
+                parse: (value: any) => new Date(value),
+                serialize: (value: any) => value instanceof Date ? value.toISOString() : value,
+                to: 1082,
+                // Optionally, specify the PostgreSQL type OIDs for dates (here 1082 for "date")
+                from: [1082]
+            }
+        }
+    }); 
 export const database_init = async () => {
     try {
         await sql`
