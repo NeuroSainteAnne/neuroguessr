@@ -24,7 +24,10 @@ function Header() {
                     data-umami-event="header logo click"
                     href="/welcome">
                     <img src="/interface/neuroguessr-64.png" alt="NeuroGuessr Logo" className="logo" />
-                    <h1>{isNeurotheka ? t("neuroglossaire_title") : t("app_title")}</h1>
+                    <div className="title-container">
+                        <h1>{isNeurotheka ? t("neuroglossaire_title") : t("app_title")}</h1>
+                        <span className="beta-label">{t("beta-version")}</span>
+                    </div>
                 </a>
                 <div className="navbar-middle">
                     { headerText != "" && <div className="target-label-container">

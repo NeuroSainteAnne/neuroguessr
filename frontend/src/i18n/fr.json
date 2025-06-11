@@ -301,5 +301,7 @@
   "unknown_error": "Une erreur inattendue s'est produite lors du chargement de la page",
   "return_home": "Retour à l'Accueil",
   "go_back": "Retour",
-  "error_details": "Détails Techniques"
+  "error_details": "Détails Techniques",
+  
+  "beta-version": "Version de développement"
 }

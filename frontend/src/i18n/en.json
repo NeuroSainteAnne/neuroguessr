@@ -302,5 +302,7 @@
   "unknown_error": "An unexpected error occurred while loading the page",
   "return_home": "Return Home",
   "go_back": "Go Back",
-  "error_details": "Technical Details"
+  "error_details": "Technical Details",
+
+  "beta-version": "Beta Version"
 }
