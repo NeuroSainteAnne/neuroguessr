@@ -388,7 +388,9 @@ export function Page() {
       if (isLoggedIn) {
         manualClotureGameSession().then((finalScore) => {
           endTimeAttack(finalScore);
-        })
+        }).catch((error) => {
+          endTimeAttack(finalScore);
+        });
       } else {
         endTimeAttack(currentScoreRef.current);
       }
