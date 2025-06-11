@@ -219,11 +219,12 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         const regionId = activeProgress.region_id;
 
         // Validate the coordinates
-        if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 3) {
+        if (!coordinates || !Array.isArray(coordinates.mm) || coordinates.mm.length < 3 || 
+                !Array.isArray(coordinates.vox) || coordinates.vox.length < 3) {
             res.status(400).send({ message: "Invalid coordinates provided." });
             return;
         }
-        const [x, y, z] = coordinates;
+        const [x, y, z] = coordinates.vox;
         // Get the atlas data for the session
         const atlasImage: NVImage = imageRef[session.atlas];
         const atlasMetadata = imageMetadata[session.atlas];
@@ -247,13 +248,14 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
                     const centers: number[][] = regionCenters[session.atlas][regionId];
+                    const [xMm, yMm, zMm] = coordinates.mm;
                     // Find the minimum distance to any center of the region
                     let minDistance = Infinity;
                     for (const center of centers) {
                         const distance = Math.sqrt(
-                            Math.pow(center[0] - x, 2) +
-                            Math.pow(center[1] - y, 2) +
-                            Math.pow(center[2] - z, 2)
+                            Math.pow(center[0] - xMm, 2) +
+                            Math.pow(center[1] - yMm, 2) +
+                            Math.pow(center[2] - zMm, 2)
                         );
                         if (distance < minDistance) {
                             minDistance = distance;
@@ -270,8 +272,13 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         }
 
         let isActive = false
+        let attempts = activeProgress.attempts + 1; // Increment attempts
+        let performHighlight = false
         if(session.mode == "practice"){
-            isActive = isCorrect ? false : true
+            isActive = isCorrect ? false : true; // In practice mode, keep the region active if incorrect
+            if(!isCorrect && attempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT){
+                performHighlight = true; // Propose to highlight the region
+            }
         }
         const timeTaken = Math.floor((Date.now() - activeProgress.created_at)); // Time in milliseconds
 
@@ -281,7 +288,8 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             SET is_active = ${isActive}, 
                 is_correct = ${isCorrect}, 
                 time_taken = ${timeTaken}, 
-                score_increment = ${scoreIncrement}
+                score_increment = ${scoreIncrement},
+                attempts = ${attempts}
             WHERE id = ${activeProgress.id}
         `;
 
@@ -335,6 +343,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             endgame,
             scoreIncrement,
             finalScore,
+            performHighlight
         });
     } catch (error: unknown) {
         console.log(error);

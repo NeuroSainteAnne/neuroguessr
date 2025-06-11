@@ -87,7 +87,7 @@ export function Page() {
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
-  const selectedVoxel = useRef<number[] | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
   const validRegions = useRef<number[]>([]);
   const usedRegions = useRef<number[]>([]);
   const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
@@ -119,6 +119,10 @@ export function Page() {
             }));
       return () => { 
         cleanHeader()
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+          timerInterval.current = null;
+        }
       };
     }, []);
 
@@ -253,7 +257,7 @@ export function Page() {
 
   const resetGameState = () => {
     currentTarget.current = null;
-    selectedVoxel.current = null;
+    selectedVoxelProp.current = null;
     setCurrentAttempts(0); // Reset attempts for practice mode
     setCurrentScore(0); // Reset score for Time Attack
     setCurrentCorrects(0); // Reset correct count for Practice/Streak
@@ -405,7 +409,7 @@ export function Page() {
 
     // Stop the game
     setIsGameRunning(false)
-    selectedVoxel.current = null;
+    selectedVoxelProp.current = null;
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
   }
 
@@ -472,7 +476,7 @@ export function Page() {
 
     if (currentTarget.current) {
       setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
-      selectedVoxel.current = null; // Reset selected voxel
+      selectedVoxelProp.current = null; // Reset selected voxel
       if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
       if (cLut.current && niivue) {
         if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
@@ -530,7 +534,7 @@ export function Page() {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if (clickedRegionLocation) {
-      selectedVoxel.current = clickedRegionLocation.vox;
+      selectedVoxelProp.current = clickedRegionLocation;
       if (gameMode === 'navigation') {
         setHeaderText(cMap.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
@@ -547,7 +551,7 @@ export function Page() {
         niivue.drawScene();
       }
     } else {
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       if (gameMode === 'navigation') {
         setHeaderText(t('no_region_selected'));
         setHighlightedRegion(null);
@@ -558,16 +562,16 @@ export function Page() {
   }
 
   const validateGuess = async () => {
-    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current || !niivue) {
-      console.warn('Cannot validate guess:', { selectedVoxel, isGameRunning, currentTarget });
+    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !niivue) {
+      console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
       return;
     }
     let guessSuccess = null;
     let isEndgame = false;
     let clickedRegion = null;
-    let clickedPosition = niivue.vox2mm(selectedVoxel.current, niivue.volumes[1].matRAS!) as number[];;
     let scoreIncrement = 0;
     let givenFinalScore = 0;
+    let performHighlight = false;
     if (isLoggedIn) {
       try {
         const token = localStorage.getItem('authToken');
@@ -580,7 +584,7 @@ export function Page() {
           body: JSON.stringify({
             sessionId: sessionId.current,
             sessionToken: sessionToken.current,
-            coordinates: clickedPosition
+            coordinates: selectedVoxelProp.current
           }),
         });
         const result = await response.json();
@@ -588,13 +592,14 @@ export function Page() {
         isEndgame = result.endgame;
         clickedRegion = result.voxelValue;
         scoreIncrement = result.scoreIncrement;
-        givenFinalScore = result.finalScore
+        givenFinalScore = result.finalScore;
+        performHighlight = result.performHighlight;
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
       }
     } else {
-      clickedRegion = Math.round(niivue.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
+      clickedRegion = selectedVoxelProp.current.idx;
       guessSuccess = clickedRegion === currentTarget.current;
       if (gameMode === 'time-attack') {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
@@ -605,21 +610,21 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }:
-    { isEndgame: boolean, clickedRegion: number, clickedPosition: number[]|null, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
-    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
-      console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
+  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight }:
+    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean }): { scoreIncrement: number } => {
+    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
+      console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
       return { scoreIncrement };
     }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
-    const clickedRegionName = clickedRegion && cMap.current && cMap.current.labels?.[clickedRegion] ? cMap.current.labels[clickedRegion] : t('unknown_region');
+    const clickedRegionName = cMap.current && cMap.current.labels?.[selectedVoxelProp.current.idx] ? cMap.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
 
     if (guessSuccess) {
       // Correct Guess
@@ -645,7 +650,7 @@ export function Page() {
         niivue.updateGLVolume();
         niivue.drawScene(); // Redraw scene to ensure color reset is visible
       }
-      selectedVoxel.current = null; // Reset selected voxel after guess
+      selectedVoxelProp.current = null; // Reset selected voxel after guess
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
 
       // Move to the next target after a short delay to show feedback
@@ -667,7 +672,8 @@ export function Page() {
         //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
         //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
-        if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
+        if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) || 
+            (isLoggedIn && performHighlight)) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
         // Increased timeout duration to make the incorrect message visible longer
@@ -681,8 +687,7 @@ export function Page() {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
           const correctCenters = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
-          const proposedCenter = clickedPosition ? clickedPosition :
-              cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion][0] : null;
+          const proposedCenter = selectedVoxelProp.current.mm;
 
           if (correctCenters && proposedCenter) {
             // Calculate Euclidean distance between centers
@@ -714,7 +719,7 @@ export function Page() {
             // ***************************************************************************
 
           } else {
-            console.warn(`Center data missing for region ${currentTarget} or ${clickedRegion}. Cannot calculate distance-based score.`);
+            console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
             // Option: award minimal points or 0 if center data is missing
             scoreIncrement = 0; // Award 0 points if centers are missing
           }
@@ -736,7 +741,7 @@ export function Page() {
         }
       }
 
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
       // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
@@ -815,7 +820,7 @@ export function Page() {
         niivue.drawScene();
       }
       setHeaderText(t('click_to_identify'));
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       setHighlightedRegion(null);
       if (tooltip) {
         setTooltip({ ...tooltip, visible: false });

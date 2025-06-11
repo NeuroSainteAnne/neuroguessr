@@ -91,7 +91,7 @@ export interface GetNextRegionRequestBody {
 interface ValidateRegionRequestBody {
     sessionId: number;
     sessionToken: string;
-    coordinates: [number, number, number];
+    coordinates: {mm:any, vox:number[], idx: number};
 }
 
 export interface ValidateRegionRequest extends Request {

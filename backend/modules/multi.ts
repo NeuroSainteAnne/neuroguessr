@@ -427,7 +427,7 @@ function updateParameters(ws: WebSocket, parameters: MultiplayerParametersType) 
   }
 }
 
-const validateGuess = (ws: WebSocket, voxel: number[]) => {
+const validateGuess = (ws: WebSocket, voxelProp: {mm: number[], vox: number[], idx: number}) => {
   try {
     const gameRef = (ws as WSGame).gameRef;
     const userName = (ws as WSGame).userName;
@@ -450,7 +450,7 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
       return;
     }
 
-    const [x, y, z] = voxel;
+    const [x, y, z] = voxelProp.vox;
     const atlasImage: NVImage = imageRef[gameRef.currentAtlas];
     const atlasMetadata = imageMetadata[gameRef.currentAtlas];
     if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
@@ -476,15 +476,23 @@ const validateGuess = (ws: WebSocket, voxel: number[]) => {
       scoreIncrement = MAX_POINTS_PER_REGION + bonus;
     } else {
         if (regionCenters[gameRef.currentAtlas] && regionCenters[gameRef.currentAtlas][gameRef.currentRegionId]) {
-            const center: number[] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId][0];
-            const distance = Math.sqrt(
-                Math.pow(center[0] - x, 2) +
-                Math.pow(center[1] - y, 2) +
-                Math.pow(center[2] - z, 2)
-            );
+            const centers: number[][] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId];
+            const [xMm, yMm, zMm] = voxelProp.mm;
+            // Find the minimum distance to any center of the region
+            let minDistance = Infinity;
+            for (const center of centers) {
+                const distance = Math.sqrt(
+                    Math.pow(center[0] - xMm, 2) +
+                    Math.pow(center[1] - yMm, 2) +
+                    Math.pow(center[2] - zMm, 2)
+                );
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
             // Calculate score based on distance
-            if (distance <= MAX_PENALTY_DISTANCE) {
-                scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+            if (minDistance <= MAX_PENALTY_DISTANCE) {
+                scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
                 scoreIncrement = 0; // No points for too far away
             }
@@ -595,8 +603,8 @@ wss.on('connection', (ws, req) => {
         launchGame(ws, data.sessionToken)
       } else if (data.type === 'update-parameters' && (ws as WSGame).gameRef && typeof data.parameters === 'object') {
         updateParameters(ws, data.parameters)
-      } else if (data.type === 'validate-guess' && (ws as WSGame).gameRef && data.voxel) {
-        validateGuess(ws, data.voxel)
+      } else if (data.type === 'validate-guess' && (ws as WSGame).gameRef && data.voxelProp) {
+        validateGuess(ws, data.voxelProp)
       }
     } catch (e) {
       ws.send(JSON.stringify({ type: 'error', message: e }));
