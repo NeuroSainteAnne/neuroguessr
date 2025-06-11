@@ -9,7 +9,7 @@ const config: Config = configJson;
 
 // Create a new database or open an existing one
 export const sql = postgres(
-    config.pgConnectionString, 
+    encodeURI(config.pgConnectionString), 
     {debug: true,
         types: {
             date: {
