@@ -10,6 +10,7 @@ import type { GameProgress, GameSession } from "../interfaces/database.interface
 import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionRequest, ValidateRegionRequest } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import crypto from 'crypto';
 const config: Config = configJson;
 
 const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -60,7 +61,7 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
         }
 
         // Generate a session token
-        const sessionToken: string = jwt.sign({ userId, mode, atlas }, config.jwt_secret, { expiresIn: "1h" });
+        const sessionToken: string = crypto.randomBytes(32).toString('hex');
 
         // Save the session to the database
          const result = await sql`
@@ -435,9 +436,9 @@ const endGame = async ({session, finalScore, elapsedTime, quitReason, bonusTime}
         // time stats
         let minTimePerRegion = null, maxTimePerRegion = null, avgTimePerRegion = null;
         if (times.length > 0) {
-            minTimePerRegion = Math.min(...times);
-            maxTimePerRegion = Math.max(...times);
-            avgTimePerRegion = times.reduce((a, b) => a + b, 0) / times.length;
+            minTimePerRegion = Math.round(Math.min(...times));
+            maxTimePerRegion = Math.round(Math.max(...times));
+            avgTimePerRegion = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
         }
 
         // time stats in correct regions
@@ -446,26 +447,26 @@ const endGame = async ({session, finalScore, elapsedTime, quitReason, bonusTime}
             .map(row => row.time_taken);
         let minTimeCorrect = null, maxTimeCorrect = null, avgTimeCorrect = null;
         if (correctTimes.length > 0) {
-            minTimeCorrect = Math.min(...correctTimes);
-            maxTimeCorrect = Math.max(...correctTimes);
-            avgTimeCorrect = correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length;
+            minTimeCorrect = Math.round(Math.min(...correctTimes));
+            maxTimeCorrect = Math.round(Math.max(...correctTimes));
+            avgTimeCorrect = Math.round(correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length);
         }
 
         // Insert into finishedsessions
         await sql`
             INSERT INTO finished_sessions (
-                user_id, session_id, mode, atlas, score, 
+                user_id, mode, atlas, score, 
                 attempts, correct, incorrect, 
                 min_time_per_region, max_time_per_region, avg_time_per_region,
                 min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
                 quit_reason, duration, created_at
             )
             VALUES (
-                ${session.user_id}, ${session.id}, ${session.mode}, ${session.atlas}, ${finalScore}, 
+                ${session.user_id}, ${session.mode}, ${session.atlas}, ${finalScore}, 
                 ${totalClicks}, ${accurateClicks}, ${incorrectClicks},
                 ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
                 ${minTimeCorrect}, ${maxTimeCorrect}, ${avgTimeCorrect},
-                ${quitReason}, ${elapsedTime}, NOW()
+                ${quitReason}, ${Math.round(elapsedTime)}, NOW()
             )
         `;
 
