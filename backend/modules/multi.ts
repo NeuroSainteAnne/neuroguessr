@@ -568,7 +568,6 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     const maxScore = Math.max(...allScores);
 
     for (const username in gameRef.individualScores) {
-      // TODO MANAGE ANONYMOUS USERS
       const userResult = await sql`
         SELECT id FROM users WHERE username = ${username}
       ` as { id: number }[];
