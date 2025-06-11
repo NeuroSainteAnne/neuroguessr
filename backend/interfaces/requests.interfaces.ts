@@ -1,5 +1,6 @@
 import type { User } from "./database.interfaces.ts";
 import type { Request } from 'express';
+import { MultiplayerParametersType } from "./multi.interfaces.ts";
 
 /* LOGIN interfaces */
 
@@ -107,6 +108,37 @@ export interface ClotureGameSessionRequest extends Request {
     body: ClotureGameSessionBody;
 }
 
+interface LaunchMultiGameBody {
+    sessionCode: string;
+    sessionToken: string;
+}
+
+export interface LaunchMultiGameRequest extends Request {
+    body: LaunchMultiGameBody;
+    user: User;
+}
+
+interface UpdateMultiGameBody {
+  sessionCode: string,
+  sessionToken: string,
+  parameters: Partial<MultiplayerParametersType>
+}
+
+export interface UpdateMultiGameRequest extends Request {
+    body: UpdateMultiGameBody;
+    user: User;
+}
+
+interface MultiValidateGuessBody {
+    sessionCode: string;
+    userName: string;
+    voxelProp: {mm: number[], vox: number[], idx: number};
+}
+
+export interface MultiValidateGuessRequest extends Request {
+    body: MultiValidateGuessBody
+}
+
 /* CONFIG USER INTERFACES */
 
 export interface ConfigUserBody {
@@ -152,3 +184,4 @@ interface GetStatsBody {
 export interface GetStatsRequest {
     body: GetStatsBody
 }
+

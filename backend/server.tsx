@@ -13,10 +13,10 @@ import { getNextRegion, manualClotureGameSession, startGameSession, validateRegi
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession } from "./modules/multi.ts";
+import { createMultiplayerSession, createSSEClient, launchGame, updateParameters, validateGuess } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -67,6 +67,13 @@ app.post('/api/cloture-game-session', authenticateToken,
     (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
 
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
+app.get('/sse/:sessionCode/:userName', createSSEClient)
+app.post('/api/multi/launch-game', authenticateToken, 
+    (req, res) => launchGame(req as LaunchMultiGameRequest, res))
+app.post('/api/multi/update-parameters', authenticateToken, 
+    (req, res) => updateParameters(req as UpdateMultiGameRequest, res))
+app.post('/api/multi/validate-guess', authenticateToken, 
+    (req, res) => validateGuess(req as MultiValidateGuessRequest, res))
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
@@ -74,15 +81,6 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 });
 
 
-app.use(
-  '/websocket',
-  createProxyMiddleware({
-    target: `ws://localhost:${config.server.websocket_port}`,
-    changeOrigin: true,
-    ws: true, // enable websocket proxying
-    pathRewrite: { '^/websocket': '' }, // optional: remove /websocket prefix if needed
-  })
-);
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
