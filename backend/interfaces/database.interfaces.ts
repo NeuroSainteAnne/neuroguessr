@@ -5,43 +5,64 @@ export interface User {
     lastname: string;
     email: string;
     password: string;
-    createdAt: string; // ISO date string
+    created_at: string; // ISO date string
     verified: boolean;
-    publishToLeaderboard: boolean | null;
+    publish_to_leaderboard: boolean | null;
     language: string;
 }
 
 export interface Token {
     id: number;
-    userId: number;
+    user_id: number;
     token: string;
-    createdAt: string; // ISO date string
+    created_at: string; // ISO date string
 }
 
 export interface GameSession {
     id: number;
-    userId: number;
+    user_id: number;
     token: string;
     mode: string;
     atlas: string;
-    createdAt: number; // Unix ms timestamp
-    currentScore: number;
+    created_at: number; // Unix ms timestamp
+    current_score: number;
 }
 
 export interface GameProgress {
     id: number;
-    sessionId: number;
-    sessionToken: string;
-    regionId: number;
-    timeTaken: number;
-    isActive: boolean;
-    isCorrect: boolean;
-    scoreIncrement: number;
+    session_id: number;
+    session_token: string;
+    region_id: number;
+    time_taken: number;
+    is_active: boolean;
+    is_correct: boolean;
+    score_increment: number;
     attempts: number;
-    createdAt: number; // Unix ms timestamp
+    created_at: number; // Unix ms timestamp
 }
 
 export interface FinishedSession {
+    id: number;
+    user_id: number;
+    mode: string;
+    atlas: string;
+    score: number;
+    attempts?: number;
+    correct?: number;
+    incorrect?: number;
+    min_time_per_region?: number;
+    max_time_per_region?: number;
+    avg_time_per_region?: number;
+    min_time_per_correct_region?: number;
+    max_time_per_correct_region?: number;
+    avg_time_per_correct_region?: number;
+    quit_reason?: string;
+    multiplayer_games_won?: number;
+    duration: number; // In milliseconds
+    created_at: number; // Unix ms timestamp
+}
+
+export interface FinishedSessionCamelCase {
     id: number;
     userId: number;
     mode: string;
@@ -60,4 +81,12 @@ export interface FinishedSession {
     multiplayerGamesWon?: number;
     duration: number; // In milliseconds
     createdAt: number; // Unix ms timestamp
+}
+
+export interface MultiSession {
+  id: number;
+  session_code: number;
+  session_token: string;
+  creator_id: number | null;
+  created_at: Date;
 }

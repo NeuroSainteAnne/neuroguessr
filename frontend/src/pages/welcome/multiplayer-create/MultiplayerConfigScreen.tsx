@@ -20,7 +20,7 @@ const MultiplayerConfigScreen = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
-    const wsRef = useRef<WebSocket | null>(null);
+    const evtSourceRef = useRef<EventSource | null>(null);
     const [numRegions, setNumRegions] = useState<number>(DEFAULT_REGION_NUMBER);
     const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
@@ -74,44 +74,52 @@ const MultiplayerConfigScreen = () => {
     };
 
     useEffect(() => {
-        if (sessionCode && sessionToken) {
-            const ws = new WebSocket(`/websocket`);
-            wsRef.current = ws;
-            ws.onopen = () => {
-                ws.send(JSON.stringify({
-                    type: 'join',
-                    sessionCode,
-                    token: authToken
-                }));
-            };
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'lobby-users' && Array.isArray(data.users)) {
-                setLobbyUsers(data.users);
-                } else if (data.type === 'player-joined' && data.userName) {
-                setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
-                } else if (data.type === 'player-left' && data.userName) {
-                setLobbyUsers(prev => prev.filter(u => u !== data.userName));
-                }
-            };
-            ws.onerror = () => {
-                setError('WebSocket connection error');
-            };
-            ws.onclose = () => {
-                // Optionally handle disconnect
-            };
-            return () => { if(ws.readyState == ws.OPEN) ws.close(); }
-        }
-    }, [sessionCode, sessionToken]);
+        if (sessionCode && sessionToken && userUsername && authToken) {
+            // Open SSE connection as host
+            const url = `/sse/${sessionCode}/${userUsername}?token=${authToken}`;
+            const evtSource = new EventSource(url);
+            evtSourceRef.current = evtSource;
 
-    const updateParameters = (newParameters : Partial<MultiplayerParametersType>) => {
+            evtSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'lobby-users' && Array.isArray(data.users)) {
+                setLobbyUsers(data.users);
+            } else if (data.type === 'player-joined' && data.userName) {
+                setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+            } else if (data.type === 'player-left' && data.userName) {
+                setLobbyUsers(prev => prev.filter(u => u !== data.userName));
+            }
+            };
+            evtSource.onerror = () => {
+            setError('SSE connection error');
+            };
+            return () => {
+            evtSource.close();
+            evtSourceRef.current = null;
+            };
+        }
+    }, [sessionCode, sessionToken, userUsername, authToken]);
+
+    const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
         parametersRef.current = {...parametersRef.current, ...newParameters}
         // Send updated parameters to the server
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'update-parameters',
-                parameters: parametersRef.current
-            }));
+        if (sessionCode && sessionToken) {
+            try {
+                await fetch('/api/multi/update-parameters', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                    sessionCode,
+                    sessionToken,
+                    parameters: parametersRef.current
+                    })
+                });
+            } catch (err) {
+            setError('Failed to update parameters');
+            }
         }
     }
 

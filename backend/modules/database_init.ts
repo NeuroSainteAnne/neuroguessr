@@ -1,97 +1,128 @@
-import sqlite3 from "better-sqlite3";
+import postgres from 'postgres';
 import path from "path";
 import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
+import { debug } from 'console';
 const config: Config = configJson;
 
 // Create a new database or open an existing one
-export const db: sqlite3.Database = new sqlite3(path.join(__dirname, "..", "database.db"));
-
+export const sql = postgres(
+    encodeURI(config.pgConnectionString), 
+    {debug: true,
+        types: {
+            date: {
+                // Ensure dates are properly parsed
+                parse: (value: any) => new Date(value),
+                serialize: (value: any) => value instanceof Date ? value.toISOString() : value,
+                to: 1082,
+                // Optionally, specify the PostgreSQL type OIDs for dates (here 1082 for "date")
+                from: [1082]
+            }
+        }
+    }); 
 export const database_init = async () => {
     try {
-        db.exec(
-            `CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
+        await sql`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT NOT NULL,
                 firstname TEXT NOT NULL,
                 lastname TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
+                email TEXT NOT NULL,
                 password TEXT NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                verified BOOLEAN NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                verified BOOLEAN NOT NULL DEFAULT FALSE,
                 language TEXT NOT NULL DEFAULT 'fr',
-                publishToLeaderboard BOOLEAN DEFAULT NULL
-            );
-            CREATE TABLE IF NOT EXISTS tokens (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER KEY NOT NULL,
+                publish_to_leaderboard BOOLEAN DEFAULT NULL
+            );`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`
+            
+        await sql`CREATE TABLE IF NOT EXISTS tokens (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS gamesessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER KEY NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`
+
+        await sql`CREATE TABLE IF NOT EXISTS game_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token TEXT NOT NULL,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                currentScore INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE TABLE IF NOT EXISTS gameprogress (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sessionId INTEGER NOT NULL,
-                sessionToken TEXT NOT NULL,
-                regionId INTEGER NOT NULL,
-                timeTaken INTEGER NOT NULL,
-                isActive BOOLEAN NOT NULL DEFAULT 1,
-                isCorrect BOOLEAN NOT NULL DEFAULT 0,
-                scoreIncrement INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                current_score INTEGER NOT NULL DEFAULT 0
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);`
+
+        await sql`CREATE TABLE IF NOT EXISTS game_progress (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
+                session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
+                region_id INTEGER NOT NULL,
+                time_taken INTEGER NOT NULL,
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+                score_increment INTEGER NOT NULL DEFAULT 0,
                 attempts INTEGER NOT NULL DEFAULT 0,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (sessionId) REFERENCES gamesessions (id)
-            );
-            CREATE TABLE IF NOT EXISTS finishedsessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`
+
+        await sql`CREATE TABLE IF NOT EXISTS finished_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
-                score INTEGER NOT NULL,
+                score INTEGER NOT NULL CHECK (score >= 0),
                 attempts INTEGER,
                 correct INTEGER,
                 incorrect INTEGER,
-                minTimePerRegion INTEGER,
-                maxTimePerRegion INTEGER,
-                avgTimePerRegion INTEGER,
-                minTimePerCorrectRegion INTEGER,
-                maxTimePerCorrectRegion INTEGER,
-                avgTimePerCorrectRegion INTEGER,
-                quitReason TEXT,
-                multiplayerGamesWon INTEGER DEFAULT 0,
+                min_time_per_region INTEGER,
+                max_time_per_region INTEGER,
+                avg_time_per_region INTEGER,
+                min_time_per_correct_region INTEGER,
+                max_time_per_correct_region INTEGER,
+                avg_time_per_correct_region INTEGER,
+                quit_reason TEXT,
+                multiplayer_games_won INTEGER DEFAULT 0,
                 duration INTEGER NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (userId) REFERENCES users (id)
-            );
-            CREATE TABLE IF NOT EXISTS multisessions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sessionCode INTEGER NOT NULL,
-                sessionToken TEXT NOT NULL,
-                creatorId INTEGER NOT NULL,
-                createdAt INTEGER DEFAULT(unixepoch('subsec') * 1000),
-                FOREIGN KEY (creatorId) REFERENCES users (id)
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_userId ON tokens (userId);
-        `);
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);`
+        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);`
+
+        await sql`CREATE TABLE IF NOT EXISTS multi_sessions (
+                id SERIAL PRIMARY KEY,
+                session_code INTEGER NOT NULL,
+                session_token TEXT NOT NULL,
+                creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
+        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
+        
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
             const hashedPassword = await bcrypt.hash("test", salt);
-            const stmt = db.prepare(`
-                INSERT OR IGNORE INTO users (username, firstname, lastname, email, password, verified)
-                VALUES (?, ?, ?, ?, ?, ?)
-            `);
-            stmt.run("test", "Test", "User", "", hashedPassword, 1);
+            await sql`
+                INSERT INTO users (username, firstname, lastname, email, password, verified)
+                VALUES ('test', 'Test', 'User', '', ${hashedPassword}, ${true})
+                ON CONFLICT (username) DO NOTHING
+            `;
             console.log("Test user added successfully.");
         }
     } catch (err) {
@@ -99,52 +130,48 @@ export const database_init = async () => {
     }
 }
 
-export const cleanExpiredTokens = () => {
+export const cleanExpiredTokens = async () => {
     try {
-        const stmt = db.prepare(`
+        const result = await sql`
             DELETE FROM tokens
-            WHERE createdAt <= datetime('now', '-1 hour')
-        `);
-        const result = stmt.run();
-        if(result.changes !== 0){
-            console.log(`Cleaned up ${result.changes} expired tokens.`);
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
+        `;
+        if(result.count !== 0){
+            console.log(`Cleaned up ${result.count} expired tokens.`);
         }
     } catch (err) {
         console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };
 
-export const cleanOldGameSessions = () => {
+export const cleanOldGameSessions = async () => {
     try {
         const suppressionDelay = 60 * 60 * 1000; // in ms 
         // Delete from gameprogress where the session is older than 1 hour
-        const deleteGameProgressStmt = db.prepare(`
-            DELETE FROM gameprogress
-            WHERE sessionId IN (
-                SELECT id FROM gamesessions WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
+        const result = await sql`
+            DELETE FROM game_progress
+            WHERE session_id IN (
+                SELECT id FROM game_sessions WHERE created_at <= NOW() - INTERVAL '1 hour'
             )
-        `);
-        const resultProgress = deleteGameProgressStmt.run();
-        if(resultProgress.changes !== 0){
-            console.log(`Cleaned up ${resultProgress.changes} old gameprogress entries.`);
+        `;
+        if(result.count !== 0){
+            console.log(`Cleaned up ${result.count} old gameprogress entries.`);
         }
         // Delete from gamesessions older than 1 hour
-        const deleteGameSessionsStmt = db.prepare(`
-            DELETE FROM gamesessions
-            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
-        `);
-        const resultSessions = deleteGameSessionsStmt.run();
-        if(resultSessions.changes !== 0){
-            console.log(`Cleaned up ${resultSessions.changes} old gamesessions.`);
+        const resultSessions = await sql`
+            DELETE FROM game_sessions
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
+        `;
+        if (resultSessions.count !== 0) {
+            console.log(`Cleaned up ${resultSessions.count} old game_sessions.`);
         }
         // Delete from multisessions older than 1 hour
-        const deleteMultiSessionsStmt = db.prepare(`
-            DELETE FROM multisessions
-            WHERE createdAt <= strftime('%s','now')*1000 - ${suppressionDelay}
-        `);
-        const resultMultiSessions = deleteMultiSessionsStmt.run();
-        if(resultMultiSessions.changes !== 0){
-            console.log(`Cleaned up ${resultMultiSessions.changes} old multisessions.`);
+        const resultMultiSessions = await sql`
+            DELETE FROM multi_sessions
+            WHERE created_at <= NOW() - INTERVAL '1 hour'
+        `;
+        if (resultMultiSessions.count !== 0) {
+            console.log(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);
         }
     } catch (err) {
         console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));

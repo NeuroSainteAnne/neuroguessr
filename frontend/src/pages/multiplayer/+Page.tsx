@@ -22,7 +22,8 @@ const MultiplayerGameScreen = () => {
   const [connected, setConnected] = useState(false);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
-  const wsRef = useRef<WebSocket | null>(null);
+  const evtSourceRef = useRef<EventSource | null>(null);
+  const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,6 +45,7 @@ const MultiplayerGameScreen = () => {
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
+
   const handleConnect = () => {
     setError(null);
     if (!inputCode.match(/^\d{8}$/)) {
@@ -56,7 +58,7 @@ const MultiplayerGameScreen = () => {
         return;
       }
     }
-    connectWS(inputCode)
+    joinLobby(inputCode)
   }
   const anonUsernameInputRef = useRef<HTMLInputElement>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
@@ -82,25 +84,25 @@ const MultiplayerGameScreen = () => {
     setHeaderTime("")
   }
 
-  const connectWS = (inputCode: string) => {
+  const joinLobby = (inputCode: string) => {
+    if (evtSourceRef.current) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
-    if (wsRef.current) return;
-    const ws = new WebSocket(`/websocket`);
-    wsRef.current = ws;
-    if(isLoggedIn){
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'join', sessionCode: inputCode, token: authToken }));
-      };
-    } else {
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'join-anonymous', sessionCode: inputCode, 
-                                username: anonUsername }));
-      };
-    }
-    ws.onmessage = (event) => {
+
+    let url = `/sse/${inputCode}/${isLoggedIn ? userUsername : anonUsername}`;
+    if (isLoggedIn && authToken) url += `?token=${authToken}`;
+    if (!isLoggedIn && anonUsername) url += `?anonymous=true`;
+
+    const evtSource = new EventSource(url);
+    evtSourceRef.current = evtSource;
+
+    evtSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'error') {
         setError(data.message);
+      } else if (data.type === 'fatal-error') {
+        setError(data.message);
+        if(evtSourceRef.current) evtSourceRef.current.close();
+        evtSourceRef.current = null;
       } else if (data.type === 'lobby-users' && Array.isArray(data.users)) {
         setConnected(true)
         setLobbyUsers(data.users);
@@ -110,6 +112,8 @@ const MultiplayerGameScreen = () => {
         tryLaunchGame()
       } else if (data.type === 'player-joined' && data.userName) {
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+      } else if (data.type === 'anon-token' && data.anonToken) {
+        anonTokenRef.current = data.anonToken;
       } else if (data.type === 'player-left' && data.userName) {
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
@@ -139,12 +143,6 @@ const MultiplayerGameScreen = () => {
           isFirstGuess.current = false;
           setForceDisplayUpdate((n)=>n+1)
         }
-      } else if (data.type === 'guess-result') {
-        if(data.isCorrect){
-          setHeaderTextMode("success")
-        } else {
-          setHeaderTextMode("failure")
-        }
       } else if (data.type === 'all-scores-update') {
         setPlayerScores(data.scores)
       } else if (data.type === 'score-update') {
@@ -158,17 +156,35 @@ const MultiplayerGameScreen = () => {
         setShowMultiplayerOverlay(true)
       }
     };
-    ws.onerror = () => {
-      setError(t('websocket-error'));
-    };
-    ws.onclose = () => {
-      clearInterface()
+    evtSource.onerror = (event) => {
+      setError(t('sse-error'));
+      console.error("SSE connection error:", event);
+      if(evtSourceRef.current) evtSourceRef.current.close();
+      evtSourceRef.current = null;
     };
   };
 
-  const tryLaunchGame = () => {
-    if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken && isLoggedIn){
-      wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: askedSessionCode, sessionToken: askedSessionToken }))
+
+  const tryLaunchGame = async () => {
+    console.log(evtSourceRef.current, askedSessionCode, askedSessionToken, isLoggedIn)
+    if (evtSourceRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
+      try {
+        const response = await fetch('/api/multi/launch-game', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ sessionCode: askedSessionCode, sessionToken: askedSessionToken })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data?.message || t('error_launching_game'));
+        }
+      } catch (err) {
+        setError(t('error_launching_game'));
+        console.error("Error launching game:", err);
+      }
     }
   }
 
@@ -191,7 +207,7 @@ const MultiplayerGameScreen = () => {
   };
 
   const updateGameDisplay = () => {
-    if (hasStarted && connected && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
+    if (hasStarted && evtSourceRef.current && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
     } else {
@@ -203,7 +219,7 @@ const MultiplayerGameScreen = () => {
   }, [parameters, currentAttempts, forceDisplayUpdate]);
 
   const handleSpaceBar = () => {
-    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && connected) {
+    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && evtSourceRef.current) {
       validateGuess();
     }
   }
@@ -256,15 +272,17 @@ const MultiplayerGameScreen = () => {
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
       setInputCode(askedSessionCode)
-      connectWS(askedSessionCode)
+      joinLobby(askedSessionCode)
     } else if(askedSessionCode && config.activateAnonymousMode){
       setIsAnonymous(false)
       clearInterface()
       setLobbyUsers([])
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
-      if(wsRef.current) wsRef.current.close()
-      wsRef.current = null
+      if (evtSourceRef.current) {
+        evtSourceRef.current.close();
+        evtSourceRef.current = null;
+      }
       setInputCode(askedSessionCode)
       if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
     }
@@ -272,7 +290,7 @@ const MultiplayerGameScreen = () => {
 
   useEffect(()=>{
     tryLaunchGame()
-  }, [askedSessionToken])
+  }, [askedSessionToken, connected])
 
   const checkToken = async () => {
     updateToken(await refreshToken())
@@ -280,9 +298,9 @@ const MultiplayerGameScreen = () => {
 
   useEffect(() => {
     return () => {
-      if (wsRef.current && wsRef.current.readyState === wsRef.current.OPEN) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (evtSourceRef.current) {
+        evtSourceRef.current.close();
+        evtSourceRef.current = null;
       }
       if (countdownInterval.current) clearInterval(countdownInterval.current);
       setHeaderTextMode("")
@@ -369,18 +387,45 @@ const MultiplayerGameScreen = () => {
     }
   }
 
-  const validateGuess = () => {
-    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !wsRef.current) {
+  const validateGuess = async () => {
+    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current) {
       console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
     }
-    setHeaderTextMode("")
-    if(guessButtonRef.current) guessButtonRef.current.disabled = true
-    wsRef.current.send(JSON.stringify({
-      type: 'validate-guess',
-      voxelProp: selectedVoxelProp.current
-    }));
-  }
+    setHeaderTextMode("");
+    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+
+    try {
+      const response = await fetch('/api/multi/validate-guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionCode: askedSessionCode,
+          userName: isLoggedIn ? userUsername : anonUsername,
+          voxelProp: selectedVoxelProp.current,
+          ...(isAnonymous && anonTokenRef.current ? { anonToken : anonTokenRef.current } : {}),
+          ...(isLoggedIn ? { userToken : authToken } : {})
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.message || t('error_validating_guess'));
+        if (guessButtonRef.current) guessButtonRef.current.disabled = false;
+        return;
+      }
+      if (data.type === 'guess-result') {
+        if (data.isCorrect) {
+          setHeaderTextMode("success");
+        } else {
+          setHeaderTextMode("failure");
+        }
+      }
+    } catch (err) {
+      setError(t('error_validating_guess'));
+      if (guessButtonRef.current) guessButtonRef.current.disabled = false;
+      console.error("Error validating guess:", err);
+    }
+  };
 
   const title = t("neuroguessr_multiplayer_title")
   return (

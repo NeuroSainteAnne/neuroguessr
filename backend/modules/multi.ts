@@ -1,15 +1,15 @@
-import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
-import { db } from "./database_init.ts";
+import type { AuthenticatedRequest, MultiValidateGuessRequest, UpdateMultiGameRequest } from "../interfaces/requests.interfaces.ts";
+import { sql } from "./database_init.ts";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
-import { WebSocketServer, WebSocket } from 'ws';
-import http from 'http';
-import express from 'express';
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
+import { MultiSession } from "interfaces/database.interfaces.ts";
+import { GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
+import crypto from "crypto";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -20,65 +20,153 @@ const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restant
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 
-interface WSGame extends WebSocket {
-  userName?: string;
-  gameRef?: MultiplayerGame;
-  sessionCode?: string;
-  lastActivity?: number;
-  isAnonymous?: boolean;
-} 
 
-interface MultiplayerParametersType {
-  atlas?: string
-  regionsNumber: number;
-  durationPerRegion: number;
-  gameoverOnError: boolean;
-}
-
-interface MultiplayerGame {
-  lobby: Set<WebSocket>;
-  sessionCode: string;
-  hasStarted: boolean;
-  hasEnded: boolean;
-  parameters: MultiplayerParametersType;
-  commands?: GameCommands[];
-  currentCommandIndex: number;
-  currentAtlas: string;
-  currentRegionId: number;
-  duration: number;
-  stepStartTime?: number;
-  commandTimeout?: NodeJS.Timeout;
-  totalGuessNumber: number;
-  hasAnswered: Record<string,boolean[]>;
-  individualScores: Record<string,number>;
-  individualAttempts: Record<string,number>;
-  individualSuccesses: Record<string,number>;
-  individualDurations: Record<string,number[]>;
-  individualCorrectDurations: Record<string,number[]>;
-  anonymousUsernames: string[];
-} 
-
-interface AtlasLUT {
-  R: number[];
-  G: number[];
-  B: number[];
-  A: number[];
-  I: number[];
-  labels: string[];
-}
-
-interface GameCommands {
-  action: string;
-  atlas?: string;
-  lut?: AtlasLUT;
-  regionId?: number;
-  duration: number;
-}
-
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+// In-memory map of SSE connections
+const sseClients: Record<string, Response[]> = {};
 const games: Record<string, MultiplayerGame> = {};
+const playerInfo: Record<string, PlayerInfo> = {};
+
+export const createSSEClient = async (req: Request, res: Response) => {
+  const { sessionCode, userName } = req.params;
+  const isAnonymous = req.query.anonymous === "true" || req.query.anonymous === "1";
+  const token = typeof req.query.token === "string" ? req.query.token : undefined;
+  let finalUserName = userName;
+  let authenticated = false;
+
+  // Always set up SSE headers first
+  req.socket.setTimeout(0);
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+  res.flushHeaders();
+
+  // Helper to send error as SSE and close connection
+  const sendSSEErrorAndClose = (message: string) => {
+    res.write(`retry: 0\n`);
+    res.write(`data: ${JSON.stringify({ type: 'fatal-error', message })}\n\n`);
+    setTimeout(() => res.end(), 100);
+  };
+
+  const sessionResult = await sql`
+      SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
+  ` as MultiSession[];
+  if (!sessionResult.length){
+      sendSSEErrorAndClose("Lobby does not exist" );
+      return
+  }
+
+  let newAnonToken: string|undefined = undefined;
+  if (!isAnonymous) {
+    if(!token){
+      sendSSEErrorAndClose("Please connect or choose anonymous mode" );
+      return
+    }
+    try {
+      const jwtpayload: any = jwt.verify(token, config.jwt_secret);
+      if (jwtpayload && jwtpayload.username) {
+        finalUserName = String(jwtpayload.username);
+        authenticated = true;
+      }
+    } catch (err) {
+      sendSSEErrorAndClose("Error: invalid token provided" );
+      return
+    }
+  } else {
+    if (!config.allowAnonymousInMultiplayer) {
+      sendSSEErrorAndClose("Anonymous mode not allowed" );
+      return;
+    }
+    const userResult = await sql`
+        SELECT id FROM users WHERE username = ${userName}
+    `;
+    if (userResult.length > 0) {
+      sendSSEErrorAndClose("Username already exists");
+      return;
+    }
+    finalUserName = userName;
+    // generate anonymous token
+    newAnonToken = crypto.randomBytes(32).toString("hex");
+  }
+  
+  if (!games[sessionCode]){
+    createEmptySession(sessionCode)
+  }
+  const gameRef = games[sessionCode];
+
+  // Prevent duplicate user in lobby
+  const playerKey = `${sessionCode}:${finalUserName}`;
+  if (playerInfo[playerKey]) {
+    sendSSEErrorAndClose("User already in lobby.");
+    return;
+  }
+
+  if(isAnonymous) gameRef.anonymousUsernames.push(finalUserName);
+
+  // Register SSE client
+  const key = `${sessionCode}:${userName}`;
+  if (!sseClients[key]) sseClients[key] = [];
+  sseClients[key].push(res);
+
+  // Update player info on connect
+  updatePlayerInfo(sessionCode, finalUserName, {
+    isAnonymous,
+    userName: finalUserName,
+    sessionCode,
+    anonToken: newAnonToken
+  });
+
+  // Send anonToken to the client if generated
+  if (isAnonymous && newAnonToken) {
+    res.write(`data: ${JSON.stringify({ type: "anon-token", anonToken: newAnonToken })}\n\n`);
+  }
+
+  initUserInLobby(finalUserName, gameRef, sessionCode)
+
+  req.on('close', () => {
+    if (sseClients[key]) {
+      sseClients[key] = sseClients[key].filter(r => r !== res);
+      if (sseClients[key].length === 0) {
+        delete sseClients[key];
+      }
+    }
+    delete playerInfo[key]; // Cleanup player info
+    broadcastSSE(sessionCode, { type: 'player-left', userName: finalUserName });
+  });
+}
+
+function sendSSE(sessionCode: string, userName: string, event: any) {
+  const key = `${sessionCode}:${userName}`;
+  if (sseClients[key]) {
+    sseClients[key].forEach(res => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    });
+  }
+}
+
+function broadcastSSE(sessionCode: string, event: any) {
+  Object.keys(sseClients)
+    .filter(key => key.startsWith(sessionCode + ":"))
+    .forEach(key => {
+      sseClients[key].forEach(res => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      });
+    });
+}
+
+function updatePlayerInfo(sessionCode: string, userName: string, info: Partial<PlayerInfo>) {
+  const key = `${sessionCode}:${userName}`;
+  if (!playerInfo[key]) {
+    playerInfo[key] = {
+      isAnonymous: false,
+      userName,
+      sessionCode,
+      gameRef: games[sessionCode]
+    };
+  }
+  Object.assign(playerInfo[key], info);
+}
 
 // Helper to generate a unique 8-digit code
 function generateCode(): string {
@@ -87,11 +175,16 @@ function generateCode(): string {
 
 async function getUniqueCode(): Promise<string> {
     let code: string;
-    let exists: { count: number };
+    let exists: boolean = true;
     do {
         code = generateCode();
-        exists = db.prepare("SELECT COUNT(*) as count FROM multisessions WHERE sessionCode = ?").get(code) as { count: number };
-    } while (exists.count > 0);
+        const result = await sql`
+            SELECT COUNT(*) as count 
+            FROM multi_sessions 
+            WHERE session_code = ${code}
+        `;
+        exists = result[0]?.count > 0;
+    } while (exists);
     return code;
 }
 
@@ -109,12 +202,15 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).user.id; 
     const sessionCode = await getUniqueCode();
     const sessionToken = jwt.sign({ userId, sessionCode, type: "multiplayer-creator" }, config.jwt_secret, { expiresIn: "1h" });
-    const stmt = db.prepare("INSERT INTO multisessions (sessionCode, sessionToken, creatorId, createdAt) VALUES (?, ?, ?, ?)");
-    const result = stmt.run(sessionCode, sessionToken, userId, Date.now());
+    const result = await sql`
+        INSERT INTO multi_sessions (session_code, session_token, creator_id, created_at)
+        VALUES (${sessionCode}, ${sessionToken}, ${userId}, NOW())
+        RETURNING id
+    ` as { id: number }[];
     res.status(200).send({
         message: "Multiplayer session created.",
         sessionCode,
-        sessionId: result.lastInsertRowid,
+        sessionId: result[0].id,
         sessionToken
     });
   } catch (error) {
@@ -125,7 +221,6 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
 
 function createEmptySession(sessionCode: string){
     games[sessionCode] = {
-      lobby: new Set(),
       sessionCode: sessionCode,
       hasStarted: false,
       hasEnded: false,
@@ -149,110 +244,31 @@ function createEmptySession(sessionCode: string){
     }
 }
 
-function initUserInLobby(ws: WebSocket, userName: string, gameRef: MultiplayerGame, sessionCode: string){
-  try {
-    gameRef.lobby.add(ws);
+function initUserInLobby(userName: string, gameRef: MultiplayerGame, sessionCode: string){
+  if (!(userName in gameRef.individualScores)) {
     gameRef.individualScores[userName] = 0;
     gameRef.individualAttempts[userName] = 0;
     gameRef.individualSuccesses[userName] = 0;
     gameRef.individualDurations[userName] = [];
     gameRef.individualCorrectDurations[userName] = [];
-    (ws as WSGame).gameRef = gameRef;
-    (ws as WSGame).sessionCode = sessionCode;
+  }
     
-    // Send the list to the newly joined client
-    const userList = Array.from(gameRef.lobby)
-      .map(client => (client as any).userName)
-      .filter(Boolean);
-    ws.send(JSON.stringify({ type: 'lobby-users', users: userList }));
-    ws.send(JSON.stringify({ type: 'parameters-updated', parameters: gameRef.parameters }));
+  // Build the current user list from playerInfo for this session
+  const userList = Object.values(playerInfo)
+    .filter(info => info.sessionCode === sessionCode)
+    .map(info => info.userName)
+    .filter(Boolean);
 
-    // Broadcast to others in the lobby
-    gameRef.lobby.forEach(client => {
-      if (client !== ws && client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: 'player-joined', userName: userName }));
-      }
-    });
-  } catch (error) {
-    console.error("Error initializing user", error);
-    if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
-  }
-}
-
-function joinLobbyAnonymous(ws: WebSocket, username: string, sessionCode: string){
-  try {
-    if (!config.allowAnonymousInMultiplayer) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Anonymous mode is not allowed.' }));
-      ws.close();
-      return;
+  // Send the updated user list and parameters to the new user
+  sendSSE(sessionCode, userName, { type: 'lobby-users', users: userList });
+  sendSSE(sessionCode, userName, { type: 'parameters-updated', parameters: gameRef.parameters });
+  
+  // Broadcast to others in the lobby that a new player has joined
+  userList.forEach(otherUser => {
+    if (otherUser !== userName) {
+      sendSSE(sessionCode, otherUser, { type: 'player-joined', userName });
     }
-    const userRow = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
-    if (userRow) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Username already exists.' }));
-      ws.close();
-      return;
-    }
-    let gameRef;
-    if (!games[sessionCode]){
-      createEmptySession(sessionCode)
-      gameRef = games[sessionCode]
-    } else {
-      gameRef = games[sessionCode]
-      const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === username)
-      || gameRef.anonymousUsernames.includes(username);
-      if (userAlreadyInLobby) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Username already in use in this lobby.' }));
-        ws.close();
-        return;
-      }
-    }
-
-    gameRef.anonymousUsernames.push(username);
-    (ws as WSGame).userName = username;
-    (ws as WSGame).isAnonymous = true;
-    initUserInLobby(ws, username, gameRef, sessionCode)
-  } catch (error) {
-    console.error("Error anonymous joining the lobby:", error);
-    if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
-  }
-}
-
-function joinLobby(ws: WebSocket, usertoken: string, sessionCode: string) {
-  try {
-    let jwtpayload: any;
-    try {
-      jwtpayload = jwt.verify(usertoken, config.jwt_secret);
-    } catch (err) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid or expired token.' }));
-      ws.close();
-      return;
-    }
-    const userName = String(jwtpayload.username);
-    (ws as WSGame).userName = userName;
-    (ws as WSGame).isAnonymous = false;
-    const session = db.prepare("SELECT * FROM multisessions WHERE sessionCode = ?").get(sessionCode);
-    if (!session) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Lobby does not exist.' }));
-      ws.close();
-      return;
-    }
-    if (!games[sessionCode]){
-      createEmptySession(sessionCode)
-    }
-    const gameRef = games[sessionCode];
-
-    // Prevent duplicate user in lobby
-    const userAlreadyInLobby = Array.from(gameRef.lobby).some(client => (client as any).userName === userName);
-    if (userAlreadyInLobby) {
-      ws.send(JSON.stringify({ type: 'error', message: 'User already in lobby.' }));
-      return;
-    }
-
-    initUserInLobby(ws, userName, gameRef, sessionCode)
-  } catch (error) {
-    console.error("Error joining lobby:", error);
-    if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
-  }
+  });
 }
 
 function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
@@ -301,45 +317,51 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   }
 }
 
-function launchGame(ws: WebSocket, sessionToken: string){
+export const launchGame = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const lobby = (ws as WSGame).gameRef?.lobby;
-    const userName = (ws as WSGame).userName;
-    const sessionCode = (ws as WSGame).sessionCode
-    if (!lobby || !userName || !sessionCode || !Array.from(lobby).some(client => (client as any).userName === userName)) {
-      ws.send(JSON.stringify({ type: 'error', message: 'You are not in the lobby.' }));
-      return;
-    }
-    if (lobby.size <= 1) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Insufficient users in lobby.' }));
-      return;
-    }
+    const { sessionCode, sessionToken } = req.body;
     const gameRef = games[sessionCode];
+    if (!gameRef) {
+      res.status(404).send({ message: "Lobby does not exist." });
+      return;
+    }
+    
     // Check that the sessionToken matches the one in the multisessions table
-    const session = db.prepare("SELECT sessionToken FROM multisessions WHERE sessionCode = ?").get(sessionCode) as { sessionToken: string };
-    if (!session || session.sessionToken !== sessionToken) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid session token for this lobby.' }));
+    const sessionResult = await sql`
+      SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+    ` as { session_token: string }[];
+    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
+      res.status(403).send({ message: "Invalid session token for this lobby." });
+      return;
+    }
+
+    // Get all users in the lobby from playerInfo
+    const userList = Object.values(playerInfo)
+      .filter(info => info.sessionCode === sessionCode)
+      .map(info => info.userName)
+      .filter(Boolean);
+      
+    if (userList.length <= 1) {
+      res.status(400).send({ message: "Insufficient users in lobby." });
       return;
     }
     if (gameRef.hasStarted) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Game already started.' }));
+      res.status(400).send({ message: "Game already started." });
       return;
     }
+
     console.log("Starting game", sessionCode)
     gameRef.commands = generateGameCommands(gameRef.parameters) || []
     gameRef.hasStarted = true;
     gameRef.duration = Date.now();
     gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
-    // broadcast gamestart to all users
-    gameRef.lobby.forEach(client => {
-      if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: 'game-start' }));
-      }
-    });
+
+    // broadcast gamestart to all users and start
+    broadcastSSE(sessionCode, { type: 'game-start' });
     sendNextCommand(gameRef);
   } catch (error) {
-      console.error("Error starting game:", error);
-      if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
+    console.error("Error starting game:", error);
+    res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -352,13 +374,12 @@ function sendNextCommand(gameRef: MultiplayerGame) {
       // Optionally broadcast game end
       const allScores = Object.values(gameRef.individualScores);
       const maxScore = Math.max(...allScores);
-      gameRef.lobby.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-          const userName = (client as WSGame).userName;
-          const userScore = userName ? gameRef.individualScores[userName] : undefined;
-          const youWon = userScore !== undefined && userScore === maxScore && maxScore > 0;
-          client.send(JSON.stringify({ type: 'game-end', scores: gameRef.individualScores, youWon }));
-        }
+      Object.keys(gameRef.individualScores).forEach(userName => {
+        sendSSE(gameRef.sessionCode, userName, {
+          type: 'game-end',
+          scores: gameRef.individualScores,
+          youWon: gameRef.individualScores[userName] === maxScore && maxScore > 0
+        });
       });
       clotureMultiplayerGame(gameRef)
       return;
@@ -368,12 +389,9 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     const command = gameRef.commands[gameRef.currentCommandIndex];
     if(command.action == "load-atlas") gameRef.currentAtlas = command.atlas || ""
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
-    gameRef.lobby.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ type: 'game-command', command }));
-        client.send(JSON.stringify({ type: 'all-scores-update', scores: gameRef.individualScores }));
-      }
-    });
+    // Broadcast command and scores to all users via SSE
+    broadcastSSE(gameRef.sessionCode, { type: 'game-command', command });
+    broadcastSSE(gameRef.sessionCode, { type: 'all-scores-update', scores: gameRef.individualScores });
 
     // Schedule next command
     if (gameRef.currentCommandIndex < gameRef.commands.length) {
@@ -388,50 +406,85 @@ function sendNextCommand(gameRef: MultiplayerGame) {
   }
 }
 
-function updateParameters(ws: WebSocket, parameters: MultiplayerParametersType) {
+export const updateParameters = async (req: UpdateMultiGameRequest, res: Response) => {
   try {
-    // Update the game parameters for this lobby
-    const gameRef = (ws as WSGame).gameRef;
+    const { sessionCode, sessionToken, parameters } = req.body;
+    const gameRef = games[sessionCode];
     if (!gameRef) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Game not available.' }));
+      res.status(404).send({ message: "Lobby does not exist." });
       return;
     }
+    
+    // Check session token
+    const sessionResult = await sql`
+      SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+    ` as { session_token: string }[];
+    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
+      res.status(403).send({ message: "Invalid session token for this lobby." });
+      return;
+    }
+
     gameRef.parameters = {
       ...gameRef.parameters,
       ...parameters
     };
     // Broadcast updated parameters to all lobby members
-    gameRef.lobby.forEach(client => {
-      if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: 'parameters-updated', parameters: gameRef.parameters }));
-      }
-    });
+    broadcastSSE(sessionCode, { type: 'parameters-updated', parameters: gameRef.parameters });
+    res.status(200).send({ message: "Parameters updated." });
   } catch (error) {
-      console.error("Error updating parameters:", error);
-      if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
+    console.error("Error updating parameters:", error);
+    res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
   }
 }
 
-const validateGuess = (ws: WebSocket, voxelProp: {mm: number[], vox: number[], idx: number}) => {
+export const validateGuess = async (req: MultiValidateGuessRequest, res: Response) => {
   try {
-    const gameRef = (ws as WSGame).gameRef;
-    const userName = (ws as WSGame).userName;
-    if (!gameRef || !gameRef.commands) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Game not available.' }));
+    const { sessionCode, userName, voxelProp, anonToken, userToken } = req.body;
+    
+    // Authentication check
+    const playerKey = `${sessionCode}:${userName}`;
+    const player = playerInfo[playerKey];
+
+    if (!player) {
+      res.status(403).send({ message: "User not in lobby." });
       return;
     }
-    if (!userName) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Username not found.' }));
+
+    if (player.isAnonymous) {
+      if (!anonToken || player.anonToken !== anonToken) {
+        res.status(403).send({ message: "Invalid or missing anonymous token." });
+        return;
+      }
+    } else {
+      if (!userToken) {
+        res.status(403).send({ message: "Missing user token." });
+        return;
+      }
+      try {
+        const jwtpayload: any = jwt.verify(userToken, config.jwt_secret);
+        if (!jwtpayload || jwtpayload.username !== userName) {
+          res.status(403).send({ message: "Invalid user token." });
+          return;
+        }
+      } catch (err) {
+        res.status(403).send({ message: "Invalid user token." });
+        return;
+      }
+    }
+
+    const gameRef = games[sessionCode];
+    if (!gameRef || !gameRef.commands) {
+      res.status(404).send({ message: 'Game not available.' });
       return;
     }
     if(!gameRef.hasAnswered) gameRef.hasAnswered = {}
     if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands.length).fill(false);
     if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
-      ws.send(JSON.stringify({ type: 'error', message: 'Answer already given.' }));
+      res.status(400).send({ message: 'Answer already given.' });
       return;
     }
     if(gameRef.commands[gameRef.currentCommandIndex].action != "guess"){
-      ws.send(JSON.stringify({ type: 'error', message: 'Guess delay timed out.' }));
+      res.status(400).send({ message: 'Guess delay timed out.' });
       return;
     }
 
@@ -439,7 +492,7 @@ const validateGuess = (ws: WebSocket, voxelProp: {mm: number[], vox: number[], i
     const atlasImage: NVImage = imageRef[gameRef.currentAtlas];
     const atlasMetadata = imageMetadata[gameRef.currentAtlas];
     if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
-      ws.send(JSON.stringify({ type: 'error', message: 'Coordinates out of bound.' }));
+      res.status(400).send({ message: 'Coordinates out of bound.' });
       return;
     }
 
@@ -488,40 +541,38 @@ const validateGuess = (ws: WebSocket, voxelProp: {mm: number[], vox: number[], i
     if(isCorrect) gameRef.individualSuccesses[userName] += 1;
     gameRef.individualDurations[userName].push(elapsed);
     if(isCorrect) gameRef.individualCorrectDurations[userName].push(elapsed);
-    ws.send(JSON.stringify({ type: 'guess-result', isCorrect, scoreIncrement, totalScore: gameRef.individualScores[userName] }));
-    gameRef.lobby.forEach(client => {
-      if (client.readyState === ws.OPEN) {
-        client.send(JSON.stringify({ type: 'score-update', user: userName, score: gameRef.individualScores[userName] }));
-      }
+    
+    // Broadcast score update to all users via SSE
+    broadcastSSE(sessionCode, {
+      type: 'score-update',
+      user: userName,
+      score: gameRef.individualScores[userName]
+    });
+
+    res.status(200).send({
+      type: 'guess-result',
+      isCorrect,
+      scoreIncrement,
+      totalScore: gameRef.individualScores[userName]
     });
   } catch (error) {
       console.error("Error validating guess:", error);
-      if(ws && ws.OPEN) ws.send(JSON.stringify({ type: 'error', message: error }));
+      res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
   }
 }
 
-function clotureMultiplayerGame(gameRef: MultiplayerGame) {
+async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
   try {
     const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
     const allScores = Object.values(gameRef.individualScores);
     const maxScore = Math.max(...allScores);
 
-    // Prepare SQL statements
-    const insertFinishedStmt = db.prepare(`
-      INSERT INTO finishedsessions (
-        userId, mode, atlas, score, attempts, correct, incorrect,
-        minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-        minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-        quitReason, multiplayerGamesWon, duration
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    // Map usernames to userIds
-    const getUserIdStmt = db.prepare('SELECT id FROM users WHERE username = ?');
-
     for (const username in gameRef.individualScores) {
-      const userRow = getUserIdStmt.get(username) as {id: number};
-      if (!userRow) continue;
-      const userId = userRow.id;
+      const userResult = await sql`
+        SELECT id FROM users WHERE username = ${username}
+      ` as { id: number }[];
+      if (userResult.length === 0) continue;
+      const userId = userResult[0].id;
       const mode = 'multiplayer';
       const atlas = gameRef.currentAtlas;
       const score = gameRef.individualScores[username] || 0;
@@ -538,24 +589,47 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a,b)=>a+b,0)/correctDurations.length) : null;
       const quitReason = 'end';
       const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
-      insertFinishedStmt.run(
-        userId, mode, atlas, score, attempts, correct, incorrect,
-        minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-        minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-        quitReason, multiplayerGamesWon, gameDuration
-      );
+
+      // Insert into finished_sessions
+      await sql`
+        INSERT INTO finished_sessions (
+          user_id, mode, atlas, score, attempts, correct, incorrect,
+          min_time_per_region, max_time_per_region, avg_time_per_region,
+          min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+          quit_reason, multiplayer_games_won, duration, created_at
+        ) VALUES (
+          ${userId}, ${mode}, ${atlas}, ${score}, ${attempts}, ${correct}, ${incorrect},
+          ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
+          ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
+          ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()
+        )
+      `;
     }
 
     const sessionCode = gameRef.sessionCode 
-    db.prepare('DELETE FROM multisessions WHERE sessionCode = ?').run(sessionCode);
-    gameRef.lobby.forEach(client => {
-      try {
-        client.close();
-      } catch (e) {
-        // Ignore errors
-      }
-    });
-    gameRef.lobby.clear();
+    await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`;
+    
+    // Optionally, broadcast a final message to all clients
+    broadcastSSE(sessionCode, { type: 'game-closed' });
+
+    // Cleanup: close all SSE connections for this session
+    Object.keys(sseClients)
+      .filter(key => key.startsWith(sessionCode + ":"))
+      .forEach(key => {
+        sseClients[key].forEach(res => {
+          try { res.end(); } catch (e) { /* ignore */ }
+        });
+        delete sseClients[key];
+      });
+
+    // Cleanup playerInfo for this session
+    Object.keys(playerInfo)
+      .filter(key => key.startsWith(sessionCode + ":"))
+      .forEach(key => {
+        delete playerInfo[key];
+      });
+      
+    // Cleanup game state
     if (gameRef.commandTimeout) {
       clearTimeout(gameRef.commandTimeout);
       gameRef.commandTimeout = undefined;
@@ -569,70 +643,3 @@ function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       console.error("Error cloturing game:", error);
   }
 }
-
-wss.on('connection', (ws, req) => {
-  try {
-    (ws as WSGame).lastActivity = Date.now();
-  } catch(err) {
-    // pass
-  }
-  ws.on('message', (message) => {
-    try {
-      (ws as WSGame).lastActivity = Date.now();
-      const data = JSON.parse(message.toString());
-      if (data.type === 'join' && data.sessionCode && data.token) {
-        joinLobby(ws, data.token, data.sessionCode)
-      } else if (data.type === 'join-anonymous' && data.sessionCode && data.username) {
-        joinLobbyAnonymous(ws, data.username, data.sessionCode)
-      } else if (data.type === 'launch-game' && data.sessionToken) {
-        launchGame(ws, data.sessionToken)
-      } else if (data.type === 'update-parameters' && (ws as WSGame).gameRef && typeof data.parameters === 'object') {
-        updateParameters(ws, data.parameters)
-      } else if (data.type === 'validate-guess' && (ws as WSGame).gameRef && data.voxelProp) {
-        validateGuess(ws, data.voxelProp)
-      }
-    } catch (e) {
-      ws.send(JSON.stringify({ type: 'error', message: e }));
-    }
-  });
-
-  ws.on('close', () => {
-    try {
-      // Remove from current lobby
-      const gameRef = (ws as WSGame).gameRef;
-      if(!gameRef) return;
-      const lobby = gameRef.lobby;
-      if (lobby && lobby.has(ws)) {
-        lobby.delete(ws);
-        const userName = (ws as WSGame).userName;
-        // Notify remaining clients in this lobby
-        lobby.forEach(client => {
-          if (client.readyState === ws.OPEN) {
-            client.send(JSON.stringify({ type: 'player-left', userName }));
-          }
-        });
-      }
-    } catch (e) {
-      console.error("Error closing websocket:", e);
-      ws.send(JSON.stringify({ type: 'error', message: e }));
-    }
-  });
-});
-
-setInterval(() => {
-  const now = Date.now();
-  wss.clients.forEach((client) => {
-    const wsGame = client as WSGame;
-    if (wsGame.lastActivity && now - wsGame.lastActivity > 60 * 60 * 1000) { // 1 hour
-      try {
-        client.terminate();
-      } catch (e) {
-        // Ignore errors
-      }
-    }
-  });
-}, 60 * 10 * 1000); // Cleanup every 10 minute
-
-server.listen(config.server.websocket_port, () => {
-  console.log(`WebSocket running on port ${config.server.websocket_port}`);
-});

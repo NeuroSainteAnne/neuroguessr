@@ -60,7 +60,7 @@ export default {
         changeOrigin: true,
         secure: false
       },
-      '/websocket': {
+      '/sse': {
         target: "http://localhost:3000",
         changeOrigin: true,
         secure: false,

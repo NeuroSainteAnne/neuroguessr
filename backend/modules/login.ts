@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { __dirname, getUserToken } from "./utils.ts";
@@ -26,13 +26,14 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
             return;
         } 
 
-        const stmt = db.prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
-        const user = stmt.get(req.body.username) as User;
-
-        if (!user){
+        const users = await sql`
+            SELECT * FROM users WHERE username = ${req.body.username} LIMIT 1
+        `;
+        if (!users.length){
             res.status(401).send({ message: "Invalid Username or Password" });
             return;
         }
+        const user = users[0] as User;
 
         const validPassword: boolean = await bcrypt.compare(req.body.password, user.password);
 
@@ -123,8 +124,17 @@ export const getUserInfo = async (req: Request, res: Response): Promise<void> =>
         const userId: number = (req as AuthenticatedRequest).user.id;
 
         // Fetch user information from the database
-        const stmt = db.prepare("SELECT id, username, firstname, lastname, email, publishToLeaderboard FROM users WHERE id = ? LIMIT 1");
-        const user = stmt.get(userId) as User;
+        const users = await sql`
+            SELECT id, username, firstname, lastname, email, publish_to_leaderboard
+            FROM users 
+            WHERE id = ${userId} 
+            LIMIT 1
+        `;
+        if (!users.length) {
+            res.status(404).send({ message: "User not found" });
+            return;
+        }
+        const user = users[0] as Partial<User>;
 
         if (!user) {
             res.status(404).send({ message: "User not found" });

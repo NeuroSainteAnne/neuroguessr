@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs"
 import https from 'https';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
-import { db, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
+import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
@@ -13,36 +13,48 @@ import { getNextRegion, manualClotureGameSession, startGameSession, validateRegi
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, StartGameSessionRequest } from "./interfaces/requests.interfaces.ts";
+import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession } from "./modules/multi.ts";
+import { createMultiplayerSession, createSSEClient, launchGame, updateParameters, validateGuess } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
+import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
+
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
 
-database_init()
+await database_init()
 
 app.use(express.json());
+app.use(transformResponseToCamelCase);
 
 if(config.server.globalAuthentication.enabled){
     app.use(globalAuthentication);
 }
 
+// login.ts
 app.post('/api/login', login);
 app.post('/api/refresh-token', refreshToken);
+app.get('/api/user-info', authenticateToken, getUserInfo);
+
+// register.ts
 app.post('/api/register', register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
 app.post("/api/verify-email", verifyEmail)
-app.get('/api/user-info', authenticateToken, getUserInfo);
+
+// config_user.ts
 app.post('/api/config-user', authenticateToken, configUser);
+
+// leaderboard.ts
 app.post('/api/get-leaderboard', getLeaderboard);
 app.post('/api/get-most-used-atlases', getMostUsedAtlases);
+
+
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
 
@@ -55,6 +67,13 @@ app.post('/api/cloture-game-session', authenticateToken,
     (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
 
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
+app.get('/sse/:sessionCode/:userName', createSSEClient)
+app.post('/api/multi/launch-game', authenticateToken, 
+    (req, res) => launchGame(req as LaunchMultiGameRequest, res))
+app.post('/api/multi/update-parameters', authenticateToken, 
+    (req, res) => updateParameters(req as UpdateMultiGameRequest, res))
+app.post('/api/multi/validate-guess', 
+    (req, res) => validateGuess(req as MultiValidateGuessRequest, res))
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
@@ -62,19 +81,10 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 });
 
 
-app.use(
-  '/websocket',
-  createProxyMiddleware({
-    target: `ws://localhost:${config.server.websocket_port}`,
-    changeOrigin: true,
-    ws: true, // enable websocket proxying
-    pathRewrite: { '^/websocket': '' }, // optional: remove /websocket prefix if needed
-  })
-);
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
-//import "../frontend/dist/server/entry.mjs"
+
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
     app.use('/atlas', express.static(path.join(reactRoot, 'client', 'atlas')));
@@ -286,3 +296,12 @@ if(config.server.mode == "https"){
         console.log(`Server is running on http://localhost:${PORT}`);
     });
 }
+
+process.on('SIGINT', async () => {
+  await sql.end();
+  process.exit(0);
+});
+process.on('SIGTERM', async () => {
+  await sql.end();
+  process.exit(0);
+});

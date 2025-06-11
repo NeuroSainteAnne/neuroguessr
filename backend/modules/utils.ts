@@ -41,7 +41,7 @@ export function getUserToken(user: User): string {
             firstname: user.firstname, 
             lastname: user.lastname,
             language: user.language,
-            publishToLeaderboard: user.publishToLeaderboard,
+            publishToLeaderboard: user.publish_to_leaderboard,
             id: user.id 
         }, config.jwt_secret, { expiresIn: "1h" })
     return token;
