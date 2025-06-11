@@ -133,6 +133,8 @@ interface MultiValidateGuessBody {
     sessionCode: string;
     userName: string;
     voxelProp: {mm: number[], vox: number[], idx: number};
+    userToken?: string;
+    anonToken?: string;
 }
 
 export interface MultiValidateGuessRequest extends Request {

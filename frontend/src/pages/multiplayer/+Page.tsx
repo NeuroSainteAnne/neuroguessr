@@ -23,6 +23,7 @@ const MultiplayerGameScreen = () => {
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
   const evtSourceRef = useRef<EventSource | null>(null);
+  const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,6 +112,8 @@ const MultiplayerGameScreen = () => {
         tryLaunchGame()
       } else if (data.type === 'player-joined' && data.userName) {
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+      } else if (data.type === 'anon-token' && data.anonToken) {
+        anonTokenRef.current = data.anonToken;
       } else if (data.type === 'player-left' && data.userName) {
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
@@ -399,7 +402,9 @@ const MultiplayerGameScreen = () => {
         body: JSON.stringify({
           sessionCode: askedSessionCode,
           userName: isLoggedIn ? userUsername : anonUsername,
-          voxelProp: selectedVoxelProp.current
+          voxelProp: selectedVoxelProp.current,
+          ...(isAnonymous && anonTokenRef.current ? { anonToken : anonTokenRef.current } : {}),
+          ...(isLoggedIn ? { userToken : authToken } : {})
         })
       });
       const data = await response.json();

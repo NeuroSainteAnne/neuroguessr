@@ -9,6 +9,7 @@ import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts"
 import { NVImage } from "@niivue/niivue";
 import { MultiSession } from "interfaces/database.interfaces.ts";
 import { GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
+import crypto from "crypto";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -56,6 +57,7 @@ export const createSSEClient = async (req: Request, res: Response) => {
       return
   }
 
+  let newAnonToken: string|undefined = undefined;
   if (!isAnonymous) {
     if(!token){
       sendSSEErrorAndClose("Please connect or choose anonymous mode" );
@@ -84,6 +86,8 @@ export const createSSEClient = async (req: Request, res: Response) => {
       return;
     }
     finalUserName = userName;
+    // generate anonymous token
+    newAnonToken = crypto.randomBytes(32).toString("hex");
   }
   
   if (!games[sessionCode]){
@@ -109,8 +113,14 @@ export const createSSEClient = async (req: Request, res: Response) => {
   updatePlayerInfo(sessionCode, finalUserName, {
     isAnonymous,
     userName: finalUserName,
-    sessionCode
+    sessionCode,
+    anonToken: newAnonToken
   });
+
+  // Send anonToken to the client if generated
+  if (isAnonymous && newAnonToken) {
+    res.write(`data: ${JSON.stringify({ type: "anon-token", anonToken: newAnonToken })}\n\n`);
+  }
 
   initUserInLobby(finalUserName, gameRef, sessionCode)
 
@@ -429,14 +439,42 @@ export const updateParameters = async (req: UpdateMultiGameRequest, res: Respons
 
 export const validateGuess = async (req: MultiValidateGuessRequest, res: Response) => {
   try {
-    const { sessionCode, userName, voxelProp } = req.body;
+    const { sessionCode, userName, voxelProp, anonToken, userToken } = req.body;
+    
+    // Authentication check
+    const playerKey = `${sessionCode}:${userName}`;
+    const player = playerInfo[playerKey];
+
+    if (!player) {
+      res.status(403).send({ message: "User not in lobby." });
+      return;
+    }
+
+    if (player.isAnonymous) {
+      if (!anonToken || player.anonToken !== anonToken) {
+        res.status(403).send({ message: "Invalid or missing anonymous token." });
+        return;
+      }
+    } else {
+      if (!userToken) {
+        res.status(403).send({ message: "Missing user token." });
+        return;
+      }
+      try {
+        const jwtpayload: any = jwt.verify(userToken, config.jwt_secret);
+        if (!jwtpayload || jwtpayload.username !== userName) {
+          res.status(403).send({ message: "Invalid user token." });
+          return;
+        }
+      } catch (err) {
+        res.status(403).send({ message: "Invalid user token." });
+        return;
+      }
+    }
+
     const gameRef = games[sessionCode];
     if (!gameRef || !gameRef.commands) {
       res.status(404).send({ message: 'Game not available.' });
-      return;
-    }
-    if (!userName) { // TODO SECURE THE CONNEXION WITH A UNIQUE TOKEN
-      res.status(400).send({ message: 'Username not found.' });
       return;
     }
     if(!gameRef.hasAnswered) gameRef.hasAnswered = {}

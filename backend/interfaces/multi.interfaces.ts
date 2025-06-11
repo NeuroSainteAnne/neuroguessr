@@ -5,6 +5,7 @@ export interface PlayerInfo {
   userName: string;
   gameRef: MultiplayerGame;
   sessionCode: string;
+  anonToken?: string;
 }
 
 export interface MultiplayerParametersType {
