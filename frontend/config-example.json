@@ -3,5 +3,6 @@
         "activate": false,
         "siteKey": ""
     },
-    "activateAnonymousMode": true
+    "activateAnonymousMode": true,
+    "customHeaderScript": ""
 }

@@ -6,42 +6,38 @@ import { fetchJSON } from '../../helper_niivue';
 import { initNiivue } from '../../utils/helper_nii';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Help } from '../../components/Help';
+import { Niivue, SHOW_RENDER } from '@niivue/niivue';
+import { ColorMap } from '../../types';
 
 function Neurotheka() {
   const { t, currentLanguage, askedAtlas, askedRegion,
-          preloadedAtlas, preloadedBackgroundMNI, viewerOptions, niivueModule, setAskedAtlas, setAskedRegion, pageContext,
+          preloadedAtlas, preloadedBackgroundMNI, viewerOptions, setAskedAtlas, setAskedRegion, pageContext,
         setHeaderText } = useApp();
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const currentlyLoadedAtlas = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
 
     useEffect(() => {
       const { routeParams } = pageContext;
       setAskedAtlas(routeParams?.atlas);
       setAskedRegion(parseInt(routeParams?.region));
 
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1]
             }));
-          }
-      });
       return () => { 
-        isMounted = false; 
         setHeaderText("");
       };
     }, []);
 
   async function updateVisualization() {
-    if (!askedRegion || !askedAtlas || !preloadedBackgroundMNI || !preloadedAtlas || !isLoadedNiivue) {
+    if (!askedRegion || !askedAtlas || !preloadedBackgroundMNI || !preloadedAtlas || !isLoadedNiivue || !niivue) {
       console.error("Invalid regionId or atlas");
       return;
     }
@@ -52,7 +48,7 @@ function Neurotheka() {
       niivue.meshes = [];
 
       // Load colormap
-      const cmap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      const cmap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json) as ColorMap;
 
       // Reset volumes
       if(preloadedAtlas != currentlyLoadedAtlas.current){
@@ -68,7 +64,7 @@ function Neurotheka() {
       let tractLabel = ""
       let tractUrl = ""
 
-      if (askedAtlas === 'xtract' && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
+      if (askedAtlas === 'xtract' && cmap.labels && isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
         const cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
         tractLabel = cmap_en.labels[askedRegion].replace(/\s+/g, '_');
         tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
@@ -117,7 +113,7 @@ function Neurotheka() {
         }
       }
 
-      if (!useTractography && niivue.volumes.length > 1) {
+      if (!useTractography && cmap.labels && niivue.volumes.length > 1) {
         niivue.volumes[1].setColormapLabel(cmap);
         const numRegions = Object.keys(cmap.labels).length;
         const clut = new Uint8Array(numRegions * 4);
@@ -142,13 +138,13 @@ function Neurotheka() {
       niivue.opts.isSliceMM = true;
 
       // set crosshair position
-      let center = cmap.centers ? cmap.centers[askedRegion] : [0,0,0]
-      niivue.scene.crosshairPos = niivue.mm2frac(center);
+      let center = cmap.centers ? cmap.centers[askedRegion][0] : [0,0,0]
+      niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
       niivue.createOnLocationChange()
       niivue.updateGLVolume();
 
       // Update display
-      if (isFinite(Number(askedRegion)) && askedRegion in cmap.labels) {
+      if (isFinite(Number(askedRegion)) && cmap.labels && askedRegion in cmap.labels) {
         setHeaderText(`${cmap.labels[askedRegion] || "Unknown"} (${selectedAtlasFiles.name})`);
       } else {
         setHeaderText(t('error_loading_data', { atlas: selectedAtlasFiles.name }));
@@ -195,11 +191,11 @@ function Neurotheka() {
         niivue.setClipPlane(niivue.meshes.length > 0 ? [-0.1, 270, 0] : [2, 270, 0]);
       }
       if (viewerOptions.displayType === "MultiPlanar") {
-        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.NEVER;
+        niivue.opts.multiplanarShowRender = SHOW_RENDER.NEVER;
         niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
       if (viewerOptions.displayType === "MultiPlanarRender") {
-        niivue.opts.multiplanarShowRender = niivueModule.SHOW_RENDER.ALWAYS;
+        niivue.opts.multiplanarShowRender = SHOW_RENDER.ALWAYS;
         niivue.setSliceType(niivue.sliceTypeMultiplanar);
       }
       if (niivue.volumes.length > 1) {
@@ -227,9 +223,6 @@ function Neurotheka() {
       <div className="button-container">
         <a id="return-button" className="return-button"  href="/welcome">{t("return_button")}</a>
       </div>
-
-      <Help />
-      
     </>
   )
 }

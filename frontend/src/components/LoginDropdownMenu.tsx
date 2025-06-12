@@ -54,6 +54,7 @@ function LoginDropdownMenu() {
                                 "lang-icon-btn-dropdown lang-icon-btn-dropdown-active":
                                 "lang-icon-btn-dropdown"}
                             data-lang="fr" aria-label="Français" 
+                            data-umami-event="language switcher" data-umami-event-language="fr" data-umami-event-logged="yes"
                             onClick={()=>{handleChangeLanguage('fr')}}>
                         <img src="/interface/fr-64.png" alt="FR" />
                     </button>
@@ -61,11 +62,12 @@ function LoginDropdownMenu() {
                                 "lang-icon-btn-dropdown lang-icon-btn-dropdown-active":
                                 "lang-icon-btn-dropdown"}
                             data-lang="en" aria-label="English"
+                            data-umami-event="language switcher" data-umami-event-language="en" data-umami-event-logged="yes"
                             onClick={()=>{handleChangeLanguage('en')}}>
                         <img src="/interface/en-64.png" alt="EN" />
                     </button>
                 </div>
-                <button id="logout-button-dropdown" className="dropdown-item logout-item" onClick={()=>logout()}>
+                <button id="logout-button-dropdown" className="dropdown-item logout-item" data-umami-event="logout button" onClick={()=>logout()}>
                     <span>{t("logout_mode")}</span>
                 </button>
             </div> }

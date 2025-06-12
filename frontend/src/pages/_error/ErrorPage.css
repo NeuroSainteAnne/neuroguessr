@@ -1,0 +1,121 @@
+.error-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 2rem;
+  color: var(--text-color, #cccccc);
+}
+
+.error-container {
+  background-color: rgba(121, 121, 121, 0.662);
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+}
+
+.error-icon {
+  font-size: 3.5rem;
+  color: var(--primary-color, #00ADB5);
+  margin-bottom: 1.5rem;
+}
+
+.error-code {
+  font-size: 4rem;
+  font-weight: 700;
+  margin: 0;
+  color: #8298b9;
+}
+
+.error-title {
+  font-size: 1.8rem;
+  margin: 0.5rem 0 1.5rem;
+  color: #bbcbe6;
+}
+
+.error-message {
+  font-size: 1.1rem;
+  color: #b8b8b8;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-home, .btn-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color, #00ADB5);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-back {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.btn-home:hover, .btn-back:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  color: inherit;
+  text-decoration: none;
+}
+
+.btn-home:active, .btn-back:active {
+  transform: translateY(0);
+}
+
+.error-stack {
+  margin-top: 2rem;
+  text-align: left;
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #e91e63;
+  overflow-x: auto;
+}
+
+.error-stack h3 {
+  margin-top: 0;
+  color: #e91e63;
+  font-size: 1.1rem;
+}
+
+.error-stack pre {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .error-actions {
+    flex-direction: column;
+  }
+  
+  .error-code {
+    font-size: 3rem;
+  }
+  
+  .error-title {
+    font-size: 1.5rem;
+  }
+}

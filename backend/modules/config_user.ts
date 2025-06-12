@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import passwordComplexity from "joi-password-complexity";
@@ -34,48 +34,64 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
 
         const { firstname, lastname, password, publishToLeaderboard, language } = req.body as ConfigUserBody;
 
-        // Dynamically construct the SQL query
-        const updates: string[] = [];
-        const params: string[] = [];
-
-        if (firstname) {
-            updates.push("firstname = ?");
-            params.push(firstname);
-        }
-        if (lastname) {
-            updates.push("lastname = ?");
-            params.push(lastname);
-        }
-        if (password) {
-            // Hash the password before updating
-            const salt: string = await bcrypt.genSalt(Number(config.salt));
-            const hashedPassword: string = await bcrypt.hash(password, salt);
-            updates.push("password = ?");
-            params.push(hashedPassword);
-        }
-        if (publishToLeaderboard !== undefined) {
-            updates.push("publishToLeaderboard = ?");
-            params.push(publishToLeaderboard === null ? "NULL" : (publishToLeaderboard ? "1" : "0"));
-        }
-        if (language !== undefined) {
-            updates.push("language = ?");
-            params.push(language);
-        }
-        if (updates.length === 0) {
+        // Check if there's anything to update
+        if (firstname === undefined && lastname === undefined && password === undefined && 
+            publishToLeaderboard === undefined && language === undefined) {
             res.status(400).send({ message: "No fields to update" });
+            return;
         }
-        // Add the user ID to the parameters
-        params.push(String(userId));
 
-        // Construct and execute the SQL query
-        const updateUserStmt = db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`);
-        updateUserStmt.run(...params);
+        // Get user to verify they exist
+        const existingUsers = await sql`
+            SELECT * FROM users WHERE id = ${userId} LIMIT 1
+        `;
+        
+        if (!existingUsers.length) {
+            res.status(404).send({ message: "User not found" });
+            return;
+        }
 
-        // update token content
-        const stmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = stmt.get(userId) as User;
-        const token = getUserToken(user);
-        res.status(200).send({ message: "User updated successfully", token: token });
+        // Dynamically construct the SQL query
+        let updates: Partial<{
+            firstname: string;
+            lastname: string;
+            password: string;
+            publish_to_leaderboard: boolean;
+            language: string;
+        }> = {};
+                
+        if (firstname) {
+            updates.firstname = firstname;
+        }
+                
+        if (lastname) {
+            updates.lastname = lastname;
+        }
+                
+        if (password) {
+            const salt = await bcrypt.genSalt(Number(config.salt));
+            updates.password = await bcrypt.hash(password, salt);
+        }
+                
+        if (publishToLeaderboard) {
+            updates.publish_to_leaderboard = publishToLeaderboard;
+        }
+                
+        if (language !== undefined) {
+            updates.language = language;
+        }
+
+        // Use the object with the sql tag for safe parameterization
+        const updatedUsers = await sql`
+            UPDATE users 
+            SET ${sql(updates)}
+            WHERE id = ${userId}
+            RETURNING *
+        `;
+        const updatedUser = updatedUsers[0] as User;
+        const updatedToken = getUserToken(updatedUser);
+
+        res.status(200).send({ message: "User updated successfully", token: updatedToken });
     } catch (error: unknown) {
         console.log(error);
         res.status(500).send({ message: "Internal Server Error" });

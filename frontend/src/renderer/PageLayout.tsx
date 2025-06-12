@@ -7,6 +7,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { AppProvider } from '../context/AppContext';
 import { Notification } from '../components/Notification';
+import { Help } from '../components/Help';
 
 function PageLayout({ children, pageContext }: { children: React.ReactNode; pageContext: PageContext }) {
     return (
@@ -16,6 +17,7 @@ function PageLayout({ children, pageContext }: { children: React.ReactNode; page
                     <Header />
                     <Content>{children}</Content>
                     <Footer />
+                    <Help />
                     <Notification />
                 </div>
             </AppProvider>

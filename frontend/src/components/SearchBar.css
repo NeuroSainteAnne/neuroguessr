@@ -100,9 +100,17 @@
     transition: background 0.2s;
 }
 
+.current-atlas{
+    background-color: rgba(89, 79, 27, 0.9);
+}
+
 .search-suggestion:hover {
     background: rgba(54, 54, 54, 0.9);
     /* Add opacity */
+}
+
+.current-atlas:hover{
+    background-color: rgba(108, 92, 15, 0.9);
 }
 
 @media (max-width: 768px) {

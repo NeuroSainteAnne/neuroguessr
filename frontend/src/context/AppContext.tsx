@@ -6,6 +6,12 @@ import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
 import { useTranslation } from 'react-i18next';
+import type { NVImage } from '@niivue/niivue';
+
+type NVImageConstructor = {
+  new (): NVImage;
+  loadFromUrl(options: { url: string }): Promise<NVImage>;
+}
 
 // Define the shape of our context
 type AppContextType = {
@@ -47,9 +53,9 @@ type AppContextType = {
   askedRegion: number | null;
   
   // Niivue module
-  niivueModule: any | null;
-  preloadedBackgroundMNI: any | null;
-  preloadedAtlas: any | null;
+  nvimageModule: NVImageConstructor | null;
+  preloadedBackgroundMNI: NVImage | null;
+  preloadedAtlas: NVImage | null;
   
   // Functions
   activateGuestMode: () => void;
@@ -78,9 +84,9 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Create a provider component
 export function AppProvider({ children, pageContext }: { children: React.ReactNode, pageContext: PageContext }) {
   const { t, i18n } = useTranslation("translation", { i18n: i18nInstance });
-  const [niivueModule, setNiivueModule] = useState<any>(null);
-  const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<any|null>(null);
-  const [preloadedAtlas, setPreloadedAtlas] = useState<any|null>(null);
+  const [nvimageModule, setnvimageModule] = useState<NVImageConstructor|null>(null);
+  const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null);
+  const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null);
   
   // Authentication state
   const isClientSide = typeof document !== 'undefined';
@@ -129,7 +135,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     let isMounted = true;
     import('@niivue/niivue').then((mod) => {
       if (isMounted) {
-        setNiivueModule(mod);
+        setnvimageModule(() => mod.NVImage);
       }
     });
     return () => { isMounted = false; };
@@ -147,9 +153,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Load MNI background when niivueModule is available
   useEffect(() => {
-    if (niivueModule) {
+    if (nvimageModule) {
       const niiFile = "/atlas/mni152_downsampled.nii.gz";
-      niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
+      nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
         setPreloadedBackgroundMNI(nvImage);
       }).catch((error: any) => {
         console.error("Error loading NIfTI file:", error);
@@ -157,15 +163,15 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         setPreloadedBackgroundMNI(null);
       });
     }
-  }, [niivueModule]);
+  }, [nvimageModule]);
   
   // Load requested atlas when it changes
   useEffect(() => {
-    if (askedAtlas && niivueModule) {
+    if (askedAtlas && nvimageModule) {
       const atlas = atlasFiles[askedAtlas];
       if (atlas) {
         const niiFile = "/atlas/nii/" + atlas.nii;
-        niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
+        nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
           setPreloadedAtlas(nvImage);
         }).catch((error: any) => {
           console.error("Error loading NIfTI file:", error);
@@ -174,7 +180,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         });
       }
     }
-  }, [askedAtlas, niivueModule]);
+  }, [askedAtlas, nvimageModule]);
 
   // Load atlas regions 
   useEffect(() => {
@@ -297,6 +303,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (isLoggedIn && authToken) {
       setIsGuest(false);
       if(localStorage !== undefined) localStorage.setItem('guestMode', 'false');
+
       
       try {
         const payload = jwtDecode<CustomTokenPayload>(authToken);
@@ -306,6 +313,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         setUserPublishToLeaderboard(
           payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard
         );
+        if (typeof window !== 'undefined' && (window as any).umami && payload.id) {
+          (window as any).umami.identify(payload.id, {username: payload.username || ""})
+        }
       } catch (error) {
         console.error("Error decoding token:", error);
         logout();
@@ -349,7 +359,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       askedRegion,
       
       // Niivue module
-      niivueModule,
+      nvimageModule,
       preloadedBackgroundMNI,
       preloadedAtlas,
 

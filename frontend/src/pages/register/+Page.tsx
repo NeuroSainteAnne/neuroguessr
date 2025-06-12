@@ -209,7 +209,7 @@ function RegisterScreen() {
             </tbody>
           </table>
           {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
-          {registerSuccessText == "" && <button type="submit">{t("register_button")}</button>}
+          {registerSuccessText == "" && <button  data-umami-event="register button" type="submit">{t("register_button")}</button>}
         </div>
       </form>
     </>)

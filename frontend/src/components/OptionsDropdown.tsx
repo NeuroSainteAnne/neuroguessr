@@ -11,7 +11,7 @@ function OptionsDropdown() {
 
     return (<>
         <div className="dropdown">
-            <button className="dropbtn">
+            <button className="dropbtn" data-umami-event="open viewer options">
                 {t("view_options")}
                 <span className="hamburger">
                     <svg width="24" height="18" viewBox="0 0 24 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -22,26 +22,34 @@ function OptionsDropdown() {
                 </span>
             </button>
             <div className="dropdown-content">
-                <a className={viewerOptions.displayType == "Axial" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "Axial" })}>{t("axial")}</a>
-                <a className={viewerOptions.displayType == "Sagittal" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "Sagittal" })}>{t("sagittal")}</a>
-                <a className={viewerOptions.displayType == "Coronal" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "Coronal" })}>{t("coronal")}</a>
-                <a className={viewerOptions.displayType == "Render" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "Render" })}>{t("render")}</a>
-                <a className={viewerOptions.displayType == "MultiPlanar" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "MultiPlanar" })}>{t("multiplanar")}</a>
-                <a className={viewerOptions.displayType == "MultiPlanarRender" ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                    onClick={() => updateViewerOptions({ displayType: "MultiPlanarRender" })}>{t("multiplanar_render")}</a>
-                <a className={viewerOptions.radiologicalOrientation ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                <button className={viewerOptions.displayType == "Axial" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="axial"
+                    onClick={() => updateViewerOptions({ displayType: "Axial" })}>{t("axial")}</button>
+                <button className={viewerOptions.displayType == "Sagittal" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="sagittal"
+                    onClick={() => updateViewerOptions({ displayType: "Sagittal" })}>{t("sagittal")}</button>
+                <button className={viewerOptions.displayType == "Coronal" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="coronal"
+                    onClick={() => updateViewerOptions({ displayType: "Coronal" })}>{t("coronal")}</button>
+                <button className={viewerOptions.displayType == "Render" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="render"
+                    onClick={() => updateViewerOptions({ displayType: "Render" })}>{t("render")}</button>
+                <button className={viewerOptions.displayType == "MultiPlanar" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="multiplanar"
+                    onClick={() => updateViewerOptions({ displayType: "MultiPlanar" })}>{t("multiplanar")}</button>
+                <button className={viewerOptions.displayType == "MultiPlanarRender" ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="multiplanar render"
+                    onClick={() => updateViewerOptions({ displayType: "MultiPlanarRender" })}>{t("multiplanar_render")}</button>
+                <button className={viewerOptions.radiologicalOrientation ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="orientation" data-umami-event-orientation={viewerOptions.radiologicalOrientation ? "neurological" : "radiological"}  
                     onClick={() => updateViewerOptions({ radiologicalOrientation: !viewerOptions.radiologicalOrientation })}>
                     {t("radiological")}
-                </a>
-                <a className={viewerOptions.displayAtlas ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                </button>
+                <button className={viewerOptions.displayAtlas ? "viewBtn dropdown-item-checked" : "viewBtn"}
+                     data-umami-event="set viewer options" data-umami-event-option="show atlas" data-umami-event-showatlas={viewerOptions.displayAtlas ? "off" : "on"}  
                     onClick={() => updateViewerOptions({ displayAtlas: !viewerOptions.displayAtlas })}>
                     {t("colored_atlas")}
-                </a>
+                </button>
                 <div className="slider-container">
                     <label className="slider-label" htmlFor="alphaSlider">{t("atlas_opacity")}</label>
                     <input

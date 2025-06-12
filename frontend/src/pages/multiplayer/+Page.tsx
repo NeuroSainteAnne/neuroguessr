@@ -7,11 +7,12 @@ import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
 import { fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
+import { Niivue, NVImage } from '@niivue/niivue';
 
 const MultiplayerGameScreen = () => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
-      preloadedBackgroundMNI, currentLanguage, niivueModule, pageContext,
+      preloadedBackgroundMNI, currentLanguage, pageContext,
       setHeaderText, setHeaderTextMode, setHeaderTime, updateToken
    } = useApp();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
@@ -21,7 +22,8 @@ const MultiplayerGameScreen = () => {
   const [connected, setConnected] = useState(false);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
-  const wsRef = useRef<WebSocket | null>(null);
+  const evtSourceRef = useRef<EventSource | null>(null);
+  const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,7 +35,7 @@ const MultiplayerGameScreen = () => {
   const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
   const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
   const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const selectedVoxel = useRef<number[] | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
   const currentTarget = useRef<number | null>(null);
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
@@ -43,6 +45,7 @@ const MultiplayerGameScreen = () => {
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
+
   const handleConnect = () => {
     setError(null);
     if (!inputCode.match(/^\d{8}$/)) {
@@ -55,28 +58,22 @@ const MultiplayerGameScreen = () => {
         return;
       }
     }
-    connectWS(inputCode)
+    joinLobby(inputCode)
   }
   const anonUsernameInputRef = useRef<HTMLInputElement>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1],
                 doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
             }));
-          }
-      });
       return () => { 
-        isMounted = false;
         cleanHeader()
       };
     }, []);
@@ -87,25 +84,25 @@ const MultiplayerGameScreen = () => {
     setHeaderTime("")
   }
 
-  const connectWS = (inputCode: string) => {
+  const joinLobby = (inputCode: string) => {
+    if (evtSourceRef.current) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
-    if (wsRef.current) return;
-    const ws = new WebSocket(`/websocket`);
-    wsRef.current = ws;
-    if(isLoggedIn){
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'join', sessionCode: inputCode, token: authToken }));
-      };
-    } else {
-      ws.onopen = () => {
-        ws.send(JSON.stringify({ type: 'join-anonymous', sessionCode: inputCode, 
-                                username: anonUsername }));
-      };
-    }
-    ws.onmessage = (event) => {
+
+    let url = `/sse/${inputCode}/${isLoggedIn ? userUsername : anonUsername}`;
+    if (isLoggedIn && authToken) url += `?token=${authToken}`;
+    if (!isLoggedIn && anonUsername) url += `?anonymous=true`;
+
+    const evtSource = new EventSource(url);
+    evtSourceRef.current = evtSource;
+
+    evtSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'error') {
         setError(data.message);
+      } else if (data.type === 'fatal-error') {
+        setError(data.message);
+        if(evtSourceRef.current) evtSourceRef.current.close();
+        evtSourceRef.current = null;
       } else if (data.type === 'lobby-users' && Array.isArray(data.users)) {
         setConnected(true)
         setLobbyUsers(data.users);
@@ -115,11 +112,12 @@ const MultiplayerGameScreen = () => {
         tryLaunchGame()
       } else if (data.type === 'player-joined' && data.userName) {
         setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+      } else if (data.type === 'anon-token' && data.anonToken) {
+        anonTokenRef.current = data.anonToken;
       } else if (data.type === 'player-left' && data.userName) {
         setLobbyUsers(prev => prev.filter(u => u !== data.userName));
       } else if (data.type === 'parameters-updated' && data.parameters) {
         setParameters(data.parameters as MultiplayerParametersType);
-        console.log("parameters", data.parameters)
       } else if (data.type === 'game-start') {
         setHasStarted(true)
         setCurrentAttempts(0)
@@ -145,12 +143,6 @@ const MultiplayerGameScreen = () => {
           isFirstGuess.current = false;
           setForceDisplayUpdate((n)=>n+1)
         }
-      } else if (data.type === 'guess-result') {
-        if(data.isCorrect){
-          setHeaderTextMode("success")
-        } else {
-          setHeaderTextMode("failure")
-        }
       } else if (data.type === 'all-scores-update') {
         setPlayerScores(data.scores)
       } else if (data.type === 'score-update') {
@@ -164,17 +156,34 @@ const MultiplayerGameScreen = () => {
         setShowMultiplayerOverlay(true)
       }
     };
-    ws.onerror = () => {
-      setError(t('websocket-error'));
-    };
-    ws.onclose = () => {
-      clearInterface()
+    evtSource.onerror = (event) => {
+      setError(t('sse-error'));
+      console.error("SSE connection error:", event);
+      if(evtSourceRef.current) evtSourceRef.current.close();
+      evtSourceRef.current = null;
     };
   };
 
-  const tryLaunchGame = () => {
-    if(wsRef.current && wsRef.current.readyState && askedSessionCode && askedSessionToken && isLoggedIn){
-      wsRef.current.send(JSON.stringify({ type: 'launch-game', sessionCode: askedSessionCode, sessionToken: askedSessionToken }))
+
+  const tryLaunchGame = async () => {
+    if (evtSourceRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
+      try {
+        const response = await fetch('/api/multi/launch-game', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ sessionCode: askedSessionCode, sessionToken: askedSessionToken })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setError(data?.message || t('error_launching_game'));
+        }
+      } catch (err) {
+        setError(t('error_launching_game'));
+        console.error("Error launching game:", err);
+      }
     }
   }
 
@@ -197,7 +206,7 @@ const MultiplayerGameScreen = () => {
   };
 
   const updateGameDisplay = () => {
-    if (hasStarted && connected && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
+    if (hasStarted && evtSourceRef.current && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
     } else {
@@ -209,7 +218,7 @@ const MultiplayerGameScreen = () => {
   }, [parameters, currentAttempts, forceDisplayUpdate]);
 
   const handleSpaceBar = () => {
-    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && connected) {
+    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && evtSourceRef.current) {
       validateGuess();
     }
   }
@@ -262,15 +271,17 @@ const MultiplayerGameScreen = () => {
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
       setInputCode(askedSessionCode)
-      connectWS(askedSessionCode)
+      joinLobby(askedSessionCode)
     } else if(askedSessionCode && config.activateAnonymousMode){
       setIsAnonymous(false)
       clearInterface()
       setLobbyUsers([])
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
-      if(wsRef.current) wsRef.current.close()
-      wsRef.current = null
+      if (evtSourceRef.current) {
+        evtSourceRef.current.close();
+        evtSourceRef.current = null;
+      }
       setInputCode(askedSessionCode)
       if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
     }
@@ -278,7 +289,7 @@ const MultiplayerGameScreen = () => {
 
   useEffect(()=>{
     tryLaunchGame()
-  }, [askedSessionToken])
+  }, [askedSessionToken, connected])
 
   const checkToken = async () => {
     updateToken(await refreshToken())
@@ -286,9 +297,9 @@ const MultiplayerGameScreen = () => {
 
   useEffect(() => {
     return () => {
-      if (wsRef.current && wsRef.current.readyState === wsRef.current.OPEN) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (evtSourceRef.current) {
+        evtSourceRef.current.close();
+        evtSourceRef.current = null;
       }
       if (countdownInterval.current) clearInterval(countdownInterval.current);
       setHeaderTextMode("")
@@ -310,9 +321,9 @@ const MultiplayerGameScreen = () => {
   useEffect(() => {
   if (askedAtlas) {
       const atlas = atlasFiles[askedAtlas];
-      if (atlas && niivueModule) {
+      if (atlas) {
         const niiFile = "/atlas/nii/" + atlas.nii;
-        niivueModule.NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
+        NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
             setLoadedAtlas(nvImage);
         }).catch((error: any) => {
             console.error("Error loading NIfTI file:", error);
@@ -320,7 +331,7 @@ const MultiplayerGameScreen = () => {
         });
       }
   }
-}, [askedAtlas, niivueModule])
+}, [askedAtlas, NVImage])
 
   useEffect(() => {
     if(niivue && preloadedBackgroundMNI && canvasRef.current && hasStarted){
@@ -371,22 +382,49 @@ const MultiplayerGameScreen = () => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if(clickedRegionLocation){
-      selectedVoxel.current = clickedRegionLocation.vox;
+      selectedVoxelProp.current = clickedRegionLocation;
     }
   }
 
-  const validateGuess = () => {
-    if (!selectedVoxel.current || !hasStarted || !currentTarget.current || !wsRef.current) {
-      console.warn('Cannot validate guess:', { selectedVoxel, hasStarted, currentTarget });
+  const validateGuess = async () => {
+    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current) {
+      console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
     }
-    setHeaderTextMode("")
-    if(guessButtonRef.current) guessButtonRef.current.disabled = true
-    wsRef.current.send(JSON.stringify({
-      type: 'validate-guess',
-      voxel: selectedVoxel.current
-    }));
-  }
+    setHeaderTextMode("");
+    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+
+    try {
+      const response = await fetch('/api/multi/validate-guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionCode: askedSessionCode,
+          userName: isLoggedIn ? userUsername : anonUsername,
+          voxelProp: selectedVoxelProp.current,
+          ...(isAnonymous && anonTokenRef.current ? { anonToken : anonTokenRef.current } : {}),
+          ...(isLoggedIn ? { userToken : authToken } : {})
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data?.message || t('error_validating_guess'));
+        if (guessButtonRef.current) guessButtonRef.current.disabled = false;
+        return;
+      }
+      if (data.type === 'guess-result') {
+        if (data.isCorrect) {
+          setHeaderTextMode("success");
+        } else {
+          setHeaderTextMode("failure");
+        }
+      }
+    } catch (err) {
+      setError(t('error_validating_guess'));
+      if (guessButtonRef.current) guessButtonRef.current.disabled = false;
+      console.error("Error validating guess:", err);
+    }
+  };
 
   const title = t("neuroguessr_multiplayer_title")
   return (
@@ -399,13 +437,13 @@ const MultiplayerGameScreen = () => {
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">
-          <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+          <button className="guess-button" ref={guessButtonRef} onClick={validateGuess} data-umami-event="multiplayer guess button">
             <span className="confirm-text">{t("confirm_guess")}</span>
             <span className="space-text">{t("space_key")}</span>
           </button>
         </div>
       </div>
-      {(isLoggedIn || config.activateAnonymousMode) && !connected && <>
+      {(isLoggedIn || config.activateAnonymousMode) && !connected && !askedSessionToken  && <>
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
           <input
@@ -426,13 +464,13 @@ const MultiplayerGameScreen = () => {
                 width: 250, border:"1px solid white" }}
             />
           }
-          <button className="join-multiplayer-button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
+          <button className="join-multiplayer-button"  data-umami-event="multiplayer join button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
         </div>
         {!isLoggedIn && <div className="multiplayer-suggest-login" 
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
           .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
       </>}
-      {(isLoggedIn ||isAnonymous) && connected && <div style={{ marginTop: 24 }}>
+      {(isLoggedIn || isAnonymous) && connected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]

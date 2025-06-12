@@ -13,6 +13,7 @@ export const GameSelectorAtlas = () => {
         {atlasCategories.map((category) => (
           <button key={category}
             className={selectedCategory == category ? "category-button selected" : "category-button"}
+            data-umami-event="select atlas category" data-umami-event-category={category}
             onClick={() => { setSelectedCategory(category) }}>
             {t(category)}
           </button>
@@ -25,6 +26,7 @@ export const GameSelectorAtlas = () => {
           .map(([key, atlas]) => (
             <button key={atlas.name}
               className={selectedAtlas == key ? "panel-button selected" : "panel-button"}
+              data-umami-event="select atlas" data-umami-event-atlas={key.toLowerCase()}
               onClick={() => setSelectedAtlas(key)}>
               <span className="atlas-info" dangerouslySetInnerHTML={{ __html: t(key.toLowerCase() + "_info") }}></span>
               {atlas.difficulty > 0 && (

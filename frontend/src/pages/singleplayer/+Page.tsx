@@ -8,6 +8,8 @@ import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { Niivue } from '@niivue/niivue';
+import { navigate } from 'vike/client/router';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -85,7 +87,7 @@ export function Page() {
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
-  const selectedVoxel = useRef<number[] | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
   const validRegions = useRef<number[]>([]);
   const usedRegions = useRef<number[]>([]);
   const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
@@ -105,24 +107,22 @@ export function Page() {
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const lastTouchEvent = useRef<React.Touch | null>(null);
 
-  const [niivue, setNiivue] = useState<any>(null);
+  const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
       setAskedAtlas(routeParams?.atlas);
-      let isMounted = true;
-      import('@niivue/niivue').then((mod) => {
-          if (isMounted) {
-            setNiivue(new mod.Niivue({
+      setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1],
                 doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
             }));
-          }
-      });
       return () => { 
-        isMounted = false;
         cleanHeader()
+        if (timerInterval.current) {
+          clearInterval(timerInterval.current);
+          timerInterval.current = null;
+        }
       };
     }, []);
 
@@ -257,7 +257,7 @@ export function Page() {
 
   const resetGameState = () => {
     currentTarget.current = null;
-    selectedVoxel.current = null;
+    selectedVoxelProp.current = null;
     setCurrentAttempts(0); // Reset attempts for practice mode
     setCurrentScore(0); // Reset score for Time Attack
     setCurrentCorrects(0); // Reset correct count for Practice/Streak
@@ -310,7 +310,7 @@ export function Page() {
   const startGame = () => {
     setIsGameRunning(true);
     resetGameState();
-    niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
+    if(niivue) niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
 
     startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
       if (session) {
@@ -388,7 +388,9 @@ export function Page() {
       if (isLoggedIn) {
         manualClotureGameSession().then((finalScore) => {
           endTimeAttack(finalScore);
-        })
+        }).catch((error) => {
+          endTimeAttack(finalScore);
+        });
       } else {
         endTimeAttack(currentScoreRef.current);
       }
@@ -409,7 +411,7 @@ export function Page() {
 
     // Stop the game
     setIsGameRunning(false)
-    selectedVoxel.current = null;
+    selectedVoxelProp.current = null;
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
   }
 
@@ -476,7 +478,7 @@ export function Page() {
 
     if (currentTarget.current) {
       setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
-      selectedVoxel.current = null; // Reset selected voxel
+      selectedVoxelProp.current = null; // Reset selected voxel
       if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
       if (cLut.current && niivue) {
         if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(cLut.current.slice());
@@ -534,7 +536,7 @@ export function Page() {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !isGameRunning || !canvasRef.current) return;
     const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
     if (clickedRegionLocation) {
-      selectedVoxel.current = clickedRegionLocation.vox;
+      selectedVoxelProp.current = clickedRegionLocation;
       if (gameMode === 'navigation') {
         setHeaderText(cMap.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
@@ -551,7 +553,7 @@ export function Page() {
         niivue.drawScene();
       }
     } else {
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       if (gameMode === 'navigation') {
         setHeaderText(t('no_region_selected'));
         setHighlightedRegion(null);
@@ -562,16 +564,16 @@ export function Page() {
   }
 
   const validateGuess = async () => {
-    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current || !niivue) {
-      console.warn('Cannot validate guess:', { selectedVoxel, isGameRunning, currentTarget });
+    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !niivue) {
+      console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
       return;
     }
     let guessSuccess = null;
     let isEndgame = false;
     let clickedRegion = null;
-    let clickedPosition = niivue.vox2mm(selectedVoxel.current, niivue.volumes[1].matRAS!) as number[];;
     let scoreIncrement = 0;
     let givenFinalScore = 0;
+    let performHighlight = false;
     if (isLoggedIn) {
       try {
         const token = localStorage.getItem('authToken');
@@ -584,7 +586,7 @@ export function Page() {
           body: JSON.stringify({
             sessionId: sessionId.current,
             sessionToken: sessionToken.current,
-            coordinates: clickedPosition
+            coordinates: selectedVoxelProp.current
           }),
         });
         const result = await response.json();
@@ -592,13 +594,14 @@ export function Page() {
         isEndgame = result.endgame;
         clickedRegion = result.voxelValue;
         scoreIncrement = result.scoreIncrement;
-        givenFinalScore = result.finalScore
+        givenFinalScore = result.finalScore;
+        performHighlight = result.performHighlight;
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
       }
     } else {
-      clickedRegion = Math.round(niivue.volumes[1].getValue(selectedVoxel.current[0], selectedVoxel.current[1], selectedVoxel.current[2]));
+      clickedRegion = selectedVoxelProp.current.idx;
       guessSuccess = clickedRegion === currentTarget.current;
       if (gameMode === 'time-attack') {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
@@ -609,21 +612,21 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, clickedRegion, clickedPosition, guessSuccess, scoreIncrement }:
-    { isEndgame: boolean, clickedRegion: number, clickedPosition: number[]|null, guessSuccess: boolean, scoreIncrement: number }): { scoreIncrement: number } => {
-    if (!selectedVoxel.current || !isGameRunning || !currentTarget.current) {
-      console.warn('Cannot update score:', { selectedVoxel, isGameRunning, currentTarget });
+  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight }:
+    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean }): { scoreIncrement: number } => {
+    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
+      console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
       return { scoreIncrement };
     }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
-    const clickedRegionName = clickedRegion && cMap.current && cMap.current.labels?.[clickedRegion] ? cMap.current.labels[clickedRegion] : t('unknown_region');
+    const clickedRegionName = cMap.current && cMap.current.labels?.[selectedVoxelProp.current.idx] ? cMap.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
 
     if (guessSuccess) {
       // Correct Guess
@@ -649,7 +652,7 @@ export function Page() {
         niivue.updateGLVolume();
         niivue.drawScene(); // Redraw scene to ensure color reset is visible
       }
-      selectedVoxel.current = null; // Reset selected voxel after guess
+      selectedVoxelProp.current = null; // Reset selected voxel after guess
       if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
 
       // Move to the next target after a short delay to show feedback
@@ -664,14 +667,15 @@ export function Page() {
 
       if (gameMode === 'practice') {
         // Use i18next interpolation for the incorrect message
-        const incorrectMessage = t('incorrect', { region: clickedRegionName });
+        const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
         setHeaderText(incorrectMessage);
         setHeaderTextMode("failure")
 
         //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
 
         //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
-        if (currentAttempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) {
+        if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) || 
+            (isLoggedIn && performHighlight)) {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
         // Increased timeout duration to make the incorrect message visible longer
@@ -684,21 +688,26 @@ export function Page() {
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && cMap.current && cMap.current.labels && cMap.current.centers) {
-          const correctCenter = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
-          const clickedCenter = clickedPosition ? clickedPosition :
-              cMap.current.centers && clickedRegion ? cMap.current.centers[clickedRegion] : null;
+          const correctCenters = cMap.current.centers ? cMap.current.centers[currentTarget.current] : null;
+          const proposedCenter = selectedVoxelProp.current.mm;
 
-          if (correctCenter && clickedCenter) {
+          if (correctCenters && proposedCenter) {
             // Calculate Euclidean distance between centers
-            const distance = Math.sqrt(
-              Math.pow(correctCenter[0] - clickedCenter[0], 2) +
-              Math.pow(correctCenter[1] - clickedCenter[1], 2) +
-              Math.pow(correctCenter[2] - clickedCenter[2], 2)
-            );
+            let minDistance = Infinity;
+            for (const center of correctCenters) {
+              const centerDistance = Math.sqrt(
+                Math.pow(center[0] - proposedCenter[0], 2) +
+                Math.pow(center[1] - proposedCenter[1], 2) +
+                Math.pow(center[2] - proposedCenter[2], 2)
+              );
+              if (centerDistance < minDistance) {
+                minDistance = centerDistance;
+              }
+            }
 
             // Calculate score based on distance
-            if (distance <= MAX_PENALTY_DISTANCE) {
-              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+            if (minDistance <= MAX_PENALTY_DISTANCE) {
+              scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
               scoreIncrement = 0; // No points for too far away
             }
@@ -712,7 +721,7 @@ export function Page() {
             // ***************************************************************************
 
           } else {
-            console.warn(`Center data missing for region ${currentTarget} or ${clickedRegion}. Cannot calculate distance-based score.`);
+            console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
             // Option: award minimal points or 0 if center data is missing
             scoreIncrement = 0; // Award 0 points if centers are missing
           }
@@ -734,7 +743,7 @@ export function Page() {
         }
       }
 
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
       // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
@@ -790,7 +799,7 @@ export function Page() {
 
       if(gameMode !== 'navigation' && cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
         const center = cMap.current.centers[highlightedRegion];
-        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center));
+        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center[0]));
         niivue.createOnLocationChange();
       }
       niivue.updateGLVolume();
@@ -813,7 +822,7 @@ export function Page() {
         niivue.drawScene();
       }
       setHeaderText(t('click_to_identify'));
-      selectedVoxel.current = null;
+      selectedVoxelProp.current = null;
       setHighlightedRegion(null);
       if (tooltip) {
         setTooltip({ ...tooltip, visible: false });
@@ -946,13 +955,15 @@ export function Page() {
       </div>
       <div className="button-container">
         <a className="return-button" href="/welcome">{t("return_button")}</a>
-        {isNavigationMode && <button className="return-button" onClick={handleRecolorization}>{t("restore_color")}</button>}
-        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} onClick={validateGuess}>
+        {isNavigationMode && <button className="return-button" 
+            data-umami-event="go back" data-umami-event-gobacksource={gameMode}
+            onClick={handleRecolorization}>{t("restore_color")}</button>}
+        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} 
+            data-umami-event="guess button" data-umami-event-guesssource={gameMode}
+            onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
       </div>
-
-      <Help />
 
       {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
         <div className="overlay-content" ref={streakOverlayRef}>
@@ -960,10 +971,14 @@ export function Page() {
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
           {userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
-            <a id="go-back-menu-button-streak" className="home-button" href="/welcome">
+            <button id="go-back-menu-button-streak" 
+                data-umami-event="go back button" data-umami-event-gobacksource="streak" 
+                className="home-button" onClick={() => { navigate("/welcome") }}>
               <i className="fas fa-home"></i>
-            </a>
-            <button id="restart-button-streak" className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
+            </button>
+            <button id="restart-button-streak" 
+                data-umami-event="restart button" data-umami-event-restartsource="streak" 
+                className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -984,10 +999,14 @@ export function Page() {
             <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
           </div>
           <div className="overlay-buttons">
-            <a id="go-back-menu-button-time-attack" className="home-button" href="/welcome">
+            <button id="go-back-menu-button-time-attack" className="home-button" 
+                data-umami-event="go back button" data-umami-event-gobacksource="time-attack" 
+                onClick={() => { navigate("/welcome") }}>
               <i className="fas fa-home"></i>
-            </a>
-            <button id="restart-button-time-attack" className="restart-button" onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
+            </button>
+            <button id="restart-button-time-attack" className="restart-button" 
+                data-umami-event="restart button" data-umami-event-gobacksource="time-attack" 
+                onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -1033,6 +1052,7 @@ const PublishToLeaderboardBox = () => {
       <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
         <button
           type="button" className="publish-btn"
+          data-umami-event="publish button" data-umami-event-publishchoice="yes" 
           style={{
             padding: "0.5em 1.5em",
             border: "none",
@@ -1046,6 +1066,7 @@ const PublishToLeaderboardBox = () => {
         </button>
         <button
           type="button" className="publish-btn"
+          data-umami-event="publish button" data-umami-event-publishchoice="no" 
           style={{
             padding: "0.5em 1.5em",
             border: "none",

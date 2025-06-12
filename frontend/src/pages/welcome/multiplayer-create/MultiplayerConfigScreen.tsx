@@ -5,6 +5,7 @@ import { useApp } from '../../../context/AppContext';
 import { MultiplayerParametersType } from '../../../types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
+import { navigate } from 'vike/client/router';
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -19,7 +20,7 @@ const MultiplayerConfigScreen = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
-    const wsRef = useRef<WebSocket | null>(null);
+    const evtSourceRef = useRef<EventSource | null>(null);
     const [numRegions, setNumRegions] = useState<number>(DEFAULT_REGION_NUMBER);
     const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
@@ -73,44 +74,52 @@ const MultiplayerConfigScreen = () => {
     };
 
     useEffect(() => {
-        if (sessionCode && sessionToken) {
-            const ws = new WebSocket(`/websocket`);
-            wsRef.current = ws;
-            ws.onopen = () => {
-                ws.send(JSON.stringify({
-                    type: 'join',
-                    sessionCode,
-                    token: authToken
-                }));
-            };
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'lobby-users' && Array.isArray(data.users)) {
-                setLobbyUsers(data.users);
-                } else if (data.type === 'player-joined' && data.userName) {
-                setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
-                } else if (data.type === 'player-left' && data.userName) {
-                setLobbyUsers(prev => prev.filter(u => u !== data.userName));
-                }
-            };
-            ws.onerror = () => {
-                setError('WebSocket connection error');
-            };
-            ws.onclose = () => {
-                // Optionally handle disconnect
-            };
-            return () => { if(ws.readyState == ws.OPEN) ws.close(); }
-        }
-    }, [sessionCode, sessionToken]);
+        if (sessionCode && sessionToken && userUsername && authToken) {
+            // Open SSE connection as host
+            const url = `/sse/${sessionCode}/${userUsername}?token=${authToken}`;
+            const evtSource = new EventSource(url);
+            evtSourceRef.current = evtSource;
 
-    const updateParameters = (newParameters : Partial<MultiplayerParametersType>) => {
+            evtSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'lobby-users' && Array.isArray(data.users)) {
+                setLobbyUsers(data.users);
+            } else if (data.type === 'player-joined' && data.userName) {
+                setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+            } else if (data.type === 'player-left' && data.userName) {
+                setLobbyUsers(prev => prev.filter(u => u !== data.userName));
+            }
+            };
+            evtSource.onerror = () => {
+            setError('SSE connection error');
+            };
+            return () => {
+            evtSource.close();
+            evtSourceRef.current = null;
+            };
+        }
+    }, [sessionCode, sessionToken, userUsername, authToken]);
+
+    const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
         parametersRef.current = {...parametersRef.current, ...newParameters}
         // Send updated parameters to the server
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'update-parameters',
-                parameters: parametersRef.current
-            }));
+        if (sessionCode && sessionToken) {
+            try {
+                await fetch('/api/multi/update-parameters', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                    sessionCode,
+                    sessionToken,
+                    parameters: parametersRef.current
+                    })
+                });
+            } catch (err) {
+            setError('Failed to update parameters');
+            }
         }
     }
 
@@ -201,6 +210,7 @@ const MultiplayerConfigScreen = () => {
                                 <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
                                     <button
                                         title="Copy game number"
+                                        data-umami-event="copy game code button"
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
@@ -218,6 +228,7 @@ const MultiplayerConfigScreen = () => {
                                     </button>
                                     <button
                                         title="Copy game link (link icon)"
+                                        data-umami-event="copy game link button"
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
@@ -246,17 +257,19 @@ const MultiplayerConfigScreen = () => {
                             <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
                             </ul>
-                            <a
+                            <button
                                 className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
-                                href={`/multiplayer/${sessionCode}${(sessionToken?"/"+sessionToken:"")}`}
+                                data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
+                                data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
+                                data-umami-event-start-multi-lobbysize={lobbyUsers.length}
                                 onClick={(e)=>{
                                     if(!loading && selectedAtlas && lobbyUsers.length > 1){
-                                        e.preventDefault(); e.stopPropagation();
+                                        navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
                                     } 
                                 }}
                             >
                                 {t("start_game_button")}
-                        </a></div>
+                        </button></div>
                     </div>
                 </div>
             )}

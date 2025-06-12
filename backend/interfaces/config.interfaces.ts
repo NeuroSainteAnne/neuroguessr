@@ -43,4 +43,5 @@ export interface Config {
     allowAnonymousInMultiplayer: boolean;
     salt: string;
     jwt_secret: string;
+    pgConnectionString: string;
 }

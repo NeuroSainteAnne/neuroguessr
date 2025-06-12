@@ -28,7 +28,7 @@ export type ColorMap = {
   min?: number;
   max?: number;
   labels?: string[];
-  centers?: number[][];
+  centers?: number[][][];
 };
 
 
@@ -36,5 +36,6 @@ export interface CustomTokenPayload {
   username?: string;
   firstname?: string;
   lastname?: string;
+  id?: number;
   publishToLeaderboard?: boolean|null;
 }

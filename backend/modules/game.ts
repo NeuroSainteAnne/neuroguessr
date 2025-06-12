@@ -1,4 +1,4 @@
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import jwt from "jsonwebtoken";
 import fs from 'fs'
 import path from "path";
@@ -10,6 +10,7 @@ import type { GameProgress, GameSession } from "../interfaces/database.interface
 import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionRequest, ValidateRegionRequest } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import crypto from 'crypto';
 const config: Config = configJson;
 
 const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -24,7 +25,7 @@ const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighti
 export const validRegions : Record<string,number[]> = {}
 export const imageRef : Record<string,NVImage> = {}
 export const imageMetadata : Record<string,any> = {}
-export const regionCenters : Record<string,number[][]> = {}
+export const regionCenters : Record<string,number[][][]> = {}
 for (const atlas in atlasFiles) {
     const atlasJsonPath = path.join(htmlRoot, "frontend", "public", "atlas", "descr", "en", atlasFiles[atlas].json)
     const atlasJson = JSON.parse(fs.readFileSync(atlasJsonPath, 'utf-8'))
@@ -60,20 +61,20 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
         }
 
         // Generate a session token
-        const sessionToken: string = jwt.sign({ userId, mode, atlas }, config.jwt_secret, { expiresIn: "1h" });
+        const sessionToken: string = crypto.randomBytes(32).toString('hex');
 
         // Save the session to the database
-        const insertSessionStmt = db.prepare(`
-            INSERT INTO gamesessions (userId, token, mode, atlas)
-            VALUES (?, ?, ?, ?)
-        `);
-        const result = insertSessionStmt.run(userId, sessionToken, mode, atlas);
+         const result = await sql`
+            INSERT INTO game_sessions (user_id, token, mode, atlas, current_score, created_at)
+            VALUES (${userId}, ${sessionToken}, ${mode}, ${atlas}, 0, NOW())
+            RETURNING id
+        ` as {id: number}[];
 
         // Respond with the session token
         res.status(200).send({
             message: "Game session started successfully.",
             sessionToken,
-            sessionId: result.lastInsertRowid
+            sessionId: result[0].id,
         });
     } catch (error) {
         console.error("Error starting game session:", error);
@@ -87,32 +88,30 @@ export const getNextRegion = async (
 ): Promise<void> => {
     try {
         const { sessionId, sessionToken } = req.body;
+
         // Validate the session token
-        const getSessionStmt = db.prepare(
-            `SELECT * FROM gamesessions WHERE id = ? AND token = ?`
-        );
-        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-        if (!session) {
-            res
-                .status(403)
-                .send({ message: "Invalid session or token mismatch" });
+        const sessionResult = await sql`
+            SELECT * FROM game_sessions WHERE id = ${sessionId} AND token = ${sessionToken}
+        ` as GameSession[];
+        if (!sessionResult.length) {
+            res.status(403).send({ message: "Invalid session or token mismatch" });
             return;
         }
+        const session = sessionResult[0];
+
         // Get the atlas length
         const atlasValidRegions = validRegions[session.atlas];
         if (!atlasValidRegions) {
-            res
-                .status(400)
-                .send({ message: "Invalid atlas specified in the session." });
+            res.status(400).send({ message: "Invalid atlas specified in the session." });
             return;
         }
 
         // --- TIME-ATTACK: Check if time is up before selecting a new region ---
         if (session.mode === "time-attack") {
-            const elapsedTime = Date.now() - session.createdAt;
+            const elapsedTime = Date.now() - new Date(session.created_at).getTime();
             if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
                 // Time is up, end the game and notify frontend
-                let {finalScore} = endGame({ session, quitReason: "timeout" });
+                let {finalScore} = await endGame({ session, quitReason: "timeout" });
                 res.status(200).send({
                     message: "Time is up! Game over.",
                     regionId: -1,
@@ -126,16 +125,16 @@ export const getNextRegion = async (
             }
         }
 
-        // Check if there is already an active gameprogress element; if yes, return the ongoing region
-        const getActiveProgressStmt = db.prepare(
-            `SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1`
-        );
-        const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress | undefined;
-        if (activeProgress) {
+        // Check if there is already an active gameprogress element
+        const activeProgresses = await sql`
+            SELECT * FROM game_progress 
+            WHERE session_id = ${sessionId} AND is_active = TRUE
+        ` as GameProgress[];
+        if (activeProgresses.length > 0) {
             // There is already an active region, return it
             res.status(200).send({
                 message: "Ongoing region found.",
-                regionId: activeProgress.regionId,
+                regionId: activeProgresses[0].region_id,
                 newRegion: false
             });
             return;
@@ -144,12 +143,12 @@ export const getNextRegion = async (
         let randomRegionId: number | null = null;
         if (session.mode == "time-attack") {
             // we have to select region that has not already been answered
-            const getSessionStmt = db.prepare(
-                `SELECT * FROM gameprogress WHERE sessionId = ? AND isCorrect = 1`
-            );
-            const answeredRegions = getSessionStmt.all(sessionId) as GameProgress[];
+            const answeredRegions = await sql`
+                SELECT * FROM game_progress 
+                WHERE session_id = ${sessionId} AND is_correct = TRUE
+            ` as GameProgress[];
             const answeredRegionIds = answeredRegions.map(
-                (region) => region.regionId
+                (region) => region.region_id
             );
             let remainingRegionIds = atlasValidRegions.filter(
                 (regionId) => !answeredRegionIds.includes(regionId)
@@ -159,9 +158,7 @@ export const getNextRegion = async (
                 remainingRegionIds = atlasValidRegions;
             }
             // Select a random region from the remaining regions
-            const randomIndex = Math.floor(
-                Math.random() * remainingRegionIds.length
-            );
+            const randomIndex = Math.floor(Math.random() * remainingRegionIds.length);
             randomRegionId = remainingRegionIds[randomIndex];
         } else {
             // Select a random region from all regions
@@ -169,11 +166,18 @@ export const getNextRegion = async (
             randomRegionId = atlasValidRegions[randomIndex];
         }
         if (randomRegionId !== null) {
-            db.exec(`
-                UPDATE gameprogress SET isActive = 0 WHERE sessionId = ${sessionId} AND isActive = 1;
-                INSERT INTO gameprogress (sessionId, sessionToken, regionId, timeTaken, isActive, isCorrect)
-                VALUES (${sessionId}, '${sessionToken}', ${randomRegionId}, 0, 1, 0);
-            `);
+            // First, deactivate any active regions
+            await sql`
+                UPDATE game_progress 
+                SET is_active = FALSE 
+                WHERE session_id = ${sessionId} AND is_active = TRUE
+            `;
+            // Insert the new active region
+            await sql`
+                INSERT INTO game_progress (session_id, session_token, region_id, time_taken, is_active, is_correct, created_at)
+                VALUES (${sessionId}, ${sessionToken}, ${randomRegionId}, 0, TRUE, FALSE, NOW())
+            `;
+
             res.status(200).send({
                 message: "Next region selected successfully.",
                 regionId: randomRegionId,
@@ -190,31 +194,38 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
     try {
         const { sessionId, sessionToken, coordinates } = req.body;
         // Validate the session token
-        const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-        if (!session) {
+        const sessionResults = await sql`
+            SELECT * FROM game_sessions 
+            WHERE id = ${sessionId} AND token = ${sessionToken}
+        ` as GameSession[];
+        if (!sessionResults.length) {
             res.status(403).send({ message: "Invalid session or token mismatch" });
-            return
+            return;
         }
+        const session = sessionResults[0];
+
         // get time elapsed from session start
-        let elapsedTime = Math.floor((Date.now() - session.createdAt)); // Time in milliseconds
+        let elapsedTime = Math.floor((Date.now() - session.created_at)); // Time in milliseconds
 
         // Retrieve the active gameprogress entry
-        const getActiveProgressStmt = db.prepare(`
-            SELECT * FROM gameprogress WHERE sessionId = ? AND isActive = 1
-        `);
-        const activeProgress = getActiveProgressStmt.get(sessionId) as GameProgress;
-        if (!activeProgress) {
+        const activeProgresses = await sql`
+            SELECT * FROM game_progress 
+            WHERE session_id = ${sessionId} AND is_active = TRUE
+        ` as GameProgress[];
+        if (!activeProgresses.length) {
             res.status(400).send({ message: "No active region to validate." });
             return;
         }
-        const { regionId } = activeProgress;
+        const activeProgress = activeProgresses[0];
+        const regionId = activeProgress.region_id;
+
         // Validate the coordinates
-        if (!coordinates || !Array.isArray(coordinates) || coordinates.length !== 3) {
+        if (!coordinates || !Array.isArray(coordinates.mm) || coordinates.mm.length < 3 || 
+                !Array.isArray(coordinates.vox) || coordinates.vox.length < 3) {
             res.status(400).send({ message: "Invalid coordinates provided." });
             return;
         }
-        const [x, y, z] = coordinates;
+        const [x, y, z] = coordinates.vox;
         // Get the atlas data for the session
         const atlasImage: NVImage = imageRef[session.atlas];
         const atlasMetadata = imageMetadata[session.atlas];
@@ -237,15 +248,23 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 scoreIncrement = MAX_POINTS_PER_REGION;
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const center: number[] = regionCenters[session.atlas][regionId];
-                    const distance = Math.sqrt(
-                        Math.pow(center[0] - x, 2) +
-                        Math.pow(center[1] - y, 2) +
-                        Math.pow(center[2] - z, 2)
-                    );
+                    const centers: number[][] = regionCenters[session.atlas][regionId];
+                    const [xMm, yMm, zMm] = coordinates.mm;
+                    // Find the minimum distance to any center of the region
+                    let minDistance = Infinity;
+                    for (const center of centers) {
+                        const distance = Math.sqrt(
+                            Math.pow(center[0] - xMm, 2) +
+                            Math.pow(center[1] - yMm, 2) +
+                            Math.pow(center[2] - zMm, 2)
+                        );
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                        }
+                    }
                     // Calculate score based on distance
-                    if (distance <= MAX_PENALTY_DISTANCE) {
-                        scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                    if (minDistance <= MAX_PENALTY_DISTANCE) {
+                        scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
                     } else {
                         scoreIncrement = 0; // No points for too far away
                     }
@@ -253,17 +272,27 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             }
         }
 
-        const updateProgressStmt = db.prepare(`
-            UPDATE gameprogress
-            SET isActive = ?, isCorrect = ?, timeTaken = ?, scoreIncrement = ?
-            WHERE id = ?
-        `);
-        let isActive = 0
+        let isActive = false
+        let attempts = activeProgress.attempts + 1; // Increment attempts
+        let performHighlight = false
         if(session.mode == "practice"){
-            isActive = isCorrect ? 0 : 1
+            isActive = isCorrect ? false : true; // In practice mode, keep the region active if incorrect
+            if(!isCorrect && attempts >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT){
+                performHighlight = true; // Propose to highlight the region
+            }
         }
-        const timeTaken = Math.floor((Date.now() - activeProgress.createdAt)); // Time in milliseconds
-        updateProgressStmt.run(isActive, isCorrect ? 1 : 0, timeTaken, scoreIncrement, activeProgress.id);
+        const timeTaken = Math.floor((Date.now() - activeProgress.created_at)); // Time in milliseconds
+
+        // Update the progress
+        await sql`
+            UPDATE game_progress
+            SET is_active = ${isActive}, 
+                is_correct = ${isCorrect}, 
+                time_taken = ${timeTaken}, 
+                score_increment = ${scoreIncrement},
+                attempts = ${attempts}
+            WHERE id = ${activeProgress.id}
+        `;
 
         let endgame = false;
         let quitReason = ""
@@ -274,9 +303,13 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         } else if (session.mode == "time-attack") {
             // Check time elapsed since session start
             // Check if all regions have been answered
-            const getAnsweredRegionsStmt = db.prepare(`SELECT COUNT(*) as count FROM gameprogress WHERE sessionId = ?`);
-            const answeredRegions = getAnsweredRegionsStmt.get(sessionId) as { count: number };
-            if (answeredRegions.count >= TOTAL_REGIONS_TIME_ATTACK) {
+            const answeredRegionsResult = await sql`
+                SELECT COUNT(*) as count 
+                FROM game_progress 
+                WHERE session_id = ${sessionId}
+            ` as { count: number }[];
+            const answeredRegionsCount = answeredRegionsResult[0].count;
+            if (answeredRegionsCount >= TOTAL_REGIONS_TIME_ATTACK) {
                 endgame = true;
                 quitReason = "all-answered"
                 if (elapsedTime < MAX_TIME_IN_SECONDS*1000) { // add bonus points if time is not over
@@ -291,17 +324,16 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         }
 
         // Save the score in the session
-        const finalScore = session.currentScore + scoreIncrement; // Add the last score increment
-        const updateSessionStmt = db.prepare(`
-            UPDATE gamesessions
-            SET currentScore = ?
-            WHERE id = ?
-        `);
-        updateSessionStmt.run(finalScore, sessionId);
+        const finalScore = session.current_score + scoreIncrement; // Add the last score increment
+        await sql`
+            UPDATE game_sessions
+            SET current_score = ${finalScore}
+            WHERE id = ${sessionId}
+        `;
 
         // If the game is over, update the session status
         if (endgame) {
-            endGame({session, finalScore, elapsedTime, quitReason, bonusTime})
+            await endGame({session, finalScore, elapsedTime, quitReason, bonusTime})
         }
         // Respond with the result
         res.status(200).send({
@@ -312,6 +344,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             endgame,
             scoreIncrement,
             finalScore,
+            performHighlight
         });
     } catch (error: unknown) {
         console.log(error);
@@ -323,15 +356,20 @@ export const manualClotureGameSession = async (req: ClotureGameSessionRequest, r
     try {
         const { sessionId, sessionToken } = req.body;
         // Validate the session token
-        const getSessionStmt = db.prepare(`SELECT * FROM gamesessions WHERE id = ? AND token = ?`);
-        const session = getSessionStmt.get(sessionId, sessionToken) as GameSession;
-        if (!session) {
+        const sessionResult = await sql`
+            SELECT * FROM game_sessions 
+            WHERE id = ${sessionId} AND token = ${sessionToken}
+        ` as GameSession[];
+        
+        if (!sessionResult.length) {
             res.status(403).send({ message: "Invalid session or token mismatch" });
-            return
+            return;
         }
+
+        const session = sessionResult[0];
         
         // Time is up, end the game and notify frontend
-        let {finalScore} = endGame({ session, quitReason: "timeout" });
+        let {finalScore} = await endGame({ session, quitReason: "timeout" });
         res.status(200).send({
             message: session.mode === "time-attack"?"Time is up! Game over.":"Game over.",
             isCorrect: false,
@@ -348,16 +386,20 @@ export const manualClotureGameSession = async (req: ClotureGameSessionRequest, r
     }
 }
 
-const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} : 
-    {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : {finalScore: number, elapsedTime: number} => {
+const endGame = async ({session, finalScore, elapsedTime, quitReason, bonusTime} : 
+    {session: GameSession, finalScore?: number, elapsedTime?: number, quitReason?: string, bonusTime?:number}) : Promise<{finalScore: number, elapsedTime: number}> => {
     try {
         if(finalScore === undefined){
-            const getScoreStmt = db.prepare(`SELECT currentScore FROM gamesessions WHERE id = ?`);
-            const scoreRow = getScoreStmt.get(session.id) as { currentScore: number };
-            finalScore = scoreRow ? scoreRow.currentScore : 0;
+            const scoreResult = await sql`
+                SELECT current_score FROM game_sessions WHERE id = ${session.id}
+            ` as { current_score: number }[];
+            finalScore = scoreResult.length ? Number(scoreResult[0].current_score) : 0;
         }
         if(elapsedTime === undefined){
-            elapsedTime = Math.min(Math.floor((Date.now() - session.createdAt)), MAX_TIME_IN_SECONDS);
+            elapsedTime = Math.min(
+                Math.floor(Date.now() - new Date(session.created_at).getTime()), 
+                MAX_TIME_IN_SECONDS * 1000
+            ) / 1000; // Convert to seconds
         }
         if(bonusTime === undefined) bonusTime = 0
         if(quitReason === undefined) quitReason = ""
@@ -365,79 +407,74 @@ const endGame = ({session, finalScore, elapsedTime, quitReason, bonusTime} :
         let accurateClicks = 0
         let incorrectClicks = 0
         let totalClicks = 0
-        if (session.mode === "time-attack") {
-            // All correct answers
-            const getScoreStmt = db.prepare(`
-                SELECT COUNT(*) as count FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 1
-            `);
-            const accurateResults = getScoreStmt.get(session.id) as { count: number };
-            accurateClicks = accurateResults.count
-            // Accuracy: correct / total attempts
-            const getTotalStmt = db.prepare(`
-                SELECT COUNT(*) as count FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 0
-            `);
-            const incorrectResults = getTotalStmt.get(session.id) as { count: number };
-            incorrectClicks = incorrectResults.count
-            totalClicks = accurateClicks + incorrectClicks
-        }
-        if (session.mode === "streak") {
-            const getScoreStmt = db.prepare(`
-                SELECT COUNT(*) as count FROM gameprogress
-                WHERE sessionId = ? AND isCorrect = 1
-            `);
-            const accurateResults = getScoreStmt.get(session.id) as { count: number };
-            accurateClicks = accurateResults.count
-            totalClicks = accurateClicks
+        if (session.mode === "time-attack" || session.mode === "streak") {
+            // Get counts for correct and incorrect clicks
+            const accuracyResult = await sql`
+                SELECT 
+                    SUM(CASE WHEN is_correct = TRUE THEN 1 ELSE 0 END) as accurate_clicks,
+                    SUM(CASE WHEN is_correct = FALSE THEN 1 ELSE 0 END) as incorrect_clicks
+                FROM game_progress
+                WHERE session_id = ${session.id}
+            `;
+            if (accuracyResult.length) {
+                accurateClicks = Number(accuracyResult[0].accurate_clicks) || 0;
+                incorrectClicks = Number(accuracyResult[0].incorrect_clicks) || 0;
+                totalClicks = accurateClicks + incorrectClicks;
+            }
         }
 
         // Compute time per region stats for this session
-        const getTimesStmt = db.prepare(`
-            SELECT timeTaken, isCorrect FROM gameprogress WHERE sessionId = ?
-        `);
-        const timesRows = getTimesStmt.all(session.id) as { timeTaken: number, isCorrect: number }[];
-        const times = timesRows.map(row => row.timeTaken).filter(t => typeof t === 'number' && !isNaN(t));
+        const timesResult = await sql`
+            SELECT time_taken, is_correct 
+            FROM game_progress 
+            WHERE session_id = ${session.id}
+        `;
+        const times = timesResult
+            .map(row => row.time_taken)
+            .filter(t => typeof t === 'number' && !isNaN(t));
 
         // time stats
         let minTimePerRegion = null, maxTimePerRegion = null, avgTimePerRegion = null;
         if (times.length > 0) {
-            minTimePerRegion = Math.min(...times);
-            maxTimePerRegion = Math.max(...times);
-            avgTimePerRegion = times.reduce((a, b) => a + b, 0) / times.length;
+            minTimePerRegion = Math.round(Math.min(...times));
+            maxTimePerRegion = Math.round(Math.max(...times));
+            avgTimePerRegion = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
         }
 
         // time stats in correct regions
-        const correctTimes = timesRows.filter(row => row.isCorrect === 1).map(row => row.timeTaken);
+        const correctTimes = timesResult
+            .filter(row => row.is_correct === true)
+            .map(row => row.time_taken);
         let minTimeCorrect = null, maxTimeCorrect = null, avgTimeCorrect = null;
         if (correctTimes.length > 0) {
-            minTimeCorrect = Math.min(...correctTimes);
-            maxTimeCorrect = Math.max(...correctTimes);
-            avgTimeCorrect = correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length;
+            minTimeCorrect = Math.round(Math.min(...correctTimes));
+            maxTimeCorrect = Math.round(Math.max(...correctTimes));
+            avgTimeCorrect = Math.round(correctTimes.reduce((a, b) => a + b, 0) / correctTimes.length);
         }
 
         // Insert into finishedsessions
-        const insertFinishedStmt = db.prepare(`
-            INSERT INTO finishedsessions (userId, mode, atlas, score, 
+        await sql`
+            INSERT INTO finished_sessions (
+                user_id, mode, atlas, score, 
                 attempts, correct, incorrect, 
-                minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-                minTimePerCorrectRegion, maxTimePerCorrectRegion, avgTimePerCorrectRegion,
-                quitReason, duration)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        insertFinishedStmt.run(session.userId, session.mode, session.atlas, finalScore, 
-            totalClicks, accurateClicks, incorrectClicks,
-            minTimePerRegion, maxTimePerRegion, avgTimePerRegion,
-            minTimeCorrect, maxTimeCorrect, avgTimeCorrect,
-            quitReason, elapsedTime);
+                min_time_per_region, max_time_per_region, avg_time_per_region,
+                min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+                quit_reason, duration, created_at
+            )
+            VALUES (
+                ${session.user_id}, ${session.mode}, ${session.atlas}, ${finalScore}, 
+                ${totalClicks}, ${accurateClicks}, ${incorrectClicks},
+                ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
+                ${minTimeCorrect}, ${maxTimeCorrect}, ${avgTimeCorrect},
+                ${quitReason}, ${Math.round(elapsedTime)}, NOW()
+            )
+        `;
 
         // Delete all gameprogress for this session
-        const deleteProgressStmt = db.prepare(`DELETE FROM gameprogress WHERE sessionId = ?`);
-        deleteProgressStmt.run(session.id);
+        await sql`DELETE FROM game_progress WHERE session_id = ${session.id}`;
 
-        // Delete the gamesession itself
-        const deleteSessionStmt = db.prepare(`DELETE FROM gamesessions WHERE id = ?`);
-        deleteSessionStmt.run(session.id);
+        // Delete the game_session itself
+        await sql`DELETE FROM game_sessions WHERE id = ${session.id}`;
 
         return {finalScore, elapsedTime}
     } catch (error: unknown) {

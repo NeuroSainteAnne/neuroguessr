@@ -37,13 +37,18 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 ## Usage
 
-1. Configure your server
+1. Install prerequisites
+
+- Install [Node.js](https://nodejs.org/en/download). Neuroguessr has been tested with node 22.11 and node 24.0
+- Install [Postgresql](https://www.postgresql.org/download) and create a database. Don't worry, the tables will be created automatically at first launch
+
+2. Configure your server
 
 - copy `backend/config-example.json` to `backend/config.json` and change parameters accordingly
 - copy `frontend/config-example.json` to `frontend/config.json` and change parameters accordingly
 - (HTTPS only) Put your server certificates in `server/server.crt` and `server/server.key`
 
-2. Run the following commands:
+3. Run the following commands:
 
 ```
 npm install

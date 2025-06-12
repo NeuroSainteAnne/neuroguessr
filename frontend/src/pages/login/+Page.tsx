@@ -188,7 +188,7 @@ function LoginScreen() {
                         </tr>}
                       </tbody>
                     </table>
-                    <button type="submit">{t("login_button")}</button>
+                    <button type="submit" data-umami-event="login button">{t("login_button")}</button>
                     <div><a id="registration_link" href="/register">
                         {t("registration_link")}
                     </a></div>
@@ -210,7 +210,9 @@ function LoginScreen() {
                         {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
 
                         {showRecoveryButton && 
-                          <button id="send-recovery-email" className="form-button" onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
+                          <button id="send-recovery-email" className="form-button" 
+                            data-umami-event="send recovery email"
+                            onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
 
                         {recoveryErrorText && <p id="recovery_error" className="recovery-message">{recoveryErrorText}</p>}
                         {recoverySuccessText && <p id="recovery_success" className="recovery-message">{recoverySuccessText}</p>}

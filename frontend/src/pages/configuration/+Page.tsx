@@ -223,7 +223,7 @@ function UserConfig() {
                     </tbody>
                 </table>
 
-                <button type="submit">{t("reconfigure_button")}</button>
+                <button type="submit" data-umami-event="configure button">{t("reconfigure_button")}</button>
             </div>
         </form>
     </>

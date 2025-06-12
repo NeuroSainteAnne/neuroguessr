@@ -5,7 +5,7 @@ import "./SearchBar.css"
 import { navigate } from 'vike/client/router'
 
 function Searchbar() {
-  const { t, atlasRegions, pageContext, setAskedAtlas, setAskedRegion } = useApp();
+  const { t, atlasRegions, pageContext, setAskedAtlas, setAskedRegion, askedAtlas } = useApp();
   const searchInput = useRef<HTMLInputElement>(null);
   const handleSearchUpdate = () => {
     searchAtlasRegions(searchInput.current?.value || "");
@@ -22,6 +22,10 @@ function Searchbar() {
     const matches = atlasRegions
       .filter(region => region.name.toLowerCase().includes(lowerQuery))
       .sort((a, b) => {
+        if(askedAtlas && isNeurotheka){
+          if (a.atlas === askedAtlas && b.atlas !== askedAtlas) return -1;
+          if (a.atlas !== askedAtlas && b.atlas === askedAtlas) return 1;
+        }
         const aIndex = a.name.toLowerCase().indexOf(lowerQuery);
         const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
         if (aIndex !== bIndex) return aIndex - bIndex;
@@ -58,16 +62,18 @@ function Searchbar() {
           />
           {suggestionList.length > 0 && 
             <div id="search-suggestions" className="search-suggestions">
-            {suggestionList.map((region) => (
-              <div
+            {suggestionList.map((region) => {
+              const isCurrentAtlas = (region.atlas === askedAtlas && isNeurotheka);
+              const suggestionClassName = isCurrentAtlas ? "search-suggestion current-atlas" : "search-suggestion";
+              return(<div
                 key={region.atlasName+"_"+region.name+"_"+region.id}
-                className="search-suggestion"
+                className={suggestionClassName}
                 onClick={()=>{handleSearchValidate(region.atlas, region.id)}}
                 dangerouslySetInnerHTML={{
                   __html: `${region.name} <span style="color: #808588;">(${region.atlasName})</span>`
                 }}
-              />
-            ))}
+              />)
+            })}
           </div>}
         </div>
       </div>

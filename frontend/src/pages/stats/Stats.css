@@ -1,0 +1,237 @@
+.stats-page {
+  max-width: 1200px;
+  width:100%;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  color: #dbdbdb;
+}
+
+.stats-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.stats-header h1 {
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.stats-period {
+  color: #8a9aa8;
+  font-size: 0.9rem;
+}
+
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.performance-metrics, .favorites {
+  background-color: rgba(61, 74, 76, 0.7);
+  border-radius: var(--border-radius, 8px);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.183));
+  padding: 1.5rem;
+}
+
+.performance-metrics h3, .favorites h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  color: var(--text-color);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 0.75rem;
+}
+
+.performance-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.chart-container {
+  background-color: rgba(61, 74, 76, 0.7);
+  border-radius: var(--border-radius, 8px);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
+  padding: 1.5rem;
+  min-height: 350px;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.25rem;
+}
+
+.game-mode-details {
+  background-color: rgba(61, 74, 76, 0.7);
+  border-radius: var(--border-radius, 8px);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
+  padding: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.game-mode-details h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.mode-stats {
+  padding: 1rem 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.mode-chart {
+  margin-top: 1.5rem;
+}
+
+.mode-chart h4 {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.session-history {
+  background-color: rgba(61, 74, 76, 0.7);
+  border-radius: var(--border-radius, 8px);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
+  padding: 1.5rem;
+}
+
+.session-history h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-select-stats {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-select-stats label, .date-range-picker-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  background-color: #fff;
+  font-size: 1rem;
+}
+
+.date-range-picker-container {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sessions-table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.sessions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sessions-table th, .sessions-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sessions-table th {
+  background-color: rgba(0, 0, 0, 0.02);
+  font-weight: 600;
+  color: #6c757d;
+  position: sticky;
+  top: 0;
+}
+
+.sessions-table tr:hover td {
+  background-color: rgba(0, 173, 181, 0.05);
+}
+
+.no-data-message {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.stats-loading, .stats-error, .stats-empty {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+  background-color: #fff;
+  border-radius: var(--border-radius, 8px);
+  box-shadow: var(--card-shadow, 0 4px 12px rgba(0, 0, 0, 0.1));
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.stats-loading {
+  color: #6c757d;
+}
+
+.stats-error {
+  color: #dc3545;
+}
+
+.stats-empty {
+  color: #6c757d;
+}
+
+@media (max-width: 768px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .performance-charts {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+  }
+  
+  .filter-select, .date-range-picker-container {
+    width: 100%;
+  }
+  
+  .sessions-table th, .sessions-table td {
+    padding: 0.5rem;
+  }
+}
+

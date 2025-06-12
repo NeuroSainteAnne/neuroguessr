@@ -2,7 +2,7 @@
 import passwordComplexity from "joi-password-complexity";
 import { sendEmail, logoString } from "./email.ts";
 import Joi from "joi";
-import { db } from "./database_init.ts";
+import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { __dirname, getUserToken, verifyCaptcha } from "./utils.ts";
@@ -40,9 +40,10 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         }
 
         // Check if the username already exists
-        const getUserByUsernameStmt = db.prepare("SELECT * FROM users WHERE username = ?");
-        const userByUsername = getUserByUsernameStmt.get(req.body.username);
-        if (userByUsername){
+        const usersByUsername = await sql`
+            SELECT * FROM users WHERE username = ${req.body.username} LIMIT 1
+        `;
+        if (usersByUsername.length > 0){
             res
                 .status(409)
                 .send({ message: "User with given username already exists" });
@@ -52,9 +53,10 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         // Vérifier si l'utilisateur existe déjà
         const email = req.body.email.toLowerCase();
         const language = req.body.language ? req.body.language : 'fr';
-        const getUserStmt = db.prepare("SELECT * FROM users WHERE email = ?");
-        const user = getUserStmt.get(email);
-        if (user){
+        const users = await sql`
+            SELECT * FROM users WHERE email = ${email} LIMIT 1
+        `;
+        if (users.length > 0){
             res
                 .status(409)
                 .send({ message: "User with given email already exists" });
@@ -85,17 +87,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         }
 
         // Insérer le nouvel utilisateur
-        const stmt = db.prepare("INSERT INTO users (username, firstname, lastname, email, password, language, verified) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        const result = stmt.run(
-            req.body.username,
-            req.body.firstname,
-            req.body.lastname,
-            email,
-            hashPassword,
-            language,
-            preVerify
-        );
-        const lastID = result.lastInsertRowid;
+        const result = await sql`
+            INSERT INTO users (username, firstname, lastname, email, password, language, verified)
+            VALUES (${req.body.username}, ${req.body.firstname}, ${req.body.lastname}, ${email}, ${hashPassword}, ${language}, ${preVerify})
+            RETURNING id
+        `;
+        const lastID = result[0].id as number;
 
         // Mode debug : pas d'envoi d'email
         if(config.email.type == "none"){
@@ -113,15 +110,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         );
 
         // Insert the token into the tokens table
-        const tokenStmt = db.prepare("INSERT INTO tokens (userId, token) VALUES (?, ?)");
-        tokenStmt.run(lastID, tokenValue);
+        await sql`
+            INSERT INTO tokens (user_id, token)
+            VALUES (${lastID}, ${tokenValue})
+        `;
 
         const url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
-
-        console.log(language)
-        console.log(backendI18n.t('register_email_subject', { lng: language }))
-        console.log(backendI18n.t('register_email_subject', { lng: "fr" }))
-        console.log(backendI18n.t('register_email_subject', { lng: "en" }))
         const subject = backendI18n.t('register_email_subject', { lng: language });
         const message = `
         <head>
@@ -176,25 +170,33 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
             return;
         }
 
-        const getUserStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserStmt.get(req.body.id) as User;
-        if (!user) {
+        const users = await sql`
+            SELECT * FROM users WHERE id = ${req.body.id} LIMIT 1
+        `;
+        if (!users.length) {
             res.status(400).send({ message: "error_invalid_token" });
             return;
         }
+        const user = users[0] as User;
 
-        const getTokenStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ?");
-        const tokenRecord = getTokenStmt.get(user.id, req.body.token) as Token;
-        if (!tokenRecord) {
+        const tokens = await sql`
+            SELECT * FROM tokens 
+            WHERE user_id = ${user.id} AND token = ${req.body.token}
+            LIMIT 1
+        `;
+        if (!tokens.length) {
             res.status(400).send({ message: "error_invalid_token" });
             return;
         }
+        const tokenRecord = tokens[0] as Token;
 
-        const updateUserStmt = db.prepare("UPDATE users SET verified = 1 WHERE id = ?");
-        updateUserStmt.run(user.id);
+        await sql`
+            UPDATE users SET verified = TRUE WHERE id = ${user.id}
+        `;
 
-        const deleteTokenStmt = db.prepare("DELETE FROM tokens WHERE userId = ?");
-        deleteTokenStmt.run(user.id);
+        await sql`
+            DELETE FROM tokens WHERE user_id = ${user.id}
+        `;
 
         const token = getUserToken(user);
         res.status(200).send({ 
@@ -229,13 +231,15 @@ export const passwordLink = async (
 
         // Check if the email already exists
         const email = req.body.email.toLowerCase();
-        const getUserByUsernameStmt = db.prepare("SELECT * FROM users WHERE email = ?");
-        const user = getUserByUsernameStmt.get(email) as User;
-        if (!user){
+        const users = await sql`
+            SELECT * FROM users WHERE email = ${email} LIMIT 1
+        `;
+        if (!users.length){
              res
                 .status(409)
                 .send({ message: "User with email does not exists" });
         }
+        const user = users[0] as User;
 
         // CAPTCHA CHECK (if enabled)
         if (config.captcha && config.captcha.activate) {
@@ -252,8 +256,10 @@ export const passwordLink = async (
         }
         
         // Check if a token already exists
-        const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ?");
-        let token = getTokenByUsernameStmt.get(user.id) as Token;
+        const tokens = await sql`
+            SELECT * FROM tokens WHERE user_id = ${user.id}
+        `;
+        let token = tokens.length ? tokens[0] as Token : undefined;
         let tokenValue: string | null = null;
         if (!token) {
             // Create a token for the user
@@ -263,8 +269,10 @@ export const passwordLink = async (
                 { expiresIn: "1h" }
             );
             // Insert the token into the tokens table
-            const tokenStmt = db.prepare("INSERT INTO tokens (userId, token) VALUES (?, ?)");
-            tokenStmt.run(user.id, tokenValue);
+            await sql`
+                INSERT INTO tokens (user_id, token) 
+                VALUES (${user.id}, ${tokenValue})
+            `;
         } else {
             tokenValue = token.token;
         }
@@ -335,34 +343,41 @@ export const resetPassword = async (req: ResetPasswordRequest, res: Response): P
             return;
         }
 
-        const getUserByIdStmt = db.prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
-        const user = getUserByIdStmt.get(req.body.id) as User;
-        if (!user){
+        const users = await sql`
+            SELECT * FROM users WHERE id = ${req.body.id} LIMIT 1
+        `;
+        if (!users.length){
             res.status(400).send({ message: "Invalid link" });
             return;
         }
+        const user = users[0] as User;
 
-        const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ? LIMIT 1");
-        const token = getTokenByUsernameStmt.get(user.id, req.body.token) as Token;
-        if (!token){
+        const tokens = await sql`
+            SELECT * FROM tokens 
+            WHERE user_id = ${user.id} AND token = ${req.body.token}
+            LIMIT 1
+        `;
+        if (!tokens.length){
             res.status(400).send({ message: "Invalid Link" });
             return;
         }
+        const token = tokens[0] as Token;
 
         const salt: string = await bcrypt.genSalt(Number(config.salt));
         const hashPassword: string = await bcrypt.hash(req.body.password, salt);
 
         // Update the user's password
-        const updatePasswordStmt = db.prepare("UPDATE users SET password = ? WHERE id = ?");
-        updatePasswordStmt.run(hashPassword, user.id);
-
-        // Update the user's verified status
-        const updateUserStmt = db.prepare("UPDATE users SET verified = 1 WHERE id = ?");
-        updateUserStmt.run(user.id);
+        await sql`
+            UPDATE users 
+            SET password = ${hashPassword}, verified = TRUE 
+            WHERE id = ${user.id}
+        `;
 
         // Delete the token after successful password reset
-        const deleteTokenStmt = db.prepare("DELETE FROM tokens WHERE userId = ? AND token = ?");
-        deleteTokenStmt.run(user.id, req.body.token);
+        await sql`
+            DELETE FROM tokens 
+            WHERE user_id = ${user.id} AND token = ${req.body.token}
+        `;
 
         const newToken = getUserToken(user);
         res.status(200).send({
@@ -391,19 +406,26 @@ export const validateResetToken = async (req: ValidateResetTokenRequest, res: Re
             });
             return;
         }
-        const getUserByIdStmt = db.prepare("SELECT * FROM users WHERE id = ?");
-        const user = getUserByIdStmt.get(req.body.id) as User;
-        if (!user){
+
+        const users = await sql`
+            SELECT * FROM users WHERE id = ${req.body.id} LIMIT 1
+        `;
+        if (!users.length){
             res.status(400).send({ message: "Invalid link" });
             return;
         } 
+        const user = users[0] as User;
 
-        const getTokenByUsernameStmt = db.prepare("SELECT * FROM tokens WHERE userId = ? AND token = ?");
-        const token = getTokenByUsernameStmt.get(user.id, req.body.token) as Token;
-        if (!token){
+        const tokens = await sql`
+            SELECT * FROM tokens 
+            WHERE user_id = ${user.id} AND token = ${req.body.token}
+            LIMIT 1
+        `;
+        if (!tokens.length){
             res.status(400).send({ message: "Invalid Link" });
             return;
         }
+        const token = tokens[0] as Token;
 
         res.status(200).send({ message: "token valid" });
     } catch (error) {

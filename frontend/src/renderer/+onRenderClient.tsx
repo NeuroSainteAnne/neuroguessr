@@ -13,7 +13,7 @@ import React from 'react'
 import ReactDOM, { createRoot, hydrateRoot } from 'react-dom/client'
 import { PageLayout } from './PageLayout'
 import type { OnRenderClientAsync } from 'vike/types'
-
+import { PageContextProvider } from 'vike-react/usePageContext'
 let root: ReactDOM.Root | null = null;
 
 // Check for server-injected state
@@ -34,15 +34,8 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
       urlOriginal: initialState.originalUrl || pageContext.urlOriginal,
       routeParams: initialState.routeParams || pageContext.routeParams
     };
-    
-    // Log for debugging
-    console.log('Using server-injected state:', initialState);
   } else if (pageContext.isClientSideNavigation) {
-    // For client-side navigation, log the current context but don't override it
-    console.log('[Client Navigation] Using navigation state:', {
-      url: pageContext.urlOriginal,
-      params: pageContext.routeParams
-    });
+    // For client-side navigation, don't override it
   }
 
   const { Page } = pageContext
@@ -51,9 +44,11 @@ const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRe
   if (!container) throw new Error('DOM element #root not found')
   const PageComponent = Page as React.ComponentType<any>
   const pageElement = (
+    <PageContextProvider pageContext={pageContext}>
       <PageLayout pageContext={pageContext}>
           <PageComponent />
       </PageLayout>
+    </PageContextProvider>
   )
   if (pageContext.isHydration) {
     try {
