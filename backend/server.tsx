@@ -54,10 +54,11 @@ app.post('/api/config-user', authenticateToken, configUser);
 app.post('/api/get-leaderboard', getLeaderboard);
 app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 
-
+// stats.ts
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
 
+// game.ts
 app.post('/api/start-game-session', authenticateToken, 
     (req, res) => startGameSession(req as StartGameSessionRequest, res));
 app.post('/api/get-next-region', authenticateToken, 
@@ -66,6 +67,7 @@ app.post('/api/validate-region', authenticateToken, validateRegion);
 app.post('/api/cloture-game-session', authenticateToken,
     (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
 
+// multi.ts
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
 app.get('/sse/:sessionCode/:userName', createSSEClient)
 app.post('/api/multi/launch-game', authenticateToken, 
@@ -79,8 +81,6 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
     res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
 });
-
-
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
@@ -106,7 +106,6 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 react: {
                     useSuspense: false
                 },
-                // Critical for SSR to work properly
                 initImmediate: false
             });
 

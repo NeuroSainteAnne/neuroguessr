@@ -5,6 +5,7 @@ export interface PlayerInfo {
   userName: string;
   gameRef: MultiplayerGame;
   sessionCode: string;
+  userId?: number;
   anonToken?: string;
 }
 
@@ -35,6 +36,7 @@ export interface MultiplayerGame {
   individualDurations: Record<string,number[]>;
   individualCorrectDurations: Record<string,number[]>;
   anonymousUsernames: string[];
+  lastActivity: number;
 } 
 
 export interface AtlasLUT {
