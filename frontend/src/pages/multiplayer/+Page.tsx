@@ -166,7 +166,6 @@ const MultiplayerGameScreen = () => {
 
 
   const tryLaunchGame = async () => {
-    console.log(evtSourceRef.current, askedSessionCode, askedSessionToken, isLoggedIn)
     if (evtSourceRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
       try {
         const response = await fetch('/api/multi/launch-game', {
