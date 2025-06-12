@@ -5,8 +5,10 @@
     "type": "module",
     "scripts": {
         "build-frontend": "cd frontend && npm run build",
+        "build": "cd frontend && npm run build",
         "start-backend": "cd backend && npx tsx server.tsx",
-        "dev-frontend": "cd frontend && npm run dev"
+        "dev-frontend": "cd frontend && npm run dev",
+        "dev": "cd frontend && npm run dev"
     },
     "dependencies": {
         "@niivue/niivue": "^0.57.0",
