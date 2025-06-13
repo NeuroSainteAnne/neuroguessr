@@ -91,6 +91,7 @@ const MultiplayerGameScreen = () => {
     let url = `/sse/${inputCode}/${isLoggedIn ? userUsername : anonUsername}`;
     if (isLoggedIn && authToken) url += `?token=${authToken}`;
     if (!isLoggedIn && anonUsername) url += `?anonymous=true`;
+    url += `${url.includes('?') ? '&' : '?'}_=${Date.now()}`; // prevent caching
 
     const evtSource = new EventSource(url);
     evtSourceRef.current = evtSource;
