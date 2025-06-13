@@ -5,19 +5,6 @@ import { useApp } from '../../context/AppContext';
 import { navigate } from 'vike/client/router';
 import Altcha from '../../components/Altcha';
 
-namespace JSX {
-  interface IntrinsicElements {
-    'altcha-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-      apikey?: string;
-      challengeurl?: string; // Add this property
-      callback?: string;
-      theme?: string;
-      autosubmit?: boolean;
-      size?: string;
-    };
-  }
-}
-
 function RegisterScreen() {
   const { t, currentLanguage } = useApp();
   const usernameInput = useRef<HTMLInputElement>(null);

@@ -1,7 +1,6 @@
 {
     "recaptcha" : {
-        "activate": false,
-        "siteKey": ""
+        "activate": false
     },
     "activateAnonymousMode": true,
     "customHeaderScript": ""

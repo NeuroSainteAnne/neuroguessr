@@ -149,6 +149,7 @@
   "error_password_mismatch": "Passwords do not match.",
   "error_password_complexity": "Password does not meet complexity requirements.",  
   "error_captcha": "CAPTCHA unavailable",
+  "verify_captcha_first": "Please check ALTCHA box",
   "login_success": "Login successful! Redirecting...",
   "login_failed": "Login failed. Please check your credentials.",
   "register_success": "Registration successful! Please check your mailbox to confirm your email address...",

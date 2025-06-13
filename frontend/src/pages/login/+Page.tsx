@@ -5,6 +5,7 @@ import config from '../../../config.json';
 import { useApp } from '../../context/AppContext';
 import './LoginScreen.css';
 import { navigate } from 'vike/client/router'
+import Altcha from '../../components/Altcha';
 
 function LoginScreen() {
     const { t, currentLanguage, updateToken } = useApp();
@@ -17,10 +18,10 @@ function LoginScreen() {
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
     const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true);
-    const [captchaLoad, setCaptchaLoad] = useState(false);
-    const activateCaptcha = config.recaptcha.activate || false;
-    const captchaKey = config.recaptcha.siteKey || '';
-    const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [captchaLoad, setCaptchaLoad] = useState(false);
+  const activateCaptcha = config.recaptcha.activate || false;
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [sentRequest, setSentRequest] = useState<boolean>(false);
 
     const onCaptchaVerify = useCallback((token: string) => {
       setCaptchaToken(token);
@@ -147,8 +148,26 @@ function LoginScreen() {
 
     }
 
-    const formContent = (
-        <>
+    const handleAltchaChange = (ev: Event | CustomEvent<any>) => {
+      const altchaEvent = ev as CustomEvent;
+      if (altchaEvent.detail) {
+        if(altchaEvent.detail.state && altchaEvent.detail.state === "verified"){
+          setCaptchaToken(altchaEvent.detail.payload);
+          setRecoveryErrorText("");
+        } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
+          // continue
+        } else {
+          console.log("Altcha error:", altchaEvent.detail);
+          setRecoveryErrorText(t('error_captcha'));
+        }
+      } else {
+        console.log("No Altcha");
+        setCaptchaToken("");
+        setRecoveryErrorText(t('error_captcha'));
+      }
+    }
+    
+    return <>
             <title>NeuroGuessr - Login</title>
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
@@ -207,12 +226,21 @@ function LoginScreen() {
 
                         <input type="email" id="recovery-email" className="form-field" 
                             placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
-                        {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
-
-                        {showRecoveryButton && 
-                          <button id="send-recovery-email" className="form-button" 
-                            data-umami-event="send recovery email"
-                            onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
+                                          
+                        { recoverySuccessText == "" && activateCaptcha && captchaLoad && <div className="altcha-container">
+                            <Altcha onStateChange={handleAltchaChange}/>
+                          </div> }
+                        { recoverySuccessText == "" && (
+                          <button 
+                            id="send-recovery-email"
+                            data-umami-event="send recovery email" 
+                            onClick={()=>handleRecovery()}
+                            disabled={activateCaptcha && (!captchaToken || sentRequest)}
+                            className={activateCaptcha && (!captchaToken || sentRequest) ? "button-disabled form-button" : "form-button"}
+                          >
+                            {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("send_recovery_email")}
+                          </button>
+                        )}
 
                         {recoveryErrorText && <p id="recovery_error" className="recovery-message">{recoveryErrorText}</p>}
                         {recoverySuccessText && <p id="recovery_success" className="recovery-message">{recoverySuccessText}</p>}
@@ -220,17 +248,6 @@ function LoginScreen() {
                 </div>
             }
         </>
-    )
-    return (activateCaptcha && captchaLoad) ? (
-      <GoogleReCaptchaProvider
-        reCaptchaKey={captchaKey}
-        language={currentLanguage}
-      >
-        {formContent}
-      </GoogleReCaptchaProvider>
-    ) : (
-      formContent
-    );
 }
 
 export default LoginScreen
