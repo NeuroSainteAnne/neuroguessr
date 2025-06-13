@@ -81,20 +81,24 @@ export const createSSEClient = async (req: Request, res: Response) => {
     req.socket.setTimeout(0);
     res.set({
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Transfer-Encoding': 'chunked'
+      'Transfer-Encoding': 'chunked',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     });
     res.flushHeaders();
-      
+          
+    // Send more data immediately to force a response
+    res.write(`:\n`); // Comment line
+    res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
+    res.write(`:\n`); // Another comment line
+    
     // Set up a keep-alive interval
     const keepAliveInterval = setInterval(() => {
       res.write(`: keep-alive comment\n\n`);
     }, 15000); // Every 15 seconds
-
-    // Send an immediate ping to confirm connection works
-    res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
     
     const sessionResult = await sql`
         SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
