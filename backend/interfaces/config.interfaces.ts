@@ -44,4 +44,5 @@ export interface Config {
     salt: string;
     jwt_secret: string;
     pgConnectionString: string;
+    altcha_secret: string;
 }

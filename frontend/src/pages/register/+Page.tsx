@@ -1,9 +1,22 @@
 import React, { use, useCallback, useEffect, useRef, useState } from 'react';
-import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import config from '../../../config.json';
 import "./RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
 import { navigate } from 'vike/client/router';
+import Altcha from '../../components/Altcha';
+
+namespace JSX {
+  interface IntrinsicElements {
+    'altcha-widget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      apikey?: string;
+      challengeurl?: string; // Add this property
+      callback?: string;
+      theme?: string;
+      autosubmit?: boolean;
+      size?: string;
+    };
+  }
+}
 
 function RegisterScreen() {
   const { t, currentLanguage } = useApp();
@@ -17,17 +30,13 @@ function RegisterScreen() {
   const [registerSuccessText, setRegisterSuccessText] = useState<string>("");
   const [captchaLoad, setCaptchaLoad] = useState(false);
   const activateCaptcha = config.recaptcha.activate || false;
-  const captchaKey = config.recaptcha.siteKey || '';
   const [captchaToken, setCaptchaToken] = useState<string>("");
-
-  const onCaptchaVerify = useCallback((token: string) => {
-    setCaptchaToken(token);
-  }, []);
-
+  const [sentRequest, setSentRequest] = useState<boolean>(false);
+  
   useEffect(() => {
     setCaptchaLoad(true)
   }, []);
-  
+
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const username = usernameInput.current?.value;
@@ -100,6 +109,7 @@ function RegisterScreen() {
 
     try {
         // Send the data to the server
+        setSentRequest(true);
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: {
@@ -121,17 +131,37 @@ function RegisterScreen() {
             }
         } else {
             setRegisterErrorText(result.message || t('register_failed')); 
+            setSentRequest(false);
         }
     } catch (error) {
         // Handle network or other errors
         console.error('Error submitting the form:', error);
         setRegisterErrorText(t('server_error'));
+        setSentRequest(false);
     }
 
   }
 
-  const formContent =     
-  (<>
+  const handleAltchaChange = (ev: Event | CustomEvent<any>) => {
+    const altchaEvent = ev as CustomEvent;
+    if (altchaEvent.detail) {
+      if(altchaEvent.detail.state && altchaEvent.detail.state === "verified"){
+        setCaptchaToken(altchaEvent.detail.payload);
+        setRegisterErrorText("");
+      } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
+        // continue
+      } else {
+        console.log("Altcha error:", altchaEvent.detail);
+        setRegisterErrorText(t('error_captcha'));
+      }
+    } else {
+      console.log("No Altcha");
+      setCaptchaToken("");
+      setRegisterErrorText(t('error_captcha'));
+    }
+  }
+
+  return <>
       <title>{t("neuroguessr_register_title")}</title>
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
@@ -208,28 +238,22 @@ function RegisterScreen() {
             </tr>}
             </tbody>
           </table>
-          {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
-          {registerSuccessText == "" && <button  data-umami-event="register button" type="submit">{t("register_button")}</button>}
+          { registerSuccessText == "" && activateCaptcha && captchaLoad && <div className="altcha-container">
+              <Altcha onStateChange={handleAltchaChange}/>
+            </div> }
+          {registerSuccessText == "" && (
+            <button 
+              data-umami-event="register button" 
+              type="submit" 
+              disabled={activateCaptcha && (!captchaToken || sentRequest)}
+              className={activateCaptcha && (!captchaToken || sentRequest) ? "button-disabled" : ""}
+            >
+              {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("register_button")}
+            </button>
+          )}        
         </div>
       </form>
-    </>)
-
-  return (activateCaptcha && captchaLoad) ? (
-    <GoogleReCaptchaProvider
-      reCaptchaKey={captchaKey}
-      language={currentLanguage}
-      scriptProps={{
-        async: true, // Load script asynchronously
-        defer: true, // Defer script execution
-        appendTo: 'body', // Append to body
-        nonce: undefined // Add nonce if you use CSP
-      }}
-    >
-      {formContent}
-    </GoogleReCaptchaProvider>
-  ) : (
-    formContent
-  );
+    </>
 }
 
 export default RegisterScreen

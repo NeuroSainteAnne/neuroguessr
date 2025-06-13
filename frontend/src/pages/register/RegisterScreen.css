@@ -81,3 +81,8 @@
     text-align: right;
     width: 65%;
 }
+
+.button-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

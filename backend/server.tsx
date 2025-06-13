@@ -20,6 +20,7 @@ import { createMultiplayerSession, createSSEClient, launchGame, updateParameters
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
+import { generateChallenge } from 'modules/altcha.ts';
 
 const config: Config = configJson;
 
@@ -81,6 +82,10 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
     res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
 });
+
+// altcha.ts
+app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
+
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
