@@ -16,7 +16,7 @@ import { Socket } from "socket.io";
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
-const LOAD_ATLAS_DURATION = 3;
+const LOAD_ATLAS_DURATION = 10;
 const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
 const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
