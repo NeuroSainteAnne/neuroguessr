@@ -17,7 +17,7 @@ export function MultiBox() {
                     placeholder={t("multi_8_digits")}
                     style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border: "1px solid white" }}
                 /></div>
-                <div><a className="play-button enabled" href={`/multiplayer-game/${multiplayerInputCode}`}
+                <div><a className="play-button enabled" href={`/multiplayer/${multiplayerInputCode}`}
                     onClick={(e) => {
                         if (!(parseInt(multiplayerInputCode) >= 10000000 && parseInt(multiplayerInputCode) <= 99999999)) { 
                             e.preventDefault();
