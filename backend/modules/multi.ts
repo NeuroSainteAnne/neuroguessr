@@ -87,7 +87,15 @@ export const createSSEClient = async (req: Request, res: Response) => {
       'Transfer-Encoding': 'chunked'
     });
     res.flushHeaders();
+      
+    // Set up a keep-alive interval
+    const keepAliveInterval = setInterval(() => {
+      res.write(`: keep-alive comment\n\n`);
+    }, 15000); // Every 15 seconds
 
+    // Send an immediate ping to confirm connection works
+    res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
+    
     const sessionResult = await sql`
         SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
     ` as MultiSession[];
@@ -164,9 +172,11 @@ export const createSSEClient = async (req: Request, res: Response) => {
 
     initUserInLobby(finalUserName, gameRef, sessionCode)
 
-    req.on('close', performCleanup);
+    req.on('close', () => {
+      clearInterval(keepAliveInterval);
+      performCleanup();
+    });
 
-    res.status(200).json({"status":"ok"})
   } catch (error) {
     console.error("SSE connection error:", error);
     performCleanup();
