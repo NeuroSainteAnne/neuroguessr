@@ -37,6 +37,7 @@ const Altcha = forwardRef<{ value: string | null }, AltchaProps>(({ onStateChang
   }
 
   return (
+    // @ts-ignore
     <altcha-widget
       ref={widgetRef}
       language={currentLanguage}
@@ -44,7 +45,7 @@ const Altcha = forwardRef<{ value: string | null }, AltchaProps>(({ onStateChang
         '--altcha-max-width': '100%',
       }}
       challengeurl="/api/altcha/challenge"
-    ></altcha-widget>
+    />
   )
 })
 
