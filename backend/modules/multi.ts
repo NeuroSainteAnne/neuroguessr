@@ -10,6 +10,8 @@ import { NVImage } from "@niivue/niivue";
 import { MultiSession } from "interfaces/database.interfaces.ts";
 import { GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
+import { getIO } from "./socket.io.ts";
+import { Socket } from "socket.io";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -21,191 +23,225 @@ const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the regio
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
-// In-memory map of SSE connections
-const sseClients: Record<string, Response[]> = {};
+// In-memory maps
+const socketClients: Record<string, string[]> = {}; // sessionCode:userName -> socketIds[]
 const games: Record<string, MultiplayerGame> = {};
 const playerInfo: Record<string, PlayerInfo> = {};
+const socketInfo: Record<string, {sessionCode: string, userName: string}> = {};
 
-export const createSSEClient = async (req: Request, res: Response) => {
-  const { sessionCode, userName } = req.params;
-  const isAnonymous = req.query.anonymous === "true" || req.query.anonymous === "1";
-  const token = typeof req.query.token === "string" ? req.query.token : undefined;
+// Initialize Socket.io handling
+export function initSocketHandlers() {
+  const io = getIO();
+
+  io.on('connection', (socket) => {
+    // Handle join lobby
+    socket.on('join-lobby', async (data: {
+      sessionCode: string,
+      userName: string,
+      isAnonymous: boolean,
+      token?: string,
+      anonToken?: string
+    }) => {
+      try {
+        const { sessionCode, userName, isAnonymous, token, anonToken } = data;
+        
+        // Set up cleanup function for when this socket disconnects
+        socket.on('disconnect', () => {
+          handleDisconnect(socket.id);
+        });
+
+        // Rest of join-lobby logic (converted from createSSEClient)
+        const result = await joinLobby(socket, sessionCode, userName, isAnonymous, token, anonToken);
+        
+        if (result.error) {
+          socket.emit('error', { message: result.error });
+          return;
+        }
+        
+        // Store socketInfo for lookups during disconnects
+        socketInfo[socket.id] = { sessionCode, userName };
+        
+        // Send initial data to client
+        if (result.anonToken) {
+          socket.emit('anon-token', { anonToken: result.anonToken });
+        }
+        
+      } catch (error) {
+        console.error("Socket join error:", error);
+        socket.emit('error', { message: "Internal server error" });
+      }
+    });
+
+    // Handle validate guess
+    socket.on('validate-guess', async (data: {
+      sessionCode: string,
+      userName: string,
+      voxelProp: any,
+      anonToken?: string,
+      userToken?: string
+    }) => {
+      try {
+        const info = socketInfo[socket.id];
+        if (!info) {
+          socket.emit('error', { message: "Not authenticated" });
+          return;
+        }
+        const result = await handleValidateGuess({...data, userName: info.userName});
+      } catch (error) {
+        console.error("Validate guess error:", error);
+        socket.emit('error', { message: "Error validating guess" });
+      }
+    });
+
+    // Handle update parameters
+    socket.on('update-parameters', async (data: {
+      sessionCode: string,
+      sessionToken: string,
+      parameters: Partial<MultiplayerParametersType>
+    }) => {
+      try {
+        const info = socketInfo[socket.id];
+        if (!info) {
+          socket.emit('error', { message: "Not authenticated" });
+          return;
+        }
+        const result = await handleUpdateParameters({...data, userName: info.userName});
+        socket.emit('parameters-updated', result);
+      } catch (error) {
+        console.error("Update parameters error:", error);
+        socket.emit('error', { message: "Error updating parameters" });
+      }
+    });
+
+    // Handle launch game
+    socket.on('launch-game', async (data: {
+      sessionCode: string,
+      sessionToken: string,
+      userToken: string
+    }) => {
+      try {
+        const info = socketInfo[socket.id];
+        if (!info) {
+          socket.emit('error', { message: "Not authenticated" });
+          return;
+        }
+        const result = await handleLaunchGame({...data, userName: info.userName});
+        socket.emit('game-launched', result);
+      } catch (error) {
+        console.error("Launch game error:", error);
+        socket.emit('error', { message: "Error launching game" });
+      }
+    });
+  });
+}
+
+
+// Convert your existing functions to use Socket.io
+async function joinLobby(
+  socket: Socket,
+  sessionCode: string,
+  userName: string,
+  isAnonymous: boolean,
+  token?: string,
+  anonToken?: string
+) {
+  updateGameActivity(sessionCode);
+  
   let finalUserName = userName;
   let authenticated = false;
-  let cleanupNeeded = false;
-  const key = `${sessionCode}:${userName}`; // Define this early for cleanup
+  let userId: number | undefined = undefined;
+  let newAnonToken: string | undefined = undefined;
+  
+  // Session check
+  const sessionResult = await sql`
+    SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
+  ` as MultiSession[];
+  
+  if (!sessionResult.length) {
+    return { error: "Lobby does not exist" };
+  }
 
-  // Set up error handler for the request
-  req.on('error', () => {
-    performCleanup();
+  // Authentication logic (similar to your existing code)
+  if (!isAnonymous) {
+    if (!token) {
+      return { error: "Please connect or choose anonymous mode" };
+    }
+    try {
+      const jwtpayload: any = jwt.verify(token, config.jwt_secret);
+      if (jwtpayload && jwtpayload.username && jwtpayload.id) {
+        finalUserName = String(jwtpayload.username);
+        userId = jwtpayload.id;
+        authenticated = true;
+      }
+    } catch (err) {
+      return { error: "Error: invalid token provided" };
+    }
+  } else {
+    if (!config.allowAnonymousInMultiplayer) {
+      return { error: "Anonymous mode not allowed" };
+    }
+    
+    const userResult = await sql`
+      SELECT id FROM users WHERE username = ${userName}
+    `;
+    
+    if (userResult.length > 0) {
+      return { error: "Username already exists" };
+    }
+    
+    finalUserName = userName;
+    
+    if (!anonToken) {
+      // Generate new token for first-time anonymous users
+      newAnonToken = crypto.randomBytes(32).toString("hex");
+    } else {
+      // Check existing token
+      const playerKey = `${sessionCode}:${finalUserName}`;
+      if (playerInfo[playerKey]?.anonToken && playerInfo[playerKey].anonToken !== anonToken) {
+        return { error: "Invalid anonymous token" };
+      }
+    }
+  }
+
+  // Create game if it doesn't exist
+  if (!games[sessionCode]) {
+    createEmptySession(sessionCode);
+  }
+  
+  const gameRef = games[sessionCode];
+  const playerKey = `${sessionCode}:${finalUserName}`;
+
+  // Prevent duplicate user in lobby
+  if (playerInfo[playerKey] && !anonToken) {
+    return { error: "User already in lobby" };
+  }
+
+  if (isAnonymous) {
+    gameRef.anonymousUsernames.push(finalUserName);
+  }
+
+  // Add socket to room
+  socket.join(`game:${sessionCode}`);
+  
+  // Register socket client
+  if (!socketClients[playerKey]) {
+    socketClients[playerKey] = [];
+  }
+  socketClients[playerKey].push(socket.id);
+
+  // Update player info
+  updatePlayerInfo(sessionCode, finalUserName, {
+    isAnonymous,
+    userName: finalUserName,
+    sessionCode,
+    anonToken: newAnonToken || anonToken,
+    userId: userId
   });
 
-  // Create a cleanup function to use in error cases
-  const performCleanup = () => {
-    if (cleanupNeeded) return; // Prevent multiple cleanups
-    cleanupNeeded = true;
-    
-    // Clean up SSE clients
-    if (sseClients[key]) {
-      sseClients[key] = sseClients[key].filter(r => r !== res);
-      if (sseClients[key].length === 0) {
-        delete sseClients[key];
-      }
-    }
-    
-    // Clean up player info if this was the only connection
-    if (!sseClients[key] || sseClients[key].length === 0) {
-      delete playerInfo[key];
-      
-      // If anonymous user, remove from the game's list
-      if (isAnonymous && games[sessionCode]) {
-        games[sessionCode].anonymousUsernames = 
-          games[sessionCode].anonymousUsernames.filter(name => name !== finalUserName);
-      }
-      
-      // Broadcast player left
-      broadcastSSE(sessionCode, { type: 'player-left', userName: finalUserName });
-    }
-  };
+  // Initialize user in lobby
+  initUserInLobby(socket, finalUserName, gameRef, sessionCode);
 
-  // Helper to send error as SSE and close connection
-  const sendSSEErrorAndClose = (message: string) => {
-    res.write(`retry: 0\n`);
-    res.write(`data: ${JSON.stringify({ type: 'fatal-error', message })}\n\n`);
-    setTimeout(() => res.end(), 100);
-  };
-
-  try {
-    updateGameActivity(sessionCode);
-    // Always set up SSE headers first
-    req.socket.setTimeout(0);
-    res.set({
-  'Content-Type': 'text/event-stream',
-  'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0, private',
-  'Connection': 'keep-alive',
-  'X-Accel-Buffering': 'no',
-  'Transfer-Encoding': 'identity', // Try this instead of chunked
-  'Content-Encoding': 'identity',  // Explicitly disable compression
-  'Pragma': 'no-cache',
-  'Expires': '0'
-    });
-    res.flushHeaders();
-          
-    // Send more data immediately to force a response
-    res.write(`:\n`); // Comment line
-    res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
-    res.write(`:\n`); // Another comment line
-    
-    // Set up a keep-alive interval
-    const keepAliveInterval = setInterval(() => {
-      res.write(`: keep-alive comment\n\n`);
-    }, 15000); // Every 15 seconds
-    
-    const sessionResult = await sql`
-        SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
-    ` as MultiSession[];
-    if (!sessionResult.length){
-        sendSSEErrorAndClose("Lobby does not exist" );
-        return
-    }
-
-    let newAnonToken: string|undefined = undefined;
-    let userId: number|undefined = undefined;
-    if (!isAnonymous) {
-      if(!token){
-        sendSSEErrorAndClose("Please connect or choose anonymous mode" );
-        return
-      }
-      try {
-        const jwtpayload: any = jwt.verify(token, config.jwt_secret);
-        if (jwtpayload && jwtpayload.username && jwtpayload.id) {
-          finalUserName = String(jwtpayload.username);
-          userId = jwtpayload.id;
-          authenticated = true;
-        }
-      } catch (err) {
-        sendSSEErrorAndClose("Error: invalid token provided" );
-        return
-      }
-    } else {
-      if (!config.allowAnonymousInMultiplayer) {
-        sendSSEErrorAndClose("Anonymous mode not allowed" );
-        return;
-      }
-      const userResult = await sql`
-          SELECT id FROM users WHERE username = ${userName}
-      `;
-      if (userResult.length > 0) {
-        sendSSEErrorAndClose("Username already exists");
-        return;
-      }
-      finalUserName = userName;
-      // generate anonymous token
-      newAnonToken = crypto.randomBytes(32).toString("hex");
-    }
-    
-    if (!games[sessionCode]){
-      createEmptySession(sessionCode)
-    }
-    const gameRef = games[sessionCode];
-
-    // Prevent duplicate user in lobby
-    if (playerInfo[key]) {
-      sendSSEErrorAndClose("User already in lobby.");
-      return;
-    }
-
-    if(isAnonymous) gameRef.anonymousUsernames.push(finalUserName);
-
-    // Register SSE client
-    if (!sseClients[key]) sseClients[key] = [];
-    sseClients[key].push(res);
-
-    // Update player info on connect
-    updatePlayerInfo(sessionCode, finalUserName, {
-      isAnonymous,
-      userName: finalUserName,
-      sessionCode,
-      anonToken: newAnonToken,
-      userId: userId
-    });
-
-    // Send anonToken to the client if generated
-    if (isAnonymous && newAnonToken) {
-      res.write(`data: ${JSON.stringify({ type: "anon-token", anonToken: newAnonToken })}\n\n`);
-    }
-
-    initUserInLobby(finalUserName, gameRef, sessionCode)
-
-    req.on('close', () => {
-      clearInterval(keepAliveInterval);
-      performCleanup();
-    });
-
-  } catch (error) {
-    console.error("SSE connection error:", error);
-    performCleanup();
-    sendSSEErrorAndClose("Internal server error");
-  }
-}
-
-function sendSSE(sessionCode: string, userName: string, event: any) {
-  const key = `${sessionCode}:${userName}`;
-  if (sseClients[key]) {
-    sseClients[key].forEach(res => {
-      res.write(`data: ${JSON.stringify(event)}\n\n`);
-    });
-  }
-}
-
-function broadcastSSE(sessionCode: string, event: any) {
-  Object.keys(sseClients)
-    .filter(key => key.startsWith(sessionCode + ":"))
-    .forEach(key => {
-      sseClients[key].forEach(res => {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
-      });
-    });
+  return { success: true, anonToken: newAnonToken };
 }
 
 function updatePlayerInfo(sessionCode: string, userName: string, info: Partial<PlayerInfo>) {
@@ -304,7 +340,7 @@ function createEmptySession(sessionCode: string){
     }
 }
 
-function initUserInLobby(userName: string, gameRef: MultiplayerGame, sessionCode: string){
+function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerGame, sessionCode: string) {
   if (!(userName in gameRef.individualScores)) {
     gameRef.individualScores[userName] = 0;
     gameRef.individualAttempts[userName] = 0;
@@ -313,22 +349,85 @@ function initUserInLobby(userName: string, gameRef: MultiplayerGame, sessionCode
     gameRef.individualCorrectDurations[userName] = [];
   }
     
-  // Build the current user list from playerInfo for this session
+  // Build the current user list
   const userList = Object.values(playerInfo)
     .filter(info => info.sessionCode === sessionCode)
     .map(info => info.userName)
     .filter(Boolean);
 
-  // Send the updated user list and parameters to the new user
-  sendSSE(sessionCode, userName, { type: 'lobby-users', users: userList });
-  sendSSE(sessionCode, userName, { type: 'parameters-updated', parameters: gameRef.parameters });
+  // Send data to the new user
+  socket.emit('lobby-users', { users: userList });
+  socket.emit('parameters-updated', { parameters: gameRef.parameters });
+
+  console.log("broadcast player joined")
   
-  // Broadcast to others in the lobby that a new player has joined
-  userList.forEach(otherUser => {
-    if (otherUser !== userName) {
-      sendSSE(sessionCode, otherUser, { type: 'player-joined', userName });
+  // Broadcast to others that a new player joined
+  socket.to(`game:${sessionCode}`).emit('player-joined', { userName });
+  
+  // If game is already in progress, send current state
+  if (gameRef.hasStarted) {
+    socket.emit('game-start');
+    
+    if (gameRef.commands && gameRef.currentCommandIndex < gameRef.commands.length) {
+      socket.emit('game-command', { 
+        command: gameRef.commands[gameRef.currentCommandIndex] 
+      });
+    }
+    
+    socket.emit('all-scores-update', { scores: gameRef.individualScores });
+  }
+}
+
+// Handle socket disconnection
+function handleDisconnect(socketId: string) {
+  const info = socketInfo[socketId];
+  if (!info) return;
+  
+  const { sessionCode, userName } = info;
+  const playerKey = `${sessionCode}:${userName}`;
+  
+  // Remove from socketClients
+  if (socketClients[playerKey]) {
+    socketClients[playerKey] = socketClients[playerKey].filter(id => id !== socketId);
+    
+    // If this was the last socket for this user
+    if (socketClients[playerKey].length === 0) {
+      delete socketClients[playerKey];
+      
+      const player = playerInfo[playerKey];
+      if (player && player.isAnonymous && games[sessionCode]) {
+        games[sessionCode].anonymousUsernames = 
+          games[sessionCode].anonymousUsernames.filter(name => name !== userName);
+      }
+      
+      // Broadcast player left
+      getIO().to(`game:${sessionCode}`).emit('player-left', { userName });
+      
+      // Clean up player info
+      delete playerInfo[playerKey];
+    }
+  }
+  
+  // Clean up socketInfo
+  delete socketInfo[socketId];
+}
+
+// Helper to emit to all sockets for a specific user
+function emitToUser(sessionCode: string, userName: string, event: string, data: any) {
+  const playerKey = `${sessionCode}:${userName}`;
+  const socketIds = socketClients[playerKey] || [];
+  
+  socketIds.forEach(socketId => {
+    const socket = getIO().sockets.sockets.get(socketId);
+    if (socket) {
+      socket.emit(event, data);
     }
   });
+}
+
+// Helper to broadcast to all users in a session
+function broadcastToSession(sessionCode: string, event: string, data: any) {
+  getIO().to(`game:${sessionCode}`).emit(event, data);
 }
 
 function verifyUserAccess(sessionCode: string, userName: string, userToken?: string, anonToken?: string): boolean {
@@ -396,13 +495,17 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   }
 }
 
-export const launchGame = async (req: AuthenticatedRequest, res: Response) => {
+async function handleLaunchGame(data: {
+  sessionCode: string,
+  sessionToken: string,
+  userName: string
+}) {
   try {
-    const { sessionCode, sessionToken } = req.body;
+    const { sessionCode, sessionToken, userName } = data;
     const gameRef = games[sessionCode];
     if (!gameRef) {
-      res.status(404).send({ message: "Lobby does not exist." });
-      return;
+      emitToUser(sessionCode, userName, "error", {message: "Lobby does not exist"})
+      return {success: false};
     }
     updateGameActivity(sessionCode);
     
@@ -411,8 +514,8 @@ export const launchGame = async (req: AuthenticatedRequest, res: Response) => {
       SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
     ` as { session_token: string }[];
     if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
-      res.status(403).send({ message: "Invalid session token for this lobby." });
-      return;
+      emitToUser(sessionCode, userName, "error", {message: "Invalid session token for this lobby"})
+      return {success: false};
     }
 
     // Get all users in the lobby from playerInfo
@@ -422,12 +525,12 @@ export const launchGame = async (req: AuthenticatedRequest, res: Response) => {
       .filter(Boolean);
       
     if (userList.length <= 1) {
-      res.status(400).send({ message: "Insufficient users in lobby." });
-      return;
+      emitToUser(sessionCode, userName, "error", {message: "Insufficient users in lobby"})
+      return {success: false};
     }
     if (gameRef.hasStarted) {
-      res.status(400).send({ message: "Game already started." });
-      return;
+      emitToUser(sessionCode, userName, "error", {message: "Game already started"})
+      return {success: false};
     }
 
     console.log("Starting game", sessionCode)
@@ -437,11 +540,12 @@ export const launchGame = async (req: AuthenticatedRequest, res: Response) => {
     gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
 
     // broadcast gamestart to all users and start
-    broadcastSSE(sessionCode, { type: 'game-start' });
+    broadcastToSession(sessionCode, 'game-start', {});
     sendNextCommand(gameRef);
+    return {success: true}
   } catch (error) {
     console.error("Error starting game:", error);
-    res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
+    emitToUser(data.sessionCode, data.userName, "error", { message: error instanceof Error ? error.message : String(error) })
   }
 }
 
@@ -455,8 +559,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
       const allScores = Object.values(gameRef.individualScores);
       const maxScore = Math.max(...allScores);
       Object.keys(gameRef.individualScores).forEach(userName => {
-        sendSSE(gameRef.sessionCode, userName, {
-          type: 'game-end',
+        emitToUser(gameRef.sessionCode, userName, "game-end", {
           scores: gameRef.individualScores,
           youWon: gameRef.individualScores[userName] === maxScore && maxScore > 0
         });
@@ -470,8 +573,8 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     if(command.action == "load-atlas") gameRef.currentAtlas = command.atlas || ""
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
     // Broadcast command and scores to all users via SSE
-    broadcastSSE(gameRef.sessionCode, { type: 'game-command', command });
-    broadcastSSE(gameRef.sessionCode, { type: 'all-scores-update', scores: gameRef.individualScores });
+    broadcastToSession(gameRef.sessionCode, 'game-command', { command });
+    broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores });
 
     // Schedule next command
     if (gameRef.currentCommandIndex < gameRef.commands.length) {
@@ -486,12 +589,17 @@ function sendNextCommand(gameRef: MultiplayerGame) {
   }
 }
 
-export const updateParameters = async (req: UpdateMultiGameRequest, res: Response) => {
+async function handleUpdateParameters(data: {
+  sessionCode: string,
+  sessionToken: string,
+  userName: string,
+  parameters: Partial<MultiplayerParametersType>
+}) {
   try {
-    const { sessionCode, sessionToken, parameters } = req.body;
+    const { sessionCode, sessionToken, parameters } = data;
     const gameRef = games[sessionCode];
     if (!gameRef) {
-      res.status(404).send({ message: "Lobby does not exist." });
+      emitToUser(data.sessionCode, data.userName, "error", { message: "Lobby does not exist" })
       return;
     }
     updateGameActivity(sessionCode);
@@ -501,7 +609,7 @@ export const updateParameters = async (req: UpdateMultiGameRequest, res: Respons
       SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
     ` as { session_token: string }[];
     if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
-      res.status(403).send({ message: "Invalid session token for this lobby." });
+      emitToUser(data.sessionCode, data.userName, "error", { message: "Invalid session token for this lobby" })
       return;
     }
 
@@ -510,28 +618,34 @@ export const updateParameters = async (req: UpdateMultiGameRequest, res: Respons
       ...parameters
     };
     // Broadcast updated parameters to all lobby members
-    broadcastSSE(sessionCode, { type: 'parameters-updated', parameters: gameRef.parameters });
-    res.status(200).send({ message: "Parameters updated." });
+    broadcastToSession(sessionCode, 'parameters-updated', { 
+      parameters: gameRef.parameters 
+    });
+    return { success: true };
   } catch (error) {
     console.error("Error updating parameters:", error);
-    res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
+    emitToUser(data.sessionCode, data.userName, "error", { message: error instanceof Error ? error.message : String(error) })
   }
 }
 
-export const validateGuess = async (req: MultiValidateGuessRequest, res: Response) => {
+async function handleValidateGuess(data: {
+  sessionCode: string,
+  userName: string,
+  voxelProp: any,
+  anonToken?: string,
+  userToken?: string
+}) {
   try {
-    const { sessionCode, userName, voxelProp, anonToken, userToken } = req.body;
+    const { sessionCode, userName, voxelProp, anonToken, userToken } = data;
     
     // Authentication check
     if (!verifyUserAccess(sessionCode, userName, userToken, anonToken)) {
-      res.status(403).send({ message: "Authentication failed." });
-      return;
+      return { error: "Authentication failed" };
     }
 
     const gameRef = games[sessionCode];
     if (!gameRef || !gameRef.commands) {
-      res.status(404).send({ message: 'Game not available.' });
-      return;
+      return { error: "Game not available" };
     }
     updateGameActivity(sessionCode);
 
@@ -539,11 +653,11 @@ export const validateGuess = async (req: MultiValidateGuessRequest, res: Respons
     if(!gameRef.hasAnswered) gameRef.hasAnswered = {}
     if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands.length).fill(false);
     if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
-      res.status(400).send({ message: 'Answer already given.' });
+      emitToUser(sessionCode, userName, "error", {message: "Answer already given"})
       return;
     }
     if(gameRef.commands[gameRef.currentCommandIndex].action != "guess"){
-      res.status(400).send({ message: 'Guess delay timed out.' });
+      emitToUser(sessionCode, userName, "error", {message: "Guess delay timed out"})
       return;
     }
 
@@ -551,7 +665,7 @@ export const validateGuess = async (req: MultiValidateGuessRequest, res: Respons
     const atlasImage: NVImage = imageRef[gameRef.currentAtlas];
     const atlasMetadata = imageMetadata[gameRef.currentAtlas];
     if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
-      res.status(400).send({ message: 'Coordinates out of bound.' });
+      emitToUser(sessionCode, userName, "error", {message: "Coordinates out of bound"})
       return;
     }
 
@@ -562,6 +676,7 @@ export const validateGuess = async (req: MultiValidateGuessRequest, res: Respons
     const command = gameRef.commands[gameRef.currentCommandIndex];
     const now = Date.now();
     const elapsed = (now - (gameRef.stepStartTime || 0));
+    let minDistance = Infinity;
     if (isCorrect) {
       let bonus = 0;
       if (gameRef.commands && gameRef.commands[gameRef.currentCommandIndex]) {
@@ -576,7 +691,6 @@ export const validateGuess = async (req: MultiValidateGuessRequest, res: Respons
             const centers: number[][] = regionCenters[gameRef.currentAtlas][gameRef.currentRegionId];
             const [xMm, yMm, zMm] = voxelProp.mm;
             // Find the minimum distance to any center of the region
-            let minDistance = Infinity;
             for (const center of centers) {
                 const distance = Math.sqrt(
                     Math.pow(center[0] - xMm, 2) +
@@ -602,21 +716,21 @@ export const validateGuess = async (req: MultiValidateGuessRequest, res: Respons
     if(isCorrect) gameRef.individualCorrectDurations[userName].push(elapsed);
     
     // Broadcast score update to all users via SSE
-    broadcastSSE(sessionCode, {
-      type: 'score-update',
+    broadcastToSession(sessionCode, 'score-update', {
       user: userName,
       score: gameRef.individualScores[userName]
     });
-
-    res.status(200).send({
-      type: 'guess-result',
+    
+    emitToUser(sessionCode, userName, "guess-result", {
       isCorrect,
       scoreIncrement,
-      totalScore: gameRef.individualScores[userName]
-    });
+      totalScore: gameRef.individualScores[userName],
+      distance: isCorrect ? 0 : minDistance
+    })
+    return { success: true };
   } catch (error) {
       console.error("Error validating guess:", error);
-      res.status(500).send({ message: error instanceof Error ? error.message : String(error) });
+      emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
   }
 }
 
@@ -689,7 +803,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     cleanupGame(gameRef.sessionCode);
     
     // broadcast a final message to all clients
-    broadcastSSE(sessionCode, { type: 'game-closed' });
+    broadcastToSession(sessionCode, 'game-closed', {});
 
     // Cleanup: close all SSE connections for this session
     cleanupGame(sessionCode);
@@ -734,14 +848,14 @@ setupInactiveGameCheck();
 
 // Create a dedicated cleanup function
 function cleanupGame(sessionCode: string) {
+  const io = getIO();
   // Clean up SSE clients
-  Object.keys(sseClients)
+  const socketIdsToDisconnect: string[] = [];
+  Object.keys(socketClients)
     .filter(key => key.startsWith(sessionCode + ":"))
     .forEach(key => {
-      sseClients[key].forEach(res => {
-        try { res.end(); } catch (e) { /* ignore */ }
-      });
-      delete sseClients[key];
+      socketIdsToDisconnect.push(...socketClients[key]);
+      delete socketClients[key];
     });
 
   // Clean up player info
@@ -751,6 +865,14 @@ function cleanupGame(sessionCode: string) {
       delete playerInfo[key];
     });
   
+  // Clean up socket info for affected sockets
+  socketIdsToDisconnect.forEach(socketId => {
+    delete socketInfo[socketId];
+  });
+  
+  // Force all sockets to leave the room
+  io.in(`game:${sessionCode}`).socketsLeave(`game:${sessionCode}`);
+
   // Remove game entry
   const game = games[sessionCode];
   if (game && game.commandTimeout) {

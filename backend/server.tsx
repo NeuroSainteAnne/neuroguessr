@@ -4,6 +4,7 @@ import express from "express";
 import path from "path";
 import fs from "fs"
 import https from 'https';
+import http from 'http';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
 import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
@@ -16,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, createSSEClient, launchGame, updateParameters, validateGuess } from "./modules/multi.ts";
+import { createMultiplayerSession, initSocketHandlers } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -70,13 +71,6 @@ app.post('/api/cloture-game-session', authenticateToken,
 
 // multi.ts
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
-app.get('/sse/:sessionCode/:userName', createSSEClient)
-app.post('/api/multi/launch-game', authenticateToken, 
-    (req, res) => launchGame(req as LaunchMultiGameRequest, res))
-app.post('/api/multi/update-parameters', authenticateToken, 
-    (req, res) => updateParameters(req as UpdateMultiGameRequest, res))
-app.post('/api/multi/validate-guess', 
-    (req, res) => validateGuess(req as MultiValidateGuessRequest, res))
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
@@ -89,6 +83,7 @@ app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
 
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
+import { initSocketIO } from 'modules/socket.io.ts';
 
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
@@ -283,6 +278,8 @@ setInterval(() => {
     cleanOldGameSessions();
 }, 10*60*1000); // each 10 minute
 
+let server;
+
 if(config.server.mode == "https"){
     var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
     var cert = fs.readFileSync(path.join(__dirname, config.server.serverCert));
@@ -291,15 +288,20 @@ if(config.server.mode == "https"){
       cert: cert
     };
     
-    var server = https.createServer(httpOptions, app);
+    server = https.createServer(httpOptions, app);
     server.listen(PORT, () => {
         console.log(`Server is running on https://localhost:${PORT}`);
     });
 } else {
-    app.listen(PORT, () => {
+    server = http.createServer(app);
+    server.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
     });
 }
+
+// Initialize Socket.io
+initSocketIO(server);
+initSocketHandlers()
 
 process.on('SIGINT', async () => {
   await sql.end();

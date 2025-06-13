@@ -6,6 +6,7 @@ import { MultiplayerParametersType } from '../../../types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';
+import { Socket, io } from 'socket.io-client';
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -20,7 +21,7 @@ const MultiplayerConfigScreen = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
-    const evtSourceRef = useRef<EventSource | null>(null);
+    const socketRef = useRef<Socket | null>(null);
     const [numRegions, setNumRegions] = useState<number>(DEFAULT_REGION_NUMBER);
     const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
@@ -75,50 +76,77 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(() => {
         if (sessionCode && sessionToken && userUsername && authToken) {
-            // Open SSE connection as host
-            const url = `/sse/${sessionCode}/${userUsername}?token=${authToken}`;
-            const evtSource = new EventSource(url);
-            evtSourceRef.current = evtSource;
-
-            evtSource.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'lobby-users' && Array.isArray(data.users)) {
-                setLobbyUsers(data.users);
-            } else if (data.type === 'player-joined' && data.userName) {
-                setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
-            } else if (data.type === 'player-left' && data.userName) {
-                setLobbyUsers(prev => prev.filter(u => u !== data.userName));
-            }
-            };
-            evtSource.onerror = () => {
-            setError('SSE connection error');
-            };
+            console.log("connexion")
+            // Create socket connection
+            const socket = io('/', {
+                path: '/socket.io',
+                forceNew: true,
+                transports: ['websocket', 'polling'],
+                // Add this timeout to help with connection issues
+                timeout: 10000
+            });
+            socketRef.current = socket;
+            
+            // Connection events
+            socket.on('connect', () => {
+                console.log('Socket connected');
+                
+                // Join the lobby
+                socket.emit('join-lobby', {
+                    sessionCode,
+                    userName: userUsername,
+                    isAnonymous: false,
+                    token: authToken
+                });
+            });
+            
+            // Connection error
+            socket.on('connect_error', (err) => {
+                setError(`Connection error: ${err.message}`);
+            });
+            socket.on('error', (data) => {
+                setError(data.message);
+            });
+            socket.on('fatal-error', (data) => {
+                setError(data.message);
+            });
+            socket.on('lobby-users', (data) => {
+                if (Array.isArray(data.users)) {
+                    setLobbyUsers(data.users);
+                }
+            });
+            socket.on('player-joined', (data) => {
+                if (data.userName) {
+                    setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+                }
+            });
+            socket.on('player-left', (data) => {
+                if (data.userName) {
+                    setLobbyUsers(prev => prev.filter(u => u !== data.userName));
+                }
+            });
             return () => {
-            evtSource.close();
-            evtSourceRef.current = null;
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                    socketRef.current = null;
+                }
             };
         }
     }, [sessionCode, sessionToken, userUsername, authToken]);
 
     const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
+        if(!socketRef.current) return;
         parametersRef.current = {...parametersRef.current, ...newParameters}
         // Send updated parameters to the server
         if (sessionCode && sessionToken) {
             try {
-                await fetch('/api/multi/update-parameters', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({
+                socketRef.current.emit('update-parameters', {
                     sessionCode,
                     sessionToken,
                     parameters: parametersRef.current
-                    })
                 });
             } catch (err) {
-            setError('Failed to update parameters');
+                setError('Failed to update parameters');
             }
         }
     }
@@ -133,6 +161,12 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(() => {
         createSession()
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+        }
     }, [])
 
     return (

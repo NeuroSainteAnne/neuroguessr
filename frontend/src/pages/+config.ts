@@ -6,5 +6,6 @@ export default {
   extends: [vikeReact],
   onRenderClient: 'import:../renderer/+onRenderClient:onRenderClient',
   onRenderHtml: 'import:../renderer/+onRenderHtml:onRenderHtml',
-  Head: true
+  Head: true,
+  disableUrlNormalization: true
 }
