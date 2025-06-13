@@ -79,7 +79,7 @@ export const createSSEClient = async (req: Request, res: Response) => {
     updateGameActivity(sessionCode);
     // Always set up SSE headers first
     req.socket.setTimeout(0);
-    res.set({
+    res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
       'Connection': 'keep-alive',
@@ -94,7 +94,7 @@ export const createSSEClient = async (req: Request, res: Response) => {
     res.write(`:\n`); // Comment line
     res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
     res.write(`:\n`); // Another comment line
-    
+
     // Set up a keep-alive interval
     const keepAliveInterval = setInterval(() => {
       res.write(`: keep-alive comment\n\n`);
