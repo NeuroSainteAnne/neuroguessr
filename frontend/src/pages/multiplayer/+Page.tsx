@@ -14,7 +14,8 @@ const MultiplayerGameScreen = () => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
       preloadedBackgroundMNI, currentLanguage, pageContext,
-      setHeaderText, setHeaderTextMode, setHeaderTime, updateToken
+      setHeaderText, setHeaderTextMode, setHeaderTime, updateToken,
+      showNotification
    } = useApp();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
@@ -151,6 +152,7 @@ const MultiplayerGameScreen = () => {
       setHasStarted(true);
       setCurrentAttempts(0)
       setHasWon(false)
+      setForceDisplayUpdate((n)=>n+1)
       isFirstGuess.current = true;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
     });
@@ -165,6 +167,7 @@ const MultiplayerGameScreen = () => {
       } else if (data.command.action === 'guess') {
         currentTarget.current = data.command.regionId
         setHeaderTextMode("")
+        if(cMap.current && cMap.current.labels && currentTarget.current) showNotification(cMap.current.labels[currentTarget.current], true)
         startStepCountdown(t("remaining-time"), data.command.duration);
         if (guessButtonRef.current) {
           guessButtonRef.current.disabled = false;
@@ -191,8 +194,10 @@ const MultiplayerGameScreen = () => {
     socket.on('guess-result', (data) => {
       console.log("guess-result",data)
         if (data.isCorrect) {
+          console.log("success")
           setHeaderTextMode("success");
         } else {
+          console.log("failure")
           setHeaderTextMode("failure");
         }
     })
