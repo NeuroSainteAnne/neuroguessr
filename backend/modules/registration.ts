@@ -5,7 +5,7 @@ import Joi from "joi";
 import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { __dirname, getUserToken, verifyCaptcha } from "./utils.ts";
+import { __dirname, getUserToken } from "./utils.ts";
 import type { Response } from "express";
 import type { Token, User } from "../interfaces/database.interfaces.ts";
 import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
@@ -250,7 +250,7 @@ export const passwordLink = async (
                 res.status(400).send({ message: "Captcha token missing" });
                 return;
             }
-            const captchaOk = await verifyCaptcha(captchaToken, config.captcha.secretKey);
+            const captchaOk = await verifyAltcha(captchaToken);
             if (!captchaOk) {
                 res.status(400).send({ message: "Captcha verification failed" });
                 return;
