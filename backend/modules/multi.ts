@@ -165,6 +165,8 @@ export const createSSEClient = async (req: Request, res: Response) => {
     initUserInLobby(finalUserName, gameRef, sessionCode)
 
     req.on('close', performCleanup);
+
+    res.status(200).json({"status":"ok"})
   } catch (error) {
     console.error("SSE connection error:", error);
     performCleanup();
