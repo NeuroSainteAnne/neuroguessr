@@ -46,6 +46,7 @@ const MultiplayerGameScreen = () => {
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
+  const isGuessCooldownRef = useRef<boolean>(false);
 
   const handleConnect = () => {
     setError(null);
@@ -165,16 +166,25 @@ const MultiplayerGameScreen = () => {
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
       } else if (data.command.action === 'guess') {
+        isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
         setHeaderTextMode("")
         if(cMap.current && cMap.current.labels && currentTarget.current) showNotification(cMap.current.labels[currentTarget.current], true)
         startStepCountdown(t("remaining-time"), data.command.duration);
         if (guessButtonRef.current) {
-          guessButtonRef.current.disabled = false;
+          guessButtonRef.current.disabled = true;
         }
         if(!isFirstGuess.current) setCurrentAttempts((n)=>n+1)
         isFirstGuess.current = false;
         setForceDisplayUpdate((n)=>n+1)
+        console.log("start cooldown")
+        setTimeout(() => {
+          isGuessCooldownRef.current = false;
+          if (guessButtonRef.current) {
+            guessButtonRef.current.disabled = false;
+          }
+          setForceDisplayUpdate((n)=>n+1)
+        }, 1000);
       }
     });
     socket.on('score-update', (data) => {
@@ -426,7 +436,8 @@ const MultiplayerGameScreen = () => {
   }
 
   const validateGuess = async () => {
-    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current) {
+    console.log(isGuessCooldownRef.current)
+    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
       console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
     }
