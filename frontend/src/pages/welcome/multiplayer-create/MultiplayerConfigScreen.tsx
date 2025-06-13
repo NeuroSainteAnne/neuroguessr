@@ -76,14 +76,14 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(() => {
         if (sessionCode && sessionToken && userUsername && authToken) {
-            console.log("connexion")
             // Create socket connection
             const socket = io('/', {
                 path: '/socket.io',
-                forceNew: true,
-                transports: ['websocket', 'polling'],
-                // Add this timeout to help with connection issues
-                timeout: 10000
+                transports: ['polling', 'websocket'], // Start with polling first, then try websocket
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 20000,
+                forceNew: true
             });
             socketRef.current = socket;
             

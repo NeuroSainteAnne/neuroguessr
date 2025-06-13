@@ -18,7 +18,7 @@ export function initSocketIO(server: Server) {
       methods: ["GET", "POST"]
     },
     // Socket.io settings to help with proxies
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     pingTimeout: 60000,
     pingInterval: 25000
   });

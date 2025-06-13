@@ -91,7 +91,14 @@ const MultiplayerGameScreen = () => {
     setError(null);
 
     // Create socket connection
-    const socket = io('/'); // or your specific endpoint
+    const socket = io('/', {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'], // Start with polling first, then try websocket
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      forceNew: true
+    });
     socketRef.current = socket;
 
     // Connection events
