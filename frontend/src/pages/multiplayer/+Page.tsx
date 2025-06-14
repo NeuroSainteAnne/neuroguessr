@@ -8,21 +8,22 @@ import atlasFiles from '../../utils/atlas_files';
 import { fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
+import { io, Socket } from 'socket.io-client';
 
 const MultiplayerGameScreen = () => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
       preloadedBackgroundMNI, currentLanguage, pageContext,
-      setHeaderText, setHeaderTextMode, setHeaderTime, updateToken
+      setHeaderText, setHeaderTextMode, setHeaderTime, updateToken,
+      showNotification
    } = useApp();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
-  const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
-  const evtSourceRef = useRef<EventSource | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
@@ -45,6 +46,7 @@ const MultiplayerGameScreen = () => {
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
+  const isGuessCooldownRef = useRef<boolean>(false);
 
   const handleConnect = () => {
     setError(null);
@@ -85,105 +87,159 @@ const MultiplayerGameScreen = () => {
   }
 
   const joinLobby = (inputCode: string) => {
-    if (evtSourceRef.current) return;
+    if (connected) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
 
-    let url = `/sse/${inputCode}/${isLoggedIn ? userUsername : anonUsername}`;
-    if (isLoggedIn && authToken) url += `?token=${authToken}`;
-    if (!isLoggedIn && anonUsername) url += `?anonymous=true`;
+    setError(null);
 
-    const evtSource = new EventSource(url);
-    evtSourceRef.current = evtSource;
+    // Create socket connection
+    const socket = io('/', {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'], // Start with polling first, then try websocket
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      forceNew: true
+    });
+    socketRef.current = socket;
 
-    evtSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'error') {
-        setError(data.message);
-      } else if (data.type === 'fatal-error') {
-        setError(data.message);
-        if(evtSourceRef.current) evtSourceRef.current.close();
-        evtSourceRef.current = null;
-      } else if (data.type === 'lobby-users' && Array.isArray(data.users)) {
-        setConnected(true)
-        setLobbyUsers(data.users);
-        if(!isLoggedIn){
-          setIsAnonymous(true)
+    // Connection events
+    socket.on('connect', () => {
+      console.log('Socket connected');
+      
+      // Join the lobby
+      socket.emit('join-lobby', {
+        sessionCode: inputCode,
+        userName: isLoggedIn ? userUsername : anonUsername,
+        isAnonymous: !isLoggedIn,
+        token: isLoggedIn ? authToken : undefined,
+        anonToken: anonTokenRef.current
+      });
+    });
+
+    // Connection error
+    socket.on('connect_error', (err) => {
+      setError(`Connection error: ${err.message}`);
+      cleanupSocket();
+    });
+    socket.on('error', (data) => {
+      setError(data.message);
+    });
+    socket.on('fatal-error', (data) => {
+      setError(data.message);
+      cleanupSocket();
+    });
+    socket.on('anon-token', (data) => {
+      anonTokenRef.current = data.anonToken;
+    });
+    socket.on('lobby-users', (data) => {
+      setLobbyUsers(data.users);
+      setConnected(true);
+      if(!isLoggedIn){
+        setIsAnonymous(true)
+      }
+      tryLaunchGame()
+    });
+    socket.on('player-joined', (data) => {
+      setLobbyUsers(prev => [...prev, data.userName]);
+    });
+    socket.on('player-left', (data) => {
+      setLobbyUsers(prev => prev.filter(user => user !== data.userName));
+    });
+    socket.on('parameters-updated', (data) => {
+      setParameters(data.parameters);
+    });
+    socket.on('game-start', () => {
+      setHasStarted(true);
+      setCurrentAttempts(0)
+      setHasWon(false)
+      setForceDisplayUpdate((n)=>n+1)
+      isFirstGuess.current = true;
+      if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+    });
+    socket.on('game-command', (data) => {
+      if (data.command.action === 'load-atlas') {
+        // Load the specified atlas in the viewer
+        if (data.command.atlas) {
+          setAskedAtlas(data.command.atlas)
+          setAskedLut(data.command.lut)
         }
-        tryLaunchGame()
-      } else if (data.type === 'player-joined' && data.userName) {
-        setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
-      } else if (data.type === 'anon-token' && data.anonToken) {
-        anonTokenRef.current = data.anonToken;
-      } else if (data.type === 'player-left' && data.userName) {
-        setLobbyUsers(prev => prev.filter(u => u !== data.userName));
-      } else if (data.type === 'parameters-updated' && data.parameters) {
-        setParameters(data.parameters as MultiplayerParametersType);
-      } else if (data.type === 'game-start') {
-        setHasStarted(true)
-        setCurrentAttempts(0)
-        setHasWon(false)
-        isFirstGuess.current = true;
-        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-      } else if (data.type === 'game-command' && data.command) {
-        if (data.command.action === 'load-atlas') {
-          // Load the specified atlas in the viewer
-          if (data.command.atlas) {
-            setAskedAtlas(data.command.atlas)
-            setAskedLut(data.command.lut)
-          }
-          startStepCountdown(t("prepare-yourself"), data.command.duration);
-        } else if (data.command.action === 'guess') {
-          currentTarget.current = data.command.regionId
-          setHeaderTextMode("")
-          startStepCountdown(t("remaining-time"), data.command.duration);
+        startStepCountdown(t("prepare-yourself"), data.command.duration);
+      } else if (data.command.action === 'guess') {
+        isGuessCooldownRef.current = true;
+        currentTarget.current = data.command.regionId
+        setHeaderTextMode("")
+        if(cMap.current && cMap.current.labels && currentTarget.current) showNotification(cMap.current.labels[currentTarget.current], true)
+        startStepCountdown(t("remaining-time"), data.command.duration);
+        if (guessButtonRef.current) {
+          guessButtonRef.current.disabled = true;
+        }
+        if(!isFirstGuess.current) setCurrentAttempts((n)=>n+1)
+        isFirstGuess.current = false;
+        setForceDisplayUpdate((n)=>n+1)
+        console.log("start cooldown")
+        setTimeout(() => {
+          isGuessCooldownRef.current = false;
           if (guessButtonRef.current) {
             guessButtonRef.current.disabled = false;
           }
-          if(!isFirstGuess.current) setCurrentAttempts((n)=>n+1)
-          isFirstGuess.current = false;
           setForceDisplayUpdate((n)=>n+1)
-        }
-      } else if (data.type === 'all-scores-update') {
-        setPlayerScores(data.scores)
-      } else if (data.type === 'score-update') {
-        setPlayerScores(prev => ({
-            ...prev,
-            [data.user]: data.score
-        }));
-      } else if (data.type === 'game-end') {
+        }, 1000);
+      }
+    });
+    socket.on('score-update', (data) => {
+      setPlayerScores(prev => ({
+        ...prev,
+        [data.user]: data.score
+      }));
+    });
+    socket.on('all-scores-update', (data) => {
+      setPlayerScores(data.scores);
+    });
+    socket.on('game-end', (data) => {
         clearInterface()
         setHasWon(data.youWon)
         setShowMultiplayerOverlay(true)
-      }
-    };
-    evtSource.onerror = (event) => {
-      setError(t('sse-error'));
-      console.error("SSE connection error:", event);
-      if(evtSourceRef.current) evtSourceRef.current.close();
-      evtSourceRef.current = null;
+    });
+    socket.on('guess-result', (data) => {
+      console.log("guess-result",data)
+        if (data.isCorrect) {
+          console.log("success")
+          setHeaderTextMode("success");
+        } else {
+          console.log("failure")
+          setHeaderTextMode("failure");
+        }
+    })
+    
+    // Cleanup on unmount
+    return () => {
+      cleanupSocket();
     };
   };
 
+  const cleanupSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  };
 
   const tryLaunchGame = async () => {
-    if (evtSourceRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
-      try {
-        const response = await fetch('/api/multi/launch-game', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ sessionCode: askedSessionCode, sessionToken: askedSessionToken })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          setError(data?.message || t('error_launching_game'));
+    if (socketRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
+      socketRef.current.emit('launch-game', {
+        sessionCode: askedSessionCode,
+        sessionToken: askedSessionToken,
+        userToken: authToken
+      });
+      socketRef.current.once('game-launched', (data) => {
+        console.log(data)
+        if (data.success) {
+          console.log('Game launched successfully');
+        } else {
+          setError(data.message || t('error_launching_game'));
         }
-      } catch (err) {
-        setError(t('error_launching_game'));
-        console.error("Error launching game:", err);
-      }
+      });
     }
   }
 
@@ -206,7 +262,7 @@ const MultiplayerGameScreen = () => {
   };
 
   const updateGameDisplay = () => {
-    if (hasStarted && evtSourceRef.current && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
+    if (hasStarted && socketRef.current && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
     } else {
@@ -218,7 +274,7 @@ const MultiplayerGameScreen = () => {
   }, [parameters, currentAttempts, forceDisplayUpdate]);
 
   const handleSpaceBar = () => {
-    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && evtSourceRef.current) {
+    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && socketRef.current) {
       validateGuess();
     }
   }
@@ -278,10 +334,6 @@ const MultiplayerGameScreen = () => {
       setLobbyUsers([])
       setPlayerScores({})
       setShowMultiplayerOverlay(false)
-      if (evtSourceRef.current) {
-        evtSourceRef.current.close();
-        evtSourceRef.current = null;
-      }
       setInputCode(askedSessionCode)
       if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
     }
@@ -297,10 +349,7 @@ const MultiplayerGameScreen = () => {
 
   useEffect(() => {
     return () => {
-      if (evtSourceRef.current) {
-        evtSourceRef.current.close();
-        evtSourceRef.current = null;
-      }
+      cleanupSocket();
       if (countdownInterval.current) clearInterval(countdownInterval.current);
       setHeaderTextMode("")
       setHeaderText("")
@@ -387,44 +436,23 @@ const MultiplayerGameScreen = () => {
   }
 
   const validateGuess = async () => {
-    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current) {
+    console.log(isGuessCooldownRef.current)
+    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
       console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
     }
     setHeaderTextMode("");
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
-    try {
-      const response = await fetch('/api/multi/validate-guess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionCode: askedSessionCode,
-          userName: isLoggedIn ? userUsername : anonUsername,
-          voxelProp: selectedVoxelProp.current,
-          ...(isAnonymous && anonTokenRef.current ? { anonToken : anonTokenRef.current } : {}),
-          ...(isLoggedIn ? { userToken : authToken } : {})
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setError(data?.message || t('error_validating_guess'));
-        if (guessButtonRef.current) guessButtonRef.current.disabled = false;
-        return;
-      }
-      if (data.type === 'guess-result') {
-        if (data.isCorrect) {
-          setHeaderTextMode("success");
-        } else {
-          setHeaderTextMode("failure");
-        }
-      }
-    } catch (err) {
-      setError(t('error_validating_guess'));
-      if (guessButtonRef.current) guessButtonRef.current.disabled = false;
-      console.error("Error validating guess:", err);
-    }
-  };
+    
+    socketRef.current.emit('validate-guess', {
+      sessionCode: inputCode,
+      userName: isLoggedIn ? userUsername : anonUsername,
+      voxelProp: selectedVoxelProp.current,
+      ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
+      ...(isLoggedIn ? { userToken: authToken } : {})
+    });
+  }
 
   const title = t("neuroguessr_multiplayer_title")
   return (
