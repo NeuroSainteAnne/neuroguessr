@@ -9,11 +9,13 @@ import { fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../uti
 import { refreshToken } from '../../utils/helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { io, Socket } from 'socket.io-client';
+import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 
 const MultiplayerGameScreen = () => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
       preloadedBackgroundMNI, currentLanguage, pageContext,
+      userPublishToLeaderboard,
       setHeaderText, setHeaderTextMode, setHeaderTime, updateToken,
       showNotification
    } = useApp();
@@ -545,13 +547,14 @@ const MultiplayerGameScreen = () => {
                 return scoreB - scoreA;
               })
               .map((u) => (
-                <li key={u} style={(u === userUsername || u === anonUsername) ? { color: 'green', fontWeight: 'bold' } : {}}>
+                <li key={u} style={(u === userUsername || u === anonUsername) ? { color: (hasWon?'green':'red'), fontWeight: 'bold' } : {}}>
                   {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
                 </li>
               ))
             }
           </ul>
           <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
+          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
             <a id="go-back-menu-button-time-attack" className="home-button" href="/welcome/multiplayer">
               <i className="fas fa-home"></i>
