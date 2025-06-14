@@ -239,6 +239,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
 
         // update the score
         let scoreIncrement = 0;
+        let minDistance = Infinity; 
         if (session.mode == "streak") {
             if (isCorrect) {
                 scoreIncrement = 1;
@@ -251,7 +252,6 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                     const centers: number[][] = regionCenters[session.atlas][regionId];
                     const [xMm, yMm, zMm] = coordinates.mm;
                     // Find the minimum distance to any center of the region
-                    let minDistance = Infinity;
                     for (const center of centers) {
                         const distance = Math.sqrt(
                             Math.pow(center[0] - xMm, 2) +
@@ -344,7 +344,8 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             endgame,
             scoreIncrement,
             finalScore,
-            performHighlight
+            performHighlight,
+            distance: isCorrect ? 0 : minDistance
         });
     } catch (error: unknown) {
         console.log(error);

@@ -102,3 +102,40 @@ export function getClickedRegion(myniivue: any, canvasObj: HTMLCanvasElement, cM
       }
     }
 }
+
+export function highlightRegionFluorescentYellow(highlightedRegion: number, niivue: any, cLut: Uint8ClampedArray|null, 
+                                                        cMap: ColorMap|null, moveToCenter: boolean = true) {
+    //console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
+    if (cLut && niivue && highlightedRegion && highlightedRegion * 4 < cLut.length) {
+      const lut = cLut.slice();
+      // Make all regions transparent initially except region 0 if needed
+      for (let i = 0; i < lut.length; i += 4) {
+        lut[i + 0] = 0;   // R
+        lut[i + 1] = 0;   // G
+        lut[i + 2] = 0;   // B
+        lut[i + 3] = 0;   // A (transparent)
+      }
+      // Highlight the specific region in yellow
+      lut[highlightedRegion * 4 + 0] = 255; // R
+      lut[highlightedRegion * 4 + 1] = 255; // G
+      lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
+      lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
+
+      if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
+
+      if(moveToCenter && cMap && cMap.centers && cMap.centers[highlightedRegion]){
+        const center = cMap.centers[highlightedRegion];
+        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center[0]));
+        niivue.createOnLocationChange();
+      }
+      niivue.updateGLVolume();
+      niivue.drawScene();
+    } else {
+      console.error('Cannot highlight region:', {
+        clut: !!cLut,
+        nv1: !!niivue,
+        highlightedRegion,
+        lutLength: cLut?.length
+      });
+    }
+  }

@@ -1,9 +1,9 @@
 import React, { use } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { isTokenValid, refreshToken } from '../../utils/helper_login';
-import { defineNiiOptions, fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
+import { defineNiiOptions, fetchJSON, getClickedRegion, highlightRegionFluorescentYellow, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { useApp } from '../../context/AppContext';
-import { ColorMap } from '../../types';
+import { ColorMap, PastRegion } from '../../types';
 import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
 import { Help } from '../../components/Help';
@@ -11,6 +11,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Niivue } from '@niivue/niivue';
 import { navigate } from 'vike/client/router';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
+import RegionHistory from '../../components/RegionHistory';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -68,12 +69,12 @@ export function Page() {
   const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
-  
   const { routeParams } = pageContext;
   const gameMode = routeParams?.mode;
   const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasEnded, setHadEnded] = useState<boolean>(false);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
   const [currentScore, setCurrentScore] = useState<number>(0);
   const currentScoreRef = useRef<number>(0);
@@ -107,6 +108,7 @@ export function Page() {
   const timeattackOverlayRef = useRef<HTMLDivElement>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const lastTouchEvent = useRef<React.Touch | null>(null);
+  const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
 
   const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
@@ -267,6 +269,8 @@ export function Page() {
     usedRegions.current = []; // Reset used regions for time attack
     setHighlightedRegion(null);
     setHeaderTextMode("normal"); // Reset header text mode
+    setHadEnded(false);
+    setPastRegions([]);
     setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
     if (gameMode === 'navigation') {
       setHeaderScore("");
@@ -386,7 +390,7 @@ export function Page() {
     const seconds = (remaining % 60).toString().padStart(2, '0');
     setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
     if (remaining <= 0) {
-      if (isLoggedIn) {
+      if (isLoggedIn && !hasEnded) {
         manualClotureGameSession().then((finalScore) => {
           endTimeAttack(finalScore);
         }).catch((error) => {
@@ -491,7 +495,7 @@ export function Page() {
 
   useEffect(() => {
     if (highlightedRegion) {
-      highlightRegionFluorescentYellow();
+      highlightRegionFluorescentYellow(highlightedRegion, niivue, cLut.current, cMap.current, gameMode !== 'navigation');
     } else { // reset to original color
       if (cLut.current && niivue && niivue.volumes.length > 1 && niivue.volumes[1].colormapLabel) {
         niivue.volumes[1].colormapLabel.lut = cLut.current;
@@ -575,6 +579,7 @@ export function Page() {
     let scoreIncrement = 0;
     let givenFinalScore = 0;
     let performHighlight = false;
+    let distance = Infinity;
     if (isLoggedIn) {
       try {
         const token = localStorage.getItem('authToken');
@@ -597,6 +602,7 @@ export function Page() {
         scoreIncrement = result.scoreIncrement;
         givenFinalScore = result.finalScore;
         performHighlight = result.performHighlight;
+        distance = result.distance;
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
@@ -613,15 +619,15 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight }:
-    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean }): { scoreIncrement: number } => {
+  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity }:
+    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number }): { scoreIncrement: number } => {
     if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
       console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
       return { scoreIncrement };
@@ -694,21 +700,21 @@ export function Page() {
 
           if (correctCenters && proposedCenter) {
             // Calculate Euclidean distance between centers
-            let minDistance = Infinity;
+            distance = Infinity;
             for (const center of correctCenters) {
               const centerDistance = Math.sqrt(
                 Math.pow(center[0] - proposedCenter[0], 2) +
                 Math.pow(center[1] - proposedCenter[1], 2) +
                 Math.pow(center[2] - proposedCenter[2], 2)
               );
-              if (centerDistance < minDistance) {
-                minDistance = centerDistance;
+              if (centerDistance < distance) {
+                distance = centerDistance;
               }
             }
 
             // Calculate score based on distance
-            if (minDistance <= MAX_PENALTY_DISTANCE) {
-              scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+            if (distance <= MAX_PENALTY_DISTANCE) {
+              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
             } else {
               scoreIncrement = 0; // No points for too far away
             }
@@ -752,67 +758,38 @@ export function Page() {
         setForceDisplayUpdate((u) => u + 1);
       }
     }
+
+    // Add region to history
+    if (gameMode === 'time-attack') {
+      setPastRegions(prev => [...prev, {
+        regionId: currentTarget.current!,
+        regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+        isCorrect: guessSuccess,
+        score: scoreIncrement,
+        distance: guessSuccess ? 0 : distance,
+      }]);
+  // TODO INSERT missing regions when game is ended
+    }
+
     return { scoreIncrement }
   }
 
   function performEndGame({ finalScore }: { finalScore: number }) {
     if (gameMode === 'streak') {
+      setHighlightedRegion(currentTarget.current); // Highlight the last region
       setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
       setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
       setShowStreakOverlay(true);
       setHeaderTextMode("failure"); // Indicate streak ended visually
       setIsGameRunning(false);
-    }
-    if (gameMode === 'time-attack') {
+    } else if (gameMode === 'time-attack') {
       if (!isLoggedIn) {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
         finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
       }
       endTimeAttack(finalScore)
-    } else if (gameMode === 'streak') {
-      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-      setShowStreakOverlay(true);
-      return;
     }
-  }
-
-
-  function highlightRegionFluorescentYellow() {
-    if (gameMode === 'navigation' && highlightedRegion === 0) return;
-    //console.log('highlightRegionFluorescentYellow called with regionId:', highlightedRegion);
-    if (cLut.current && niivue && highlightedRegion && highlightedRegion * 4 < cLut.current.length) {
-      const lut = cLut.current.slice();
-      // Make all regions transparent initially except region 0 if needed
-      for (let i = 0; i < lut.length; i += 4) {
-        lut[i + 0] = 0;   // R
-        lut[i + 1] = 0;   // G
-        lut[i + 2] = 0;   // B
-        lut[i + 3] = 0;   // A (transparent)
-      }
-      // Highlight the specific region in yellow
-      lut[highlightedRegion * 4 + 0] = 255; // R
-      lut[highlightedRegion * 4 + 1] = 255; // G
-      lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
-      lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
-
-      if (niivue.volumes[1].colormapLabel) niivue.volumes[1].colormapLabel.lut = new Uint8ClampedArray(lut);
-
-      if(gameMode !== 'navigation' && cMap.current && cMap.current.centers && cMap.current.centers[highlightedRegion]){
-        const center = cMap.current.centers[highlightedRegion];
-        niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(center[0]));
-        niivue.createOnLocationChange();
-      }
-      niivue.updateGLVolume();
-      niivue.drawScene();
-    } else {
-      console.error('Cannot highlight region:', {
-        clut: !!cLut.current,
-        nv1: !!niivue,
-        highlightedRegion,
-        lutLength: cLut.current?.length
-      });
-    }
+    setHadEnded(true)
   }
 
   const handleRecolorization = () => {
@@ -949,21 +926,35 @@ export function Page() {
       {isLoading && <LoadingScreen />}
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-      <div className="canvas-container">
-        <canvas id="gl1" onClick={handleCanvasInteraction} 
-          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
-          onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+      <div className='canvas-and-info-container'>
+        {hasEnded && gameMode == "time-attack" && <RegionHistory pastRegions={pastRegions} 
+          highlightPastRegion={setHighlightedRegion}/>}
+        <div className="canvas-container">
+          <canvas id="gl1" onClick={handleCanvasInteraction} 
+            onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
+            onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+        </div>
       </div>
       <div className="button-container">
-        <a className="return-button" href="/welcome">{t("return_button")}</a>
+        <button
+            data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
+            className="home-button" onClick={() => { navigate("/welcome") }}>
+          <i className="fas fa-home"></i>
+        </button>
         {isNavigationMode && <button className="return-button" 
-            data-umami-event="go back" data-umami-event-gobacksource={gameMode}
+            data-umami-event="recolorize button"
             onClick={handleRecolorization}>{t("restore_color")}</button>}
         {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} 
             data-umami-event="guess button" data-umami-event-guesssource={gameMode}
             onClick={validateGuess}>
           <span className="confirm-text">{t("confirm_guess")}</span>
           <span className="space-text">{t("space_key")}</span></button>}
+        {hasEnded && 
+            <button className="restart-button" 
+                data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
+                onClick={() => { startGame() }}>
+              <i className="fas fa-sync-alt"></i>
+            </button>}
       </div>
 
       {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
@@ -972,6 +963,14 @@ export function Page() {
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
           {userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
+            <button 
+              className="eye-button" 
+              onClick={() => setShowStreakOverlay(false)}
+              data-umami-event="show review button" 
+              data-umami-event-overlay="streak"
+            >
+              <i className="fas fa-eye"></i>
+            </button>
             <button id="go-back-menu-button-streak" 
                 data-umami-event="go back button" data-umami-event-gobacksource="streak" 
                 className="home-button" onClick={() => { navigate("/welcome") }}>
@@ -979,7 +978,7 @@ export function Page() {
             </button>
             <button id="restart-button-streak" 
                 data-umami-event="restart button" data-umami-event-restartsource="streak" 
-                className="restart-button" onClick={() => { setShowStreakOverlay(false); startGame() }}>
+                className="restart-button" onClick={() => { startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
           </div>
@@ -1000,6 +999,14 @@ export function Page() {
             <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
           </div>
           <div className="overlay-buttons">
+            <button 
+              className="eye-button" 
+              onClick={() => setShowTimeattackOverlay(false)}
+              data-umami-event="show review button" 
+              data-umami-event-overlay="time-attack"
+            >
+              <i className="fas fa-eye"></i>
+            </button>
             <button id="go-back-menu-button-time-attack" className="home-button" 
                 data-umami-event="go back button" data-umami-event-gobacksource="time-attack" 
                 onClick={() => { navigate("/welcome") }}>

@@ -39,3 +39,11 @@ export interface CustomTokenPayload {
   id?: number;
   publishToLeaderboard?: boolean|null;
 }
+
+export type PastRegion = {
+  regionId: number;
+  regionName: string;
+  isCorrect: boolean;
+  score: number;
+  distance: number;
+}

@@ -72,6 +72,8 @@
   "time_attack_ended_title" : "Contre la montre Terminé !",
   "time_attack_ended_time" : "Temps : ",
   "time_attack_ended_score" : "Score : ",
+  "answers_summary": "Résumé des Réponses",
+  "no_guess": "Aucune réponse",
   "no_atlas_message": "Aucun atlas disponible pour cette catégorie.",
   "error_loading_atlas": "Échec du chargement des régions pour {atlas}.",
   "no_regions_loaded": "Aucune région d'atlas chargée. Recherche désactivée.",

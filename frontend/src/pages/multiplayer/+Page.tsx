@@ -2,14 +2,15 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
 import "../singleplayer/GameScreen.css"
 import { useApp } from '../../context/AppContext';
-import { ColorMap, MultiplayerParametersType } from '../../types';
+import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types';
 import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
-import { fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
+import { fetchJSON, getClickedRegion, highlightRegionFluorescentYellow, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { io, Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
+import RegionHistory from '../../components/RegionHistory';
 
 const MultiplayerGameScreen = () => {
   const { 
@@ -45,10 +46,14 @@ const MultiplayerGameScreen = () => {
   const cMap = useRef<ColorMap | null>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const isFirstGuess = useRef<boolean>(true);
+  const hasAnswered = useRef<boolean>(false);
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
+  const [hasEnded, setHasEnded] = useState<boolean>(false);
+  const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
+  const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
 
   const handleConnect = () => {
     setError(null);
@@ -168,6 +173,16 @@ const MultiplayerGameScreen = () => {
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
       } else if (data.command.action === 'guess') {
+        if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
+          setPastRegions(prev => [...prev, {
+            regionId: currentTarget.current!,
+            regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+            isCorrect: false,
+            score: 0,
+            distance: -1, // Special value to indicate no guess was made
+          }]);
+        }
+        hasAnswered.current = false;
         isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
         setHeaderTextMode("")
@@ -179,7 +194,6 @@ const MultiplayerGameScreen = () => {
         if(!isFirstGuess.current) setCurrentAttempts((n)=>n+1)
         isFirstGuess.current = false;
         setForceDisplayUpdate((n)=>n+1)
-        console.log("start cooldown")
         setTimeout(() => {
           isGuessCooldownRef.current = false;
           if (guessButtonRef.current) {
@@ -199,12 +213,28 @@ const MultiplayerGameScreen = () => {
       setPlayerScores(data.scores);
     });
     socket.on('game-end', (data) => {
-        clearInterface()
-        setHasWon(data.youWon)
-        setShowMultiplayerOverlay(true)
+      if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
+        setPastRegions(prev => [...prev, {
+          regionId: currentTarget.current!,
+          regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+          isCorrect: false,
+          score: 0,
+          distance: -1, // Special value to indicate no guess was made
+        }]);
+      }
+      setHasEnded(true)
+      clearInterface()
+      setHasWon(data.youWon)
+      setShowMultiplayerOverlay(true)
     });
     socket.on('guess-result', (data) => {
-      console.log("guess-result",data)
+        setPastRegions(prev => [...prev, {
+          regionId: currentTarget.current!,
+          regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+          isCorrect: data.isCorrect,
+          score: data.scoreIncrement,
+          distance: data.isCorrect ? 0 : data.distance,
+        }]);
         if (data.isCorrect) {
           console.log("success")
           setHeaderTextMode("success");
@@ -438,7 +468,6 @@ const MultiplayerGameScreen = () => {
   }
 
   const validateGuess = async () => {
-    console.log(isGuessCooldownRef.current)
     if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
       console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
       return;
@@ -446,7 +475,7 @@ const MultiplayerGameScreen = () => {
     setHeaderTextMode("");
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
-    
+    hasAnswered.current = true;
     socketRef.current.emit('validate-guess', {
       sessionCode: inputCode,
       userName: isLoggedIn ? userUsername : anonUsername,
@@ -456,14 +485,23 @@ const MultiplayerGameScreen = () => {
     });
   }
 
+  useEffect(() => {
+    if (highlightedRegion) {
+      highlightRegionFluorescentYellow(highlightedRegion, niivue, niivue?.volumes[1].colormapLabel?.lut || new Uint8ClampedArray(), askedLut || null);
+    }
+  }, [highlightedRegion]);
+
   const title = t("neuroguessr_multiplayer_title")
   return (
     <>
       <title>{title}</title>
       
-      <div className="canvas-container" style={{display:((hasStarted && connected)?"block":"none")}}>
-        <canvas id="gl1" onClick={handleCanvasInteraction} 
-          onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
+      <div className='canvas-and-info-container'>
+        {hasEnded && <RegionHistory pastRegions={pastRegions} highlightPastRegion={setHighlightedRegion}/>}
+        <div className="canvas-container" style={{display:(((hasStarted && connected) || hasEnded)?"block":"none")}}>
+          <canvas id="gl1" onClick={handleCanvasInteraction} 
+            onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
+        </div>
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
         <div className="button-container">
@@ -556,6 +594,14 @@ const MultiplayerGameScreen = () => {
           <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
           {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
+            <button 
+              className="eye-button" 
+              onClick={() => setShowMultiplayerOverlay(false)}
+              data-umami-event="show review button" 
+              data-umami-event-overlay="time-attack"
+            >
+              <i className="fas fa-eye"></i>
+            </button>
             <a id="go-back-menu-button-time-attack" className="home-button" href="/welcome/multiplayer">
               <i className="fas fa-home"></i>
             </a>

@@ -1,0 +1,79 @@
+/* Region Summary Styles */
+.region-summary {
+  margin: 20px;
+  max-height: calc(100% - 40px);
+  height: calc(100% - 40px);
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #59595988;
+}
+
+.region-summary h3 {
+  margin-top: 0;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.region-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.region-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(23, 21, 21, 0.489);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.region-item.correct {
+  border-left: 4px solid #4caf50;
+}
+
+.region-item.incorrect {
+  border-left: 4px solid #f44336;
+}
+
+.region-number {
+  font-weight: bold;
+  margin-right: 10px;
+  min-width: 25px;
+}
+
+.region-name {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.incorrect-answer {
+  font-size: 0.85em;
+  color: #666;
+  font-style: italic;
+}
+
+.region-score {
+  font-weight: bold;
+  color: #2196f3;
+  margin-right: 10px;
+}
+
+.highlight-region-button {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.highlight-region-button:hover {
+  background-color: #eee;
+  color: #000;
+}

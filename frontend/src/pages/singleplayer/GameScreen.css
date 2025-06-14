@@ -5,6 +5,16 @@
     box-sizing: border-box;
 }
 
+.canvas-and-info-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
 
 /* Force 1:1 aspect ratio on mobile devices */
 @media (min-width: 300px) and (max-width: 500px) {
@@ -294,6 +304,7 @@
 /* Shared button style for menu/home/restart */
 .menu-button,
 .home-button,
+.eye-button,
 .restart-button {
     padding: 10px 20px;
     background-color: #007bff;
@@ -313,6 +324,7 @@
 
 .menu-button:hover,
 .home-button:hover,
+.eye-button:hover,
 .restart-button:hover {
     background-color: #0056b3;
 }
@@ -321,12 +333,14 @@
 
     .menu-button,
     .home-button,
+    .eye-button,
     .restart-button {
         padding: 8px 15px;
         font-size: 0.9em;
     }
 
     .home-button,
+    .eye-button,
     .restart-button {
         width: 40px;
         height: 40px;
@@ -379,6 +393,34 @@
 }
 
 .restart-button i {
+    color: #333;
+    /* Dark icon color */
+}
+
+/* Specific style for the eye button */
+.eye-button {
+    width: 50px;
+    /* Adjust size as needed */
+    height: 50px;
+    /* Adjust size as needed */
+    border-radius: 50%;
+    /* Make it round */
+    padding: 0;
+    /* Remove padding */
+    font-size: 1.5em;
+    /* Adjust icon size */
+    background-color: #10c299;
+    /* Example color: yellow */
+    color: #333;
+    /* Dark text color for contrast */
+}
+
+.eye-button:hover {
+    background-color: #18bb0c;
+    /* Darker yellow on hover */
+}
+
+.eye-button i {
     color: #333;
     /* Dark icon color */
 }
