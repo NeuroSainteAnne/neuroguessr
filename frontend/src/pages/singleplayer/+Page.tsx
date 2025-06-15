@@ -74,7 +74,7 @@ export function Page() {
   const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [hasEnded, setHadEnded] = useState<boolean>(false);
+  const [hasEnded, setHasEnded] = useState<boolean>(false);
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
   const [currentScore, setCurrentScore] = useState<number>(0);
   const currentScoreRef = useRef<number>(0);
@@ -269,7 +269,7 @@ export function Page() {
     usedRegions.current = []; // Reset used regions for time attack
     setHighlightedRegion(null);
     setHeaderTextMode("normal"); // Reset header text mode
-    setHadEnded(false);
+    setHasEnded(false);
     setPastRegions([]);
     setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
     if (gameMode === 'navigation') {
@@ -399,6 +399,13 @@ export function Page() {
       } else {
         endTimeAttack(currentScoreRef.current);
       }
+      setPastRegions(prev => [...prev, {
+        regionId: currentTarget.current!,
+        regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+        isCorrect: false,
+        score: 0,
+        distance: -1,
+      }]);
     }
   }
 
@@ -416,6 +423,7 @@ export function Page() {
 
     // Stop the game
     setIsGameRunning(false)
+    setHasEnded(true);
     selectedVoxelProp.current = null;
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
   }
@@ -768,7 +776,6 @@ export function Page() {
         score: scoreIncrement,
         distance: guessSuccess ? 0 : distance,
       }]);
-  // TODO INSERT missing regions when game is ended
     }
 
     return { scoreIncrement }
@@ -789,7 +796,7 @@ export function Page() {
       }
       endTimeAttack(finalScore)
     }
-    setHadEnded(true)
+    setHasEnded(true)
   }
 
   const handleRecolorization = () => {

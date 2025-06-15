@@ -10,6 +10,15 @@
   background-color: #59595988;
 }
 
+@media (max-width: 700px) {
+    .region-summary {
+        height: auto;
+        flex-direction: column; /* Stack elements vertically */
+        align-items: center; /* Center elements horizontally */
+        justify-content: center; /* Center elements vertically */
+    }
+}
+
 .region-summary h3 {
   margin-top: 0;
   text-align: center;
