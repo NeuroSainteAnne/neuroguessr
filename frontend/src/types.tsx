@@ -27,7 +27,7 @@ export type ColorMap = {
   I: number[];
   min?: number;
   max?: number;
-  labels?: string[];
+  labels: string[];
   centers?: number[][][];
 };
 
@@ -51,4 +51,30 @@ export type PastRegion = {
     vox: number[];
   };
   regionCenter?: number[];
+}
+
+export type ImageMetadata = {
+  // unique if of image
+  id: string
+  // data type
+  datatypeCode: number
+  // number of columns
+  nx: number
+  // number of rows
+  ny: number
+  // number of slices
+  nz: number
+  // number of volumes
+  nt: number
+  // space between columns
+  dx: number
+  // space between rows
+  dy: number
+  // space between slices
+  dz: number
+  // time between volumes
+  dt: number
+  // bits per voxel
+  // TODO was documented as bpx
+  bpv: number
 }
