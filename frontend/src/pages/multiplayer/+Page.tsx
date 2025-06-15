@@ -234,6 +234,12 @@ const MultiplayerGameScreen = () => {
           isCorrect: data.isCorrect,
           score: data.scoreIncrement,
           distance: data.isCorrect ? 0 : data.distance,
+          clickedPosition: selectedVoxelProp.current ? {
+            mm: [...selectedVoxelProp.current.mm],
+            vox: [...selectedVoxelProp.current.vox]
+          } : undefined,
+          regionCenter: (cMap.current && cMap.current.centers) ? cMap.current.centers?.[currentTarget.current!][0] : undefined
+          // TODO ADJUST FOR MULTIPLE CENTERS
         }]);
         if (data.isCorrect) {
           console.log("success")
@@ -485,6 +491,11 @@ const MultiplayerGameScreen = () => {
     });
   }
 
+  const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
+      highlightRegionFluorescentYellow(regionId, niivue, niivue?.volumes[1].colormapLabel?.lut || new Uint8ClampedArray(), 
+                                        cMap.current, moveToCenter);
+  }
+
   useEffect(() => {
     if (highlightedRegion) {
       highlightRegionFluorescentYellow(highlightedRegion, niivue, niivue?.volumes[1].colormapLabel?.lut || new Uint8ClampedArray(), askedLut || null);
@@ -497,7 +508,7 @@ const MultiplayerGameScreen = () => {
       <title>{title}</title>
       
       <div className='canvas-and-info-container'>
-        {hasEnded && <RegionHistory pastRegions={pastRegions} highlightPastRegion={setHighlightedRegion}/>}
+        {hasEnded && <RegionHistory pastRegions={pastRegions} highlightPastRegion={highlightWrapper} niivue={niivue} />}
         <div className="canvas-container" style={{display:(((hasStarted && connected) || hasEnded)?"block":"none")}}>
           <canvas id="gl1" onClick={handleCanvasInteraction} 
             onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>

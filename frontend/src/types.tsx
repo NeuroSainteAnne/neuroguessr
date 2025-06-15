@@ -46,4 +46,9 @@ export type PastRegion = {
   isCorrect: boolean;
   score: number;
   distance: number;
+  clickedPosition?: {
+    mm: number[];
+    vox: number[];
+  };
+  regionCenter?: number[];
 }

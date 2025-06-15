@@ -501,6 +501,10 @@ export function Page() {
     }
   }
 
+  const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
+      highlightRegionFluorescentYellow(regionId, niivue, cLut.current, cMap.current, moveToCenter);
+  }
+
   useEffect(() => {
     if (highlightedRegion) {
       highlightRegionFluorescentYellow(highlightedRegion, niivue, cLut.current, cMap.current, gameMode !== 'navigation');
@@ -642,7 +646,7 @@ export function Page() {
     }
     const targetName = cMap.current && cMap.current.labels?.[currentTarget.current] ? cMap.current.labels[currentTarget.current] : t('unknown_region');
     const clickedRegionName = cMap.current && cMap.current.labels?.[selectedVoxelProp.current.idx] ? cMap.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
-
+    const selectedVoxelSave = selectedVoxelProp.current;
     if (guessSuccess) {
       // Correct Guess
       setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
@@ -775,6 +779,12 @@ export function Page() {
         isCorrect: guessSuccess,
         score: scoreIncrement,
         distance: guessSuccess ? 0 : distance,
+        clickedPosition: selectedVoxelSave ? {
+          mm: [...selectedVoxelSave.mm],
+          vox: [...selectedVoxelSave.vox]
+        } : undefined,
+        regionCenter: (cMap.current && cMap.current.centers) ? cMap.current.centers?.[currentTarget.current!][0] : undefined
+        // TODO ADJUST FOR MULTIPLE CENTERS
       }]);
     }
 
@@ -934,8 +944,8 @@ export function Page() {
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className='canvas-and-info-container'>
-        {hasEnded && gameMode == "time-attack" && <RegionHistory pastRegions={pastRegions} 
-          highlightPastRegion={setHighlightedRegion}/>}
+        {hasEnded && gameMode == "time-attack" && <RegionHistory pastRegions={pastRegions} niivue={niivue}
+          highlightPastRegion={highlightWrapper}/>}
         <div className="canvas-container">
           <canvas id="gl1" onClick={handleCanvasInteraction} 
             onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
