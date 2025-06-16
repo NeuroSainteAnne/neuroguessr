@@ -29,6 +29,19 @@ const games: Record<string, MultiplayerGame> = {};
 const playerInfo: Record<string, PlayerInfo> = {};
 const socketInfo: Record<string, {sessionCode: string, userName: string}> = {};
 
+export type ColorMap = {
+  R: number[];
+  G: number[];
+  B: number[];
+  A: number[];
+  I: number[];
+  min?: number;
+  max?: number;
+  labels: string[];
+  centers?: number[][][];
+};
+
+
 // Initialize Socket.io handling
 export function initSocketHandlers() {
   const io = getIO();
@@ -449,23 +462,51 @@ function verifyUserAccess(sessionCode: string, userName: string, userToken?: str
   }
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
 function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
   try {
     const commands = [];
     if(!params.atlas) return;
     // 1. Load atlas
     const atlasNumberRegions = validRegions[params.atlas].length
+    let lut : ColorMap | undefined = undefined;
+    let mapping : Record<number,number> | undefined = undefined;
+    let inverseMapping : Record<number,number> | undefined = undefined;
+    if (atlasNumberRegions > 254) {
+      // data shuffle mode
+      const indices: number[] = [...validRegions[params.atlas].keys()].filter(id => id > 0 && Number.isInteger(id))
+      const shuffled = shuffleArray(indices);
+      mapping = {};
+      inverseMapping = {};
+      for (let i = 0; i < indices.length; i++) {
+          const oldId = indices[i];
+          const newId = shuffled[i];
+          mapping[oldId] = newId;
+          inverseMapping[newId] = oldId;
+      }
+    } else {
+      // lut shuffle mode
+      lut = {
+          "R": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, atlasNumberRegions - 1)),
+          "G": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, atlasNumberRegions - 1)),
+          "B": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, atlasNumberRegions - 1)),
+          "A": Array(1).fill(0).concat(Array((atlasNumberRegions || 1) - 1).fill(255)),
+          "I": [...Array(atlasNumberRegions).keys()],
+          "labels": (validRegions[params.atlas] || []).map(String) || [],
+        }
+    }
     commands.push({
       action: "load-atlas",
       atlas: params.atlas,
-      lut:{
-            "R":generateRandomInts(atlasNumberRegions || 0, 255),
-            "G":generateRandomInts(atlasNumberRegions || 0, 255),
-            "B":generateRandomInts(atlasNumberRegions || 0, 255),
-            "A":Array(1).fill(0).concat(Array((atlasNumberRegions || 0)-1).fill(255)),
-            "I":Array.from(Array(atlasNumberRegions || 0).keys()),
-            "labels": (validRegions[params.atlas] || []).map(String) || [],
-          },
+      lut, mapping, inverseMapping,
       duration: LOAD_ATLAS_DURATION
     });
 

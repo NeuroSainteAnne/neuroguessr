@@ -1,7 +1,7 @@
 import React, { use } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
 import { isTokenValid, refreshToken } from '../../utils/helper_login';
-import { AtlasImageProxy, defineNiiOptions, fetchJSON, getClickedRegion, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
+import { AtlasImageProxy, defineNiiOptions, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { useApp } from '../../context/AppContext';
 import { ColorMap, ImageMetadata, PastRegion } from '../../types';
 import atlasFiles from '../../utils/atlas_files';
@@ -181,10 +181,10 @@ export function Page() {
       if (!askedAtlas) return
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {     
+      if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
         atlasRef.current = new AtlasImageProxy(niivue, niivue.volumes[1], jsonData.labels, jsonData.centers ? jsonData.centers : undefined);
         atlasRef.current.showShuffledRegions();
-        niivue.updateGLVolume();
+        niivue.setOpacity(1, viewerOptions.displayOpacity);
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -506,7 +506,7 @@ export function Page() {
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !isGameRunning || !canvasRef.current || !atlasRef.current) return;
-    const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, e, atlasRef.current)
+    const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
     if (clickedRegionLocation) {
       selectedVoxelProp.current = clickedRegionLocation;
       if (gameMode === 'navigation') {

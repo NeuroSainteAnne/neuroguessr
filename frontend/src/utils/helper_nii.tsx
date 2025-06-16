@@ -57,12 +57,12 @@ export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptio
         myniivue.opts.yoke3Dto2DZoom = true;
         defineNiiOptions(myniivue, viewerOptions)
         callback()
-    }).catch((error:any) => {
+    }).catch((error: any) => {
         console.error('Error attaching Niivue to canvas:', error);
-  });
+    });
 }
 
-export const loadAtlasNii = (myniivue: any, preloadedBackgroundMNI: any|null, preloadedAtlas?: any) => {
+export const loadAtlasNii = (myniivue: any, preloadedBackgroundMNI: any | null, preloadedAtlas?: any) => {
     if (myniivue) {
         for (let i = 1; i < myniivue.volumes.length; i++) {
             myniivue.removeVolume(myniivue.volumes[i]);
@@ -73,7 +73,7 @@ export const loadAtlasNii = (myniivue: any, preloadedBackgroundMNI: any|null, pr
             const firstVolumeId = myniivue.volumes[0].id;
             myniivue.setColormap(firstVolumeId, 'MNI_Cmap');
         }
-        if(preloadedAtlas){
+        if (preloadedAtlas) {
             myniivue.addVolume(preloadedAtlas.clone());
         }
         myniivue.setClipPlane([2, 270, 0]);
@@ -92,186 +92,197 @@ function shuffleArray<T>(arr: T[]): T[] {
 }
 
 export class AtlasImageProxy {
-  public labels: string[];
-  public centers?: number[][][];
-  private data: Float32Array;
-  private remappedData?: Float32Array;
-  private dims: [number, number, number];
-  private validRegions: number[];
-  private mapping?: Record<number,number>;
-  private inverseMapping?: Record<number,number>;
-  private niivue: Niivue;
-  private shuffleMode : "lut" | "data";
-  private cmapLabels?: ColorMap;
-  private lut?: Uint8ClampedArray;
-  private origVolume: NVImage;
-  private regionIndices: Map<number, number[]> = new Map();
+    public labels: string[];
+    public centers?: number[][][];
+    private data: Float32Array;
+    private remappedData?: Float32Array;
+    private dims: [number, number, number];
+    private validRegions: number[];
+    private mapping?: Record<number, number>;
+    private inverseMapping?: Record<number, number>;
+    private niivue: Niivue;
+    private shuffleMode: "lut" | "data";
+    private cmapLabels?: ColorMap;
+    private lut?: Uint8ClampedArray;
+    private origVolume: NVImage;
+    private regionIndices: Map<number, number[]> = new Map();
 
-  constructor(niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][]) {
-    this.niivue = niivue;
-    this.origVolume = nvImage;
-    this.labels = labels;
-    this.shuffleMode = this.labels.length > 254 ? "data" : "lut";
-    const meta = nvImage.getImageMetadata();
-    this.dims = [meta.nx, meta.ny, meta.nz];
-    this.validRegions = [...this.labels.keys() || []].filter(id => id > 0 && Number.isInteger(id));
+    constructor(niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
+        proposedLut?: ColorMap, proposedMapping?: Record<number, number>, proposedInverseMapping?: Record<number, number>) {
+        this.niivue = niivue;
+        this.origVolume = nvImage;
+        this.labels = labels;
+        this.centers = centers;
+        this.shuffleMode = this.labels.length > 254 ? "data" : "lut";
+        const meta = nvImage.getImageMetadata();
+        this.dims = [meta.nx, meta.ny, meta.nz];
+        this.validRegions = [...this.labels.keys() || []].filter(id => id > 0 && Number.isInteger(id));
 
-    // Get a complete copy of the data
-    this.data = new Float32Array(
-        nvImage.getVolumeData([0, 0, 0], this.dims, 'float32')[0]
-    );
-    
-    if (this.shuffleMode === "lut") {
-        this.cmapLabels = {
-          "R": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
-          "G": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
-          "B": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
-          "A": Array(1).fill(0).concat(Array((this.labels.length || 1) - 1).fill(255)),
-          "I": [...Array(this.labels.length).keys()],
-          "labels": this.labels || [],
+        // Get a complete copy of the data
+        this.data = new Float32Array(
+            nvImage.getVolumeData([0, 0, 0], this.dims, 'float32')[0]
+        );
+
+        if (this.shuffleMode === "lut") {
+            if (proposedLut) {
+                this.cmapLabels = proposedLut;
+            } else {
+                this.cmapLabels = {
+                    "R": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
+                    "G": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
+                    "B": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, this.labels.length - 1)),
+                    "A": Array(1).fill(0).concat(Array((this.labels.length || 1) - 1).fill(255)),
+                    "I": [...Array(this.labels.length).keys()],
+                    "labels": this.labels || [],
+                }
+            }
+            this.origVolume.setColormapLabel(this.cmapLabels);
+            this.lut = this.origVolume.colormapLabel?.lut || new Uint8ClampedArray();
+        } else {
+            if (proposedMapping && proposedInverseMapping) {
+                this.mapping = proposedMapping;
+                this.inverseMapping = proposedInverseMapping;
+            } else {
+                const shuffled = shuffleArray(this.validRegions);
+                this.mapping = {};
+                this.inverseMapping = {};
+                for (let i = 0; i < this.validRegions.length; i++) {
+                    const oldId = this.validRegions[i];
+                    const newId = shuffled[i];
+                    this.mapping[oldId] = newId;
+                    this.inverseMapping[newId] = oldId;
+                }
+            }
+
+            const remapBuf = new Float32Array(this.data)
+            for (let i = 0; i < this.data.length; i++) {
+                if (i == 26968416) console.log("remapping", this.data[i], this.mapping[this.data[i]], this.mapping, this.inverseMapping)
+                remapBuf[i] = this.mapping[this.data[i]] || 0
+            }
+            this.remappedData = remapBuf;
+
+            this.buildRegionIndices();
         }
-        this.origVolume.setColormapLabel(this.cmapLabels);
-        this.lut = this.origVolume.colormapLabel?.lut || new Uint8ClampedArray();
-    } else {
-        const shuffled = shuffleArray(this.validRegions);
-        this.mapping = {};
-        this.inverseMapping = {};
-        for (let i = 0; i < this.validRegions.length; i++) {
-            const oldId = this.validRegions[i];
-            const newId = shuffled[i];
-            this.mapping[oldId] = newId;
-            this.inverseMapping[newId] = oldId;
+    }
+
+
+    private buildRegionIndices() {
+        for (let i = 0; i < this.data.length; i++) {
+            const value = this.data[i];
+            if (value > 0) { // Skip background (0)
+                if (!this.regionIndices.has(value)) {
+                    this.regionIndices.set(value, []);
+                }
+                this.regionIndices.get(value)!.push(i);
+            }
+        }
+    }
+
+    getRegionIndices(regionId: number): number[] {
+        return this.regionIndices.get(regionId) || [];
+    }
+
+    // The key method you want to preserve
+    getValue(x: number, y: number, z: number): number {
+        // Bounds checking
+        if (x < 0 || y < 0 || z < 0 ||
+            x >= this.dims[0] || y >= this.dims[1] || z >= this.dims[2]) {
+            return 0;
         }
 
-        const remapBuf  = new Float32Array(this.data)
-        for (let i=0; i<this.data.length; i++) {
-            if(i== 26968416) console.log("remapping", this.data[i], this.mapping[this.data[i]], this.mapping, this.inverseMapping)
-            remapBuf[i] = this.mapping[this.data[i]] || 0
+        // Calculate 1D index from 3D coordinates
+        const index = Math.floor(x) +
+            Math.floor(y) * this.dims[0] +
+            Math.floor(z) * this.dims[0] * this.dims[1];
+
+        return this.data[index] || 0;
+    }
+
+    // Forward mm2vox to the original image
+    mm2vox(mm: number[]): number[] {
+        return this.origVolume.mm2vox(mm) as number[];
+    }
+
+    // Add any other methods you need
+    getImageMetadata() {
+        return this.origVolume.getImageMetadata();
+    }
+
+    public showShuffledRegions(): void {
+        if (this.shuffleMode === "lut") {
+            if (this.cmapLabels) this.origVolume.setColormapLabel(this.cmapLabels);
+        } else {
+            this.origVolume.setColormap("hsv")
+            this.origVolume.setVolumeData([0, 0, 0], this.dims, this.remappedData)
         }
-        this.remappedData = remapBuf;
-
-        this.buildRegionIndices();
+        this.niivue.updateGLVolume();
+        this.niivue.drawScene();
     }
-  }
 
+    public highlightRegionFluorescentYellow(highlightedRegion: number, moveToCenter: boolean = true) {
+        if (this.shuffleMode == "lut" && this.lut) {
+            const lut = this.lut.slice();
+            // Make all regions transparent initially except region 0 if needed
+            for (let i = 0; i < lut.length; i += 4) {
+                lut[i + 0] = 0;   // R
+                lut[i + 1] = 0;   // G
+                lut[i + 2] = 0;   // B
+                lut[i + 3] = 0;   // A (transparent)
+            }
+            // Highlight the specific region in yellow
+            lut[highlightedRegion * 4 + 0] = 255; // R
+            lut[highlightedRegion * 4 + 1] = 255; // G
+            lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
+            lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
 
- private buildRegionIndices() {
-    for (let i = 0; i < this.data.length; i++) {
-      const value = this.data[i];
-      if (value > 0) { // Skip background (0)
-        if (!this.regionIndices.has(value)) {
-          this.regionIndices.set(value, []);
+            if (this.origVolume.colormapLabel) this.origVolume.colormapLabel.lut = new Uint8ClampedArray(lut);
         }
-        this.regionIndices.get(value)!.push(i);
-      }
-    }
-  }
-
-  getRegionIndices(regionId: number): number[] {
-    return this.regionIndices.get(regionId) || [];
-  }
-
-  // The key method you want to preserve
-  getValue(x: number, y: number, z: number): number {
-    // Bounds checking
-    if (x < 0 || y < 0 || z < 0 || 
-        x >= this.dims[0] || y >= this.dims[1] || z >= this.dims[2]) {
-      return 0;
-    }
-    
-    // Calculate 1D index from 3D coordinates
-    const index = Math.floor(x) + 
-                  Math.floor(y) * this.dims[0] + 
-                  Math.floor(z) * this.dims[0] * this.dims[1];
-    
-    return this.data[index] || 0;
-  }
-
-  // Forward mm2vox to the original image
-  mm2vox(mm: number[]): number[] {
-    return this.origVolume.mm2vox(mm) as number[];
-  }
-  
-  // Add any other methods you need
-  getImageMetadata() {
-    return this.origVolume.getImageMetadata();
-  }
-
-  public showShuffledRegions(): void {
-    if(this.shuffleMode === "lut") {
-        if(this.cmapLabels) this.origVolume.setColormapLabel(this.cmapLabels);
-    } else {
-        this.origVolume.setColormap("hsv")
-        this.origVolume.setVolumeData([0, 0, 0], this.dims, this.remappedData)
-    }
-    this.niivue.updateGLVolume();
-    this.niivue.drawScene();
-  }
-
-  public highlightRegionFluorescentYellow(highlightedRegion: number, moveToCenter: boolean = true) {
-    if(this.shuffleMode == "lut" && this.lut){
-      const lut = this.lut.slice();
-      // Make all regions transparent initially except region 0 if needed
-      for (let i = 0; i < lut.length; i += 4) {
-        lut[i + 0] = 0;   // R
-        lut[i + 1] = 0;   // G
-        lut[i + 2] = 0;   // B
-        lut[i + 3] = 0;   // A (transparent)
-      }
-      // Highlight the specific region in yellow
-      lut[highlightedRegion * 4 + 0] = 255; // R
-      lut[highlightedRegion * 4 + 1] = 255; // G
-      lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
-      lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
-
-      if (this.origVolume.colormapLabel) this.origVolume.colormapLabel.lut = new Uint8ClampedArray(lut);
-    }
-    if(this.shuffleMode == "data"){
-        this.origVolume.setColormapLabel({
-            R: [0, 255],
-            G: [0, 255],
-            B: [0, 0],
-            A: [0, 200],
-            I: [0, 255],
-            labels: ["background", "highlighted"]
-        });
-        const buf = new Float32Array(this.dims[0] *  this.dims[1] * this.dims[2]);
-        const indices = this.getRegionIndices(highlightedRegion);
-        for (const idx of indices) {
-            buf[idx] = 255;
+        if (this.shuffleMode == "data") {
+            this.origVolume.setColormapLabel({
+                R: [0, 255],
+                G: [0, 255],
+                B: [0, 0],
+                A: [0, 200],
+                I: [0, 255],
+                labels: ["background", "highlighted"]
+            });
+            const buf = new Float32Array(this.dims[0] * this.dims[1] * this.dims[2]);
+            const indices = this.getRegionIndices(highlightedRegion);
+            for (const idx of indices) {
+                buf[idx] = 255;
+            }
+            this.origVolume.setVolumeData([0, 0, 0], this.dims, buf);
         }
-        this.origVolume.setVolumeData([0, 0, 0], this.dims, buf);
-    }
-    if(moveToCenter && this.centers && this.centers[highlightedRegion]){
-        const center = this.centers[highlightedRegion];
-        this.niivue.scene.crosshairPos = this.niivue.mm2frac(new Float32Array(center[0]));
-        this.niivue.createOnLocationChange();
-    }
-    this.niivue.updateGLVolume();
-    this.niivue.drawScene();
-  }
-}
-
-export function getClickedRegion(myniivue: any, canvasObj: HTMLCanvasElement, e: any, origVolume: AtlasImageProxy){
-    const isTouch = e.type === 'touchstart' || e.type === 'touchend';
-    const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
-    const rect = canvasObj.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    // Check if touch/click is within canvas bounds
-    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
-      const pos = myniivue.getNoPaddingNoBorderCanvasRelativeMousePosition(touch as unknown as MouseEvent, myniivue.gl.canvas);
-      if (!pos) return; // If position is not valid, exit early
-      const frac = myniivue.canvasPos2frac([pos.x * (myniivue.uiData?.dpr ?? 1), pos.y * (myniivue.uiData?.dpr ?? 1)]);
-      if (frac[0] >= 0) {
-        const mm = myniivue.frac2mm(frac);
-        const vox = myniivue.volumes[1].mm2vox(Array.from(mm));
-        const idx = Math.round(origVolume.getValue(vox[0], vox[1], vox[2]));
-        console.log(idx)
-        if (isFinite(idx) && idx > 0 && idx in (origVolume?.labels ?? [])) { // Ensure valid region ID > 0
-            return {mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx}
+        if (moveToCenter && this.centers && this.centers[highlightedRegion]) {
+            const center = this.centers[highlightedRegion];
+            this.niivue.scene.crosshairPos = this.niivue.mm2frac(new Float32Array(center[0]));
+            this.niivue.createOnLocationChange();
         }
-      }
+        this.niivue.updateGLVolume();
+        this.niivue.drawScene();
+    }
+
+    public getClickedRegion(canvasObj: HTMLCanvasElement, e: any) {
+        const isTouch = e.type === 'touchstart' || e.type === 'touchend';
+        const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
+        const rect = canvasObj.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        // Check if touch/click is within canvas bounds
+        if (x >= 0 && x < rect.width && y >= 0 && y < rect.height) {
+            const pos = this.niivue.getNoPaddingNoBorderCanvasRelativeMousePosition(touch as unknown as MouseEvent, this.niivue.gl.canvas);
+            if (!pos) return; // If position is not valid, exit early
+            const frac = this.niivue.canvasPos2frac([pos.x * (this.niivue.uiData?.dpr ?? 1), pos.y * (this.niivue.uiData?.dpr ?? 1)]);
+            if (frac[0] >= 0) {
+                const mm = this.niivue.frac2mm(frac);
+                const vox = this.niivue.volumes[1].mm2vox(Array.from(mm));
+                const idx = Math.round(this.origVolume.getValue(vox[0], vox[1], vox[2]));
+                console.log(idx)
+                if (isFinite(idx) && idx > 0 && idx in (this.labels)) { // Ensure valid region ID > 0
+                    return { mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx }
+                }
+            }
+        }
     }
 }

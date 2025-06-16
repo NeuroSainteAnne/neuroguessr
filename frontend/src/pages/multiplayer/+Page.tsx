@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types';
 import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
-import { fetchJSON, getClickedRegion, highlightRegionFluorescentYellow, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
+import { AtlasImageProxy, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
 import { Niivue, NVImage } from '@niivue/niivue';
 import { io, Socket } from 'socket.io-client';
@@ -35,15 +35,14 @@ const MultiplayerGameScreen = () => {
   const [stepCountdown, setStepCountdown] = useState<number | null>(null);
   const countdownInterval = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const stepEndTime = useRef<number | null>(null);
-  const [askedAtlas, setAskedAtlas] = useState<string>("");
+  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut: ColorMap | undefined, mapping : Record<number,number>, inverseMapping : Record<number,number>}|undefined>(undefined);
   const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
-  const [askedLut, setAskedLut] = useState<ColorMap|undefined>();
+  const atlasRef = useRef<AtlasImageProxy|null>(null);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
   const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
   const currentTarget = useRef<number | null>(null);
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
-  const cMap = useRef<ColorMap | null>(null);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const isFirstGuess = useRef<boolean>(true);
   const hasAnswered = useRef<boolean>(false);
@@ -84,6 +83,7 @@ const MultiplayerGameScreen = () => {
             }));
       return () => { 
         cleanHeader()
+        atlasRef.current = null;
       };
     }, []);
 
@@ -168,15 +168,19 @@ const MultiplayerGameScreen = () => {
       if (data.command.action === 'load-atlas') {
         // Load the specified atlas in the viewer
         if (data.command.atlas) {
-          setAskedAtlas(data.command.atlas)
-          setAskedLut(data.command.lut)
+          setAskedAtlas({
+            atlas: data.command.atlas,
+            lut: data.command.lut || undefined,
+            mapping: data.command.mapping || undefined,
+            inverseMapping: data.command.inverseMapping || undefined
+          })
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
       } else if (data.command.action === 'guess') {
         if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
           setPastRegions(prev => [...prev, {
             regionId: currentTarget.current!,
-            regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+            regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
             isCorrect: false,
             score: 0,
             distance: -1, // Special value to indicate no guess was made
@@ -186,7 +190,7 @@ const MultiplayerGameScreen = () => {
         isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
         setHeaderTextMode("")
-        if(cMap.current && cMap.current.labels && currentTarget.current) showNotification(cMap.current.labels[currentTarget.current], true)
+        if(atlasRef.current && atlasRef.current.labels && currentTarget.current) showNotification(atlasRef.current.labels[currentTarget.current], true)
         startStepCountdown(t("remaining-time"), data.command.duration);
         if (guessButtonRef.current) {
           guessButtonRef.current.disabled = true;
@@ -216,7 +220,7 @@ const MultiplayerGameScreen = () => {
       if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
         setPastRegions(prev => [...prev, {
           regionId: currentTarget.current!,
-          regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+          regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
           isCorrect: false,
           score: 0,
           distance: -1, // Special value to indicate no guess was made
@@ -230,7 +234,7 @@ const MultiplayerGameScreen = () => {
     socket.on('guess-result', (data) => {
         setPastRegions(prev => [...prev, {
           regionId: currentTarget.current!,
-          regionName: cMap.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+          regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
           isCorrect: data.isCorrect,
           score: data.scoreIncrement,
           distance: data.isCorrect ? 0 : data.distance,
@@ -238,7 +242,7 @@ const MultiplayerGameScreen = () => {
             mm: [...selectedVoxelProp.current.mm],
             vox: [...selectedVoxelProp.current.vox]
           } : undefined,
-          regionCenter: (cMap.current && cMap.current.centers) ? cMap.current.centers?.[currentTarget.current!][0] : undefined
+          regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
           // TODO ADJUST FOR MULTIPLE CENTERS
         }]);
         if (data.isCorrect) {
@@ -300,9 +304,9 @@ const MultiplayerGameScreen = () => {
   };
 
   const updateGameDisplay = () => {
-    if (hasStarted && socketRef.current && currentTarget.current !== null && cMap.current && cMap.current.labels && cMap.current.labels[currentTarget.current]) {
+    if (hasStarted && socketRef.current && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
-      setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${cMap.current.labels[currentTarget.current]}`);
+      setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
     } else {
       setHeaderText("");
     }
@@ -333,14 +337,17 @@ const MultiplayerGameScreen = () => {
 
   const loadAtlasData = async () => {
     try {
-      if (!askedAtlas || !askedLut) return
-      const selectedAtlasFiles = atlasFiles[askedAtlas];
-      cMap.current = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue && niivue.volumes.length > 1 && cMap.current) {
-        niivue.volumes[1].setColormapLabel(cMap.current)
-        niivue.volumes[1].setColormapLabel(askedLut);
+      if (!askedAtlas) return
+      const selectedAtlasFiles = atlasFiles[askedAtlas.atlas];
+      const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
+      if (niivue && niivue.volumes.length > 1 && jsonData) {
+          atlasRef.current = new AtlasImageProxy(niivue, niivue.volumes[1], 
+            jsonData.labels, 
+            jsonData.centers ? jsonData.centers : undefined,
+            askedAtlas.lut, askedAtlas.mapping, askedAtlas.inverseMapping);
+          atlasRef.current.showShuffledRegions();
+        atlasRef.current.showShuffledRegions();
         niivue.setOpacity(1, viewerOptions.displayOpacity);
-        niivue.updateGLVolume();
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -406,33 +413,33 @@ const MultiplayerGameScreen = () => {
   }, [niivue, canvasRef.current, hasStarted])
 
   useEffect(() => {
-  if (askedAtlas) {
-      const atlas = atlasFiles[askedAtlas];
-      if (atlas) {
-        const niiFile = "/atlas/nii/" + atlas.nii;
-        NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
-            setLoadedAtlas(nvImage);
-        }).catch((error: any) => {
-            console.error("Error loading NIfTI file:", error);
-            setLoadedAtlas(undefined)
-        });
-      }
-  }
-}, [askedAtlas, NVImage])
+    if (askedAtlas) {
+        const atlas = atlasFiles[askedAtlas.atlas];
+        if (atlas) {
+          const niiFile = "/atlas/nii/" + atlas.nii;
+          NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
+              setLoadedAtlas(nvImage);
+          }).catch((error: any) => {
+              console.error("Error loading NIfTI file:", error);
+              setLoadedAtlas(undefined)
+          });
+        }
+    }
+  }, [askedAtlas, NVImage])
 
   useEffect(() => {
     if(niivue && preloadedBackgroundMNI && canvasRef.current && hasStarted){
       loadAtlasNii(niivue, preloadedBackgroundMNI, loadedAtlas);
       loadAtlasData();
     }
-  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, hasStarted, canvasRef.current, loadedAtlas, askedAtlas, askedLut])
+  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, hasStarted, canvasRef.current, loadedAtlas, askedAtlas])
 
   useLayoutEffect(() => {
-  if (niivue && canvasRef.current && hasStarted) {
-    // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
-    niivue.resizeListener();
-  }
-}, [niivue, hasStarted, connected]);
+    if (niivue && canvasRef.current && hasStarted) {
+      // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+      niivue.resizeListener();
+    }
+  }, [niivue, hasStarted, connected]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     // Save the last touch event for later use in touchEnd
@@ -466,8 +473,8 @@ const MultiplayerGameScreen = () => {
   };
 
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!niivue || !niivue.gl || !niivue.volumes[1] || !cMap.current || !hasStarted || !canvasRef.current) return;
-    const clickedRegionLocation = getClickedRegion(niivue, canvasRef.current, cMap.current, e)
+    if (!niivue || !niivue.gl || !niivue.volumes[1] || !atlasRef.current || !hasStarted || !canvasRef.current) return;
+    const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
     if(clickedRegionLocation){
       selectedVoxelProp.current = clickedRegionLocation;
     }
@@ -492,13 +499,12 @@ const MultiplayerGameScreen = () => {
   }
 
   const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
-      highlightRegionFluorescentYellow(regionId, niivue, niivue?.volumes[1].colormapLabel?.lut || new Uint8ClampedArray(), 
-                                        cMap.current, moveToCenter);
+    if(atlasRef.current) atlasRef.current.highlightRegionFluorescentYellow(regionId, moveToCenter);
   }
 
   useEffect(() => {
     if (highlightedRegion) {
-      highlightRegionFluorescentYellow(highlightedRegion, niivue, niivue?.volumes[1].colormapLabel?.lut || new Uint8ClampedArray(), askedLut || null);
+      highlightWrapper(highlightedRegion, true);
     }
   }, [highlightedRegion]);
 
