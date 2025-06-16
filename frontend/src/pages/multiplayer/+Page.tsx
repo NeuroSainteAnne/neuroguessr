@@ -177,10 +177,11 @@ const MultiplayerGameScreen = () => {
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
       } else if (data.command.action === 'guess') {
-        if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
+        if (currentTarget.current !== null && !hasAnswered.current) {
+          const curTar = currentTarget.current;    
           setPastRegions(prev => [...prev, {
-            regionId: currentTarget.current!,
-            regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+            regionId: curTar,
+            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
             isCorrect: false,
             score: 0,
             distance: -1, // Special value to indicate no guess was made
@@ -217,10 +218,11 @@ const MultiplayerGameScreen = () => {
       setPlayerScores(data.scores);
     });
     socket.on('game-end', (data) => {
-      if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {          
+      if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {
+        const curTar = currentTarget.current;
         setPastRegions(prev => [...prev, {
-          regionId: currentTarget.current!,
-          regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+          regionId: curTar,
+          regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
           isCorrect: false,
           score: 0,
           distance: -1, // Special value to indicate no guess was made
@@ -232,24 +234,25 @@ const MultiplayerGameScreen = () => {
       setShowMultiplayerOverlay(true)
     });
     socket.on('guess-result', (data) => {
-        setPastRegions(prev => [...prev, {
-          regionId: currentTarget.current!,
-          regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
-          isCorrect: data.isCorrect,
-          score: data.scoreIncrement,
-          distance: data.isCorrect ? 0 : data.distance,
-          clickedPosition: selectedVoxelProp.current ? {
-            mm: [...selectedVoxelProp.current.mm],
-            vox: [...selectedVoxelProp.current.vox]
-          } : undefined,
-          regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
-          // TODO ADJUST FOR MULTIPLE CENTERS
-        }]);
+        if(currentTarget.current){
+          const curTar = currentTarget.current;
+          setPastRegions(prev => [...prev, {
+            regionId: curTar,
+            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+            isCorrect: data.isCorrect,
+            score: data.scoreIncrement,
+            distance: data.isCorrect ? 0 : data.distance,
+            clickedPosition: selectedVoxelProp.current ? {
+              mm: [...selectedVoxelProp.current.mm],
+              vox: [...selectedVoxelProp.current.vox]
+            } : undefined,
+            regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
+            // TODO ADJUST FOR MULTIPLE CENTERS
+          }]);
+        }
         if (data.isCorrect) {
-          console.log("success")
           setHeaderTextMode("success");
         } else {
-          console.log("failure")
           setHeaderTextMode("failure");
         }
     })
@@ -275,7 +278,6 @@ const MultiplayerGameScreen = () => {
         userToken: authToken
       });
       socketRef.current.once('game-launched', (data) => {
-        console.log(data)
         if (data.success) {
           console.log('Game launched successfully');
         } else {

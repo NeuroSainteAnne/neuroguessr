@@ -156,7 +156,6 @@ export class AtlasImageProxy {
 
             const remapBuf = new Float32Array(this.data)
             for (let i = 0; i < this.data.length; i++) {
-                if (i == 26968416) console.log("remapping", this.data[i], this.mapping[this.data[i]], this.mapping, this.inverseMapping)
                 remapBuf[i] = this.mapping[this.data[i]] || 0
             }
             this.remappedData = remapBuf;
