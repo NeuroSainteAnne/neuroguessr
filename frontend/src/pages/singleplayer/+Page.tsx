@@ -846,25 +846,34 @@ export function Page() {
   }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 
   useEffect(() => {
-    const handleClick = (event: Event) => {
-      if (
-        showStreakOverlay &&
-        streakOverlayRef.current &&
-        !streakOverlayRef.current.contains(event.target as Node)
-      ) {
-        setShowStreakOverlay(false);
-      }
-      if (
-        showTimeattackOverlay &&
-        timeattackOverlayRef.current &&
-        !timeattackOverlayRef.current.contains(event.target as Node)
-      ) {
-        setShowTimeattackOverlay(false);
-      }
-    };
-    document.addEventListener('click', handleClick);
+    if (!showStreakOverlay && !showTimeattackOverlay) return;
+    // Add a small delay before attaching the click handler
+    // to ensure the overlay is fully rendered
+    const timeoutId = setTimeout(() => {
+      const handleClick = (event: Event) => {
+        if (
+          showStreakOverlay &&
+          streakOverlayRef.current &&
+          !streakOverlayRef.current.contains(event.target as Node)
+        ) {
+          setShowStreakOverlay(false);
+        }
+        if (
+          showTimeattackOverlay &&
+          timeattackOverlayRef.current &&
+          !timeattackOverlayRef.current.contains(event.target as Node)
+        ) {
+          setShowTimeattackOverlay(false);
+        }
+      };
+      document.addEventListener('click', handleClick);
+      return () => {
+        document.removeEventListener('click', handleClick);
+      };
+    }, 300); // 300ms delay should be enough for the overlay to render
+    
     return () => {
-      document.removeEventListener('click', handleClick);
+      clearTimeout(timeoutId);
     };
   }, [showStreakOverlay, showTimeattackOverlay])
 
