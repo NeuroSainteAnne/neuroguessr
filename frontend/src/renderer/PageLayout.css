@@ -47,8 +47,6 @@ body {
   right: 0;
   bottom: 0;
   background-color: rgba(54, 54, 54, 0.8);
-  /* Opacity 0.8 */
-  z-index: -1;
   backdrop-filter: blur(1px);
 }
 
