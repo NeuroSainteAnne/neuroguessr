@@ -90,7 +90,6 @@ export function Page() {
   const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
   const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
-  const validRegions = useRef<number[]>([]);
   const usedRegions = useRef<number[]>([]);
   const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
@@ -277,6 +276,7 @@ export function Page() {
   const startGame = () => {
     setIsGameRunning(true);
     resetGameState();
+    if(!atlasRef.current) return;
     if(niivue) niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
 
     startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
@@ -293,13 +293,13 @@ export function Page() {
       if (gameMode === 'time-attack') {
         if (!sessionToken.current) { // logic for local game
           // Shuffle validRegions and take the first 20 for Time Attack
-          if (validRegions.current.length >= TOTAL_REGIONS_TIME_ATTACK) {
-            validRegions.current.sort(() => 0.5 - Math.random());
-            validRegions.current = validRegions.current.slice(0, TOTAL_REGIONS_TIME_ATTACK);
+          if (atlasRef.current && atlasRef.current.validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
+            atlasRef.current.validRegions.sort(() => 0.5 - Math.random());
+            atlasRef.current.validRegions = atlasRef.current.validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
             //console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
-          } else if (validRegions.current.length > 0) {
-            console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${validRegions.current.length} available regions.`);
-            validRegions.current.sort(() => 0.5 - Math.random()); // Still shuffle available regions
+          } else if (atlasRef.current && atlasRef.current.validRegions.length > 0) {
+            console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${atlasRef.current.validRegions.length} available regions.`);
+            atlasRef.current.validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
           } else {
             console.error("No valid regions available for Time Attack!");
             setHeaderText(t('no_regions_available') || 'No regions available.');
@@ -418,11 +418,11 @@ export function Page() {
         console.error("Error occured during next region fetching:", error);
         return false;
       }
-    } else if (validRegions.current && usedRegions.current) {
-      let availableRegions = validRegions.current.filter(r => !usedRegions.current.includes(r));
+    } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
+      let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
       if (gameMode === 'time-attack' && availableRegions.length === 0) {
         // if no region remaining, we'll take a random region
-        availableRegions = validRegions.current
+        availableRegions = atlasRef.current.validRegions
       }
       if (availableRegions.length !== 0) {
         regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
@@ -430,6 +430,7 @@ export function Page() {
           usedRegions.current.push(regionId);
         }
       }
+      console.log("got there", atlasRef.current.validRegions)
     }
 
     if (regionId === -1) { // did not found region
@@ -926,7 +927,7 @@ export function Page() {
         <div className="overlay-content" ref={streakOverlayRef}>
           <h2>{t("streak_ended_title")}</h2>
           <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
-          {userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
             <button 
               className="eye-button" 
@@ -956,7 +957,7 @@ export function Page() {
           <p><span>{t("time_attack_ended_time")}</span>
             <span id="final-time-attack-time">{finalElapsed}</span></p>
           <p><span>{t("time_attack_ended_score")}</span></p>
-          {userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="score-progress-bar w3-light-grey w3-round">
             <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
               style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>

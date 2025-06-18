@@ -97,7 +97,7 @@ export class AtlasImageProxy {
     private data: Float32Array;
     private remappedData?: Float32Array;
     private dims: [number, number, number];
-    private validRegions: number[];
+    public validRegions: number[];
     private mapping?: Record<number, number>;
     private inverseMapping?: Record<number, number>;
     private niivue: Niivue;
