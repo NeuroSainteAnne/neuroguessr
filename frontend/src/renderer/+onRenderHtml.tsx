@@ -248,6 +248,7 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       </div>
     </div>
   </div>
+  <div id="blur-root"></div>
   <div id="root" class="i18n-content-hidden">${dangerouslySkipEscape(pageHtml)}</div>
 </body>
 
