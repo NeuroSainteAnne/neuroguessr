@@ -430,7 +430,6 @@ export function Page() {
           usedRegions.current.push(regionId);
         }
       }
-      console.log("got there", atlasRef.current.validRegions)
     }
 
     if (regionId === -1) { // did not found region
