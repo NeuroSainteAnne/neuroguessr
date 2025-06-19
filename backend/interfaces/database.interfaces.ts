@@ -24,6 +24,7 @@ export interface GameSession {
     token: string;
     mode: string;
     atlas: string;
+    blind_mode: boolean;
     created_at: number; // Unix ms timestamp
     current_score: number;
 }
@@ -47,6 +48,7 @@ export interface FinishedSession {
     mode: string;
     atlas: string;
     score: number;
+    blind_mode: boolean;
     attempts?: number;
     correct?: number;
     incorrect?: number;
@@ -68,6 +70,7 @@ export interface FinishedSessionCamelCase {
     mode: string;
     atlas: string;
     score: number;
+    blindMode: boolean;
     attempts?: number;
     correct?: number;
     incorrect?: number;

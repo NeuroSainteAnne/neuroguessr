@@ -14,7 +14,7 @@ import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBo
 import RegionHistory from '../../components/RegionHistory';
 
 
-async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string): Promise<{ sessionToken: string, sessionId: string } | null> {
+async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string, blindMode: boolean): Promise<{ sessionToken: string, sessionId: string } | null> {
   // Check if the player is logged in
   if (!isLoggedIn || !token) {
     return null;
@@ -32,7 +32,7 @@ async function startOnlineSession(isLoggedIn: boolean, token: string, mode: stri
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ mode, atlas }),
+      body: JSON.stringify({ mode, atlas, blindMode }),
     });
 
     if (!response.ok) {
@@ -69,10 +69,10 @@ export function Page() {
   const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
+  const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
   const { routeParams } = pageContext;
   const gameMode = routeParams?.mode;
   const blindMode = routeParams?.blind === "true" || false;
-  const scoreMultiplier = blindMode ? 1.5 : 1;
   const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -324,7 +324,7 @@ export function Page() {
     if(!atlasRef.current) return;
     if(niivue) niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
 
-    startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal').then((session) => {
+    startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal', blindMode).then((session) => {
       if (session) {
         sessionToken.current = session.sessionToken;
         sessionId.current = session.sessionId;
@@ -653,7 +653,7 @@ export function Page() {
 
       if (gameMode === 'time-attack') {
         // Add full points for correct guess
-        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : MAX_POINTS_PER_REGION));
+        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1))));
       }
       if (gameMode === 'streak') {
         // Increment streak for correct guess
@@ -725,6 +725,9 @@ export function Page() {
             } else {
               scoreIncrement = 0; // No points for too far away
             }
+            if(blindMode) {
+              scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER); // Apply blind mode multiplier
+            }
           } else {
             console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
             // Option: award minimal points or 0 if center data is missing
@@ -780,7 +783,7 @@ export function Page() {
   function performEndGame({ finalScore }: { finalScore: number }) {
     if (gameMode === 'streak') {
       setHighlightedRegion(currentTarget.current); // Highlight the last region
-      setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+      setFinalStreak(Math.floor(currentStreakRef.current * (blindMode?BLIND_MODE_MULTIPLIER:1))); // Store the final streak before resetting
       setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
       setShowStreakOverlay(true);
       setHeaderTextMode("failure"); // Indicate streak ended visually
@@ -788,7 +791,7 @@ export function Page() {
     } else if (gameMode === 'time-attack') {
       if (!isLoggedIn) {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        finalScore = Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0))
+        finalScore = Math.round(currentScoreRef.current + ((remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ?BLIND_MODE_MULTIPLIER : 1)))
       }
       endTimeAttack(finalScore)
     }

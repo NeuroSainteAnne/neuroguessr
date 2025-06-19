@@ -72,6 +72,7 @@ export interface ValidateResetTokenRequest extends Request {
 export interface StartGameSessionBody {
     mode: string;
     atlas: string;
+    blindMode?: boolean;
 }
 
 export interface StartGameSessionRequest extends Request {

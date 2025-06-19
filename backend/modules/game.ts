@@ -21,6 +21,7 @@ const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK 
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
+const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
 
 export const validRegions : Record<string,number[]> = {}
 export const imageRef : Record<string,NVImage> = {}
@@ -51,7 +52,7 @@ for (const atlas in atlasFiles) {
 
 export const startGameSession = async (req: StartGameSessionRequest, res: Response): Promise<void> => {
     try {
-        const { mode, atlas } = req.body;
+        const { mode, atlas, blindMode } = req.body;
         const userId = req.user.id; // Extract user ID from the authenticated user
 
         // Validate the required fields
@@ -65,8 +66,8 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
 
         // Save the session to the database
          const result = await sql`
-            INSERT INTO game_sessions (user_id, token, mode, atlas, current_score, created_at)
-            VALUES (${userId}, ${sessionToken}, ${mode}, ${atlas}, 0, NOW())
+            INSERT INTO game_sessions (user_id, token, mode, atlas, blind_mode, current_score, created_at)
+            VALUES (${userId}, ${sessionToken}, ${mode}, ${atlas}, ${blindMode || false}, 0, NOW())
             RETURNING id
         ` as {id: number}[];
 
@@ -270,6 +271,10 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                     }
                 }
             }
+        }
+
+        if(session.blind_mode) {
+            scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER);
         }
 
         let isActive = false
