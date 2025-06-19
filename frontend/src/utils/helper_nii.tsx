@@ -276,7 +276,7 @@ export class AtlasImageProxy {
             if (frac[0] >= 0) {
                 const mm = this.niivue.frac2mm(frac);
                 const vox = this.niivue.volumes[1].mm2vox(Array.from(mm));
-                const idx = Math.round(this.origVolume.getValue(vox[0], vox[1], vox[2]));
+                const idx = Math.round(this.getValue(vox[0], vox[1], vox[2]));
                 if (isFinite(idx) && idx > 0 && idx in (this.labels)) { // Ensure valid region ID > 0
                     return { mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx }
                 }
