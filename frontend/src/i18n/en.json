@@ -36,6 +36,8 @@
   "practice_mode": "Practice",
   "practice_description": "Learn with feedback",
   "streak_mode": "Streak",
+  "blind_mode": "Blind Mode",
+  "blind_mode_description": "Identify regions without labels (x1.5 score)",
   "single_player_button" : "Singleplayer",
   "multiplayer_button" : "Multiplayer",
   "multiplayer_mode": "Multiplayer",

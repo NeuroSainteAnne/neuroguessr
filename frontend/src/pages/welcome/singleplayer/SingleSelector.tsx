@@ -2,10 +2,13 @@ import { navigate } from "vike/client/router";
 import { useApp } from "../../../context/AppContext";
 import { useGameSelector } from "../../../context/GameSelectorContext";
 import { GameSelectorAtlas } from "../GameSelectorAtlas";
+import "./SingleSelector.css";
+import { useState } from "react";
 
 export function SingleSelector() {
     const { t } = useApp();
     const { selectedAtlas, selectedMode, setSelectedMode } = useGameSelector();
+    const [blindMode, setBlindMode] = useState(false);
     return (
         <>
             <section className="atlas-selection">
@@ -45,10 +48,32 @@ export function SingleSelector() {
                         <span className="mode-description">{t("time_attack_description")}</span>
                     </button>
                 </div>
+                <div className="blind-mode-container">
+                    <label className="blind-mode-label" htmlFor="blind-mode-checkbox">
+                        <input
+                            id="blind-mode-checkbox"
+                            type="checkbox"
+                            checked={blindMode}
+                            onChange={() => setBlindMode(!blindMode)}
+                            style={{ marginRight: "10px", cursor: "pointer" }}
+                            data-umami-event="toggle blind mode"
+                            data-umami-event-blind-mode-state={blindMode ? "on" : "off"}
+                        />
+                        <span>{t("blind_mode") || "Blind Mode"}</span>
+                        <div className="blind-mode-description" style={{
+                            fontSize: "0.9rem",
+                            color: "#666",
+                            marginLeft: "10px"
+                        }}>
+                            {t("blind_mode_description") || "No region highlighting. Challenge yourself for 1.5x points!"}
+                        </div>
+                    </label>
+                    
+                </div>
                 <button id="play-button"
                     onClick={(e)=>{ 
                         if(selectedAtlas && selectedMode){ 
-                            navigate(`/singleplayer/${selectedAtlas}/${selectedMode}`)
+                            navigate(`/singleplayer/${selectedAtlas}/${selectedMode}${blindMode ? "?blind=true" : ""}`);
                         }
                     }}
                     data-umami-event="start singleplayer button" data-umami-event-start-single-altas={selectedAtlas}

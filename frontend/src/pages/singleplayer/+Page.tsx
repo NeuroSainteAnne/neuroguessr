@@ -71,6 +71,8 @@ export function Page() {
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
   const { routeParams } = pageContext;
   const gameMode = routeParams?.mode;
+  const blindMode = routeParams?.blind === "true" || false;
+  const scoreMultiplier = blindMode ? 1.5 : 1;
   const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -222,9 +224,10 @@ export function Page() {
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
-        atlasRef.current = new AtlasImageProxy(niivue, niivue.volumes[1], jsonData.labels, jsonData.centers ? jsonData.centers : undefined);
+        atlasRef.current = new AtlasImageProxy({niivue, nvImage:niivue.volumes[1], labels:jsonData.labels, 
+          centers:jsonData.centers ? jsonData.centers : undefined, 
+          blindMode, viewerOptions});
         atlasRef.current.showShuffledRegions();
-        niivue.setOpacity(1, viewerOptions.displayOpacity);
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -309,8 +312,8 @@ export function Page() {
     setShowStreakOverlay(false);
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
-    if (niivue) {
-      defineNiiOptions(niivue, viewerOptions)
+    if (niivue && atlasRef.current) {
+      defineNiiOptions(niivue, atlasRef.current, viewerOptions)
       niivue.drawScene();
     }
   }
@@ -910,7 +913,7 @@ export function Page() {
   }, [showStreakOverlay, showTimeattackOverlay])
 
   useEffect(() => {
-    defineNiiOptions(niivue, viewerOptions)
+    defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions)
   }, [viewerOptions])
   
   useLayoutEffect(() => {

@@ -1,6 +1,8 @@
 import React from 'react';
 import { ColorMap, DisplayOptions, ImageMetadata } from '../types';
 import type { Niivue, NVImage } from '@niivue/niivue';
+import { usePageContext } from 'vike-react/usePageContext';
+import { useApp } from '../context/AppContext';
 
 export async function fetchJSON(fnm: string): Promise<any> {
     try {
@@ -13,7 +15,7 @@ export async function fetchJSON(fnm: string): Promise<any> {
     }
 }
 
-export const defineNiiOptions = (myniivue: any, viewerOptions: DisplayOptions) => {
+export const defineNiiOptions = (myniivue: any, myAtlasProxy: AtlasImageProxy | undefined, viewerOptions: DisplayOptions) => {
     if (myniivue) {
         if (viewerOptions.displayType === "Axial") myniivue.setSliceType(myniivue.sliceTypeAxial);
         if (viewerOptions.displayType === "Coronal") myniivue.setSliceType(myniivue.sliceTypeCoronal);
@@ -31,7 +33,12 @@ export const defineNiiOptions = (myniivue: any, viewerOptions: DisplayOptions) =
             myniivue.setSliceType(myniivue.sliceTypeMultiplanar);
         }
         if (myniivue.volumes.length > 1) {
-            myniivue.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
+            if(myAtlasProxy){
+                myAtlasProxy.setViewerOptions(viewerOptions);
+            } 
+            else {
+                myniivue.setOpacity(1, viewerOptions.displayAtlas ? viewerOptions.displayOpacity : 0);
+            }
         }
         myniivue.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
         myniivue.updateGLVolume();
@@ -55,7 +62,7 @@ export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptio
         myniivue.opts.crosshairGap = 0;
         myniivue.opts.dragMode = myniivue.dragModes.slicer3D;
         myniivue.opts.yoke3Dto2DZoom = true;
-        defineNiiOptions(myniivue, viewerOptions)
+        defineNiiOptions(myniivue, undefined, viewerOptions)
         callback()
     }).catch((error: any) => {
         console.error('Error attaching Niivue to canvas:', error);
@@ -98,6 +105,7 @@ export class AtlasImageProxy {
     private remappedData?: Float32Array;
     private dims: [number, number, number];
     public validRegions: number[];
+    private blindMode: boolean = false;
     private mapping?: Record<number, number>;
     private inverseMapping?: Record<number, number>;
     private niivue: Niivue;
@@ -106,17 +114,24 @@ export class AtlasImageProxy {
     private lut?: Uint8ClampedArray;
     private origVolume: NVImage;
     private regionIndices: Map<number, number[]> = new Map();
+    private viewerOptions: DisplayOptions;
+    private isShowing: "all-regions" | "highlighted" = "all-regions";
 
-    constructor(niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
-        proposedLut?: ColorMap, proposedMapping?: Record<number, number>, proposedInverseMapping?: Record<number, number>) {
+    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions} :
+        {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
+        proposedLut?: ColorMap, proposedMapping?: Record<number, number>, 
+        proposedInverseMapping?: Record<number, number>, blindMode: boolean, 
+        viewerOptions: DisplayOptions}) {
         this.niivue = niivue;
         this.origVolume = nvImage;
         this.labels = labels;
         this.centers = centers;
+        this.blindMode = blindMode;
         this.shuffleMode = this.labels.length > 254 ? "data" : "lut";
         const meta = nvImage.getImageMetadata();
         this.dims = [meta.nx, meta.ny, meta.nz];
         this.validRegions = [...this.labels.keys() || []].filter(id => id > 0 && Number.isInteger(id));
+        this.viewerOptions = viewerOptions;
 
         // Get a complete copy of the data
         this.data = new Float32Array(
@@ -181,6 +196,17 @@ export class AtlasImageProxy {
         return this.regionIndices.get(regionId) || [];
     }
 
+    public setBlindMode(blind: boolean): void {
+        this.blindMode = blind;
+    }
+
+    public setViewerOptions(options: DisplayOptions): void {
+        this.viewerOptions = options;
+        if(this.isShowing == "highlighted" || !this.blindMode){
+            this.niivue.setOpacity(1, this.viewerOptions.displayOpacity);
+        }
+    }
+
     // The key method you want to preserve
     getValue(x: number, y: number, z: number): number {
         // Bounds checking
@@ -206,19 +232,29 @@ export class AtlasImageProxy {
     getImageMetadata() {
         return this.origVolume.getImageMetadata();
     }
-
+    
     public showShuffledRegions(): void {
-        if (this.shuffleMode === "lut") {
-            if (this.cmapLabels) this.origVolume.setColormapLabel(this.cmapLabels);
+        this.isShowing = "all-regions";
+        if (this.blindMode) {
+            // Hide the atlas by setting opacity to 0
+            this.niivue.setOpacity(1, 0);
         } else {
-            this.origVolume.setColormap("hsv")
-            this.origVolume.setVolumeData([0, 0, 0], this.dims, this.remappedData)
+            // Show the atlas with normal opacity
+            if (this.shuffleMode === "lut") {
+                if (this.cmapLabels) this.origVolume.setColormapLabel(this.cmapLabels);
+            } else {
+                this.origVolume.setColormap("hsv")
+                this.origVolume.setVolumeData([0, 0, 0], this.dims, this.remappedData)
+            }
+            this.niivue.setOpacity(1, this.viewerOptions.displayOpacity); // Full opacity for non-blind mode
         }
         this.niivue.updateGLVolume();
         this.niivue.drawScene();
     }
 
     public highlightRegionFluorescentYellow(highlightedRegion: number, moveToCenter: boolean = true) {
+        this.isShowing = "highlighted";
+        this.niivue.setOpacity(1, this.viewerOptions.displayOpacity);
         if (this.shuffleMode == "lut" && this.lut) {
             const lut = this.lut.slice();
             // Make all regions transparent initially except region 0 if needed

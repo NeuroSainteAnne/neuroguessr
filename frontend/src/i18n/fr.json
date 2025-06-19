@@ -46,6 +46,8 @@
   "practice_description": "Apprendre les différentes régions",
   "streak_mode": "Série",
   "streak_description": "Maximum consécutif",
+  "blind_mode": "Mode Masqué",
+  "blind_mode_description": "Identifier les régions sans les voir (score x1.5)",
   "time_attack_mode": "Contre-la-Montre",
   "time-attack_mode": "Contre-la-Montre",
   "time_attack_description": "Mimimum de temps",
