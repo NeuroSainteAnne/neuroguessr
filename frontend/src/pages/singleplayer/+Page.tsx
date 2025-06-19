@@ -112,17 +112,58 @@ export function Page() {
 
   const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
-      setAskedAtlas(routeParams?.atlas);
-      setNiivue(new Niivue({
-                logLevel: "error",
-                show3Dcrosshair: true,
-                backColor: [0, 0, 0, 1],
-                crosshairColor: [1, 1, 1, 1],
-                doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
-            }));
+      if (!niivue) {
+        setAskedAtlas(routeParams?.atlas);
+        const niivueInstance = new Niivue({
+          logLevel: "error",
+          show3Dcrosshair: true,
+          backColor: [0, 0, 0, 1],
+          crosshairColor: [1, 1, 1, 1],
+          doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
+        });
+        setNiivue(niivueInstance);
+      }
       return () => { 
+        const niivueInstance = niivue;
         cleanHeader()
+        // Clean up Niivue properly
+        if (niivueInstance) {
+          // Remove all volumes
+          while (niivueInstance.volumes.length > 0) {
+            niivueInstance.removeVolume(niivueInstance.volumes[0]);
+          }
+          // Remove all meshes
+          while (niivueInstance.meshes.length > 0) {
+            niivueInstance.removeMesh(niivueInstance.meshes[0]);
+          }
+          // Destroy WebGL context if needed
+          try{
+            if (niivueInstance.gl) {
+              const loseContext = niivueInstance.gl.getExtension('WEBGL_lose_context');
+              if (loseContext) loseContext.loseContext();
+            }
+          } catch (error) {
+            //
+          }
+          // Force garbage collection hints
+          niivueInstance.drawScene = () => {}; // Neutralize any pending animation frames
+          niivueInstance.volumes = [];
+          niivueInstance.meshes = [];
+        }
+        // Clear the canvas
+        if (canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
         atlasRef.current = null;
+        selectedVoxelProp.current = null;
+        currentTarget.current = null;
+        usedRegions.current = [];
+        setNiivue(null);
+        setIsLoadedNiivue(false);
+        setIsGameRunning(false);
+        setIsLoading(true);
+        setPastRegions([]);
         if (timerInterval.current) {
           clearInterval(timerInterval.current);
           timerInterval.current = null;
@@ -220,6 +261,7 @@ export function Page() {
       setHeaderScore("");
       setHeaderStreak("");
       setHeaderErrors("");
+      setHeaderTime("")
   }
 
   const resetGameState = () => {
@@ -632,8 +674,6 @@ export function Page() {
         }, 100);
       }
     } else { // Incorrect Guess
-      setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-      setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
 
       if (gameMode === 'practice') {
         // Use i18next interpolation for the incorrect message
@@ -649,8 +689,9 @@ export function Page() {
           setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
         }
         // Increased timeout duration to make the incorrect message visible longer
+        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
         setTimeout(() => {
-          // Restore the "Find: [Target Region]" message using the 'find' key
           const findPrefix = t('find') || 'Find: ';
           setHeaderText(findPrefix + targetName);
           setHeaderTextMode("normal")
@@ -681,15 +722,6 @@ export function Page() {
             } else {
               scoreIncrement = 0; // No points for too far away
             }
-
-            /*console.log(`Time Attack Error:`);
-            console.log(`  Target Region ID: ${currentTarget} (${targetName}), Clicked Region ID: ${clickedRegion} (${clickedRegionName})`);
-            console.log(`  Correct Center: ${correctCenter}`);
-            console.log(`  Clicked Center: ${clickedCenter}`);
-            console.log(`  Calculated Distance: ${distance.toFixed(2)} mm`);
-            console.log(`  Points earned for this error: ${scoreIncrement.toFixed(2)}`);*/
-            // ***************************************************************************
-
           } else {
             console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
             // Option: award minimal points or 0 if center data is missing
@@ -697,20 +729,20 @@ export function Page() {
           }
         }
 
-        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
-
-        // Display temporary incorrect message and points earned
-        const incorrectMsgPrefix = t('incorrect_prefix') || 'Incorrect! It\'s ';
-        const pointsMsg = Math.round(scoreIncrement) > 0 ? ` (+${scoreIncrement.toFixed(1)} pts)` : ' (+0 pts)';
-        setHeaderText(incorrectMsgPrefix + clickedRegionName + '!' + pointsMsg);
         setHeaderTextMode("failure"); // Indicate incorrect guess visually
 
         // Automatically move to the next target after a short delay
         if (!isEndgame) {
-          setTimeout(() => {
-            selectNewTarget();
+          setTimeout(async () => {
+            await selectNewTarget();
+            setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+            setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
+            setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
           }, 100);
         }
+      } else {
+        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
       }
 
       selectedVoxelProp.current = null;
