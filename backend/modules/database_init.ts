@@ -55,6 +55,7 @@ export const database_init = async () => {
                 token TEXT NOT NULL,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
+                blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 current_score INTEGER NOT NULL DEFAULT 0
             );`
@@ -84,6 +85,7 @@ export const database_init = async () => {
                 user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
                 mode TEXT NOT NULL,
                 atlas TEXT NOT NULL,
+                blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
                 score INTEGER NOT NULL CHECK (score >= 0),
                 attempts INTEGER,
                 correct INTEGER,
@@ -114,6 +116,17 @@ export const database_init = async () => {
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
         
+        await sql`
+            ALTER TABLE finished_sessions 
+            ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+        `;
+
+        // If you need to add it to other tables as well:
+        await sql`
+            ALTER TABLE game_sessions 
+            ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+        `;
+
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
