@@ -461,14 +461,14 @@ const endGame = async ({session, finalScore, elapsedTime, quitReason, bonusTime}
         // Insert into finishedsessions
         await sql`
             INSERT INTO finished_sessions (
-                user_id, mode, atlas, score, 
+                user_id, mode, atlas, blind_mode, score, 
                 attempts, correct, incorrect, 
                 min_time_per_region, max_time_per_region, avg_time_per_region,
                 min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
                 quit_reason, duration, created_at
             )
             VALUES (
-                ${session.user_id}, ${session.mode}, ${session.atlas}, ${finalScore}, 
+                ${session.user_id}, ${session.mode}, ${session.atlas}, ${session.blind_mode}, ${finalScore}, 
                 ${totalClicks}, ${accurateClicks}, ${incorrectClicks},
                 ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
                 ${minTimeCorrect}, ${maxTimeCorrect}, ${avgTimeCorrect},
