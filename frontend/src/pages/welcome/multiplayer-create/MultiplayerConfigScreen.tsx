@@ -24,12 +24,14 @@ const MultiplayerConfigScreen = () => {
     const socketRef = useRef<Socket | null>(null);
     const [numRegions, setNumRegions] = useState<number>(DEFAULT_REGION_NUMBER);
     const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
+    const [blindMode, setBlindMode] = useState(false);
     const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
     const parametersRef = useRef<MultiplayerParametersType>({
         atlas: undefined,
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
-        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
+        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
+        blindMode: false
     })
     const [copiedIcon, setCopiedIcon] = useState<null | "code" | "link">(null);
 
@@ -219,6 +221,28 @@ const MultiplayerConfigScreen = () => {
                                     style={{ width: 200, verticalAlign: 'middle' }}
                                 />
                                 </div>
+                            </div>
+                            <div className="blind-mode-container">
+                                <label className="blind-mode-label" htmlFor="blind-mode-checkbox">
+                                    <input
+                                        id="blind-mode-checkbox"
+                                        type="checkbox"
+                                        checked={blindMode}
+                                        onChange={() => { setBlindMode(!blindMode); updateParameters({blindMode: !blindMode}) }}
+                                        style={{ marginRight: "10px", cursor: "pointer" }}
+                                        data-umami-event="toggle blind mode multiplayer"
+                                        data-umami-event-blind-mode-state={blindMode ? "on" : "off"}
+                                    />
+                                    <span>{t("blind_mode") || "Blind Mode"}</span>
+                                    <div className="blind-mode-description" style={{
+                                        fontSize: "0.9rem",
+                                        color: "#666",
+                                        marginLeft: "10px"
+                                    }}>
+                                        {t("blind_mode_description") || "No region highlighting. Challenge yourself for 1.5x points!"}
+                                    </div>
+                                </label>
+                                
                             </div>
                             {false && "FOR v2" && <div className="mode-buttons">
                                 <label htmlFor="gameoverOnErrorCheckbox" style={{ fontSize: 18, marginRight: 12 }}>

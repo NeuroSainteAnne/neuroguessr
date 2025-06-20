@@ -14,6 +14,7 @@ export interface MultiplayerParametersType {
   regionsNumber: number;
   durationPerRegion: number;
   gameoverOnError: boolean;
+  blindMode: boolean;
 }
 
 export interface MultiplayerGame {
@@ -37,6 +38,7 @@ export interface MultiplayerGame {
   individualCorrectDurations: Record<string,number[]>;
   anonymousUsernames: string[];
   lastActivity: number;
+  isCurrentlyBlind: boolean;
 } 
 
 export interface AtlasLUT {
@@ -54,4 +56,5 @@ export interface GameCommands {
   lut?: AtlasLUT;
   regionId?: number;
   duration: number;
+  blindMode?: boolean;
 }

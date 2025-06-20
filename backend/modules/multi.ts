@@ -22,6 +22,7 @@ const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restant
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
 
 // In-memory maps
 const socketClients: Record<string, string[]> = {}; // sessionCode:userName -> socketIds[]
@@ -340,7 +341,8 @@ function createEmptySession(sessionCode: string){
       parameters: {
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
-        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR
+        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
+        blindMode: false
       },
       hasAnswered: {},
       individualScores: {},
@@ -349,7 +351,8 @@ function createEmptySession(sessionCode: string){
       individualDurations: {},
       individualCorrectDurations: {},
       anonymousUsernames: [],
-      lastActivity: Date.now()
+      lastActivity: Date.now(),
+      isCurrentlyBlind: false
     }
 }
 
@@ -507,7 +510,8 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
       action: "load-atlas",
       atlas: params.atlas,
       lut, mapping, inverseMapping,
-      duration: LOAD_ATLAS_DURATION
+      duration: LOAD_ATLAS_DURATION,
+      blindMode: params.blindMode || false
     });
 
     // 2. Generate region IDs (replace with your actual region list logic)
@@ -611,7 +615,10 @@ function sendNextCommand(gameRef: MultiplayerGame) {
 
     gameRef.stepStartTime = Date.now();
     const command = gameRef.commands[gameRef.currentCommandIndex];
-    if(command.action == "load-atlas") gameRef.currentAtlas = command.atlas || ""
+    if(command.action == "load-atlas"){
+      gameRef.currentAtlas = command.atlas || "";
+      gameRef.isCurrentlyBlind = command.blindMode || false;
+    }
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
     // Broadcast command and scores to all users via SSE
     broadcastToSession(gameRef.sessionCode, 'game-command', { command });
@@ -749,6 +756,9 @@ async function handleValidateGuess(data: {
                 scoreIncrement = 0; // No points for too far away
             }
         }
+    }
+    if(gameRef.isCurrentlyBlind) {
+      scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER);
     }
     gameRef.individualScores[userName] += scoreIncrement
     gameRef.individualAttempts[userName] += 1;

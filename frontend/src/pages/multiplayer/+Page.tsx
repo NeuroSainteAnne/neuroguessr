@@ -35,7 +35,7 @@ const MultiplayerGameScreen = () => {
   const [stepCountdown, setStepCountdown] = useState<number | null>(null);
   const countdownInterval = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const stepEndTime = useRef<number | null>(null);
-  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut: ColorMap | undefined, mapping : Record<number,number>, inverseMapping : Record<number,number>}|undefined>(undefined);
+  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut: ColorMap | undefined, mapping : Record<number,number>, inverseMapping : Record<number,number>, blindMode:boolean}|undefined>(undefined);
   const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
   const atlasRef = useRef<AtlasImageProxy|null>(null);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
@@ -172,7 +172,8 @@ const MultiplayerGameScreen = () => {
             atlas: data.command.atlas,
             lut: data.command.lut || undefined,
             mapping: data.command.mapping || undefined,
-            inverseMapping: data.command.inverseMapping || undefined
+            inverseMapping: data.command.inverseMapping || undefined,
+            blindMode: data.command.blindMode || false
           })
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
@@ -343,13 +344,12 @@ const MultiplayerGameScreen = () => {
       const selectedAtlasFiles = atlasFiles[askedAtlas.atlas];
       const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue && niivue.volumes.length > 1 && jsonData) {
-          atlasRef.current = new AtlasImageProxy(niivue, niivue.volumes[1], 
-            jsonData.labels, 
-            jsonData.centers ? jsonData.centers : undefined,
-            askedAtlas.lut, askedAtlas.mapping, askedAtlas.inverseMapping);
-          atlasRef.current.showShuffledRegions();
+          atlasRef.current = new AtlasImageProxy({niivue, nvImage:niivue.volumes[1], 
+            labels: jsonData.labels, 
+            centers: jsonData.centers ? jsonData.centers : undefined,
+            proposedLut: askedAtlas.lut, proposedMapping: askedAtlas.mapping, proposedInverseMapping: askedAtlas.inverseMapping,
+            viewerOptions, blindMode: askedAtlas.blindMode});
         atlasRef.current.showShuffledRegions();
-        niivue.setOpacity(1, viewerOptions.displayOpacity);
       }
     } catch (error) {
       console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
@@ -417,6 +417,9 @@ const MultiplayerGameScreen = () => {
   useEffect(() => {
     if (askedAtlas) {
         const atlas = atlasFiles[askedAtlas.atlas];
+        if(atlasRef.current) {
+          atlasRef.current.setBlindMode(askedAtlas.blindMode);
+        }
         if (atlas) {
           const niiFile = "/atlas/nii/" + atlas.nii;
           NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
@@ -580,6 +583,7 @@ const MultiplayerGameScreen = () => {
           {parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
           <div>{t("number_regions")}: {parameters.regionsNumber}</div>
           <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
+          {parameters?.blindMode && <div>{t("blind_mode")}</div>}
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
       </div>}

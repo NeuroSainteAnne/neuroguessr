@@ -17,6 +17,7 @@ export interface MultiplayerParametersType {
     regionsNumber: number;
     durationPerRegion: number;
     gameoverOnError: boolean;
+    blindMode: boolean;
 }
 
 export type ColorMap = {
