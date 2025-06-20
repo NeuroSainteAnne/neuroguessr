@@ -805,6 +805,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       if(!userId) continue; // If no userId, do not store anything for this user
       const mode = 'multiplayer';
       const atlas = gameRef.currentAtlas;
+      const blindMode = gameRef.isCurrentlyBlind || false;
       const score = gameRef.individualScores[username] || 0;
       const attempts = gameRef.individualAttempts[username] || 0;
       const correct = gameRef.individualSuccesses[username] || 0;
@@ -824,12 +825,12 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       savePromises.push(
         sql`
           INSERT INTO finished_sessions (
-            user_id, mode, atlas, score, attempts, correct, incorrect,
+            user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
             min_time_per_region, max_time_per_region, avg_time_per_region,
             min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
             quit_reason, multiplayer_games_won, duration, created_at
           ) VALUES (
-            ${userId}, ${mode}, ${atlas}, ${score}, ${attempts}, ${correct}, ${incorrect},
+            ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
             ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
             ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
             ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()

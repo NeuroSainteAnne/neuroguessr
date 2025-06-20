@@ -11,15 +11,16 @@ interface LeaderboardEntry {
     mode: string; 
     best_score: number;
     atlas: string;
+    blind_mode?: boolean | null;
 }
 
 function getSummedLeaderboard(leaderboard: LeaderboardEntry[]) {
     const summed: Record<string, LeaderboardEntry> = {};
 
     leaderboard.forEach(entry => {
-        const key = `${entry.username}||${entry.mode}`;
+        const key = `${entry.username}||${entry.mode}||${String(entry.blind_mode) || "null"}`;
         if (!summed[key]) {
-            summed[key] = { username: entry.username, mode: entry.mode, best_score: 0, atlas: "total" };
+            summed[key] = { username: entry.username, mode: entry.mode, blind_mode: entry.blind_mode, best_score: 0, atlas: "total" };
         }
         summed[key].best_score += entry.best_score;
     });
@@ -30,19 +31,21 @@ function getSummedLeaderboard(leaderboard: LeaderboardEntry[]) {
 
 export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response): Promise<void> => {
     try {
-        const { mode, atlas, appendTotal = true, numberLimit = 10, timeLimit = 7 } = req.body;
-
+        const { mode, atlas, appendTotal = true, numberLimit = 10, timeLimit = 7, blindMode = null } = req.body;
+        
         const innerQuery = sql`
             SELECT
                 user_id,
                 mode,
                 atlas,
+                blind_mode,
                 MAX(score) AS best_score
             FROM finished_sessions
             WHERE 1=1
                 ${mode ? sql` AND mode = ${mode}` : sql` AND mode != ${'multiplayer'}`}
                 ${timeLimit ? sql` AND NOW() - created_at <= ${`'${timeLimit} days'`}` : sql``}
-            GROUP BY user_id, mode, atlas
+                ${blindMode !== null ? sql` AND blind_mode = ${blindMode}` : sql``}
+            GROUP BY user_id, mode, atlas, blind_mode
         `;
 
         // Execute query to get leaderboard
@@ -51,6 +54,7 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
                 u.username,
                 fs.mode AS mode,
                 fs.atlas AS atlas,
+                fs.blind_mode AS blind_mode,
                 fs.best_score AS best_score
             FROM (${innerQuery}) fs
             JOIN users u ON fs.user_id = u.id

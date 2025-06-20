@@ -8,6 +8,7 @@ interface LeaderboardEntry {
   mode: string;
   best_score: number;
   atlas: string;
+  blind_mode: boolean;
 }
 
 interface AtlasOption {
@@ -20,11 +21,13 @@ interface LeaderboardProps {
   initialMode?: string;
   initialAtlas?: string;
   className?: string;
+  initialBlindMode?: null | true | false;
 }
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ 
   initialMode = '',
   initialAtlas = '',
+  initialBlindMode = null,
   className = ''
 }) => {
   const { t, userUsername } = useApp();
@@ -35,6 +38,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
   // Filter states
   const [mode, setMode] = useState<string>(initialMode);
   const [atlas, setAtlas] = useState<string>(initialAtlas);
+  const [blindMode, setBlindMode] = useState<boolean | null>(initialBlindMode);
   const [timeLimit, setTimeLimit] = useState<number>(30); // Default 7 days
   const [numberLimit, setNumberLimit] = useState<number>(10);
 
@@ -113,6 +117,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
         body: JSON.stringify({
           mode: mode !== '' ? mode : undefined,
           atlas: atlas !== '' ? atlas : undefined,
+          blindMode: blindMode === null ? null : blindMode,
           appendTotal: atlas == '',
           numberLimit,
           timeLimit: timeLimit || 0 // 0 means no time limit
@@ -141,7 +146,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
 
   useEffect(() => {
     fetchLeaderboard();
-  }, [mode, atlas, timeLimit, numberLimit]); // Re-fetch when filters change
+  }, [mode, atlas, timeLimit, numberLimit, blindMode]); // Re-fetch when filters change
 
   const handleModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setMode(e.target.value);
@@ -158,6 +163,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
   const handleNumberLimitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setNumberLimit(parseInt(e.target.value));
   };
+
+  const handleBlindModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setBlindMode(null);
+    } else {
+      setBlindMode(value === "true");
+    }
+  }
 
   const getModeName = (modeCode: string): string => {
     const mode = modeOptions.find(m => m.value === modeCode);
@@ -240,6 +254,19 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
             <option value={100}>100</option>
           </select>
         </div>
+          <div className="filter-group">
+          <label htmlFor="blind-filter">{t('blind_mode')}:</label>
+          <select 
+            id="blind-filter" 
+            value={blindMode === null ? "" : blindMode.toString()} 
+            onChange={handleBlindModeChange}
+            className="filter-select"
+          >
+            <option value={""}></option>
+            <option value={"true"}>{t("yes")}</option>
+            <option value={"false"}>{t("no")}</option>
+          </select>
+        </div>
       </div>
       
       {loading ? (
@@ -269,18 +296,20 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
                 <th>{t('player')}</th>
                 <th>{t('mode')}</th>
                 <th>{t('atlas')}</th>
+                <th>{t('blind_mode')}</th>
                 <th>{t('score')}</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.length > 0 ? (
                 leaderboard.map((entry, index) => (
-                  <tr key={`${entry.username}-${entry.mode}-${entry.atlas}`} 
+                  <tr key={`${entry.username}-${entry.mode}-${entry.atlas}-${entry.blind_mode}`} 
                       className={`${entry.atlas === 'total' ? 'total-row' : ''} ${entry.username == userUsername ? "current-user-row" : ""}`} >
                     <td className="rank-cell">{index + 1}</td>
                     <td className="username-cell">{entry.username}</td>
                     <td className="mode-cell">{getModeName(entry.mode)}</td>
                     <td className="atlas-cell">{getAtlasName(entry.atlas)}</td>
+                    <td className="atlas-cell">{entry.blind_mode ? t("yes") : t("no")}</td>
                     <td className="score-cell">{entry.best_score}</td>
                   </tr>
                 ))

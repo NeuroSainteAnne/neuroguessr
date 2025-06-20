@@ -160,6 +160,7 @@ interface GetLeaderboardBody {
     numberLimit?: number;
     timeLimit?: number;
     appendTotal?: boolean;
+    blindMode?: boolean | null;
 }
 
 export interface GetLeaderboardRequest {

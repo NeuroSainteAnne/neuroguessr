@@ -309,5 +309,7 @@
   "go_back": "Go Back",
   "error_details": "Technical Details",
 
-  "beta-version": "Beta Version"
+  "beta-version": "Beta Version",
+  "yes": "Yes",
+  "no": "No"
 }
