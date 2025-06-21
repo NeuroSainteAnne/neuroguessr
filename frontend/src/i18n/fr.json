@@ -298,6 +298,12 @@
   "global_average": "Moyenne Globale",
   "percentile": "Percentile",
   "unknown_atlas": "Atlas Inconnu",
+  "blind_mode_games": "Parties en Mode Masqué",
+  "blind_mode_statistics": "Statistiques en Mode Masqué",
+  "blind_mode_distribution": "Distribution des Scores en Mode Masqué",
+  "normal_mode_games": "Mode Normal",
+  "score_multiplier": "Multiplicateur de Score",
+  "score_comparison": "Comparaison des Scores",
   
   "*****ERROR*****":"",
   "page_not_found": "Page Non Trouvée",

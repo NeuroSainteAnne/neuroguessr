@@ -299,6 +299,12 @@
   "global_average": "Global Average",
   "percentile": "Percentile",
   "unknown_atlas": "Unknown Atlas",
+  "blind_mode_games": "Blind Mode Games",
+  "blind_mode_statistics": "Blind Mode Statistics",
+  "blind_mode_distribution": "Blind Mode Distribution",
+  "normal_mode_games": "Normal Mode",
+  "score_multiplier": "Score Multiplier",
+  "score_comparison": "Score Comparison",
 
   "*****ERROR*****":"",
   "page_not_found": "Page Not Found",
