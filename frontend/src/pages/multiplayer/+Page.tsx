@@ -39,7 +39,7 @@ const MultiplayerGameScreen = () => {
   const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
   const atlasRef = useRef<AtlasImageProxy|null>(null);
   const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number | undefined} | null>(null);
   const currentTarget = useRef<number | null>(null);
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);

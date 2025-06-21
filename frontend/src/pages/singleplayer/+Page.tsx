@@ -91,7 +91,7 @@ export function Page() {
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const currentAttemptsRef = useRef<number>(0);
   const currentTarget = useRef<number | null>(null);
-  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number} | null>(null);
+  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number|undefined} | null>(null);
   const usedRegions = useRef<number[]>([]);
   const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
@@ -552,9 +552,9 @@ export function Page() {
   const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!niivue || !niivue.gl || !niivue.volumes[1] || !isGameRunning || !canvasRef.current || !atlasRef.current) return;
     const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
-    if (clickedRegionLocation) {
+    if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
       selectedVoxelProp.current = clickedRegionLocation;
-      if (gameMode === 'navigation') {
+      if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
         setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
         if (tooltip) {
@@ -645,7 +645,7 @@ export function Page() {
       return { scoreIncrement };
     }
     const targetName = atlasRef.current && atlasRef.current.labels?.[currentTarget.current] ? atlasRef.current.labels[currentTarget.current] : t('unknown_region');
-    const clickedRegionName = atlasRef.current && atlasRef.current.labels?.[selectedVoxelProp.current.idx] ? atlasRef.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
+    const clickedRegionName = atlasRef.current && selectedVoxelProp.current.idx && atlasRef.current.labels?.[selectedVoxelProp.current.idx] ? atlasRef.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
     const selectedVoxelSave = selectedVoxelProp.current;
     if (guessSuccess) {
       // Correct Guess
