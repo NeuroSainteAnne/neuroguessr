@@ -34,7 +34,7 @@
   "join_multiplayer_button": "Rejoindre",
   "create_multiplayer_game": "Créer une partie multijoueur",
   "create_multiplayer_button": "Créer",
-  "multi_unavailable_login": "Merci de vous <a href='/login'>identifier</a> pour créer une partie multijoueur",
+  "multi_unavailable_login": "Merci de vous <a href='/login?returnURL=%2Fwelcome%2Fmultiplayer-create'>identifier</a> pour créer une partie multijoueur",
   "multi_suggest_login": "Pour une expérience optimale, nous vous recommandons de vous <a href='/login'>identifier</a>.",
   "login_mode": "S'identifier",
   "logout_mode": "Se déconnecter",
@@ -189,7 +189,7 @@
   "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
   "reconfigure_success": "Configuration réussie !",
   "reconfigure_failed": "Échec de la configuration. Veuillez réessayer.",
-  "config_unavailable_login": "Merci de vous <a href='/login'>identifier</a> pour accéder à la configuration de votre compte.",
+  "config_unavailable_login": "Merci de vous <a href='/login?returnURL=%2Fconfiguration'>identifier</a> pour accéder à la configuration de votre compte.",
 
 
   "beta_version_login_message": "ATTENTION : ce site est en version de développement expérimental. Votre compte ainsi que vos résultats peuvent être supprimés à tout moment",
@@ -262,7 +262,7 @@
   
   "*****STATS*****":"",
 
-  "stats_unavailable_login": "Merci de vous <a href='/login'>identifier</a> pour accéder à vos statistiques.",
+  "stats_unavailable_login": "Merci de vous <a href='/login?returnURL=%2Fstats'>identifier</a> pour accéder à vos statistiques.",
   "your_statistics": "Vos Statistiques",
   "stats_from": "Du",
   "to": "au",

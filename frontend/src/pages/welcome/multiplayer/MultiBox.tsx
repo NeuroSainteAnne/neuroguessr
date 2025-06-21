@@ -35,7 +35,6 @@ export function MultiBox() {
             {!isLoggedIn && <>
                 <div className="multiplayer-please-login" dangerouslySetInnerHTML={{
                     __html: t("multi_unavailable_login")
-                        .replace("/login", `/login?redirect=welcome&redirect_subpage=multiplayer`)
                 }}></div>
                 <a href="/welcome/multiplayer-create" style={{ display: "none" }}>{t("create_multiplayer_button")}</a></>}
         </div>

@@ -46,7 +46,7 @@
   "join_multiplayer_button": "Join",
   "create_multiplayer_game": "Create multiplayer game",
   "create_multiplayer_button": "Create",
-  "multi_unavailable_login": "Please <a href='/login'>log in</a> to create a multiplayer game",
+  "multi_unavailable_login": "Please <a href='/login?returnURL=%2Fwelcome%2Fmultiplayer-create'>log in</a> to create a multiplayer game",
   "multi_suggest_login": "For an optimal experience, we suggest you to <a href='/login'>log in</a> for multiplayer features",
   "streak_description": "Test consecutive accuracy",
   "time_attack_mode": "Time Attack",
@@ -190,7 +190,7 @@
   "password-helper-leaveempty": "Leave empty to keep the same password",
   "reconfigure_success": "Configuration successful!",
   "reconfigure_failed": "Configuration failed. Please try again.",
-  "config_unavailable_login": "Please <a href='/login'>log in</a> to access configuration screen.",
+  "config_unavailable_login": "Please <a href='/login?returnURL=%2Fconfiguration'>log in</a> to access configuration screen.",
 
 
   "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime",
@@ -262,7 +262,7 @@
   
   "*****STATS*****":"",
 
-  "stats_unavailable_login": "Please <a href='/login'>log in</a> to access your statistics.",
+  "stats_unavailable_login": "Please <a href='/login?returnURL=%2Fstats'>log in</a> to access your statistics.",
   "your_statistics": "Your Statistics",
   "stats_from": "From",
   "to": "to",
