@@ -67,7 +67,7 @@ function Header() {
                     {!isLoggedIn && <>
                         <a id="guest-sign-in-button" className="guest-sign-in-button"
                             data-umami-event="goto login button" data-umami-event-source="header"
-                            href="/login">{t("sign_in")}</a>
+                            href={`/login?returnURL=${encodeURIComponent(currentPath)}`}>{t("sign_in")}</a>
                         <button className={currentLanguage=="fr"?
                                     "lang-icon-btn lang-icon-btn-active":
                                     "lang-icon-btn"}

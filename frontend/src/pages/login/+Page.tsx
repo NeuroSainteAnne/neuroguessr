@@ -56,13 +56,14 @@ function LoginScreen() {
 
           const result = await response.json();
 
-          if (response.ok) {
-            // Handle successful login
+          if (response.ok) {            // Handle successful login
             setLoginErrorText('');
             setLoginSuccessText(t('login_success'));
             updateToken(result.token);
             const urlParams = new URLSearchParams(window.location.search);
             const redirectParam = urlParams.get('redirect');
+            const returnUrl = urlParams.get('returnURL');
+            
             if (redirectParam) {
               window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
               if(redirectParam == "multiplayer-game"){
@@ -75,6 +76,9 @@ function LoginScreen() {
               } else {
                 navigate(`/${redirectParam}`);
               }
+            } else if (returnUrl) {
+              window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
+              navigate(returnUrl);
             } else {
               navigate("/welcome");
             }
