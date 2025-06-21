@@ -179,6 +179,9 @@
   "error_invalid_token": "The reset link is invalid or has expired.",
   "password_reset_success": "Your password has been reset successfully.",
   "password_reset_failed": "Failed to reset password. Please try again.",
+
+  "*****CONFIGURATION*****":"",
+
   "config_mode": "Setup",
   "config_description": "Account parameters",
   "config_publish_to_leaderboard": "Publish to leaderboard",
@@ -187,6 +190,9 @@
   "password-helper-leaveempty": "Leave empty to keep the same password",
   "reconfigure_success": "Configuration successful!",
   "reconfigure_failed": "Configuration failed. Please try again.",
+  "config_unavailable_login": "Please <a href='/login'>log in</a> to access configuration screen.",
+
+
   "beta_version_login_message": "WARNING: this website is in experimental development version. Your account as well as your results may be deleted anytime",
   "game_code": "Your sharing game code",
   "players_in_lobby": "Players in lobby",
@@ -256,6 +262,7 @@
   
   "*****STATS*****":"",
 
+  "stats_unavailable_login": "Please <a href='/login'>log in</a> to access your statistics.",
   "your_statistics": "Your Statistics",
   "stats_from": "From",
   "to": "to",

@@ -4,7 +4,7 @@ import "../register/RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
 
 function UserConfig() {
-    const { t, updateToken } = useApp();
+    const { t, updateToken, isLoggedIn } = useApp();
     const usernameInput = useRef<HTMLInputElement>(null);
     const emailInput = useRef<HTMLInputElement>(null);
     const firstnameInput = useRef<HTMLInputElement>(null);
@@ -134,6 +134,10 @@ function UserConfig() {
             console.error('Error submitting the form:', error);
             setReconfigureErrorText(t('server_error'));
         }
+    }
+
+    if (!isLoggedIn) {
+        return <div className="config-please-connect" dangerouslySetInnerHTML={{__html:t('config_unavailable_login')}}></div>;
     }
     
     return(

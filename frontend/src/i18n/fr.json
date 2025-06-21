@@ -178,6 +178,9 @@
   "validate_email_header": "Validation addresse email",
   "email_validation_wait": "Validation en cours...",
   "success_email_verified": "Email vérifié avec succès ! Identification en cours...",
+
+  "*****CONFIGURATION*****":"",
+
   "config_mode": "Configuration",
   "config_description": "Paramètres de votre compte",
   "config_publish_to_leaderboard": "Publier votre classement",
@@ -186,6 +189,9 @@
   "password-helper-leaveempty": "Laissez vide pour conserver le même mot de passe",
   "reconfigure_success": "Configuration réussie !",
   "reconfigure_failed": "Échec de la configuration. Veuillez réessayer.",
+  "config_unavailable_login": "Merci de vous <a href='/login'>identifier</a> pour accéder à la configuration de votre compte.",
+
+
   "beta_version_login_message": "ATTENTION : ce site est en version de développement expérimental. Votre compte ainsi que vos résultats peuvent être supprimés à tout moment",
   "game_code": "Votre code de jeu à partager",
   "players_in_lobby": "Joueurs en salle d'attente",
@@ -255,6 +261,8 @@
 
   
   "*****STATS*****":"",
+
+  "stats_unavailable_login": "Merci de vous <a href='/login'>identifier</a> pour accéder à vos statistiques.",
   "your_statistics": "Vos Statistiques",
   "stats_from": "Du",
   "to": "au",

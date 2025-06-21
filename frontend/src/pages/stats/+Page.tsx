@@ -6,6 +6,7 @@ import { formatTime, formatDate } from '../../utils/formatters';
 import './Stats.css';
 import { useApp } from '../../context/AppContext';
 import atlasFiles from '../../utils/atlas_files';
+import { copyFileSync } from 'fs';
 
 enum GameMode {
   STREAK = 'streak',
@@ -75,7 +76,7 @@ type DateRangeOption = {
 };
 
 export function Page() {
-  const { t, showNotification, authToken } = useApp();
+  const { t, showNotification, authToken, isLoggedIn } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);  const [historyModeFilter, setHistoryModeFilter] = useState<'' | GameMode>('');
@@ -151,6 +152,9 @@ export function Page() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        if (!isLoggedIn) {
+          return;
+        }
         setLoading(true);
         const response = await fetch('/api/get-stats', {
           method: 'POST',
@@ -305,18 +309,17 @@ export function Page() {
       { name: t('normal_mode'), value: normalModeAvg }
     ];
   };
-    // Hide blind mode section if no blind mode games have been played
+
+  // Hide blind mode section if no blind mode games have been played
   const showBlindModeSection = (stats?.blindModeGames || 0) > 0;
-  
-  if (loading) {
+
+  if (!isLoggedIn) {
+    return <div className="stats-please-connect" dangerouslySetInnerHTML={{__html:t('stats_unavailable_login')}}></div>;
+  } else if (loading) {
     return <div className="stats-loading">{t('loading_stats')}</div>;
-  }
-  
-  if (error) {
+  } else if (error) {
     return <div className="stats-error">{error}</div>;
-  }
-  
-  if (!stats) {
+  } else if (!stats) {
     return <div className="stats-empty">{t('no_stats_available')}</div>;
   }
   
@@ -506,7 +509,8 @@ export function Page() {
           </Tab>
         </Tabs>      </section>
       
-      {/* Blind Mode Section */}      {showBlindModeSection && (
+      {/* Blind Mode Section */}      
+      {showBlindModeSection && (
       <section className="blind-mode-stats">
         <h2>{t('blind_mode_statistics')}</h2>
         <div className="stats-grid">
