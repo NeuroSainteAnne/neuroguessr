@@ -46,6 +46,13 @@ export const defineNiiOptions = (myniivue: any, myAtlasProxy: AtlasImageProxy | 
 }
 
 export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, callback: () => void) => {
+    if ((myniivue as any)._isInitialized) {
+        if (callback) callback();
+        return;
+    }
+    (myniivue as any)._isInitialized = true;
+    console.log("Initializing Niivue...");
+
     myniivue.attachToCanvas(canvas).then(() => {
         myniivue.setInterpolation(false);
         const myCustomCmap = {

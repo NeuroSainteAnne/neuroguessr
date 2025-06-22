@@ -77,6 +77,7 @@ export function Page() {
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [hasEnded, setHasEnded] = useState<boolean>(false);
+  const hasEndedRef = useRef<boolean>(false); // Added ref to track ending state synchronously
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
   const [currentScore, setCurrentScore] = useState<number>(0);
   const currentScoreRef = useRef<number>(0);
@@ -116,6 +117,7 @@ export function Page() {
     useEffect(() => {
       if (!niivue) {
         setAskedAtlas(routeParams?.atlas);
+        console.log("Creating Niivue...");
         const niivueInstance = new Niivue({
           logLevel: "error",
           show3Dcrosshair: true,
@@ -174,18 +176,42 @@ export function Page() {
     }, []);
 
   useEffect(() => {
-    if(niivue && canvasRef.current){
-      initNiivue(niivue, canvasRef.current, viewerOptions, () => {
-        setIsLoadedNiivue(true);
-      })
-    }
-  }, [niivue, canvasRef.current])
+    let cancelled = false;
+    const doSequentialLoad = async () => {
+      setIsLoading(true);
 
-  useEffect(() => {
-    if(isLoadedNiivue){
-        checkLoading();
-    }
-  }, [isLoadedNiivue])
+      // 1. Wait for Niivue to be ready
+      if (!niivue || !canvasRef.current) return;
+
+      await new Promise<void>((resolve) => {
+        initNiivue(niivue, canvasRef.current!, viewerOptions, () => {
+          if (!cancelled) setIsLoadedNiivue(true);
+          resolve();
+        });
+      });
+
+      // 2. Wait for atlas and background to be ready
+      if (!preloadedAtlas || !preloadedBackgroundMNI || !askedAtlas) return;
+
+      console.log("Loading atlas and background MNI...");
+      loadAtlasNii(niivue, preloadedBackgroundMNI, preloadedAtlas);
+
+      // 3. Load atlas data
+      console.log("Loading atlas data...");
+      await loadAtlasData();
+
+      // 4. Start game
+      if (!cancelled) {
+        console.log("Starting game...");
+        startGame();
+        setIsLoading(false);
+      }
+    };
+
+    doSequentialLoad();
+
+    return () => { cancelled = true; };
+  }, [niivue, canvasRef.current, preloadedAtlas, preloadedBackgroundMNI, askedAtlas, viewerOptions]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -234,20 +260,6 @@ export function Page() {
       setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
     }
   }
-  useEffect(() => {
-    checkLoading();
-  }, [preloadedAtlas, preloadedBackgroundMNI, isLoadedNiivue, gameMode, askedAtlas])
-
-  const checkLoading = async () => {
-    if (preloadedAtlas && preloadedBackgroundMNI && isLoadedNiivue && askedAtlas && !atlasRef.current) {
-      loadAtlasNii(niivue, preloadedBackgroundMNI, preloadedAtlas);
-      await loadAtlasData();
-      startGame();
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
-    }
-  }
 
   useEffect(() => {
     currentStreakRef.current = currentStreak
@@ -279,6 +291,7 @@ export function Page() {
     setHighlightedRegion(null);
     setHeaderTextMode("normal"); // Reset header text mode
     setHasEnded(false);
+    hasEndedRef.current = false; // Reset the ref value
     setPastRegions([]);
     setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
     if (gameMode === 'navigation') {
@@ -396,12 +409,16 @@ export function Page() {
     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
     const seconds = (remaining % 60).toString().padStart(2, '0');
     setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
-    if (remaining <= 0) {
-      if (isLoggedIn && !hasEnded) {
+    
+    if (remaining <= 0 && !hasEndedRef.current) {
+      // Set ended flags synchronously first to prevent multiple calls
+      hasEndedRef.current = true;
+      setHasEnded(true);
+      if (isLoggedIn) {
         manualClotureGameSession().then((finalScore) => {
           endTimeAttack(finalScore);
         }).catch((error) => {
-          endTimeAttack(finalScore);
+          endTimeAttack(currentScoreRef.current);
         });
       } else {
         endTimeAttack(currentScoreRef.current);
@@ -431,6 +448,7 @@ export function Page() {
     // Stop the game
     setIsGameRunning(false)
     setHasEnded(true);
+    hasEndedRef.current = true;
     selectedVoxelProp.current = null;
     if (guessButtonRef.current) guessButtonRef.current.disabled = true;
   }
@@ -481,7 +499,11 @@ export function Page() {
       if (gameMode === 'time-attack') {
         // TODO take into account server response = -1
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        endTimeAttack(Math.round(currentScoreRef.current + (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0)));
+        // Calculate time bonus points
+        const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
+        // Apply blind mode multiplier to the entire score
+        const finalScore = Math.round(currentScoreRef.current = (timeBonus * (blindMode ? BLIND_MODE_MULTIPLIER : 1)));
+        endTimeAttack(finalScore);
         return;
       } else if (gameMode === 'streak') {
         setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
@@ -649,11 +671,11 @@ export function Page() {
     const selectedVoxelSave = selectedVoxelProp.current;
     if (guessSuccess) {
       // Correct Guess
-      setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes
-
+      setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes      
       if (gameMode === 'time-attack') {
-        // Add full points for correct guess
-        setCurrentScore((curScore) => curScore + (isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1))));
+        // Add full points for correct guess - scoreIncrement already has blind mode multiplier applied if from server
+        const points = isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
+        setCurrentScore((curScore) => curScore + points);
       }
       if (gameMode === 'streak') {
         // Increment streak for correct guess
@@ -783,7 +805,8 @@ export function Page() {
   function performEndGame({ finalScore }: { finalScore: number }) {
     if (gameMode === 'streak') {
       setHighlightedRegion(currentTarget.current); // Highlight the last region
-      setFinalStreak(Math.floor(currentStreakRef.current * (blindMode?BLIND_MODE_MULTIPLIER:1))); // Store the final streak before resetting
+      // Apply blind mode multiplier consistently to the final streak score
+      setFinalStreak(Math.floor(currentStreakRef.current * (blindMode ? BLIND_MODE_MULTIPLIER : 1))); 
       setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
       setShowStreakOverlay(true);
       setHeaderTextMode("failure"); // Indicate streak ended visually
@@ -791,11 +814,15 @@ export function Page() {
     } else if (gameMode === 'time-attack') {
       if (!isLoggedIn) {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        finalScore = Math.round(currentScoreRef.current + ((remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ?BLIND_MODE_MULTIPLIER : 1)))
+        // First calculate the time bonus without multiplier
+        const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
+        // Then apply blind mode multiplier to the final total score
+        finalScore = Math.round((currentScoreRef.current + timeBonus) * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
       }
       endTimeAttack(finalScore)
     }
     setHasEnded(true)
+    hasEndedRef.current = true;
   }
 
   const handleRecolorization = () => {
