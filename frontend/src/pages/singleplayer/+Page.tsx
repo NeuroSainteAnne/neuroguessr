@@ -1052,7 +1052,7 @@ export function Page() {
               <i className="fas fa-home"></i>
             </button>
             <button id="restart-button-time-attack" className="restart-button" 
-                data-umami-event="restart button" data-umami-event-gobacksource="time-attack" 
+                data-umami-event="restart button" data-umami-event-restartsource="time-attack" 
                 onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>
