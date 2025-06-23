@@ -1,0 +1,44 @@
+.clinical-trial-container{
+    width: 100%;
+    margin: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #808080;
+    padding: 8px;
+}
+
+.clinical-trial-element{
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.clinical-trial-element td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+
+.clinical-trial-element td:first-child {
+    vertical-align: middle;
+}
+
+.clinical-trial-element td:first-child {
+    text-align: left;
+    width: 35%;
+}
+
+.clinical-trial-element td:last-child {
+    text-align: right;
+    width: 65%;
+}
+
+.clinical_trial_header{
+    text-align: center !important;
+    color: #979797;
+}
+
+.clinical_trial_radio{
+    text-align: left !important;
+    display:flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap:10px;
+}

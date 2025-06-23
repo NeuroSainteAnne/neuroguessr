@@ -29,7 +29,28 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 language: Joi.string().label("language").valid("fr", "en"),
                 // @ts-ignore
                 password: passwordComplexity().required().label("password"),
-                captcha_token: Joi.string().label("captcha_token")
+                captcha_token: Joi.string().label("captcha_token"),
+                clinical_trial_gender: Joi.string()
+                    .valid("male", "female", "other", null)
+                    .label("clinical_trial_gender"),
+                clinical_trial_age: Joi.number()
+                    .integer()
+                    .min(0)
+                    .allow(null)
+                    .label("clinical_trial_age"),
+                clinical_trial_country: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_country"),
+                clinical_trial_occupation: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_occupation"),
+                clinical_trial_consent: Joi.string()
+                    .valid("data_usage", "acknowledgement", "none", null)
+                    .label("clinical_trial_consent"),
+                clinical_trial_consent_date: Joi.date()
+                    .iso()
+                    .allow(null)
+                    .label("clinical_trial_consent_date"),
             });
             return schema.validate(data);
         };
@@ -90,8 +111,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
 
         // Insérer le nouvel utilisateur
         const result = await sql`
-            INSERT INTO users (username, firstname, lastname, email, password, language, verified)
-            VALUES (${req.body.username}, ${req.body.firstname}, ${req.body.lastname}, ${email}, ${hashPassword}, ${language}, ${preVerify})
+            INSERT INTO users (username, firstname, lastname, email, password, language, verified,
+                clinical_trial_gender, clinical_trial_age, clinical_trial_country,
+                clinical_trial_occupation, clinical_trial_consent, clinical_trial_consent_date)
+            VALUES (${req.body.username}, ${req.body.firstname}, ${req.body.lastname}, ${email}, ${hashPassword}, ${language}, ${preVerify},
+                ${req.body.clinical_trial_gender || null}, ${req.body.clinical_trial_age || null}, ${req.body.clinical_trial_country || null},
+                ${req.body.clinical_trial_occupation || null}, ${req.body.clinical_trial_consent || null}, ${req.body.clinical_trial_consent_date || null})
             RETURNING id
         `;
         const lastID = result[0].id as number;

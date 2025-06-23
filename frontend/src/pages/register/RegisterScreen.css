@@ -6,7 +6,7 @@
     padding: 40px;
     border-radius: 12px;
     width: 100%;
-    max-width: 450px;
+    max-width: 800px;
     /* Slightly wider for more input fields */
     text-align: center;
     box-sizing: border-box;
@@ -34,6 +34,11 @@
     margin-top: 10px;
     color: #FF7070;
     /* Brighter red for error messages on dark background */
+}
+
+.beta-info{
+    color: #FF7070;
+    font-size: 0.9em;
 }
 
 #register_success {
@@ -85,4 +90,16 @@
 .button-disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.register-content {
+    display: flex;
+    flex-direction: row;
+    gap:25px;
+}
+@media (max-width: 800px) {
+    .register-content {
+        flex-direction: column;
+        gap: 15px;
+    }
 }

@@ -9,6 +9,12 @@ export interface User {
     verified: boolean;
     publish_to_leaderboard: boolean | null;
     language: string;
+    clinical_trial_gender: "male" | "female" | "other" | null;
+    clinical_trial_age: number | null;
+    clinical_trial_country: string | null;
+    clinical_trial_occupation: string | null;
+    clinical_trial_consent: "data_usage" | "acknowledgement" | "none" | null;
+    clinical_trial_consent_date: string | null; // ISO date string
 }
 
 export interface Token {

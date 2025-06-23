@@ -125,7 +125,9 @@ export const getUserInfo = async (req: Request, res: Response): Promise<void> =>
 
         // Fetch user information from the database
         const users = await sql`
-            SELECT id, username, firstname, lastname, email, publish_to_leaderboard
+            SELECT id, username, firstname, lastname, email, publish_to_leaderboard,
+            language, clinical_trial_gender, clinical_trial_age,
+            clinical_trial_country, clinical_trial_occupation, clinical_trial_consent
             FROM users 
             WHERE id = ${userId} 
             LIMIT 1

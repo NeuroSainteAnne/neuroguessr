@@ -23,6 +23,12 @@ export interface RegisterBody {
     password: string;
     language?: string;
     captcha_token?: string;
+    clinical_trial_gender?: "male" | "female" | "other" | null;
+    clinical_trial_age?: number | null;
+    clinical_trial_country?: string | null;
+    clinical_trial_occupation?: string | null;
+    clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
+    clinical_trial_consent_date?: string | null; 
 }
 
 export interface RegisterRequest extends Request {
@@ -150,6 +156,11 @@ export interface ConfigUserBody {
     password?: string;
     publishToLeaderboard?: boolean | null;
     language?: string;
+    clinical_trial_gender?: "male" | "female" | "other" | null;
+    clinical_trial_age?: number | null;
+    clinical_trial_country?: string | null;
+    clinical_trial_occupation?: string | null;
+    clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
 }
 
 /* LEADERBOARD INTERFACES */

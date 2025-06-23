@@ -35,11 +35,17 @@ export const database_init = async () => {
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 verified BOOLEAN NOT NULL DEFAULT FALSE,
                 language TEXT NOT NULL DEFAULT 'fr',
-                publish_to_leaderboard BOOLEAN DEFAULT NULL
+                publish_to_leaderboard BOOLEAN DEFAULT NULL,
+                clinical_trial_gender TEXT DEFAULT NULL,
+                clinical_trial_age INTEGER DEFAULT NULL,
+                clinical_trial_country TEXT DEFAULT NULL,
+                clinical_trial_occupation TEXT DEFAULT NULL,
+                clinical_trial_consent TEXT DEFAULT NULL,
+                clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`
-            
+
         await sql`CREATE TABLE IF NOT EXISTS tokens (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -121,11 +127,24 @@ export const database_init = async () => {
             ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
         `;
 
-        // If you need to add it to other tables as well:
         await sql`
             ALTER TABLE game_sessions 
             ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
         `;
+
+        // Add clinical_trial variables if they don't exist
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_age INTEGER DEFAULT NULL;`
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_country TEXT DEFAULT NULL;`
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
+
+        
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
 
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){

@@ -21,7 +21,24 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
                 // @ts-ignore
                 password: passwordComplexity().optional().label("password"),
                 publishToLeaderboard: Joi.boolean().optional(),
-                language: Joi.string().optional().label("language").valid("fr", "en")
+                language: Joi.string().optional().label("language").valid("fr", "en"),
+                clinical_trial_gender: Joi.string()
+                    .valid("male", "female", "other", null)
+                    .label("clinical_trial_gender"),
+                clinical_trial_age: Joi.number()
+                    .integer()
+                    .min(0)
+                    .allow(null)
+                    .label("clinical_trial_age"),
+                clinical_trial_country: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_country"),
+                clinical_trial_occupation: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_occupation"),
+                clinical_trial_consent: Joi.string()
+                    .valid("data_usage", "acknowledgement", "none", null)
+                    .label("clinical_trial_consent")
             });
             return schema.validate(data);
         };
@@ -32,11 +49,32 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const { firstname, lastname, password, publishToLeaderboard, language } = req.body as ConfigUserBody;
+        const {
+            firstname,
+            lastname,
+            password,
+            publishToLeaderboard,
+            language,
+            clinical_trial_gender,
+            clinical_trial_age,
+            clinical_trial_country,
+            clinical_trial_occupation,
+            clinical_trial_consent,
+        } = req.body as ConfigUserBody;
 
         // Check if there's anything to update
-        if (firstname === undefined && lastname === undefined && password === undefined && 
-            publishToLeaderboard === undefined && language === undefined) {
+        if (
+            firstname === undefined &&
+            lastname === undefined &&
+            password === undefined &&
+            publishToLeaderboard === undefined &&
+            language === undefined &&
+            clinical_trial_gender === undefined &&
+            clinical_trial_age === undefined &&
+            clinical_trial_country === undefined &&
+            clinical_trial_occupation === undefined &&
+            clinical_trial_consent === undefined
+        ) {
             res.status(400).send({ message: "No fields to update" });
             return;
         }
@@ -58,6 +96,12 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             password: string;
             publish_to_leaderboard: boolean;
             language: string;
+            clinical_trial_gender: string | null;
+            clinical_trial_age: number | null;
+            clinical_trial_country: string | null;
+            clinical_trial_occupation: string | null;
+            clinical_trial_consent: string | null;
+            clinical_trial_consent_date: string | null;
         }> = {};
                 
         if (firstname) {
@@ -79,6 +123,27 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
                 
         if (language !== undefined) {
             updates.language = language;
+        }
+
+        if (clinical_trial_gender !== undefined) {
+            updates.clinical_trial_gender = clinical_trial_gender;
+        }
+
+        if (clinical_trial_age !== undefined) {
+            updates.clinical_trial_age = clinical_trial_age;
+        }
+
+        if (clinical_trial_country !== undefined) {
+            updates.clinical_trial_country = clinical_trial_country;
+        }
+
+        if (clinical_trial_occupation !== undefined) {
+            updates.clinical_trial_occupation = clinical_trial_occupation;
+        }
+
+        if (clinical_trial_consent !== undefined) {
+            updates.clinical_trial_consent = clinical_trial_consent;
+            updates.clinical_trial_consent_date = new Date().toISOString(); // Set consent date to now
         }
 
         // Use the object with the sql tag for safe parameterization

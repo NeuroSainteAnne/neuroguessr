@@ -324,5 +324,31 @@
 
   "beta-version": "Beta Version",
   "yes": "Yes",
-  "no": "No"
+  "no": "No",
+
+  "*****CLINICAL TRIAL*****":"",
+  "clinical_trial_header": "Private information, for clinical trial participation only",
+  "clinical_trial_gender": "Gender",
+  "clinical_trial_gender_male": "Male",
+  "clinical_trial_gender_female": "Female",
+  "clinical_trial_gender_other": "Other",
+  "clinical_trial_gender_null": "Do not disclose",
+  "clinical_trial_age": "Age",
+  "clinical_trial_country": "Country",
+  "clinical_trial_occupation": "Occupation",
+  "clinical_trial_consent_data_usage": "I consent to the retrospective and anonymized use of my data for research purposes",
+  "clinical_trial_consent_acknowledgement": "I consent to the retrospective and anonymized use of my data for research purposes, and wish to be acknowledged in any publications resulting from this research",
+  "clinical_trial_consent_none": "I do not consent to the use of my data for research purposes",
+  "clinical_trial_occupation_select": "Select your occupation",
+  "clinical_trial_occupation_radiography_technician": "Radiography Technician",
+  "clinical_trial_occupation_radiology_resident": "Radiology Resident",
+  "clinical_trial_occupation_resident_other": "Resident (other specialty)",
+  "clinical_trial_occupation_neuroradiologist": "Neuroradiologist",
+  "clinical_trial_occupation_radiologist_other": "Radiologist (Other Specialty)",
+  "clinical_trial_occupation_neurologist": "Neurologist",
+  "clinical_trial_occupation_neurosurgeon": "Neurosurgeon",
+  "clinical_trial_occupation_medical_student": "Medical Student",
+  "clinical_trial_occupation_neuroscientist": "Neuroscientist",
+  "clinical_trial_occupation_researcher": "Researcher (Other Specialty)",
+  "clinical_trial_occupation_other": "Other"
 }
