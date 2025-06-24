@@ -59,6 +59,10 @@
   "streak_label": "Série",
   "time_label": "Temps",
   "not_started": "Non Commencé",
+
+  
+  "*****SINGLEPLAYER*****":"",
+
   "click_to_identify": "Cliquer pour identifier une région",
   "no_region_selected": "Aucune région sélectionnée",
   "game_over": "Terminé ! Précision : {accuracy}%, Temps : {minutes}m {seconds}s",
@@ -75,6 +79,10 @@
   "time_attack_ended_time" : "Temps : ",
   "time_attack_ended_score" : "Score : ",
   "answers_summary": "Résumé des Réponses",
+  "streak_incorrect": "Incorrect ({{consecutiveErrors}}/{{maxErrors}})",
+  "streak_ended_too_far": "Réponse trop distante ! ({{distance}}mm)",
+  "streak_ended_max_errors": "Trop de réponses incorrectes consécutives ! ({{maxErrors}})",
+
   "no_guess": "Aucune réponse",
   "no_atlas_message": "Aucun atlas disponible pour cette catégorie.",
   "error_loading_atlas": "Échec du chargement des régions pour {atlas}.",

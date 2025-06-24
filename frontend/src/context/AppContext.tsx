@@ -221,10 +221,17 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   }
   
   // Notification system
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const showNotification = (message: string, isSuccess: boolean, i18params = {}) => {
+    if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+    }
     setNotificationStatus(isSuccess ? 'success' : 'error');
     setNotificationMessage(t(message, i18params));
-    setTimeout(() => { setNotificationMessage(null) }, 3000);
+    notificationTimeoutRef.current = setTimeout(() => {
+        setNotificationMessage(null);
+        notificationTimeoutRef.current = null; // Reset the ref
+    }, 3000);
   };
 
   // Overlay system

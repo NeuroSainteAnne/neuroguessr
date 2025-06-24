@@ -58,7 +58,7 @@ export function Page() {
       isLoggedIn, authToken, userPublishToLeaderboard,
     setHeaderText, setHeaderTextMode, setHeaderScore,
     setHeaderStreak, setHeaderErrors, setHeaderTime,
-    setShowHelpOverlay,
+    setShowHelpOverlay, showNotification,
     setAskedAtlas, pageContext } = useApp();
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -70,6 +70,10 @@ export function Page() {
   const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
   const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
   const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
+  const STREAK_BONUS_AFTER = 5;
+  const STREAK_BONUS = 5; 
+  const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
+  const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
   const { routeParams } = pageContext;
   const gameMode = routeParams?.mode;
   const blindMode = routeParams?.blind === "true" || false;
@@ -611,6 +615,9 @@ export function Page() {
     let isEndgame = false;
     let clickedRegion = null;
     let scoreIncrement = 0;
+    let streak = 0;
+    let consecutiveErrors = 0;
+    let quitReason = "";
     let givenFinalScore = 0;
     let performHighlight = false;
     let distance = Infinity;
@@ -637,6 +644,9 @@ export function Page() {
         givenFinalScore = result.finalScore;
         performHighlight = result.performHighlight;
         distance = result.distance;
+        streak = result.streak;
+        consecutiveErrors = result.consecutiveErrors;
+        quitReason = result.quitReason;
       } catch (error) {
         console.error("Error occured during region validation:", error);
         return false;
@@ -653,15 +663,16 @@ export function Page() {
     }
 
     let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance }).scoreIncrement
+    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, 
+                                    performHighlight, distance, streak, consecutiveErrors, quitReason }).scoreIncrement
 
     if (isEndgame) {
       performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
     }
   }
 
-  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity }:
-    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number }): { scoreIncrement: number } => {
+  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity, streak = 0, consecutiveErrors = 0, quitReason = "" }:
+    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number, streak: number, consecutiveErrors: number, quitReason: string}): { scoreIncrement: number } => {
     if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
       console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
       return { scoreIncrement };
@@ -671,7 +682,7 @@ export function Page() {
     const selectedVoxelSave = selectedVoxelProp.current;
     if (guessSuccess) {
       // Correct Guess
-      setCurrentCorrects((cs) => cs + 1); // Increment correct count for other modes      
+      setCurrentCorrects((cs) => cs + 1); // Increment correct count       
       if (gameMode === 'time-attack') {
         // Add full points for correct guess - scoreIncrement already has blind mode multiplier applied if from server
         const points = isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
@@ -679,7 +690,9 @@ export function Page() {
       }
       if (gameMode === 'streak') {
         // Increment streak for correct guess
-        setCurrentStreak((cs) => cs + (isLoggedIn ? scoreIncrement : 1));
+        setCurrentStreak((cs) => (isLoggedIn ? streak : cs + 0)); // TODO offline
+        setCurrentScore((cs) => cs + (isLoggedIn ? scoreIncrement : 1));
+        setCurrentErrors((cs) => (isLoggedIn ? consecutiveErrors : 0));
       }
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
@@ -721,6 +734,33 @@ export function Page() {
           setHeaderText(findPrefix + targetName);
           setHeaderTextMode("normal")
         }, 3000); // Increased delay to 3 seconds
+      } else if (gameMode === "streak") {
+        if(!isLoggedIn){
+          //TODO: handle offline streak mode
+        } else {
+          // Use i18next interpolation for the incorrect message
+          const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
+          setHeaderText(incorrectMessage);
+          setHeaderTextMode("failure");
+          console.log(isEndgame, quitReason, distance, consecutiveErrors);
+          if(isEndgame && quitReason === "streak-too-far"){
+            showNotification('streak_ended_too_far', false, { distance: Math.round(distance) });
+          } else if(isEndgame && quitReason === "streak-max-errors") {
+            showNotification('streak_ended_max_errors', false, { consecutiveErrors: consecutiveErrors });
+          } else if(!isEndgame) {
+            console.log(distance)
+            showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
+          }
+        }
+        // Automatically move to the next target after a short delay
+        if (!isEndgame) {
+          setTimeout(async () => {
+            await selectNewTarget();
+            setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+            setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+            setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
+          }, 100);
+        }
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
@@ -811,6 +851,7 @@ export function Page() {
       setShowStreakOverlay(true);
       setHeaderTextMode("failure"); // Indicate streak ended visually
       setIsGameRunning(false);
+      setFinalScore(finalScore);
     } else if (gameMode === 'time-attack') {
       if (!isLoggedIn) {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
@@ -999,7 +1040,7 @@ export function Page() {
       {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
         <div className="overlay-content" ref={streakOverlayRef}>
           <h2>{t("streak_ended_title")}</h2>
-          <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalStreak}</span></p>
+          <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalScore}</span></p>
           {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
           <div className="overlay-buttons">
             <button 

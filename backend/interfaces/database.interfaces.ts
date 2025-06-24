@@ -33,6 +33,8 @@ export interface GameSession {
     blind_mode: boolean;
     created_at: number; // Unix ms timestamp
     current_score: number;
+    current_streak: number;
+    consecutive_errors: number;
 }
 
 export interface GameProgress {

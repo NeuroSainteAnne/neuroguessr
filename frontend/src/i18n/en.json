@@ -60,6 +60,10 @@
   "streak_label": "Streak",
   "time_label": "Time",
   "not_started": "Not Started",
+
+  
+  "*****SINGLEPLAYER*****":"",
+
   "click_to_identify": "Click to identify a region",
   "no_region_selected": "No region selected",
   "game_over": "Game Over! Accuracy: {accuracy}%, Time: {minutes}m {seconds}s",
@@ -75,6 +79,10 @@
   "time_attack_ended_time" : "Time : ",
   "time_attack_ended_score" : "Score : ",
   "answers_summary": "Answers Summary",
+  "streak_incorrect": "Incorrect ({{consecutiveErrors}}/{{maxErrors}})",
+  "streak_ended_too_far": "Réponse trop distante ! ({{distance}}mm)",
+  "streak_ended_max_errors": "Trop de réponses incorrectes consécutives ! ({{maxErrors}})",
+
   "no_guess": "No guess made",
   "no_atlas_message": "No atlases available for this category.",
   "error_loading_atlas": "Failed to load regions for {atlas}.",

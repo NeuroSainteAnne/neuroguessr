@@ -63,7 +63,9 @@ export const database_init = async () => {
                 atlas TEXT NOT NULL,
                 blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                current_score INTEGER NOT NULL DEFAULT 0
+                current_score INTEGER NOT NULL DEFAULT 0,
+                current_streak INTEGER DEFAULT 0,
+                consecutive_errors INTEGER DEFAULT 0
             );`
         await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`
@@ -139,8 +141,15 @@ export const database_init = async () => {
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
         await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
+        await sql`
+            ALTER TABLE game_sessions 
+            ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0;
+        `;
+        await sql`
+            ALTER TABLE game_sessions 
+            ADD COLUMN IF NOT EXISTS consecutive_errors INTEGER DEFAULT 0;
+        `;
 
-        
         await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
         await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
         await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;

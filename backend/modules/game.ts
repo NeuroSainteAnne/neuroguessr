@@ -22,6 +22,10 @@ const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the regio
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
 const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
+const STREAK_BONUS_AFTER = 5;
+const STREAK_BONUS = 5; 
+const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
+const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
 
 export const validRegions : Record<string,number[]> = {}
 export const imageRef : Record<string,NVImage> = {}
@@ -48,6 +52,23 @@ for (const atlas in atlasFiles) {
     }
     validRegions[atlas] = theseValidRegions;
     regionCenters[atlas] = atlasJson.centers
+}
+
+function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): number {
+    let minDistance = Infinity;
+    const [xMm, yMm, zMm] = coordinates.mm;
+    // Find the minimum distance to any center of the region
+    for (const center of centers) {
+        const distance = Math.sqrt(
+            Math.pow(center[0] - xMm, 2) +
+            Math.pow(center[1] - yMm, 2) +
+            Math.pow(center[2] - zMm, 2)
+        );
+        if (distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+    return minDistance;
 }
 
 export const startGameSession = async (req: StartGameSessionRequest, res: Response): Promise<void> => {
@@ -240,29 +261,41 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
 
         // update the score
         let scoreIncrement = 0;
+        let streakBonus = 0;
+        let newStreak = session.current_streak;
+        let newConsecutiveErrors = session.consecutive_errors;
+        let streakTooFar = false;
         let minDistance = Infinity; 
         if (session.mode == "streak") {
             if (isCorrect) {
                 scoreIncrement = 1;
+                newConsecutiveErrors = 0;
+                newStreak = newStreak + 1;
+                // Award a streak bonus for every 5 correct guesses
+                if (newStreak % STREAK_BONUS_AFTER === 0) {
+                    streakBonus = STREAK_BONUS; // Bonus points
+                    scoreIncrement += streakBonus;
+                }
+            } else {
+                newStreak = 0; // Reset streak on incorrect guess
+                if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
+                    minDistance = getDistance(regionCenters[session.atlas][regionId], coordinates);
+                }
+                // Check if the error is within the allowed distance
+                if (minDistance <= MAX_STREAK_DISTANCE) {
+                    // Increment consecutive errors
+                    newConsecutiveErrors += 1;
+                } else {
+                    newConsecutiveErrors += 1;
+                    streakTooFar = true;
+                }
             }
         } else if (session.mode == "time-attack" && elapsedTime < MAX_TIME_IN_SECONDS*1000) {
             if (isCorrect) {
                 scoreIncrement = MAX_POINTS_PER_REGION;
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const centers: number[][] = regionCenters[session.atlas][regionId];
-                    const [xMm, yMm, zMm] = coordinates.mm;
-                    // Find the minimum distance to any center of the region
-                    for (const center of centers) {
-                        const distance = Math.sqrt(
-                            Math.pow(center[0] - xMm, 2) +
-                            Math.pow(center[1] - yMm, 2) +
-                            Math.pow(center[2] - zMm, 2)
-                        );
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                        }
-                    }
+                    minDistance = getDistance(regionCenters[session.atlas][regionId], coordinates);
                     // Calculate score based on distance
                     if (minDistance <= MAX_PENALTY_DISTANCE) {
                         scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
@@ -303,8 +336,13 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         let quitReason = ""
         let bonusTime = 0
         if (!isCorrect && session.mode == "streak") {
-            endgame = true;
-            quitReason = "streak-ended"
+            if (streakTooFar) {
+                endgame = true;
+                quitReason = "streak-too-far";
+            } else if (newConsecutiveErrors >= MAX_NUMBER_FAR_STREAK) {
+                endgame = true;
+                quitReason = "streak-max-errors";
+            }
         } else if (session.mode == "time-attack") {
             // Check time elapsed since session start
             // Check if all regions have been answered
@@ -332,7 +370,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         const finalScore = session.current_score + scoreIncrement; // Add the last score increment
         await sql`
             UPDATE game_sessions
-            SET current_score = ${finalScore}
+            SET current_score = ${finalScore}, current_streak = ${newStreak}, consecutive_errors = ${newConsecutiveErrors}
             WHERE id = ${sessionId}
         `;
 
@@ -348,6 +386,9 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             voxelValue,
             endgame,
             scoreIncrement,
+            streak: newStreak,
+            consecutiveErrors: newConsecutiveErrors,
+            quitReason: quitReason || "",
             finalScore,
             performHighlight,
             distance: isCorrect ? 0 : minDistance
