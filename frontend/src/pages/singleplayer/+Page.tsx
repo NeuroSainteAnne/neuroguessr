@@ -303,6 +303,7 @@ export function Page() {
   const resetGameState = () => {
     currentTarget.current = null;
     selectedVoxelProp.current = null;
+    currentConsecutiveErrorsRef.current = 0;
     setCurrentAttempts(0); // Reset attempts for practice mode
     setCurrentScore(0); // Reset score for Time Attack
     setCurrentCorrects(0); // Reset correct count for Practice/Streak
@@ -691,6 +692,7 @@ export function Page() {
             quitReason = "streak-max-errors"
           }
         }
+        consecutiveErrors = currentConsecutiveErrorsRef.current;
       }
     }
     let previousScore = currentScoreRef.current;
@@ -730,8 +732,8 @@ export function Page() {
           setCurrentStreak(newStreak);
           let pointsForGuess = 1; 
           // Apply streak bonus if applicable
-          if (newStreak > STREAK_BONUS_AFTER) {
-            pointsForGuess = STREAK_BONUS;
+          if (newStreak % STREAK_BONUS_AFTER === 0) {
+            pointsForGuess += STREAK_BONUS;
           }
           // Apply blind mode multiplier if applicable
           if (blindMode) {
@@ -864,7 +866,7 @@ export function Page() {
     }
 
     // Add region to history
-    if (gameMode === 'time-attack') {
+    if (gameMode === 'time-attack' || gameMode == "streak") {
       setPastRegions(prev => [...prev, {
         regionId: currentTarget.current!,
         regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
@@ -885,9 +887,8 @@ export function Page() {
 
   function performEndGame({ finalScore }: { finalScore: number }) {
     if (gameMode === 'streak') {
-      setHighlightedRegion(currentTarget.current); // Highlight the last region
       // Apply blind mode multiplier consistently to the final streak score
-      setFinalStreak(Math.floor(currentStreakRef.current * (blindMode ? BLIND_MODE_MULTIPLIER : 1))); 
+      setFinalStreak(currentStreakRef.current); 
       setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
       setShowStreakOverlay(true);
       setHeaderTextMode("failure"); // Indicate streak ended visually
@@ -1048,7 +1049,7 @@ export function Page() {
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className='canvas-and-info-container'>
-        {hasEnded && gameMode == "time-attack" && <RegionHistory pastRegions={pastRegions} niivue={niivue}
+        {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
           highlightPastRegion={highlightWrapper}/>}
         <div className="canvas-container">
           <canvas id="gl1" onClick={handleCanvasInteraction} 
