@@ -80,6 +80,7 @@
   "time_attack_ended_score" : "Score : ",
   "answers_summary": "Résumé des Réponses",
   "streak_incorrect": "Incorrect ({{consecutiveErrors}}/{{maxErrors}})",
+  "streak_ended_generic": "Mauvaise réponse !",
   "streak_ended_too_far": "Réponse trop distante ! ({{distance}}mm)",
   "streak_ended_max_errors": "Trop de réponses incorrectes consécutives ! ({{maxErrors}})",
 

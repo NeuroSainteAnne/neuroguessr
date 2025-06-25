@@ -51,6 +51,22 @@ async function startOnlineSession(isLoggedIn: boolean, token: string, mode: stri
   }
 }
 
+function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): number {
+    let minDistance = Infinity;
+    const [xMm, yMm, zMm] = coordinates.mm;
+    // Find the minimum distance to any center of the region
+    for (const center of centers) {
+        const distance = Math.sqrt(
+            Math.pow(center[0] - xMm, 2) +
+            Math.pow(center[1] - yMm, 2) +
+            Math.pow(center[2] - zMm, 2)
+        );
+        if (distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+    return minDistance;
+}
 
 export function Page() {
   const { t, currentLanguage, askedAtlas,
@@ -91,6 +107,7 @@ export function Page() {
   const [currentErrors, setCurrentErrors] = useState<number>(0);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
   const currentStreakRef = useRef<number>(0);
+  const currentConsecutiveErrorsRef = useRef<number>(0);
   const [finalStreak, setFinalStreak] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState<string>("00:00");
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
@@ -487,13 +504,13 @@ export function Page() {
       }
     } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
       let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
-      if (gameMode === 'time-attack' && availableRegions.length === 0) {
+      if ((gameMode === 'time-attack' || gameMode === "streak") && availableRegions.length === 0) {
         // if no region remaining, we'll take a random region
         availableRegions = atlasRef.current.validRegions
       }
       if (availableRegions.length !== 0) {
         regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        if ((gameMode === 'time-attack' || gameMode === 'streak')) { // Add streak mode here to track used regions
+        if ((gameMode === 'time-attack' || gameMode === 'streak')) {
           usedRegions.current.push(regionId);
         }
       }
@@ -658,10 +675,24 @@ export function Page() {
         isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
       }
       if (gameMode === 'streak') {
-        isEndgame = !guessSuccess
+        if(guessSuccess){
+          currentConsecutiveErrorsRef.current = 0
+          isEndgame = false
+        } else {
+          currentConsecutiveErrorsRef.current += 1
+          if (atlasRef.current && atlasRef.current.centers) {
+            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+          }
+          if (distance > MAX_STREAK_DISTANCE) {
+            isEndgame = true;
+            quitReason = "streak-too-far"
+          } else if (currentConsecutiveErrorsRef.current >= MAX_NUMBER_FAR_STREAK){
+            isEndgame = true;
+            quitReason = "streak-max-errors"
+          }
+        }
       }
     }
-
     let previousScore = currentScoreRef.current;
     scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, 
                                     performHighlight, distance, streak, consecutiveErrors, quitReason }).scoreIncrement
@@ -689,10 +720,29 @@ export function Page() {
         setCurrentScore((curScore) => curScore + points);
       }
       if (gameMode === 'streak') {
-        // Increment streak for correct guess
-        setCurrentStreak((cs) => (isLoggedIn ? streak : cs + 0)); // TODO offline
-        setCurrentScore((cs) => cs + (isLoggedIn ? scoreIncrement : 1));
-        setCurrentErrors((cs) => (isLoggedIn ? consecutiveErrors : 0));
+        if (isLoggedIn) {
+          // Online mode - use server values
+          setCurrentStreak((cs) => streak);
+          setCurrentScore((cs) => cs + scoreIncrement);
+          setCurrentErrors((cs) => consecutiveErrors);
+        } else {
+          const newStreak = currentStreakRef.current + 1;
+          setCurrentStreak(newStreak);
+          let pointsForGuess = 1; 
+          // Apply streak bonus if applicable
+          if (newStreak > STREAK_BONUS_AFTER) {
+            pointsForGuess = STREAK_BONUS;
+          }
+          // Apply blind mode multiplier if applicable
+          if (blindMode) {
+            pointsForGuess = Math.floor(pointsForGuess * BLIND_MODE_MULTIPLIER);
+          }
+          // Update score
+          setCurrentScore((cs) => cs + pointsForGuess);
+          // Reset consecutive errors on correct guess
+          setCurrentErrors(0);
+          currentConsecutiveErrorsRef.current = 0;
+        }
       }
       if (gameMode === 'practice') {
         setCurrentAttempts(0); // Reset attempts on correct guess
@@ -712,7 +762,6 @@ export function Page() {
         }, 100);
       }
     } else { // Incorrect Guess
-
       if (gameMode === 'practice') {
         // Use i18next interpolation for the incorrect message
         const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
@@ -736,21 +785,25 @@ export function Page() {
         }, 3000); // Increased delay to 3 seconds
       } else if (gameMode === "streak") {
         if(!isLoggedIn){
-          //TODO: handle offline streak mode
+          const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
+          setHeaderText(incorrectMessage);
+          setHeaderTextMode("failure");
         } else {
           // Use i18next interpolation for the incorrect message
           const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
           setHeaderText(incorrectMessage);
           setHeaderTextMode("failure");
-          console.log(isEndgame, quitReason, distance, consecutiveErrors);
-          if(isEndgame && quitReason === "streak-too-far"){
+        }
+        if(isEndgame && quitReason === "streak-too-far"){
+          if(distance === Infinity){
+            showNotification('streak_ended', false);
+          } else {
             showNotification('streak_ended_too_far', false, { distance: Math.round(distance) });
-          } else if(isEndgame && quitReason === "streak-max-errors") {
-            showNotification('streak_ended_max_errors', false, { consecutiveErrors: consecutiveErrors });
-          } else if(!isEndgame) {
-            console.log(distance)
-            showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
           }
+        } else if(isEndgame && quitReason === "streak-max-errors") {
+          showNotification('streak_ended_max_errors', false, { maxErrors: MAX_NUMBER_FAR_STREAK });
+        } else if(!isEndgame) {
+            showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
         }
         // Automatically move to the next target after a short delay
         if (!isEndgame) {
@@ -764,22 +817,10 @@ export function Page() {
       } else if (gameMode === 'time-attack') {
         // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
         if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
-          const correctCenters = atlasRef.current.centers ? atlasRef.current.centers[currentTarget.current] : null;
-          const proposedCenter = selectedVoxelProp.current.mm;
-
-          if (correctCenters && proposedCenter) {
+          if (atlasRef.current.centers) {
             // Calculate Euclidean distance between centers
             distance = Infinity;
-            for (const center of correctCenters) {
-              const centerDistance = Math.sqrt(
-                Math.pow(center[0] - proposedCenter[0], 2) +
-                Math.pow(center[1] - proposedCenter[1], 2) +
-                Math.pow(center[2] - proposedCenter[2], 2)
-              );
-              if (centerDistance < distance) {
-                distance = centerDistance;
-              }
-            }
+            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
 
             // Calculate score based on distance
             if (distance <= MAX_PENALTY_DISTANCE) {
@@ -882,9 +923,9 @@ export function Page() {
 
   const updateGameDisplay = () => {
     // Update labels based on mode
-    if (gameMode === 'time-attack') {
+    if (gameMode === 'time-attack' || gameMode === 'streak') {
       setHeaderScore(t('score_label') + `: ${Math.round(currentScore)}`); // Display rounded score for Time Attack
-    } else if (gameMode === 'streak' || gameMode === 'practice') {
+    } else if (gameMode === 'practice') {
       setHeaderScore(t('correct_label') + `: ${currentCorrects}`); // Display correct count for other modes
     }
 

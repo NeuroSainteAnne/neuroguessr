@@ -80,8 +80,9 @@
   "time_attack_ended_score" : "Score : ",
   "answers_summary": "Answers Summary",
   "streak_incorrect": "Incorrect ({{consecutiveErrors}}/{{maxErrors}})",
-  "streak_ended_too_far": "Réponse trop distante ! ({{distance}}mm)",
-  "streak_ended_max_errors": "Trop de réponses incorrectes consécutives ! ({{maxErrors}})",
+  "streak_ended_generic": "Bad answer !",
+  "streak_ended_too_far": "Answer too far away! ({{distance}}mm)",
+  "streak_ended_max_errors": "Too many consecutive incorrect answers! ({{maxErrors}})",
 
   "no_guess": "No guess made",
   "no_atlas_message": "No atlases available for this category.",
