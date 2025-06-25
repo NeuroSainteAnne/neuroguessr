@@ -897,10 +897,8 @@ export function Page() {
     } else if (gameMode === 'time-attack') {
       if (!isLoggedIn) {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        // First calculate the time bonus without multiplier
-        const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
-        // Then apply blind mode multiplier to the final total score
-        finalScore = Math.round((currentScoreRef.current + timeBonus) * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
+        const timeBonus = (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ? BLIND_MODE_MULTIPLIER : 1);
+        finalScore = Math.round((currentScoreRef.current + timeBonus));
       }
       endTimeAttack(finalScore)
     }

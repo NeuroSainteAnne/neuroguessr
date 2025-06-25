@@ -357,7 +357,11 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 quitReason = "all-answered"
                 if (elapsedTime < MAX_TIME_IN_SECONDS*1000) { // add bonus points if time is not over
                     bonusTime = MAX_TIME_IN_SECONDS*1000 - elapsedTime
-                    scoreIncrement += Math.floor(bonusTime * BONUS_POINTS_PER_SECOND / 1000);
+                    let timeBonus = Math.floor(bonusTime * BONUS_POINTS_PER_SECOND / 1000);
+                    if(session.blind_mode) {
+                        timeBonus = Math.floor(timeBonus * BLIND_MODE_MULTIPLIER);
+                    }
+                    scoreIncrement += timeBonus;
                 }
             }
             if (elapsedTime >= MAX_TIME_IN_SECONDS*1000) {
