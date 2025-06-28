@@ -29,8 +29,7 @@ type AppContextType = {
   
   // UI state
   currentLanguage: string;
-  notificationMessage: string | null;
-  notificationStatus: "error" | "success";
+  notifications: { id: string; message: string; isSuccess: boolean, removing: boolean }[];
   
   // Header state
   headerText: string;
@@ -221,16 +220,29 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   }
   
   // Notification system
-  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [notifications, setNotifications] = useState<
+    { id: string; message: string; isSuccess: boolean, removing: boolean }[]
+  >([]);
   const showNotification = (message: string, isSuccess: boolean, i18params = {}) => {
-    if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
-    }
-    setNotificationStatus(isSuccess ? 'success' : 'error');
-    setNotificationMessage(t(message, i18params));
-    notificationTimeoutRef.current = setTimeout(() => {
-        setNotificationMessage(null);
-        notificationTimeoutRef.current = null; // Reset the ref
+    const id = Date.now() + "-" + Math.floor(Math.random() * 10000); // Unique ID for each notification
+    const newNotification = {
+      id,
+      message: t(message, i18params),
+      isSuccess,
+      removing: false, 
+    };
+    // Add the new notification to the queue
+    setNotifications((prev) => [...prev, newNotification]);
+    // Automatically remove the notification after 3 seconds
+    setTimeout(() => {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id ? { ...notification, removing: true } : notification
+        )
+      );
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+      }, 500);
     }, 3000);
   };
 
@@ -346,8 +358,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       
       // UI state
       currentLanguage,
-      notificationMessage,
-      notificationStatus,
+      notifications,
       
       // Header state
       headerText,

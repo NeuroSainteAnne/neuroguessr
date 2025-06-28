@@ -1,42 +1,45 @@
-#notification {
+.notification-container {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translateX(-50%);
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-size: 2rem;
     z-index: 1500;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    /* Animations */
-    animation: fadeInOut 3s ease forwards;
-    transition: all 0.3s ease;
+    display: flex;
+  flex-direction: column;
+    gap: 10px;
 }
-#notification.success {
+.notification {
+  position: absolute;
+  height: 50px;
+  padding: 15px;
+  border-radius: 0.5rem;
+  font-size: 2rem;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease; /* Fade-in animation */
+  transition: opacity 0.5s ease, transform 0.5s ease, top 0.5s ease; /* Smooth fade-out and movement */
+}
+.notification.success {
     background: #4ade80CC;
     color: #1a3c1f;
 }
-#notification.error {
+.notification.error {
     background: #f87171CC;
     color: #3c1a1a;
 }
+.notification.removing {
+  opacity: 0;
+  transform: translateY(-20px); /* Move up slightly while fading out */
+}
 
-/* Fade in and out animation */
-@keyframes fadeInOut {
-  0% {
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
     opacity: 0;
-    transform: translate(-50%, -40%);
+    transform: translateY(20px); /* Start slightly below */
   }
-  15% {
+  to {
     opacity: 1;
-    transform: translate(-50%, -50%);
-  }
-  85% {
-    opacity: 1;
-    transform: translate(-50%, -50%);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -60%);
+    transform: translateY(0); /* Move to its position */
   }
 }
