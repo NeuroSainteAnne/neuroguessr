@@ -70,6 +70,7 @@
   "previous_game": "Previous Game - Accuracy: {accuracy}%, Time: {minutes}m {seconds}s",
   "previous_streak": "Previous Streak: {streak} regions",
   "find": "Find:",
+  "new_target": "Find {{region}}",
   "incorrect_clicked": "It's {{region}} !",
   "streak_ended_title" : "Game Over !",
   "streak_ended_score": "Your score :",

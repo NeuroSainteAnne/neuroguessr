@@ -539,6 +539,9 @@ export function Page() {
       }
     }
     currentTarget.current = regionId
+    if(atlasRef.current){
+      showNotification('new_target', true, { region: atlasRef.current.labels[currentTarget.current] }, 1500);
+    }
 
     if (currentTarget.current) {
       setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
@@ -948,7 +951,6 @@ export function Page() {
       } else {
         setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
       }
-      //console.log(`Displaying target: ${cMap.current.labels[currentTarget.current]} (ID: ${currentTarget.current})`);
     } else {
       setHeaderText(''); // No region : cleanup
     }
