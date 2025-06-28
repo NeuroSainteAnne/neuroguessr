@@ -62,7 +62,7 @@ type AppContextType = {
   updateToken: (token: string | null) => void;
   logout: () => void;
   handleChangeLanguage: (lang: string) => void;
-  showNotification: (message: string, isSuccess: boolean, i18params?: object) => void;
+  showNotification: (message: string, isSuccess: boolean, i18params?: object, duration?: number) => void;
   setHeaderText: (text: string) => void;
   setHeaderTextMode: (mode: string) => void;
   setHeaderScore: (score: string) => void;
@@ -105,8 +105,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
-  const [notificationStatus, setNotificationStatus] = useState<"error" | "success">("success");
   
   // Header state
   const [headerText, setHeaderText] = useState<string>("");
@@ -223,7 +221,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [notifications, setNotifications] = useState<
     { id: string; message: string; isSuccess: boolean, removing: boolean }[]
   >([]);
-  const showNotification = (message: string, isSuccess: boolean, i18params = {}) => {
+  const showNotification = (message: string, isSuccess: boolean, i18params = {}, duration=3000) => {
     const id = Date.now() + "-" + Math.floor(Math.random() * 10000); // Unique ID for each notification
     const newNotification = {
       id,
@@ -243,7 +241,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setTimeout(() => {
         setNotifications((prev) => prev.filter((notification) => notification.id !== id));
       }, 500);
-    }, 3000);
+    }, duration);
   };
 
   // Overlay system
