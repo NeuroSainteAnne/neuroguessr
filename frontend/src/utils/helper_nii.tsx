@@ -278,10 +278,10 @@ export class AtlasImageProxy {
             tractLabel = this.cmap_en.labels[highlightedRegion].replace(/\s+/g, '_');
             tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
             try {
-            const response = await fetch(tractUrl, { method: 'HEAD' });
-            if (response.ok) {
-                useTractography = true;
-            }
+                const response = await fetch(tractUrl, { method: 'HEAD' });
+                if (response.ok) {
+                    useTractography = true;
+                }
             } catch (error) {
                 console.log(`Tractography not available for ${tractLabel}:`, error);
             }
@@ -304,6 +304,7 @@ export class AtlasImageProxy {
                 this.niivue.setClipPlane([-0.1, 270, 0]);
             } catch (error) {
                 console.error(`Failed to load tractography for ${tractLabel}:`, error);
+                this.niivue.setClipPlane([2, 270, 0]);
             }
         } else {
             if (this.niivue.meshes.length > 0) {
@@ -311,6 +312,7 @@ export class AtlasImageProxy {
                     this.niivue.removeMesh(this.niivue.meshes[i]);
                 }
             }
+            this.niivue.setClipPlane([2, 270, 0]);
         }
         
     
