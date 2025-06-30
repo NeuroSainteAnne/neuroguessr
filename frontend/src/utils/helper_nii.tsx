@@ -274,7 +274,7 @@ export class AtlasImageProxy {
         let useTractography = false;
         let tractUrl = '';
         let tractLabel = '';
-        if(this.cmap_en){
+        if(this.cmap_en && allowFibers){
             tractLabel = this.cmap_en.labels[highlightedRegion].replace(/\s+/g, '_');
             tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
             try {
@@ -301,10 +301,17 @@ export class AtlasImageProxy {
                     this.niivue.meshes[0].fiberColor = 'Local';
                 }
                 tractographyLoaded = true;
+                this.niivue.setClipPlane([-0.1, 270, 0]);
             } catch (error) {
                 console.error(`Failed to load tractography for ${tractLabel}:`, error);
             }
-        } 
+        } else {
+            if (this.niivue.meshes.length > 0) {
+                for (let i = 0; i < this.niivue.meshes.length; i++) {
+                    this.niivue.removeMesh(this.niivue.meshes[i]);
+                }
+            }
+        }
         
     
         if (this.shuffleMode == "lut" && this.lut) {

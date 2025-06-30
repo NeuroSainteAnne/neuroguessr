@@ -245,7 +245,7 @@ export function Page() {
       if (askedRegion && !cancelled) {
         console.log("Loading region...", askedRegion);
         setHighlightedRegion(askedRegion)
-        highlightWrapper(askedRegion, true);
+        highlightWrapper(askedRegion, true, gameMode === 'navigation');
         if(atlasRef.current) showNotification( atlasRef.current.labels[askedRegion], true, {}, 1500);
       }
     };
@@ -586,9 +586,9 @@ export function Page() {
     }
   }
 
-  const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
+  const highlightWrapper = (regionId: number, moveToCenter: boolean, allowFibers: boolean = false) => {
     if(atlasRef.current)
-      atlasRef.current.highlightRegion(regionId, moveToCenter);
+      atlasRef.current.highlightRegion(regionId, moveToCenter, allowFibers);
   }
 
   const unHighlight = () =>{
@@ -635,7 +635,7 @@ export function Page() {
       if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
         setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
-        highlightWrapper(clickedRegionLocation.idx, false);
+        highlightWrapper(clickedRegionLocation.idx, false, true);
         if (tooltip) {
           setTooltip({ ...tooltip, visible: false });
         }
