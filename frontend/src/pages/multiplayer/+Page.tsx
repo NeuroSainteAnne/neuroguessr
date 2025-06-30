@@ -504,7 +504,7 @@ const MultiplayerGameScreen = () => {
   }
 
   const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
-    if(atlasRef.current) atlasRef.current.highlightRegionFluorescentYellow(regionId, moveToCenter);
+    if(atlasRef.current) atlasRef.current.highlightRegion(regionId, moveToCenter);
   }
 
   useEffect(() => {

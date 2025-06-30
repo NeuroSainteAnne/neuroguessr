@@ -245,6 +245,7 @@ export function Page() {
       if (askedRegion && !cancelled) {
         console.log("Loading region...", askedRegion);
         setHighlightedRegion(askedRegion)
+        highlightWrapper(askedRegion, true);
         if(atlasRef.current) showNotification( atlasRef.current.labels[askedRegion], true, {}, 1500);
       }
     };
@@ -291,9 +292,22 @@ export function Page() {
       const selectedAtlasFiles = atlasFiles[askedAtlas];
       const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
-        atlasRef.current = new AtlasImageProxy({niivue, nvImage:niivue.volumes[1], labels:jsonData.labels, 
+        let cmap_en: ColorMap|null = null;
+        if (askedAtlas === 'xtract') {
+          if(currentLanguage === 'en') {
+            cmap_en = jsonData; // Already in English
+          } else {
+            cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
+          }
+        }
+        atlasRef.current = new AtlasImageProxy({
+          niivue, 
+          nvImage:niivue.volumes[1], 
+          labels:jsonData.labels, 
           centers:jsonData.centers ? jsonData.centers : undefined, 
-          blindMode, viewerOptions});
+          blindMode, 
+          viewerOptions,
+          cmap_en});
         atlasRef.current.showShuffledRegions();
       }
     } catch (error) {
@@ -331,6 +345,7 @@ export function Page() {
     setCurrentStreak(0); // Reset streak
     usedRegions.current = []; // Reset used regions for time attack
     setHighlightedRegion(null);
+    unHighlight();
     setHeaderTextMode("normal"); // Reset header text mode
     setHasEnded(false);
     hasEndedRef.current = false; // Reset the ref value
@@ -573,16 +588,12 @@ export function Page() {
 
   const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
     if(atlasRef.current)
-      atlasRef.current.highlightRegionFluorescentYellow(regionId, moveToCenter);
+      atlasRef.current.highlightRegion(regionId, moveToCenter);
   }
 
-  useEffect(() => {
-    if (highlightedRegion) {
-      highlightWrapper(highlightedRegion, gameMode !== 'navigation' || askedRegion == highlightedRegion);
-    } else { // reset to original color
+  const unHighlight = () =>{
       atlasRef.current?.showShuffledRegions()
-    }
-  }, [highlightedRegion]);
+  }
 
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -624,6 +635,7 @@ export function Page() {
       if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
         setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
+        highlightWrapper(clickedRegionLocation.idx, false);
         if (tooltip) {
           setTooltip({ ...tooltip, visible: false });
         }
@@ -641,6 +653,7 @@ export function Page() {
       if (gameMode === 'navigation') {
         setHeaderText(t('no_region_selected'));
         setHighlightedRegion(null);
+        unHighlight();
       } else {
         if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       }
@@ -798,7 +811,8 @@ export function Page() {
         //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
         if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) || 
             (isLoggedIn && performHighlight)) {
-          setHighlightedRegion(currentTarget.current); // Highlight target region after max attempts
+          setHighlightedRegion(currentTarget.current); 
+          highlightWrapper(currentTarget.current, true); // Highlight the target region
         }
         // Increased timeout duration to make the incorrect message visible longer
         setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
@@ -935,6 +949,7 @@ export function Page() {
       setHeaderText(t('click_to_identify'));
       selectedVoxelProp.current = null;
       setHighlightedRegion(null);
+      unHighlight();
       if (tooltip) {
         setTooltip({ ...tooltip, visible: false });
       }

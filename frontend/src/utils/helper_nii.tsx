@@ -123,12 +123,13 @@ export class AtlasImageProxy {
     private regionIndices: Map<number, number[]> = new Map();
     private viewerOptions: DisplayOptions;
     private isShowing: "all-regions" | "highlighted" = "all-regions";
+    private cmap_en: ColorMap|null;
 
-    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions} :
+    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en} :
         {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
         proposedLut?: ColorMap, proposedMapping?: Record<number, number>, 
         proposedInverseMapping?: Record<number, number>, blindMode: boolean, 
-        viewerOptions: DisplayOptions}) {
+        viewerOptions: DisplayOptions, cmap_en: ColorMap|null}) {
         this.niivue = niivue;
         this.origVolume = nvImage;
         this.labels = labels;
@@ -139,6 +140,7 @@ export class AtlasImageProxy {
         this.dims = [meta.nx, meta.ny, meta.nz];
         this.validRegions = [...this.labels.keys() || []].filter(id => id > 0 && Number.isInteger(id));
         this.viewerOptions = viewerOptions;
+        this.cmap_en = cmap_en;
 
         // Get a complete copy of the data
         this.data = new Float32Array(
@@ -254,14 +256,57 @@ export class AtlasImageProxy {
                 this.origVolume.setVolumeData([0, 0, 0], this.dims, this.remappedData)
             }
             this.niivue.setOpacity(1, this.viewerOptions.displayOpacity); // Full opacity for non-blind mode
+
+        }
+        if (this.niivue.meshes.length > 0) {
+            for (let i = 0; i < this.niivue.meshes.length; i++) {
+                this.niivue.removeMesh(this.niivue.meshes[i]);
+            }
         }
         this.niivue.updateGLVolume();
         this.niivue.drawScene();
     }
 
-    public highlightRegionFluorescentYellow(highlightedRegion: number, moveToCenter: boolean = true) {
+    public async highlightRegion(highlightedRegion: number, moveToCenter: boolean = true, allowFibers: boolean = false): Promise<void> {
         this.isShowing = "highlighted";
         this.niivue.setOpacity(1, this.viewerOptions.displayOpacity);
+
+        let useTractography = false;
+        let tractUrl = '';
+        let tractLabel = '';
+        if(this.cmap_en){
+            tractLabel = this.cmap_en.labels[highlightedRegion].replace(/\s+/g, '_');
+            tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
+            try {
+            const response = await fetch(tractUrl, { method: 'HEAD' });
+            if (response.ok) {
+                useTractography = true;
+            }
+            } catch (error) {
+                console.log(`Tractography not available for ${tractLabel}:`, error);
+            }
+        }
+
+        let tractographyLoaded = false;
+        if(useTractography){
+            try {
+                await this.niivue.loadMeshes([
+                    {
+                    url: tractUrl,
+                    rgba255: [0, 255, 255, 255]
+                    }
+                ]);
+                if (this.niivue.meshes.length > 0) {
+                    this.niivue.meshes[0].colormap = 'blue';
+                    this.niivue.meshes[0].fiberColor = 'Local';
+                }
+                tractographyLoaded = true;
+            } catch (error) {
+                console.error(`Failed to load tractography for ${tractLabel}:`, error);
+            }
+        } 
+        
+    
         if (this.shuffleMode == "lut" && this.lut) {
             const lut = this.lut.slice();
             // Make all regions transparent initially except region 0 if needed
@@ -271,11 +316,13 @@ export class AtlasImageProxy {
                 lut[i + 2] = 0;   // B
                 lut[i + 3] = 0;   // A (transparent)
             }
-            // Highlight the specific region in yellow
-            lut[highlightedRegion * 4 + 0] = 255; // R
-            lut[highlightedRegion * 4 + 1] = 255; // G
-            lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
-            lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
+            if(!tractographyLoaded){
+                // Highlight the specific region in yellow
+                lut[highlightedRegion * 4 + 0] = 255; // R
+                lut[highlightedRegion * 4 + 1] = 255; // G
+                lut[highlightedRegion * 4 + 2] = 0;   // B (Yellow)
+                lut[highlightedRegion * 4 + 3] = 255; // A (Fully Opaque)
+            }
 
             if (this.origVolume.colormapLabel) this.origVolume.colormapLabel.lut = new Uint8ClampedArray(lut);
         }
@@ -289,12 +336,15 @@ export class AtlasImageProxy {
                 labels: ["background", "highlighted"]
             });
             const buf = new Float32Array(this.dims[0] * this.dims[1] * this.dims[2]);
-            const indices = this.getRegionIndices(highlightedRegion);
-            for (const idx of indices) {
-                buf[idx] = 255;
+            if(!tractographyLoaded){
+                const indices = this.getRegionIndices(highlightedRegion);
+                for (const idx of indices) {
+                    buf[idx] = 255;
+                }
             }
             this.origVolume.setVolumeData([0, 0, 0], this.dims, buf);
         }
+
         if (moveToCenter && this.centers && this.centers[highlightedRegion]) {
             const center = this.centers[highlightedRegion];
             this.niivue.scene.crosshairPos = this.niivue.mm2frac(new Float32Array(center[0]));
