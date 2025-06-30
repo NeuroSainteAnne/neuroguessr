@@ -42,7 +42,7 @@ function Searchbar() {
       // Use history.pushState to update URL without page reload
       window.history.pushState(null, '', `/singleplayer/navigation/${atlas}/${region}`);
     } else {
-      // If not already on neurotheka page, do a full page navigation
+      // If not already on navigation page, do a full page navigation
       navigate(`/singleplayer/navigation/${atlas}/${region}`);
     }
   }

@@ -179,19 +179,14 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/navigation/harvard-oxford"
                 
                 // Define a list of routes that should load their index.html
-                const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'validate', 'resetpwd'];
+                const clientRoutedPaths = ['singleplayer', 'multiplayer', 'validate', 'resetpwd'];
                 if (clientRoutedPaths.includes(baseRoute)) {
                     // This is a client-routed path, serve the base route's index.html
                     fsPath = path.join(reactRoot, 'client', baseRoute, 'index.html');
                     console.log(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
                     if (segments.length > 1) {
                         const baseRoute = segments[0];
-                        if (baseRoute === 'neurotheka') {
-                            routeParams = {
-                                atlas: segments[1] || "",
-                                region: segments[2] || ""
-                            };
-                        } else if (baseRoute === 'singleplayer') {
+                        if (baseRoute === 'singleplayer') {
                             routeParams = {
                                 mode: segments[1] || "",
                                 atlas: segments[2] || "",

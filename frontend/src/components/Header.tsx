@@ -13,7 +13,6 @@ function Header() {
     // Get the current path from pageContext
     const currentPath = pageContext?.urlPathname || '';
     const parts = currentPath.split('/');
-    const isNeurotheka = parts[1] === 'neurotheka';
     const isSingleplayer = parts[1] === 'singleplayer'
     const isMultiplayer = parts[1] === 'multiplayer';
     const isAuthPage = ['login', 'register', 'validate', 'resetpwd'].includes(parts[1]);
@@ -26,7 +25,7 @@ function Header() {
                     href="/welcome">
                     <img src="/interface/neuroguessr-64.png" alt="NeuroGuessr Logo" className="logo" />
                     <div className="title-container">
-                        <h1>{isNeurotheka ? t("neuroglossaire_title") : t("app_title")}</h1>
+                        <h1>{t("app_title")}</h1>
                         <span className="beta-label">{t("beta-version")}</span>
                     </div>
                 </a>
@@ -46,7 +45,6 @@ function Header() {
                             }>{headerText}</span>
                         </p>
                     </div>}
-                    {isNeurotheka && <SearchBar />}
                     {isSingleplayer && <div className="score-error-container">
                             {headerScore && <p id="score-label">{headerScore}</p>}
                             {headerErrors && <p id="error-label">{t('errors_label')}: {headerErrors}</p>}
@@ -89,7 +87,7 @@ function Header() {
                     {isLoggedIn && 
                         <LoginDropdownMenu />
                     }
-                    {(isNeurotheka || isSingleplayer || isMultiplayer) && <OptionsDropdown />} 
+                    {(isSingleplayer || isMultiplayer) && <OptionsDropdown />} 
                 </div>
             </div>
         </>

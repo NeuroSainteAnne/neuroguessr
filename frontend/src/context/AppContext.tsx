@@ -295,12 +295,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     setIsGuest(true);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('guestMode', 'true');
   };
-  
-  // Application features
-  const launchNeurotheka = async (region: Partial<AtlasRegion>) => {
-    updateToken(await refreshToken());
-    if (region.atlas) setAskedAtlas(region.atlas);
-  };
    
   // Viewer option handler
   const setViewerOption = (options: DisplayOptions) => {
