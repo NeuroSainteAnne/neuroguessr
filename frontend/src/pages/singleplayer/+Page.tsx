@@ -641,6 +641,7 @@ export function Page() {
         }
         niivue.opts.crosshairColor = [1, 1, 1, 1];
         niivue.drawScene();
+        window.history.pushState(null, '', `/singleplayer/navigation/${askedAtlas}/${clickedRegionLocation.idx}`);
       } else {
         if (guessButtonRef.current) {
           guessButtonRef.current.disabled = false;
