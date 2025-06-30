@@ -14,8 +14,9 @@ function route(pageContext: PageContext) {
     
     return {
       routeParams: {
-        atlas: parts[2] || "",
-        mode: parts[3] || "",
+        mode: parts[2] || "",
+        atlas: parts[3] || "",
+        region: parts[4] || "",
         blind: queryParams.get('blind') || "false"
       }
     }

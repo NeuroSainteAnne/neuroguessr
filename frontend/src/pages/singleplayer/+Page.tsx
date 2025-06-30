@@ -12,6 +12,7 @@ import { Niivue, NVImage } from '@niivue/niivue';
 import { navigate } from 'vike/client/router';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
+import SearchBar from '../../components/SearchBar';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string, blindMode: boolean): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -69,13 +70,13 @@ function getDistance(centers: number[][], coordinates: {mm: number[], vox: numbe
 }
 
 export function Page() {
-  const { t, currentLanguage, askedAtlas,
-      preloadedAtlas, preloadedBackgroundMNI, viewerOptions,
+  const { t, currentLanguage, askedAtlas, askedRegion,
+      preloadedBackgroundMNI, viewerOptions,
       isLoggedIn, authToken, userPublishToLeaderboard,
     setHeaderText, setHeaderTextMode, setHeaderScore,
     setHeaderStreak, setHeaderErrors, setHeaderTime,
     setShowHelpOverlay, showNotification,
-    setAskedAtlas, pageContext } = useApp();
+    setAskedAtlas, setAskedRegion, pageContext } = useApp();
   // Time Attack specific constants
   const TOTAL_REGIONS_TIME_ATTACK = 18;
   const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -96,6 +97,7 @@ export function Page() {
   const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
   const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const currentlyLoadedAtlas = useRef<any>(null);
   const [hasEnded, setHasEnded] = useState<boolean>(false);
   const hasEndedRef = useRef<boolean>(false); // Added ref to track ending state synchronously
   const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
@@ -138,6 +140,7 @@ export function Page() {
     useEffect(() => {
       if (!niivue) {
         setAskedAtlas(routeParams?.atlas);
+        setAskedRegion(parseInt(routeParams?.region) || null);
         console.log("Creating Niivue...");
         const niivueInstance = new Niivue({
           logLevel: "error",
@@ -212,14 +215,24 @@ export function Page() {
       });
 
       // 2. Wait for atlas and background to be ready
-      if (!preloadedAtlas || !preloadedBackgroundMNI || !askedAtlas) return;
+      if (!preloadedBackgroundMNI || !askedAtlas) return;
 
-      console.log("Loading atlas and background MNI...");
-      loadAtlasNii(niivue, preloadedBackgroundMNI, preloadedAtlas);
+      if(currentlyLoadedAtlas.current != askedAtlas){
+        console.log("Loading atlas and background MNI", askedAtlas);
+        const atlas = atlasFiles[askedAtlas];
+        if (atlas) {
+          atlasRef.current = null;
+          const niiFile = "/atlas/nii/" + atlas.nii;
+          const altasNv = await NVImage.loadFromUrl({url: niiFile})
+          loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
+        }
+        currentlyLoadedAtlas.current = askedAtlas
 
-      // 3. Load atlas data
-      console.log("Loading atlas data...");
-      await loadAtlasData();
+        // 3. Load atlas data
+        console.log("Loading atlas regions", askedAtlas);
+        await loadAtlasData();
+      }
+
 
       // 4. Start game
       if (!cancelled) {
@@ -227,16 +240,23 @@ export function Page() {
         startGame();
         setIsLoading(false);
       }
+
+      // 5. load region
+      if (askedRegion && !cancelled) {
+        console.log("Loading region...", askedRegion);
+        setHighlightedRegion(askedRegion)
+        if(atlasRef.current) showNotification( atlasRef.current.labels[askedRegion], true, {}, 1500);
+      }
     };
 
     doSequentialLoad();
 
     return () => { cancelled = true; };
-  }, [niivue, canvasRef.current, preloadedAtlas, preloadedBackgroundMNI, askedAtlas, viewerOptions]);
+  }, [niivue, canvasRef.current, preloadedBackgroundMNI, askedAtlas, viewerOptions, askedRegion]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === 'Space' && gameMode !== "navigation") {
         e.preventDefault();
         handleSpaceBar();
       }
@@ -389,7 +409,7 @@ export function Page() {
         startTimer(); // Start timer for Time Attack
       }
       // Start the first round
-      selectNewTarget();
+      if(gameMode != "navigation") selectNewTarget();
       setForceDisplayUpdate((u) => u + 1);
     })
 
@@ -558,7 +578,7 @@ export function Page() {
 
   useEffect(() => {
     if (highlightedRegion) {
-      highlightWrapper(highlightedRegion, gameMode !== 'navigation');
+      highlightWrapper(highlightedRegion, gameMode !== 'navigation' || askedRegion == highlightedRegion);
     } else { // reset to original color
       atlasRef.current?.showShuffledRegions()
     }
@@ -1046,6 +1066,7 @@ export function Page() {
     <>
       <title>{myTitle}</title>
       {isLoading && <LoadingScreen />}
+      {gameMode == "navigation" && <SearchBar />}
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className='canvas-and-info-container'>

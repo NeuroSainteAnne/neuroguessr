@@ -14,7 +14,7 @@ function Searchbar() {
 
   // Get the current path from pageContext
   const currentPath = pageContext?.urlPathname || '';
-  const isNeurotheka = currentPath.includes('/neurotheka');
+  const isNavigation = currentPath.includes('/singleplayer/navigation');
   
   // Search across all atlas regions
   function searchAtlasRegions(query: string) {
@@ -22,7 +22,7 @@ function Searchbar() {
     const matches = atlasRegions
       .filter(region => region.name.toLowerCase().includes(lowerQuery))
       .sort((a, b) => {
-        if(askedAtlas && isNeurotheka){
+        if(askedAtlas && isNavigation){
           if (a.atlas === askedAtlas && b.atlas !== askedAtlas) return -1;
           if (a.atlas !== askedAtlas && b.atlas === askedAtlas) return 1;
         }
@@ -34,16 +34,16 @@ function Searchbar() {
     setSuggestionList(matches)
   }
   function handleSearchValidate(atlas: string, region: number) {
-    if(isNeurotheka){
+    if(isNavigation){
       // Update state and URL without page reload
       setAskedAtlas(atlas)
       setAskedRegion(region)
       setSuggestionList([])
       // Use history.pushState to update URL without page reload
-      window.history.pushState(null, '', `/neurotheka/${atlas}/${region}`);
+      window.history.pushState(null, '', `/singleplayer/navigation/${atlas}/${region}`);
     } else {
       // If not already on neurotheka page, do a full page navigation
-      navigate(`/neurotheka/${atlas}/${region}`);
+      navigate(`/singleplayer/navigation/${atlas}/${region}`);
     }
   }
 
@@ -63,7 +63,7 @@ function Searchbar() {
           {suggestionList.length > 0 && 
             <div id="search-suggestions" className="search-suggestions">
             {suggestionList.map((region) => {
-              const isCurrentAtlas = (region.atlas === askedAtlas && isNeurotheka);
+              const isCurrentAtlas = (region.atlas === askedAtlas && isNavigation);
               const suggestionClassName = isCurrentAtlas ? "search-suggestion current-atlas" : "search-suggestion";
               return(<div
                 key={region.atlasName+"_"+region.name+"_"+region.id}

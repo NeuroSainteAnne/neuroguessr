@@ -73,7 +73,7 @@ export function SingleSelector() {
                 <button id="play-button"
                     onClick={(e)=>{ 
                         if(selectedAtlas && selectedMode){ 
-                            navigate(`/singleplayer/${selectedAtlas}/${selectedMode}${blindMode ? "?blind=true" : ""}`);
+                            navigate(`/singleplayer/${selectedMode}/${selectedAtlas}${blindMode ? "?blind=true" : ""}`);
                         }
                     }}
                     data-umami-event="start singleplayer button" data-umami-event-start-single-altas={selectedAtlas}

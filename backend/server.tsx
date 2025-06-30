@@ -176,7 +176,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 // For parameterized routes, we need to check the base route first
                 // Extract the first segment of the path
                 const segments = url.split('/').filter(Boolean);
-                const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/harvard-oxford/navigation"
+                const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/navigation/harvard-oxford"
                 
                 // Define a list of routes that should load their index.html
                 const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'validate', 'resetpwd'];
@@ -193,8 +193,9 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                             };
                         } else if (baseRoute === 'singleplayer') {
                             routeParams = {
-                                atlas: segments[1] || "",
-                                mode: segments[2] || ""
+                                mode: segments[1] || "",
+                                atlas: segments[2] || "",
+                                region: segments[3] || ""
                             };
                         } else if (baseRoute === 'multiplayer') {
                             routeParams = {
