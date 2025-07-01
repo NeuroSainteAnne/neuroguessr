@@ -1082,7 +1082,7 @@ export function Page() {
     <>
       <title>{myTitle}</title>
       {isLoading && <LoadingScreen />}
-      {gameMode == "navigation" && <SearchBar />}
+      {!isLoading && gameMode == "navigation" && <SearchBar />}
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
       <div className='canvas-and-info-container'>
@@ -1094,13 +1094,13 @@ export function Page() {
             onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
         </div>
       </div>
-      <div className="button-container">
+      {!isLoading && <div className="button-container">
         <button
             data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
             className="home-button" onClick={() => { navigate("/welcome") }}>
           <i className="fas fa-home"></i>
         </button>
-        {isNavigationMode && <button className="return-button" 
+        {isNavigationMode && <button className="return-button" disabled={highlightedRegion === null}
             data-umami-event="recolorize button"
             onClick={handleRecolorization}>{t("restore_color")}</button>}
         {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} 
@@ -1114,7 +1114,7 @@ export function Page() {
                 onClick={() => { startGame() }}>
               <i className="fas fa-sync-alt"></i>
             </button>}
-      </div>
+      </div>}
 
       {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
         <div className="overlay-content" ref={streakOverlayRef}>

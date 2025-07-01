@@ -121,6 +121,11 @@
     /* Added opacity */
 }
 
+.return-button:not(:disabled) {
+    background-color: rgb(63, 109, 159);
+    border: 1.5px solid #345a85;
+}
+
 .return-button:hover {
     background: #2a2a2a;
 }
