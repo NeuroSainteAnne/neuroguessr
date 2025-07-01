@@ -636,6 +636,7 @@ export function Page() {
         setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
         setHighlightedRegion(clickedRegionLocation.idx);
         highlightWrapper(clickedRegionLocation.idx, false, true);
+        if(atlasRef.current) showNotification( atlasRef.current.labels[clickedRegionLocation.idx], true, {}, 1500);
         if (tooltip) {
           setTooltip({ ...tooltip, visible: false });
         }
