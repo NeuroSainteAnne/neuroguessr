@@ -76,10 +76,10 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
               className="highlight-region-button"
               onClick={() => {
                 removeOpenMeshes();
+                highlightPastRegion(region.regionId, region.clickedPosition?false:true);
                 if(region.clickedPosition){
                     jumpToPosition(region.clickedPosition, region.regionCenter);
                 }
-                highlightPastRegion(region.regionId, region.clickedPosition?false:true);
               }}
               title={t("highlight_region")}
             >
