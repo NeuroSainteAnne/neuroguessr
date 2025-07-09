@@ -67,7 +67,6 @@ export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptio
         // 2. Add the colormap to Niivue with a unique name
         myniivue.addColormap('MNI_Cmap', myCustomCmap);
         myniivue.opts.crosshairGap = 0;
-        myniivue.opts.dragMode = myniivue.dragModes.slicer3D;
         myniivue.opts.yoke3Dto2DZoom = true;
         defineNiiOptions(myniivue, undefined, viewerOptions)
         callback()

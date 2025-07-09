@@ -8,7 +8,7 @@ import atlasFiles from '../../utils/atlas_files';
 import "./GameScreen.css"
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { Niivue, NVImage } from '@niivue/niivue';
+import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { navigate } from 'vike/client/router';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
@@ -136,6 +136,12 @@ export function Page() {
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
 
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
+  const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
+  const [currentAxis, setCurrentAxis] = useState<number>(2)
+  const dragSensitivity = 0.01; // Adjust this value to control sensitivity
+
   const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
       if (!niivue) {
@@ -145,6 +151,7 @@ export function Page() {
         const niivueInstance = new Niivue({
           logLevel: "error",
           show3Dcrosshair: true,
+          dragMode: DRAG_MODE.none,
           backColor: [0, 0, 0, 1],
           crosshairColor: [1, 1, 1, 1],
           doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
@@ -993,6 +1000,89 @@ export function Page() {
     }
   }
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if(!niivue) return
+    // Right mouse button (button 2) for slice scrolling
+    if (e.button === 2) {
+      e.preventDefault();
+      const pos = niivue.getRelativeMousePosition(e.nativeEvent, e.currentTarget);
+      if (pos) {
+        const clickedTileIndex = niivue.tileIndex(pos.x, pos.y);
+        
+        // Determine which slice type based on the tile
+        let axisToModify = 2; // Default to Z-axis (axial)
+        
+        // Check the screenSlices array to determine the slice type for this tile
+        if (niivue.screenSlices && niivue.screenSlices[clickedTileIndex]) {
+          const sliceInfo = niivue.screenSlices[clickedTileIndex];
+          
+          switch (sliceInfo.axCorSag) {
+            case niivue.sliceTypeAxial:
+              axisToModify = 2; // Z-axis
+              break;
+            case niivue.sliceTypeCoronal:
+              axisToModify = 1; // Y-axis
+              break;
+            case niivue.sliceTypeSagittal:
+              axisToModify = 0; // X-axis
+              break;
+            default:
+              // For render view or other types, don't scroll
+              return;
+          }
+        }
+        
+        setCurrentAxis(axisToModify); // Add this state variable
+        setLastSlicePosition(niivue.scene.crosshairPos[axisToModify]);
+        setIsDragging(true);
+        setDragStart({ x: e.clientX, y: e.clientY });
+      }
+      // Disable context menu during drag
+      e.currentTarget.oncontextmenu = (e) => e.preventDefault();
+    } else {
+      // Handle left-click normally
+      handleCanvasInteraction(e);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if(!niivue) return
+    if (isDragging && dragStart) {
+      e.preventDefault();
+      // Calculate vertical movement
+      const deltaY = e.clientY - dragStart.y;
+      
+      // Calculate new slice position based on movement
+      const sliceIncrement = deltaY*dragSensitivity;
+      
+      // Update crosshair position to change slice
+      const currentPos = [...niivue.scene.crosshairPos];        
+      const newSlicePosition = lastSlicePosition + sliceIncrement;
+      
+      // Clamp the value between 0 and 1
+      currentPos[currentAxis] = Math.max(0, Math.min(1, newSlicePosition));
+      
+      // Set new crosshair position
+      niivue.setCrosshairColor([1, 1, 1, 1]);
+      niivue.scene.crosshairPos = new Float32Array(currentPos);
+      niivue.drawScene();
+    } else if (gameMode === 'navigation') {
+      // Handle normal mouse move for tooltips in navigation mode
+      handleCanvasMouseMove(e);
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 2 && isDragging) {
+      e.preventDefault();
+      setIsDragging(false);
+      setDragStart(null);
+      
+      // Re-enable context menu
+      e.currentTarget.oncontextmenu = null;
+    }
+  };
+
   const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isGameRunning || !canvasRef.current || !niivue || gameMode !== 'navigation' || highlightedRegion !== null) {
       setTooltip({ ...tooltip, visible: false });
@@ -1014,7 +1104,7 @@ export function Page() {
         if (isFinite(idx) && idx > 0 && idx in atlasRef.current.labels) { // Ensure valid region ID > 0
           setTooltip({
             visible: true, text: atlasRef.current.labels[idx] || t('unknown_region'),
-            x: x + 10, y: y + 10
+            x: e.pageX + 15, y: e.pageY + 15
           });
         } else {
           setTooltip({ ...tooltip, visible: false });
@@ -1090,9 +1180,14 @@ export function Page() {
         {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
           highlightPastRegion={highlightWrapper}/>}
         <div className="canvas-container">
-          <canvas id="gl1" onClick={handleCanvasInteraction} 
-            onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove}
-            onMouseMove={handleCanvasMouseMove} onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+          <canvas id="gl1"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd} 
+            onTouchMove={handleTouchMove}
+            onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
         </div>
       </div>
       {!isLoading && <div className="button-container">

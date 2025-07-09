@@ -7,7 +7,7 @@ import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
 import { AtlasImageProxy, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
-import { Niivue, NVImage } from '@niivue/niivue';
+import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { io, Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
@@ -72,11 +72,18 @@ const MultiplayerGameScreen = () => {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
 
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
+  const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
+  const [currentAxis, setCurrentAxis] = useState<number>(2)
+  const dragSensitivity = 0.01; // Adjust this value to control sensitivity
+
   const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
       setNiivue(new Niivue({
                 logLevel: "error",
                 show3Dcrosshair: true,
+                dragMode: DRAG_MODE.none,
                 backColor: [0, 0, 0, 1],
                 crosshairColor: [1, 1, 1, 1],
                 doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
@@ -492,6 +499,86 @@ const MultiplayerGameScreen = () => {
       selectedVoxelProp.current = clickedRegionLocation;
     }
   }
+  
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if(!niivue) return
+    // Right mouse button (button 2) for slice scrolling
+    if (e.button === 2) {
+      e.preventDefault();
+      const pos = niivue.getRelativeMousePosition(e.nativeEvent, e.currentTarget);
+      if (pos) {
+        const clickedTileIndex = niivue.tileIndex(pos.x, pos.y);
+        
+        // Determine which slice type based on the tile
+        let axisToModify = 2; // Default to Z-axis (axial)
+        
+        // Check the screenSlices array to determine the slice type for this tile
+        if (niivue.screenSlices && niivue.screenSlices[clickedTileIndex]) {
+          const sliceInfo = niivue.screenSlices[clickedTileIndex];
+          
+          switch (sliceInfo.axCorSag) {
+            case niivue.sliceTypeAxial:
+              axisToModify = 2; // Z-axis
+              break;
+            case niivue.sliceTypeCoronal:
+              axisToModify = 1; // Y-axis
+              break;
+            case niivue.sliceTypeSagittal:
+              axisToModify = 0; // X-axis
+              break;
+            default:
+              // For render view or other types, don't scroll
+              return;
+          }
+        }
+        
+        setCurrentAxis(axisToModify); // Add this state variable
+        setLastSlicePosition(niivue.scene.crosshairPos[axisToModify]);
+        setIsDragging(true);
+        setDragStart({ x: e.clientX, y: e.clientY });
+      }
+      // Disable context menu during drag
+      e.currentTarget.oncontextmenu = (e) => e.preventDefault();
+    } else {
+      // Handle left-click normally
+      handleCanvasInteraction(e);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if(!niivue) return
+    if (isDragging && dragStart) {
+      e.preventDefault();
+      // Calculate vertical movement
+      const deltaY = e.clientY - dragStart.y;
+      
+      // Calculate new slice position based on movement
+      const sliceIncrement = deltaY*dragSensitivity;
+      
+      // Update crosshair position to change slice
+      const currentPos = [...niivue.scene.crosshairPos];        
+      const newSlicePosition = lastSlicePosition + sliceIncrement;
+      
+      // Clamp the value between 0 and 1
+      currentPos[currentAxis] = Math.max(0, Math.min(1, newSlicePosition));
+      
+      // Set new crosshair position
+      niivue.setCrosshairColor([1, 1, 1, 1]);
+      niivue.scene.crosshairPos = new Float32Array(currentPos);
+      niivue.drawScene();
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button === 2 && isDragging) {
+      e.preventDefault();
+      setIsDragging(false);
+      setDragStart(null);
+      
+      // Re-enable context menu
+      e.currentTarget.oncontextmenu = null;
+    }
+  };
 
   const validateGuess = async () => {
     if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
@@ -529,8 +616,13 @@ const MultiplayerGameScreen = () => {
       <div className='canvas-and-info-container'>
         {hasEnded && <RegionHistory pastRegions={pastRegions} highlightPastRegion={highlightWrapper} niivue={niivue} />}
         <div className="canvas-container" style={{display:(((hasStarted && connected) || hasEnded)?"block":"none")}}>
-          <canvas id="gl1" onClick={handleCanvasInteraction} 
-            onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
+          <canvas id="gl1"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd} 
+            onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
         </div>
       </div>
       <div style={{display:((hasStarted && connected)?"block":"none")}}>
