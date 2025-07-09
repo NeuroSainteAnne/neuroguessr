@@ -344,11 +344,19 @@ const MultiplayerGameScreen = () => {
       const selectedAtlasFiles = atlasFiles[askedAtlas.atlas];
       const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
       if (niivue && niivue.volumes.length > 1 && jsonData) {
+          let cmap_en: ColorMap|null = null;
+          if (askedAtlas.atlas === 'xtract') {
+            if(currentLanguage === 'en') {
+              cmap_en = jsonData; // Already in English
+            } else {
+              cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
+            }
+          }
           atlasRef.current = new AtlasImageProxy({niivue, nvImage:niivue.volumes[1], 
             labels: jsonData.labels, 
             centers: jsonData.centers ? jsonData.centers : undefined,
             proposedLut: askedAtlas.lut, proposedMapping: askedAtlas.mapping, proposedInverseMapping: askedAtlas.inverseMapping,
-            viewerOptions, blindMode: askedAtlas.blindMode});
+            viewerOptions, blindMode: askedAtlas.blindMode, cmap_en});
         atlasRef.current.showShuffledRegions();
       }
     } catch (error) {
