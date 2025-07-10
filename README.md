@@ -61,5 +61,5 @@ npm run start-backend
 This project is licensed under the GPLv3 License - see the [LICENSE] file for details.
 
 ## Authors 
-François Ramon
-Joseph Benzakoun 
+[Francois Ramon](https://github.com/FRramon)
+[Joseph Benzakoun](https://github.com/jbenzakoun)
