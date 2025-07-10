@@ -6,7 +6,7 @@ import SearchBar from './SearchBar';
 
 function Header() {
     const {currentLanguage, atlasRegions, t, handleChangeLanguage, 
-    isLoggedIn, userFirstName, userLastName, 
+    isLoggedIn, userFirstName, userLastName, isMobileView,
     headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
     viewerOptions, pageContext } = useApp();
 
@@ -87,7 +87,7 @@ function Header() {
                     {isLoggedIn && 
                         <LoginDropdownMenu />
                     }
-                    {(isSingleplayer || isMultiplayer) && <OptionsDropdown />} 
+                    {(isSingleplayer || isMultiplayer) && !isMobileView && <OptionsDropdown />} 
                 </div>
             </div>
         </>

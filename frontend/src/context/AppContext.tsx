@@ -55,6 +55,7 @@ type AppContextType = {
   nvimageModule: NVImageConstructor | null;
   preloadedBackgroundMNI: NVImage | null;
   preloadedAtlas: NVImage | null;
+  isMobileView: boolean;
   
   // Functions
   activateGuestMode: () => void;
@@ -74,6 +75,7 @@ type AppContextType = {
   setAskedRegion: (region: number | null) => void;
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
+  setIsMobileView: (isMobile: boolean) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
 };
 
@@ -126,6 +128,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([]);
   const [askedAtlas, setAskedAtlas] = useState<string | null>(null);
   const [askedRegion, setAskedRegion] = useState<number | null>(null);
+
+  // Mobile view state
+  const [isMobileView, setIsMobileView] = useState<boolean>(false);
   
   // Load Niivue module
   useEffect(() => {
@@ -372,6 +377,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       nvimageModule,
       preloadedBackgroundMNI,
       preloadedAtlas,
+      isMobileView,
 
       // Overlay state
       showHelpOverlay,
@@ -395,6 +401,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setAskedRegion,
       setShowHelpOverlay,
       setShowLegalOverlay,
+      setIsMobileView,
 
       // language functions
       t

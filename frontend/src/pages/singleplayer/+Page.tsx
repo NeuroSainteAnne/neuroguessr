@@ -73,6 +73,7 @@ export function Page() {
   const { t, currentLanguage, askedAtlas, askedRegion,
       preloadedBackgroundMNI, viewerOptions,
       isLoggedIn, authToken, userPublishToLeaderboard,
+      isMobileView, setIsMobileView,
     setHeaderText, setHeaderTextMode, setHeaderScore,
     setHeaderStreak, setHeaderErrors, setHeaderTime,
     setShowHelpOverlay, showNotification,
@@ -136,11 +137,19 @@ export function Page() {
   const lastTouchEvent = useRef<React.Touch | null>(null);
   const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
 
+  // dragging states
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
   const [currentAxis, setCurrentAxis] = useState<number>(2)
-  const dragSensitivity = 0.01; // Adjust this value to control sensitivity
+  const dragSensitivity = 0.01;  
+
+  // mobile view specific states
+  const [mobileOrientation, setMobileOrientation] = useState<string>("axial"); // "axial", "sagittal", "coronal"
+  const scrollBarRef = useRef<HTMLDivElement>(null);
+  const scrollThumbRef = useRef<HTMLDivElement>(null);
+  const isScrolling = useRef<boolean>(false);
+  const lastScrollPosition = useRef<number>(0);
 
   const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
@@ -148,15 +157,26 @@ export function Page() {
         setAskedAtlas(routeParams?.atlas);
         setAskedRegion(parseInt(routeParams?.region) || null);
         console.log("Creating Niivue...");
+        const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
+        setIsMobileView(isMobile);
         const niivueInstance = new Niivue({
           logLevel: "error",
           show3Dcrosshair: true,
           dragMode: DRAG_MODE.none,
           backColor: [0, 0, 0, 1],
           crosshairColor: [1, 1, 1, 1],
-          doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
+          doubleTouchTimeout: 0, // Disable double touch to avoid conflicts
+          multiplanarForceRender: !isMobile,
         });
+        if(isMobile) niivueInstance.setSliceType(mobileOrientation === "axial" 
+          ? niivueInstance.sliceTypeAxial 
+          : mobileOrientation === "sagittal" 
+            ? niivueInstance.sliceTypeSagittal 
+            : niivueInstance.sliceTypeCoronal);
         setNiivue(niivueInstance);
+        if (isMobileView) {
+          setTimeout(() => configureMobileView(), 0);
+        }
       }
       return () => { 
         const niivueInstance = niivue;
@@ -207,7 +227,26 @@ export function Page() {
     }, []);
 
   useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
+      setIsMobileView(isMobile);
+      // If switching to mobile view, ensure NiiVue is configured properly
+      if(!niivue) return;
+      if (isMobile) {
+        configureMobileView();
+      } else {
+        defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [niivue]);
+
+  useEffect(() => {
     let cancelled = false;
+    const isMobile = window.innerWidth <= 768;
+    console.log(isMobile ? "Mobile view detected" : "Desktop view detected");
     const doSequentialLoad = async () => {
       setIsLoading(true);
 
@@ -218,7 +257,7 @@ export function Page() {
         initNiivue(niivue, canvasRef.current!, viewerOptions, () => {
           if (!cancelled) setIsLoadedNiivue(true);
           resolve();
-        });
+        }, isMobile);
       });
 
       // 2. Wait for atlas and background to be ready
@@ -390,7 +429,7 @@ export function Page() {
     setShowTimeattackOverlay(false);
     // Reset Niivue view if needed
     if (niivue && atlasRef.current) {
-      defineNiiOptions(niivue, atlasRef.current, viewerOptions)
+      if(!isMobileView) defineNiiOptions(niivue, atlasRef.current, viewerOptions)
       niivue.drawScene();
     }
   }
@@ -1000,6 +1039,33 @@ export function Page() {
     }
   }
 
+  const configureMobileView = () => {
+    if (!niivue) return;
+    // Save current position
+    const currentPos = [...niivue.scene.crosshairPos];
+    // Configure for single view based on orientation
+    niivue.opts.sliceType = mobileOrientation === "axial" 
+      ? niivue.sliceTypeAxial 
+      : mobileOrientation === "sagittal" 
+        ? niivue.sliceTypeSagittal 
+        : niivue.sliceTypeCoronal;
+    // Show only one slice
+    niivue.opts.multiplanarForceRender = false;
+
+    // Set layout to single view
+    niivue.setSliceType(niivue.opts.sliceType);
+    
+    // Restore position
+    niivue.scene.crosshairPos = new Float32Array(currentPos);
+    niivue.drawScene();
+  };
+
+  useEffect(() => {
+    if (isMobileView && niivue) {
+      configureMobileView();
+    }
+  }, [mobileOrientation, isMobileView, niivue]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if(!niivue) return
     // Right mouse button (button 2) for slice scrolling
@@ -1116,6 +1182,79 @@ export function Page() {
     }
   }
 
+  const handleScrollStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!niivue || !scrollBarRef.current) return;
+    
+    isScrolling.current = true;
+    
+    // Get initial position
+    const clientY = 'touches' in e 
+      ? e.touches[0].clientY 
+      : e.clientY;
+    lastScrollPosition.current = clientY;
+    
+    // Update the scroll thumb position
+    updateScrollThumb(clientY);
+  };
+
+  // Handle scroll move
+  const handleScrollMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!isScrolling.current || !niivue || !scrollBarRef.current) return;
+    
+    const clientY = 'touches' in e 
+      ? e.touches[0].clientY 
+      : e.clientY;
+    
+    updateScrollThumb(clientY);
+    
+    // Prevent default to avoid page scrolling
+    e.preventDefault();
+  };
+
+  // Handle scroll end
+  const handleScrollEnd = () => {
+    isScrolling.current = false;
+  };
+
+  // Update scroll thumb position and slice
+  const updateScrollThumb = (clientY: number) => {
+    if (!scrollBarRef.current || !niivue) return;
+    
+    const scrollBar = scrollBarRef.current;
+    const rect = scrollBar.getBoundingClientRect();
+    
+    // Calculate relative position (0 to 1)
+    let relativePos = (clientY - rect.top) / rect.height;
+    relativePos = Math.max(0, Math.min(1, relativePos));
+    
+    // Update thumb position
+    if (scrollThumbRef.current) {
+      scrollThumbRef.current.style.top = `${relativePos * 100}%`;
+    }
+    
+    // Update slice position based on orientation
+    const currentPos = [...niivue.scene.crosshairPos];
+    let axisToModify = 2; // Z-axis (axial)
+    
+    if (mobileOrientation === "sagittal") {
+      axisToModify = 0; // X-axis
+    } else if (mobileOrientation === "coronal") {
+      axisToModify = 1; // Y-axis
+    }
+    
+    // For axial view, top of scrollbar = bottom of volume
+    if (mobileOrientation === "axial") {
+      relativePos = 1 - relativePos;
+    }
+    
+    currentPos[axisToModify] = relativePos;
+    
+    // Update crosshair position
+    niivue.setCrosshairColor([1, 1, 1, 1]);
+    niivue.scene.crosshairPos = new Float32Array(currentPos);
+    niivue.drawScene();
+  };
+
   useEffect(() => {
     updateGameDisplay();
   }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
@@ -1153,7 +1292,7 @@ export function Page() {
   }, [showStreakOverlay, showTimeattackOverlay])
 
   useEffect(() => {
-    defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions)
+    if(!isMobileView) defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions)
   }, [viewerOptions])
   
   useLayoutEffect(() => {
@@ -1176,19 +1315,62 @@ export function Page() {
       {!isLoading && gameMode == "navigation" && <SearchBar />}
       {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-      <div className='canvas-and-info-container'>
-        {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
-          highlightPastRegion={highlightWrapper}/>}
-        <div className="canvas-container">
-          <canvas id="gl1"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd} 
-            onTouchMove={handleTouchMove}
-            onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+      <div className='canvas-and-scroll-container'>
+        <div className='canvas-and-info-container'>
+          {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
+            highlightPastRegion={highlightWrapper}/>}
+          <div className="canvas-container">
+            <canvas id="gl1"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd} 
+              onTouchMove={handleTouchMove}
+              onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
+          </div>
         </div>
+        {isMobileView && (
+          <div className="mobile-controls">
+            {/* Custom scroll bar */}
+            <div 
+              className="mobile-scroll-bar"
+              ref={scrollBarRef}
+              onMouseDown={handleScrollStart}
+              onTouchStart={handleScrollStart}
+              onMouseMove={handleScrollMove}
+              onTouchMove={handleScrollMove}
+              onMouseUp={handleScrollEnd}
+              onTouchEnd={handleScrollEnd}
+              onMouseLeave={handleScrollEnd}
+            >
+              <div 
+                className="mobile-scroll-thumb"
+                ref={scrollThumbRef}
+              />
+            </div>
+            <div className="orientation-buttons">
+              <button 
+                className={`orientation-button ${mobileOrientation === "axial" ? "active" : ""}`}
+                onClick={() => setMobileOrientation("axial")}
+              >
+                Axial
+              </button>
+              <button 
+                className={`orientation-button ${mobileOrientation === "sagittal" ? "active" : ""}`}
+                onClick={() => setMobileOrientation("sagittal")}
+              >
+                Sagittal
+              </button>
+              <button 
+                className={`orientation-button ${mobileOrientation === "coronal" ? "active" : ""}`}
+                onClick={() => setMobileOrientation("coronal")}
+              >
+                Coronal
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {!isLoading && <div className="button-container">
         <button

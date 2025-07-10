@@ -45,7 +45,8 @@ export const defineNiiOptions = (myniivue: any, myAtlasProxy: AtlasImageProxy | 
     }
 }
 
-export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, callback: () => void) => {
+export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, 
+                            callback: () => void, overrideOptions = false) => {
     if ((myniivue as any)._isInitialized) {
         if (callback) callback();
         return;
@@ -68,7 +69,7 @@ export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptio
         myniivue.addColormap('MNI_Cmap', myCustomCmap);
         myniivue.opts.crosshairGap = 0;
         myniivue.opts.yoke3Dto2DZoom = true;
-        defineNiiOptions(myniivue, undefined, viewerOptions)
+        if(!overrideOptions) defineNiiOptions(myniivue, undefined, viewerOptions)
         callback()
     }).catch((error: any) => {
         console.error('Error attaching Niivue to canvas:', error);
