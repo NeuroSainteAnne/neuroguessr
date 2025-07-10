@@ -146,6 +146,7 @@ export function Page() {
 
   // mobile view specific states
   const [mobileOrientation, setMobileOrientation] = useState<string>("axial"); // "axial", "sagittal", "coronal"
+  const mobileOrientationRef = useRef<string>("axial"); // "axial", "sagittal", "coronal"
   const scrollBarRef = useRef<HTMLDivElement>(null);
   const scrollThumbRef = useRef<HTMLDivElement>(null);
   const isScrolling = useRef<boolean>(false);
@@ -242,6 +243,23 @@ export function Page() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [niivue]);
+
+  useEffect(() => {
+    if (isMobileView && niivue && !isLoading) {
+      updateScrollThumbFromNiivue();
+    }
+  }, [niivue, isMobileView, isLoading]);
+
+  useEffect(() => { // orientation change handler
+    if (isMobileView && niivue) {
+      configureMobileView();
+      // The configureMobileView function now calls updateScrollThumbFromNiivue
+    }
+  }, [mobileOrientation, isMobileView, niivue]);
+
+  useEffect(() => { // orientation change handler
+    mobileOrientationRef.current = mobileOrientation;
+  }, [mobileOrientation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1042,11 +1060,10 @@ export function Page() {
   const configureMobileView = () => {
     if (!niivue) return;
     // Save current position
-    const currentPos = [...niivue.scene.crosshairPos];
     // Configure for single view based on orientation
-    niivue.opts.sliceType = mobileOrientation === "axial" 
+    niivue.opts.sliceType = mobileOrientationRef.current === "axial" 
       ? niivue.sliceTypeAxial 
-      : mobileOrientation === "sagittal" 
+      : mobileOrientationRef.current === "sagittal" 
         ? niivue.sliceTypeSagittal 
         : niivue.sliceTypeCoronal;
     // Show only one slice
@@ -1056,8 +1073,8 @@ export function Page() {
     niivue.setSliceType(niivue.opts.sliceType);
     
     // Restore position
-    niivue.scene.crosshairPos = new Float32Array(currentPos);
     niivue.drawScene();
+    setTimeout(() => updateScrollThumbFromNiivue(), 0);
   };
 
   useEffect(() => {
@@ -1253,6 +1270,23 @@ export function Page() {
     niivue.setCrosshairColor([1, 1, 1, 1]);
     niivue.scene.crosshairPos = new Float32Array(currentPos);
     niivue.drawScene();
+  };
+
+  const updateScrollThumbFromNiivue = () => {
+    if (!niivue || !scrollThumbRef.current || !scrollBarRef.current) return;
+    // Get current crosshair position
+    const currentPos = niivue.scene.crosshairPos;
+    // Determine which axis to use based on current orientation
+    let axisValue = 0;
+    if (mobileOrientationRef.current === "axial") {
+      axisValue = 1 - currentPos[2]; // Invert for axial view
+    } else if (mobileOrientationRef.current === "sagittal") {
+      axisValue = currentPos[0];
+    } else if (mobileOrientationRef.current === "coronal") {
+      axisValue = currentPos[1];
+    }
+    // Set the thumb position directly
+    scrollThumbRef.current.style.top = `${axisValue * 100}%`;
   };
 
   useEffect(() => {
