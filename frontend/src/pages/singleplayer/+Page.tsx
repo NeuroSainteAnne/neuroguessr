@@ -5,7 +5,6 @@ import { AtlasImageProxy, defineNiiOptions, fetchJSON, initNiivue, loadAtlasNii 
 import { useApp } from '../../context/AppContext';
 import { ColorMap, ImageMetadata, PastRegion } from '../../types';
 import atlasFiles from '../../utils/atlas_files';
-import "./GameScreen.css"
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
@@ -13,46 +12,47 @@ import { navigate } from 'vike/client/router';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
 import SearchBar from '../../components/SearchBar';
+import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string, blindMode: boolean): Promise<{ sessionToken: string, sessionId: string } | null> {
-  // Check if the player is logged in
-  if (!isLoggedIn || !token) {
-    return null;
-  }
-  if (!isTokenValid(token)) {
-    if (!refreshToken()) {
-      return null;
+    // Check if the player is logged in
+    if (!isLoggedIn || !token) {
+        return null;
     }
-  }
-  try {
-    // Send a request to the backend to start a session
-    const response = await fetch('/api/start-game-session', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ mode, atlas, blindMode }),
-    });
-
-    if (!response.ok) {
-      console.error("Failed to online game session on the backend.");
-      const result = await response.json();
-      console.error(result.message || "Failed to start game session.");
-      return null;
+    if (!isTokenValid(token)) {
+        if (!refreshToken()) {
+            return null;
+        }
     }
+    try {
+        // Send a request to the backend to start a session
+        const response = await fetch('/api/start-game-session', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ mode, atlas, blindMode }),
+        });
 
-    const result = await response.json();
-    return { sessionToken: result.sessionToken, sessionId: result.sessionId };
-  } catch (error) {
-    console.error("Error starting online game session:", error);
-    console.error("An error occurred while starting online game session. Please try again later.");
-    return null;
-  }
+        if (!response.ok) {
+            console.error("Failed to online game session on the backend.");
+            const result = await response.json();
+            console.error(result.message || "Failed to start game session.");
+            return null;
+        }
+
+        const result = await response.json();
+        return { sessionToken: result.sessionToken, sessionId: result.sessionId };
+    } catch (error) {
+        console.error("Error starting online game session:", error);
+        console.error("An error occurred while starting online game session. Please try again later.");
+        return null;
+    }
 }
 
-function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): number {
+function getDistance(centers: number[][], coordinates: { mm: number[], vox: number[] }): number {
     let minDistance = Infinity;
     const [xMm, yMm, zMm] = coordinates.mm;
     // Find the minimum distance to any center of the region
@@ -70,1430 +70,895 @@ function getDistance(centers: number[][], coordinates: {mm: number[], vox: numbe
 }
 
 export function Page() {
-  const { t, currentLanguage, askedAtlas, askedRegion,
-      preloadedBackgroundMNI, viewerOptions,
-      isLoggedIn, authToken, userPublishToLeaderboard,
-      isMobileView, setIsMobileView,
-    setHeaderText, setHeaderTextMode, setHeaderScore,
-    setHeaderStreak, setHeaderErrors, setHeaderTime,
-    setShowHelpOverlay, showNotification,
-    setAskedAtlas, setAskedRegion, pageContext } = useApp();
-  // Time Attack specific constants
-  const TOTAL_REGIONS_TIME_ATTACK = 18;
-  const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
-  const MAX_TIME_IN_SECONDS = 100; // nombre de secondes pour le Time Attack
-  const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
-  const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
-  const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
-  const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
-  const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
-  const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
-  const STREAK_BONUS_AFTER = 5;
-  const STREAK_BONUS = 5; 
-  const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
-  const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
-  const { routeParams } = pageContext;
-  const gameMode = routeParams?.mode;
-  const blindMode = routeParams?.blind === "true" || false;
-  const [isNavigationMode, setIsNavigationMode] = useState<boolean>(true);
-  const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const currentlyLoadedAtlas = useRef<any>(null);
-  const [hasEnded, setHasEnded] = useState<boolean>(false);
-  const hasEndedRef = useRef<boolean>(false); // Added ref to track ending state synchronously
-  const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
-  const [currentScore, setCurrentScore] = useState<number>(0);
-  const currentScoreRef = useRef<number>(0);
-  const [finalScore, setFinalScore] = useState<number>(0);
-  const [finalElapsed, setFinalElapsed] = useState<number>(0);
-  const [currentCorrects, setCurrentCorrects] = useState<number>(0);
-  const [currentErrors, setCurrentErrors] = useState<number>(0);
-  const [currentStreak, setCurrentStreak] = useState<number>(0);
-  const currentStreakRef = useRef<number>(0);
-  const currentConsecutiveErrorsRef = useRef<number>(0);
-  const [finalStreak, setFinalStreak] = useState<number>(0);
-  const [currentTime, setCurrentTime] = useState<string>("00:00");
-  const [currentAttempts, setCurrentAttempts] = useState<number>(0);
-  const currentAttemptsRef = useRef<number>(0);
-  const currentTarget = useRef<number | null>(null);
-  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number|undefined} | null>(null);
-  const usedRegions = useRef<number[]>([]);
-  const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
-  const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
-  const mappingRef = useRef<Record<number,number>>({});
-  const inverseMappingRef = useRef<Record<number,number>>({});
-  const atlasRef = useRef<AtlasImageProxy|null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const guessButtonRef = useRef<HTMLButtonElement>(null);
-  const startTime = useRef<number | null>(null);
-  const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sessionToken = useRef<string | null>(null);
-  const sessionId = useRef<string | null>(null);
-  const [showStreakOverlay, setShowStreakOverlay] = useState<boolean>(false);
-  const streakOverlayRef = useRef<HTMLDivElement>(null);
-  const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
-  const timeattackOverlayRef = useRef<HTMLDivElement>(null);
-  const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
-  const lastTouchEvent = useRef<React.Touch | null>(null);
-  const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
+    const { pageContext } = useApp();
+    const { routeParams } = pageContext;
+    const gameMode = routeParams?.mode;
+    const blindMode = routeParams?.blind === "true" || false;
+    const routedAtlas = routeParams?.atlas
+    const routedRegion = parseInt(routeParams?.region) || undefined
+    const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
+    const cleanGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const startGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const resetGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const validateGuessCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { console.log("Not Initialized") });
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { console.log("Not Initialized") });
+    return (
+        <GameProvider gameMode={gameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
+            cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
+            validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef}>
+            <SinglePlayer tooltip={tooltip} setTooltip={setTooltip}
+                cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
+                validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef} />
+        </GameProvider>
+    )
+}
 
-  // dragging states
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
-  const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
-  const [currentAxis, setCurrentAxis] = useState<number>(2)
-  const dragSensitivity = 0.01;  
+function SinglePlayer({
+    tooltip, setTooltip,
+    cleanGameCallbackRef, startGameCallbackRef, resetGameCallbackRef,
+    validateGuessCallbackRef, genericKeyPressCallbackRef, canvasInteractionRef
+}: {
+    tooltip: { visible: boolean; text: string; x: number; y: number; },
+    setTooltip: React.Dispatch<React.SetStateAction<{ visible: boolean; text: string; x: number; y: number; }>>,
+    cleanGameCallbackRef: React.RefObject<() => void>,
+    startGameCallbackRef: React.RefObject<() => void>,
+    resetGameCallbackRef: React.RefObject<() => void>,
+    validateGuessCallbackRef: React.RefObject<() => void>,
+    genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
+    canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
+}) {
+    const { t, currentLanguage, askedAtlas, askedRegion,
+        preloadedBackgroundMNI, viewerOptions,
+        isLoggedIn, authToken, userPublishToLeaderboard,
+        isMobileView, setIsMobileView,
+        setHeaderText, setHeaderTextMode, setHeaderScore,
+        setHeaderStreak, setHeaderErrors, setHeaderTime,
+        setShowHelpOverlay, showNotification,
+        setAskedAtlas, setAskedRegion, pageContext } = useApp();
+    // Time Attack specific constants
+    const TOTAL_REGIONS_TIME_ATTACK = 18;
+    const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
+    const MAX_TIME_IN_SECONDS = 100; // nombre de secondes pour le Time Attack
+    const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
+    const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+    const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
+    const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
+    const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
+    const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
+    const STREAK_BONUS_AFTER = 5;
+    const STREAK_BONUS = 5;
+    const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
+    const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
+    const { routeParams } = pageContext;
+    const gameMode = routeParams?.mode;
+    const blindMode = routeParams?.blind === "true" || false;
+    const [currentScore, setCurrentScore] = useState<number>(0);
+    const currentScoreRef = useRef<number>(0);
+    const [finalScore, setFinalScore] = useState<number>(0);
+    const [finalElapsed, setFinalElapsed] = useState<number>(0);
+    const [currentCorrects, setCurrentCorrects] = useState<number>(0);
+    const [currentErrors, setCurrentErrors] = useState<number>(0);
+    const [currentStreak, setCurrentStreak] = useState<number>(0);
+    const currentStreakRef = useRef<number>(0);
+    const currentConsecutiveErrorsRef = useRef<number>(0);
+    const [finalStreak, setFinalStreak] = useState<number>(0);
+    const [currentTime, setCurrentTime] = useState<string>("00:00");
+    const [currentAttempts, setCurrentAttempts] = useState<number>(0);
+    const currentAttemptsRef = useRef<number>(0);
+    const usedRegions = useRef<number[]>([]);
+    const startTime = useRef<number | null>(null);
+    const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const sessionToken = useRef<string | null>(null);
+    const sessionId = useRef<string | null>(null);
+    const [showStreakOverlay, setShowStreakOverlay] = useState<boolean>(false);
+    const streakOverlayRef = useRef<HTMLDivElement>(null);
+    const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
+    const timeattackOverlayRef = useRef<HTMLDivElement>(null);
+    const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
 
-  // mobile view specific states
-  const [mobileOrientation, setMobileOrientation] = useState<string>("axial"); // "axial", "sagittal", "coronal"
-  const mobileOrientationRef = useRef<string>("axial"); // "axial", "sagittal", "coronal"
-  const scrollBarRef = useRef<HTMLDivElement>(null);
-  const scrollThumbRef = useRef<HTMLDivElement>(null);
-  const isScrolling = useRef<boolean>(false);
-  const lastScrollPosition = useRef<number>(0);
+    const {
+        setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
+        guessButtonRef, atlasRef, isGameRunning, highlightedRegion, highlightWrapper, setHighlightedRegion, unHighlight,
+        setIsNavigationMode,
+        niivue, niivueRef, canvasRef, isLoading,
+    } = useGame();
 
-  const [niivue, setNiivue] = useState<Niivue|null>(null);
     useEffect(() => {
-      if (!niivue) {
-        setAskedAtlas(routeParams?.atlas);
-        setAskedRegion(parseInt(routeParams?.region) || null);
-        console.log("Creating Niivue...");
-        const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
-        setIsMobileView(isMobile);
-        const niivueInstance = new Niivue({
-          logLevel: "error",
-          show3Dcrosshair: true,
-          dragMode: DRAG_MODE.none,
-          backColor: [0, 0, 0, 1],
-          crosshairColor: [1, 1, 1, 1],
-          doubleTouchTimeout: 0, // Disable double touch to avoid conflicts
-          multiplanarForceRender: !isMobile,
-        });
-        if(isMobile) niivueInstance.setSliceType(mobileOrientation === "axial" 
-          ? niivueInstance.sliceTypeAxial 
-          : mobileOrientation === "sagittal" 
-            ? niivueInstance.sliceTypeSagittal 
-            : niivueInstance.sliceTypeCoronal);
-        setNiivue(niivueInstance);
-        if (isMobileView) {
-          setTimeout(() => configureMobileView(), 0);
-        }
-      }
-      return () => { 
-        const niivueInstance = niivue;
-        cleanHeader()
-        // Clean up Niivue properly
-        if (niivueInstance) {
-          // Remove all volumes
-          while (niivueInstance.volumes.length > 0) {
-            niivueInstance.removeVolume(niivueInstance.volumes[0]);
-          }
-          // Remove all meshes
-          while (niivueInstance.meshes.length > 0) {
-            niivueInstance.removeMesh(niivueInstance.meshes[0]);
-          }
-          // Destroy WebGL context if needed
-          try{
-            if (niivueInstance.gl) {
-              const loseContext = niivueInstance.gl.getExtension('WEBGL_lose_context');
-              if (loseContext) loseContext.loseContext();
+        currentStreakRef.current = currentStreak
+    }, [currentStreak])
+    useEffect(() => {
+        currentScoreRef.current = currentScore
+    }, [currentScore])
+    useEffect(() => {
+        currentAttemptsRef.current = currentAttempts
+    }, [currentAttempts])
+
+    const cleanHeader = () => {
+        setHeaderText("");
+        setHeaderScore("");
+        setHeaderStreak("");
+        setHeaderErrors("");
+        setHeaderTime("")
+    }
+
+    useEffect(() => {
+        const cleanGame = () => {
+            cleanHeader();
+            usedRegions.current = [];
+            setIsGameRunning(false);
+            setPastRegions([]);
+            if (timerInterval.current) {
+                clearInterval(timerInterval.current);
+                timerInterval.current = null;
             }
-          } catch (error) {
-            //
-          }
-          // Force garbage collection hints
-          niivueInstance.drawScene = () => {}; // Neutralize any pending animation frames
-          niivueInstance.volumes = [];
-          niivueInstance.meshes = [];
         }
-        // Clear the canvas
-        if (canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        if (cleanGameCallbackRef) {
+            cleanGameCallbackRef.current = cleanGame; // Set the callback in the ref
         }
-        atlasRef.current = null;
-        selectedVoxelProp.current = null;
-        currentTarget.current = null;
-        usedRegions.current = [];
-        setNiivue(null);
-        setIsLoadedNiivue(false);
-        setIsGameRunning(false);
-        setIsLoading(true);
-        setPastRegions([]);
-        if (timerInterval.current) {
-          clearInterval(timerInterval.current);
-          timerInterval.current = null;
+    }, [cleanGameCallbackRef]);
+
+
+    useEffect(() => {
+        const resetGameState = () => {
+            currentTarget.current = null;
+            selectedVoxelProp.current = null;
+            currentConsecutiveErrorsRef.current = 0;
+            setCurrentAttempts(0); // Reset attempts for practice mode
+            setCurrentScore(0); // Reset score for Time Attack
+            setCurrentCorrects(0); // Reset correct count for Practice/Streak
+            setCurrentErrors(0); // Reset errors
+            setCurrentStreak(0); // Reset streak
+            usedRegions.current = []; // Reset used regions for time attack
+            setHeaderTextMode("normal"); // Reset header text mode
+            setHasEnded(false);
+            hasEndedRef.current = false; // Reset the ref value
+            setPastRegions([]);
+            setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
+            if (gameMode === 'navigation') {
+                setHeaderScore("");
+                setHeaderStreak("");
+                setHeaderErrors("");
+            } else if (gameMode === 'practice') {
+                setHeaderScore(t('correct_label') + ": 0");
+                setHeaderErrors("0");
+                setHeaderStreak("");
+            } else if (gameMode === 'streak') {
+                setHeaderScore(t('correct_label') + ": 0");
+                setHeaderErrors("0");
+                setHeaderStreak("0");
+            } else if (gameMode === 'time-attack') {
+                setHeaderScore(t('score_label') + ": 0");
+                setHeaderErrors("0");
+                setHeaderStreak("");
+            }
+            if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+            atlasRef.current?.showShuffledRegions()
+            if (timerInterval.current) {
+                clearInterval(timerInterval.current);
+                timerInterval.current = null;
+            }
+            if (tooltip) {
+                setTooltip({ ...tooltip, visible: false });
+            }
+            // Hide overlays
+            setShowHelpOverlay(false);
+            setShowStreakOverlay(false);
+            setShowTimeattackOverlay(false);
         }
-      };
-    }, []);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
-      setIsMobileView(isMobile);
-      // If switching to mobile view, ensure NiiVue is configured properly
-      if(!niivue) return;
-      if (isMobile) {
-        configureMobileView();
-      } else {
-        defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions);
-      }
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, [niivue]);
-
-  useEffect(() => {
-    if (isMobileView && niivue && !isLoading) {
-      updateScrollThumbFromNiivue();
-    }
-  }, [niivue, isMobileView, isLoading]);
-
-  useEffect(() => { // orientation change handler
-    if (isMobileView && niivue) {
-      configureMobileView();
-      // The configureMobileView function now calls updateScrollThumbFromNiivue
-    }
-  }, [mobileOrientation, isMobileView, niivue]);
-
-  useEffect(() => { // orientation change handler
-    mobileOrientationRef.current = mobileOrientation;
-  }, [mobileOrientation]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const isMobile = window.innerWidth <= 768;
-    console.log(isMobile ? "Mobile view detected" : "Desktop view detected");
-    const doSequentialLoad = async () => {
-      setIsLoading(true);
-
-      // 1. Wait for Niivue to be ready
-      if (!niivue || !canvasRef.current) return;
-
-      await new Promise<void>((resolve) => {
-        initNiivue(niivue, canvasRef.current!, viewerOptions, () => {
-          if (!cancelled) setIsLoadedNiivue(true);
-          resolve();
-        }, isMobile);
-      });
-
-      // 2. Wait for atlas and background to be ready
-      if (!preloadedBackgroundMNI || !askedAtlas) return;
-
-      if(currentlyLoadedAtlas.current != askedAtlas){
-        console.log("Loading atlas and background MNI", askedAtlas);
-        const atlas = atlasFiles[askedAtlas];
-        if (atlas) {
-          atlasRef.current = null;
-          const niiFile = "/atlas/nii/" + atlas.nii;
-          const altasNv = await NVImage.loadFromUrl({url: niiFile})
-          loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
+        if (resetGameCallbackRef) {
+            resetGameCallbackRef.current = resetGameState; // Set the callback in the ref
         }
-        currentlyLoadedAtlas.current = askedAtlas
-
-        // 3. Load atlas data
-        console.log("Loading atlas regions", askedAtlas);
-        await loadAtlasData();
-      }
+    }, [resetGameCallbackRef, tooltip]);
 
 
-      // 4. Start game
-      if (!cancelled) {
-        console.log("Starting game...");
-        startGame();
-        setIsLoading(false);
-      }
+    useEffect(() => {
+        const startGame = () => {
+            setIsGameRunning(true);
+            if (!atlasRef.current) return;
 
-      // 5. load region
-      if (askedRegion && !cancelled) {
-        console.log("Loading region...", askedRegion);
-        setHighlightedRegion(askedRegion)
-        highlightWrapper(askedRegion, true, gameMode === 'navigation');
-        if(atlasRef.current) showNotification( atlasRef.current.labels[askedRegion], true, {}, 1500);
-      }
-    };
-
-    doSequentialLoad();
-
-    return () => { cancelled = true; };
-  }, [niivue, canvasRef.current, preloadedBackgroundMNI, askedAtlas, viewerOptions, askedRegion]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && gameMode !== "navigation") {
-        e.preventDefault();
-        handleSpaceBar();
-      }
-      if (e.code === 'Escape' && isGameRunning && gameMode === 'navigation') {
-        e.preventDefault();
-        handleRecolorization()
-      }
-      if (e.key === 'Escape' && showStreakOverlay) {
-        setShowStreakOverlay(false)
-      }
-      if (e.key === 'Escape' && showTimeattackOverlay) {
-        setShowTimeattackOverlay(false)
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      // Remove event listener
-      document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isGameRunning])
-
-  const handleSpaceBar = () => {
-    if (guessButtonRef.current && !guessButtonRef.current.disabled && isGameRunning && gameMode !== 'navigation') {
-      validateGuess();
-    }
-  }
-
-
-  const loadAtlasData = async () => {
-    try {
-      if (!askedAtlas) return
-      const selectedAtlasFiles = atlasFiles[askedAtlas];
-      const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
-        let cmap_en: ColorMap|null = null;
-        if (askedAtlas === 'xtract') {
-          if(currentLanguage === 'en') {
-            cmap_en = jsonData; // Already in English
-          } else {
-            cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
-          }
+            startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal', blindMode).then((session) => {
+                if (session) {
+                    sessionToken.current = session.sessionToken;
+                    sessionId.current = session.sessionId;
+                    //console.log("Online session started:", session);
+                } else {
+                    console.warn("Failed to start online session, proceeding in offline mode.");
+                }
+            }).catch((error) => {
+                console.error("Error starting online session:", error);
+            }).finally(() => {
+                if (gameMode === 'time-attack') {
+                    if (!sessionToken.current) { // logic for local game
+                        // Shuffle validRegions and take the first 20 for Time Attack
+                        if (atlasRef.current && atlasRef.current.validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
+                            atlasRef.current.validRegions.sort(() => 0.5 - Math.random());
+                            atlasRef.current.validRegions = atlasRef.current.validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
+                            //console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
+                        } else if (atlasRef.current && atlasRef.current.validRegions.length > 0) {
+                            console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${atlasRef.current.validRegions.length} available regions.`);
+                            atlasRef.current.validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
+                        } else {
+                            console.error("No valid regions available for Time Attack!");
+                            setHeaderText(t('no_regions_available') || 'No regions available.');
+                            return; // Stop game initialization if no regions
+                        }
+                    }
+                    startTimer(); // Start timer for Time Attack
+                }
+                // Start the first round
+                if (gameMode != "navigation") selectNewTarget();
+                setForceDisplayUpdate((u) => u + 1);
+            })
         }
-        atlasRef.current = new AtlasImageProxy({
-          niivue, 
-          nvImage:niivue.volumes[1], 
-          labels:jsonData.labels, 
-          centers:jsonData.centers ? jsonData.centers : undefined, 
-          blindMode, 
-          viewerOptions,
-          cmap_en});
-        atlasRef.current.showShuffledRegions();
-      }
-    } catch (error) {
-      console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
-      setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
-    }
-  }
-
-  useEffect(() => {
-    currentStreakRef.current = currentStreak
-  }, [currentStreak])
-  useEffect(() => {
-    currentScoreRef.current = currentScore
-  }, [currentScore])
-  useEffect(() => {
-    currentAttemptsRef.current = currentAttempts
-  }, [currentAttempts])
-
-  const cleanHeader = () => {
-      setHeaderText("");
-      setHeaderScore("");
-      setHeaderStreak("");
-      setHeaderErrors("");
-      setHeaderTime("")
-  }
-
-  const resetGameState = () => {
-    currentTarget.current = null;
-    selectedVoxelProp.current = null;
-    currentConsecutiveErrorsRef.current = 0;
-    setCurrentAttempts(0); // Reset attempts for practice mode
-    setCurrentScore(0); // Reset score for Time Attack
-    setCurrentCorrects(0); // Reset correct count for Practice/Streak
-    setCurrentErrors(0); // Reset errors
-    setCurrentStreak(0); // Reset streak
-    usedRegions.current = []; // Reset used regions for time attack
-    setHighlightedRegion(null);
-    unHighlight();
-    setHeaderTextMode("normal"); // Reset header text mode
-    setHasEnded(false);
-    hasEndedRef.current = false; // Reset the ref value
-    setPastRegions([]);
-    setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
-    if (gameMode === 'navigation') {
-      setHeaderScore("");
-      setHeaderStreak("");
-      setHeaderErrors("");
-    } else if (gameMode === 'practice') {
-      setHeaderScore(t('correct_label') + ": 0");
-      setHeaderErrors("0");
-      setHeaderStreak("");
-    } else if (gameMode === 'streak') {
-      setHeaderScore(t('correct_label') + ": 0");
-      setHeaderErrors("0");
-      setHeaderStreak("0");
-    } else if (gameMode === 'time-attack') {
-      setHeaderScore(t('score_label') + ": 0");
-      setHeaderErrors("0");
-      setHeaderStreak("");
-    }
-    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-    atlasRef.current?.showShuffledRegions()
-    if (timerInterval.current) {
-      clearInterval(timerInterval.current);
-      timerInterval.current = null;
-    }
-    if (tooltip) {
-      setTooltip({ ...tooltip, visible: false });
-    }
-    // Hide overlays
-    setShowHelpOverlay(false);
-    setShowStreakOverlay(false);
-    setShowTimeattackOverlay(false);
-    // Reset Niivue view if needed
-    if (niivue && atlasRef.current) {
-      if(!isMobileView) defineNiiOptions(niivue, atlasRef.current, viewerOptions)
-      niivue.drawScene();
-    }
-  }
-
-  const startGame = () => {
-    setIsGameRunning(true);
-    resetGameState();
-    if(!atlasRef.current) return;
-    if(niivue) niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
-
-    startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal', blindMode).then((session) => {
-      if (session) {
-        sessionToken.current = session.sessionToken;
-        sessionId.current = session.sessionId;
-        //console.log("Online session started:", session);
-      } else {
-        console.warn("Failed to start online session, proceeding in offline mode.");
-      }
-    }).catch((error) => {
-      console.error("Error starting online session:", error);
-    }).finally(() => {
-      if (gameMode === 'time-attack') {
-        if (!sessionToken.current) { // logic for local game
-          // Shuffle validRegions and take the first 20 for Time Attack
-          if (atlasRef.current && atlasRef.current.validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
-            atlasRef.current.validRegions.sort(() => 0.5 - Math.random());
-            atlasRef.current.validRegions = atlasRef.current.validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
-            //console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
-          } else if (atlasRef.current && atlasRef.current.validRegions.length > 0) {
-            console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${atlasRef.current.validRegions.length} available regions.`);
-            atlasRef.current.validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
-          } else {
-            console.error("No valid regions available for Time Attack!");
-            setHeaderText(t('no_regions_available') || 'No regions available.');
-            return; // Stop game initialization if no regions
-          }
+        if (startGameCallbackRef) {
+            startGameCallbackRef.current = startGame; // Set the callback in the ref
         }
-        startTimer(); // Start timer for Time Attack
-      }
-      // Start the first round
-      if(gameMode != "navigation") selectNewTarget();
-      setForceDisplayUpdate((u) => u + 1);
-    })
-
-  }
+    }, [startGameCallbackRef, isLoggedIn, authToken, gameMode, askedAtlas, blindMode]);
 
 
-  function startTimer() {
-    startTime.current = Date.now();
-    refreshTimer()
-    timerInterval.current = setInterval(() => {
-      refreshTimer()
-    }, 500);
-  }
 
-  const manualClotureGameSession = async (): Promise<number> => {
-    try {
-      const response = await fetch('/api/cloture-game-session', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
-      });
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.message || "Unknown error");
-      }
-      const result = await response.json();
-      return result.finalScore;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  const refreshTimer = () => {
-    const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-    //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
-    const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
-    const seconds = (remaining % 60).toString().padStart(2, '0');
-    setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
-    
-    if (remaining <= 0 && !hasEndedRef.current) {
-      // Set ended flags synchronously first to prevent multiple calls
-      hasEndedRef.current = true;
-      setHasEnded(true);
-      if (isLoggedIn) {
-        manualClotureGameSession().then((finalScore) => {
-          endTimeAttack(finalScore);
-        }).catch((error) => {
-          endTimeAttack(currentScoreRef.current);
-        });
-      } else {
-        endTimeAttack(currentScoreRef.current);
-      }
-      setPastRegions(prev => [...prev, {
-        regionId: currentTarget.current!,
-        regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
-        isCorrect: false,
-        score: 0,
-        distance: -1,
-      }]);
-    }
-  }
-
-  function endTimeAttack(givenFinalScore: number) {
-    if (timerInterval.current) clearInterval(timerInterval.current);
-    const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = (elapsed % 60).toString().padStart(2, '0');
-
-    setFinalScore(givenFinalScore);
-    setFinalElapsed(elapsed);
-    setShowTimeattackOverlay(true); // Show Time Attack end overlay
-
-    setHeaderTextMode("success")
-
-    // Stop the game
-    setIsGameRunning(false)
-    setHasEnded(true);
-    hasEndedRef.current = true;
-    selectedVoxelProp.current = null;
-    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-  }
-
-  const selectNewTarget = async () => {
-    let regionId = -1;
-    if (isLoggedIn) { // network region fetching
-      try {
-        const response = await fetch('/api/get-next-region', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
-        });
-        if (!response.ok) {
-          const result = await response.json();
-          console.error("Failed to get next region:", result.message || "Unknown error");
-          return false;
-        }
-        const result = await response.json();
-        if (result.regionId >= 0) {
-          regionId = result.regionId;
-        } else {
-          console.warn("No valid region ID received from server.");
-          return false;
-        }
-      } catch (error) {
-        console.error("Error occured during next region fetching:", error);
-        return false;
-      }
-    } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
-      let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
-      if ((gameMode === 'time-attack' || gameMode === "streak") && availableRegions.length === 0) {
-        // if no region remaining, we'll take a random region
-        availableRegions = atlasRef.current.validRegions
-      }
-      if (availableRegions.length !== 0) {
-        regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        if ((gameMode === 'time-attack' || gameMode === 'streak')) {
-          usedRegions.current.push(regionId);
-        }
-      }
+    function startTimer() {
+        startTime.current = Date.now();
+        refreshTimer()
+        timerInterval.current = setInterval(() => {
+            refreshTimer()
+        }, 500);
     }
 
-    if (regionId === -1) { // did not found region
-      if (gameMode === 'time-attack') {
-        // TODO take into account server response = -1
+    const manualClotureGameSession = async (): Promise<number> => {
+        try {
+            const response = await fetch('/api/cloture-game-session', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
+            });
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.message || "Unknown error");
+            }
+            const result = await response.json();
+            return result.finalScore;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    const refreshTimer = () => {
         const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        // Calculate time bonus points
-        const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
-        // Apply blind mode multiplier to the entire score
-        const finalScore = Math.round(currentScoreRef.current = (timeBonus * (blindMode ? BLIND_MODE_MULTIPLIER : 1)));
-        endTimeAttack(finalScore);
-        return;
-      } else if (gameMode === 'streak') {
-        setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
-        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-        setShowStreakOverlay(true);
-        return;
-      } else {
-        // If no more regions in Practice, end the game
-        resetGameState(); // Or handle as an error in other modes
-        return;
-      }
-    }
-    currentTarget.current = regionId
-    if(atlasRef.current){
-      showNotification('new_target', true, { region: atlasRef.current.labels[currentTarget.current] }, 1500);
-    }
+        //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
+        const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+        const seconds = (remaining % 60).toString().padStart(2, '0');
+        setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
 
-    if (currentTarget.current) {
-      setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
-      selectedVoxelProp.current = null; // Reset selected voxel
-      if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
-      atlasRef.current?.showShuffledRegions()
-    }
-  }
-
-  const highlightWrapper = (regionId: number, moveToCenter: boolean, allowFibers: boolean = false) => {
-    if(atlasRef.current)
-      atlasRef.current.highlightRegion(regionId, moveToCenter, allowFibers);
-  }
-
-  const unHighlight = () =>{
-      atlasRef.current?.showShuffledRegions()
-  }
-
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Save the last touch event for later use in touchEnd
-    if (e.touches.length > 0) {
-      lastTouchEvent.current = e.touches[0];
-    }
-    handleCanvasInteraction(e);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Save the last touch event for later use in touchEnd
-    if (e.touches.length > 0) {
-      lastTouchEvent.current = e.touches[0];
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // If we have a saved touch event, create a synthetic mouse event
-    // and pass it to the handleCanvasInteraction function
-    if (lastTouchEvent.current && canvasRef.current && gameMode !== 'navigation') {
-      // Create a synthetic event using the last saved touch position
-      const syntheticEvent = {
-        ...e,
-        touches: [lastTouchEvent.current] as unknown as React.TouchList
-      } as React.TouchEvent<HTMLCanvasElement>;
-      // Call the mouse event handler with our synthetic event
-      handleCanvasInteraction(syntheticEvent);
-      // Clear the saved touch event
-    }
-    lastTouchEvent.current = null;
-  };
-
-  const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!niivue || !niivue.gl || !niivue.volumes[1] || !isGameRunning || !canvasRef.current || !atlasRef.current) return;
-    const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
-    if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
-      selectedVoxelProp.current = clickedRegionLocation;
-      if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-        setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
-        setHighlightedRegion(clickedRegionLocation.idx);
-        highlightWrapper(clickedRegionLocation.idx, false, true);
-        if(atlasRef.current) showNotification( atlasRef.current.labels[clickedRegionLocation.idx], true, {}, 1500);
-        if (tooltip) {
-          setTooltip({ ...tooltip, visible: false });
-        }
-        niivue.opts.crosshairColor = [1, 1, 1, 1];
-        niivue.drawScene();
-        window.history.pushState(null, '', `/singleplayer/navigation/${askedAtlas}/${clickedRegionLocation.idx}`);
-      } else {
-        if (guessButtonRef.current) {
-          guessButtonRef.current.disabled = false;
-        }
-        niivue.opts.crosshairColor = [1, 1, 1, 1];
-        niivue.drawScene();
-      }
-    } else {
-      selectedVoxelProp.current = null;
-      if (gameMode === 'navigation') {
-        setHeaderText(t('no_region_selected'));
-        setHighlightedRegion(null);
-        unHighlight();
-      } else {
-        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-      }
-    }
-  }
-
-  const validateGuess = async () => {
-    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !niivue) {
-      console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
-      return;
-    }
-    let guessSuccess = null;
-    let isEndgame = false;
-    let clickedRegion = null;
-    let scoreIncrement = 0;
-    let streak = 0;
-    let consecutiveErrors = 0;
-    let quitReason = "";
-    let givenFinalScore = 0;
-    let performHighlight = false;
-    let distance = Infinity;
-    if (isLoggedIn) {
-      try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch('/api/validate-region', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId: sessionId.current,
-            sessionToken: sessionToken.current,
-            coordinates: selectedVoxelProp.current
-          }),
-        });
-        const result = await response.json();
-        guessSuccess = result.isCorrect;
-        isEndgame = result.endgame;
-        clickedRegion = result.voxelValue;
-        scoreIncrement = result.scoreIncrement;
-        givenFinalScore = result.finalScore;
-        performHighlight = result.performHighlight;
-        distance = result.distance;
-        streak = result.streak;
-        consecutiveErrors = result.consecutiveErrors;
-        quitReason = result.quitReason;
-      } catch (error) {
-        console.error("Error occured during region validation:", error);
-        return false;
-      }
-    } else {
-      clickedRegion = selectedVoxelProp.current.idx;
-      guessSuccess = clickedRegion === currentTarget.current;
-      if (gameMode === 'time-attack') {
-        isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
-      }
-      if (gameMode === 'streak') {
-        if(guessSuccess){
-          currentConsecutiveErrorsRef.current = 0
-          isEndgame = false
-        } else {
-          currentConsecutiveErrorsRef.current += 1
-          if (atlasRef.current && atlasRef.current.centers) {
-            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
-          }
-          if (distance > MAX_STREAK_DISTANCE) {
-            isEndgame = true;
-            quitReason = "streak-too-far"
-          } else if (currentConsecutiveErrorsRef.current >= MAX_NUMBER_FAR_STREAK){
-            isEndgame = true;
-            quitReason = "streak-max-errors"
-          }
-        }
-        consecutiveErrors = currentConsecutiveErrorsRef.current;
-      }
-    }
-    let previousScore = currentScoreRef.current;
-    scoreIncrement = getUpdatedScore({ isEndgame, guessSuccess, scoreIncrement, 
-                                    performHighlight, distance, streak, consecutiveErrors, quitReason }).scoreIncrement
-
-    if (isEndgame) {
-      performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
-    }
-  }
-
-  const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity, streak = 0, consecutiveErrors = 0, quitReason = "" }:
-    { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number, streak: number, consecutiveErrors: number, quitReason: string}): { scoreIncrement: number } => {
-    if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
-      console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
-      return { scoreIncrement };
-    }
-    const targetName = atlasRef.current && atlasRef.current.labels?.[currentTarget.current] ? atlasRef.current.labels[currentTarget.current] : t('unknown_region');
-    const clickedRegionName = atlasRef.current && selectedVoxelProp.current.idx && atlasRef.current.labels?.[selectedVoxelProp.current.idx] ? atlasRef.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
-    const selectedVoxelSave = selectedVoxelProp.current;
-    if (guessSuccess) {
-      // Correct Guess
-      setCurrentCorrects((cs) => cs + 1); // Increment correct count       
-      if (gameMode === 'time-attack') {
-        // Add full points for correct guess - scoreIncrement already has blind mode multiplier applied if from server
-        const points = isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
-        setCurrentScore((curScore) => curScore + points);
-      }
-      if (gameMode === 'streak') {
-        if (isLoggedIn) {
-          // Online mode - use server values
-          setCurrentStreak((cs) => streak);
-          setCurrentScore((cs) => cs + scoreIncrement);
-          setCurrentErrors((cs) => consecutiveErrors);
-        } else {
-          const newStreak = currentStreakRef.current + 1;
-          setCurrentStreak(newStreak);
-          let pointsForGuess = 1; 
-          // Apply streak bonus if applicable
-          if (newStreak % STREAK_BONUS_AFTER === 0) {
-            pointsForGuess += STREAK_BONUS;
-          }
-          // Apply blind mode multiplier if applicable
-          if (blindMode) {
-            pointsForGuess = Math.floor(pointsForGuess * BLIND_MODE_MULTIPLIER);
-          }
-          // Update score
-          setCurrentScore((cs) => cs + pointsForGuess);
-          // Reset consecutive errors on correct guess
-          setCurrentErrors(0);
-          currentConsecutiveErrorsRef.current = 0;
-        }
-      }
-      if (gameMode === 'practice') {
-        setCurrentAttempts(0); // Reset attempts on correct guess
-      } else {
-        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-      }
-
-      setHeaderTextMode("success"); // Indicate correct guess visually
-      atlasRef.current?.showShuffledRegions()
-      selectedVoxelProp.current = null; // Reset selected voxel after guess
-      if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
-
-      // Move to the next target after a short delay to show feedback
-      if (!isEndgame) {
-        setTimeout(() => {
-          selectNewTarget();
-        }, 100);
-      }
-    } else { // Incorrect Guess
-      if (gameMode === 'practice') {
-        // Use i18next interpolation for the incorrect message
-        const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-        setHeaderText(incorrectMessage);
-        setHeaderTextMode("failure")
-
-        //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
-
-        //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
-        if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) || 
-            (isLoggedIn && performHighlight)) {
-          setHighlightedRegion(currentTarget.current); 
-          highlightWrapper(currentTarget.current, true); // Highlight the target region
-        }
-        // Increased timeout duration to make the incorrect message visible longer
-        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-        setTimeout(() => {
-          const findPrefix = t('find') || 'Find: ';
-          setHeaderText(findPrefix + targetName);
-          setHeaderTextMode("normal")
-        }, 3000); // Increased delay to 3 seconds
-      } else if (gameMode === "streak") {
-        if(!isLoggedIn){
-          const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-          setHeaderText(incorrectMessage);
-          setHeaderTextMode("failure");
-        } else {
-          // Use i18next interpolation for the incorrect message
-          const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-          setHeaderText(incorrectMessage);
-          setHeaderTextMode("failure");
-        }
-        if(isEndgame && quitReason === "streak-too-far"){
-          if(distance === Infinity){
-            showNotification('streak_ended', false);
-          } else {
-            showNotification('streak_ended_too_far', false, { distance: Math.round(distance) });
-          }
-        } else if(isEndgame && quitReason === "streak-max-errors") {
-          showNotification('streak_ended_max_errors', false, { maxErrors: MAX_NUMBER_FAR_STREAK });
-        } else if(!isEndgame) {
-            showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
-        }
-        // Automatically move to the next target after a short delay
-        if (!isEndgame) {
-          setTimeout(async () => {
-            await selectNewTarget();
-            setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-            setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-            setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
-          }, 100);
-        }
-      } else if (gameMode === 'time-attack') {
-        // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
-        if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
-          if (atlasRef.current.centers) {
-            // Calculate Euclidean distance between centers
-            distance = Infinity;
-            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
-
-            // Calculate score based on distance
-            if (distance <= MAX_PENALTY_DISTANCE) {
-              scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+        if (remaining <= 0 && !hasEndedRef.current) {
+            // Set ended flags synchronously first to prevent multiple calls
+            hasEndedRef.current = true;
+            setHasEnded(true);
+            if (isLoggedIn) {
+                manualClotureGameSession().then((finalScore) => {
+                    endTimeAttack(finalScore);
+                }).catch((error) => {
+                    endTimeAttack(currentScoreRef.current);
+                });
             } else {
-              scoreIncrement = 0; // No points for too far away
+                endTimeAttack(currentScoreRef.current);
             }
-            if(blindMode) {
-              scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER); // Apply blind mode multiplier
+            setPastRegions(prev => [...prev, {
+                regionId: currentTarget.current!,
+                regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+                isCorrect: false,
+                score: 0,
+                distance: -1,
+            }]);
+        }
+    }
+
+    function endTimeAttack(givenFinalScore: number) {
+        if (timerInterval.current) clearInterval(timerInterval.current);
+        const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = (elapsed % 60).toString().padStart(2, '0');
+
+        setFinalScore(givenFinalScore);
+        setFinalElapsed(elapsed);
+        setShowTimeattackOverlay(true); // Show Time Attack end overlay
+
+        setHeaderTextMode("success")
+
+        // Stop the game
+        setIsGameRunning(false)
+        setHasEnded(true);
+        hasEndedRef.current = true;
+        selectedVoxelProp.current = null;
+        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+    }
+
+    const selectNewTarget = async () => {
+        let regionId = -1;
+        if (isLoggedIn) { // network region fetching
+            try {
+                const response = await fetch('/api/get-next-region', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
+                });
+                if (!response.ok) {
+                    const result = await response.json();
+                    console.error("Failed to get next region:", result.message || "Unknown error");
+                    return false;
+                }
+                const result = await response.json();
+                if (result.regionId >= 0) {
+                    regionId = result.regionId;
+                } else {
+                    console.warn("No valid region ID received from server.");
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error occured during next region fetching:", error);
+                return false;
             }
-          } else {
-            console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
-            // Option: award minimal points or 0 if center data is missing
-            scoreIncrement = 0; // Award 0 points if centers are missing
-          }
+        } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
+            let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
+            if ((gameMode === 'time-attack' || gameMode === "streak") && availableRegions.length === 0) {
+                // if no region remaining, we'll take a random region
+                availableRegions = atlasRef.current.validRegions
+            }
+            if (availableRegions.length !== 0) {
+                regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+                if ((gameMode === 'time-attack' || gameMode === 'streak')) {
+                    usedRegions.current.push(regionId);
+                }
+            }
         }
 
-        setHeaderTextMode("failure"); // Indicate incorrect guess visually
-
-        // Automatically move to the next target after a short delay
-        if (!isEndgame) {
-          setTimeout(async () => {
-            await selectNewTarget();
-            setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-            setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-            setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
-          }, 100);
+        if (regionId === -1) { // did not found region
+            if (gameMode === 'time-attack') {
+                // TODO take into account server response = -1
+                const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+                // Calculate time bonus points
+                const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
+                // Apply blind mode multiplier to the entire score
+                const finalScore = Math.round(currentScoreRef.current = (timeBonus * (blindMode ? BLIND_MODE_MULTIPLIER : 1)));
+                endTimeAttack(finalScore);
+                return;
+            } else if (gameMode === 'streak') {
+                setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
+                setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+                setShowStreakOverlay(true);
+                return;
+            } else {
+                // If no more regions in Practice, end the game
+                resetGameCallbackRef.current(); // Or handle as an error in other modes
+                return;
+            }
         }
-      } else {
-        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-      }
-
-      selectedVoxelProp.current = null;
-      if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-
-      // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
-      if (gameMode !== 'practice') {
-        setForceDisplayUpdate((u) => u + 1);
-      }
-    }
-
-    // Add region to history
-    if (gameMode === 'time-attack' || gameMode == "streak") {
-      setPastRegions(prev => [...prev, {
-        regionId: currentTarget.current!,
-        regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
-        isCorrect: guessSuccess,
-        score: scoreIncrement,
-        distance: guessSuccess ? 0 : distance,
-        clickedPosition: selectedVoxelSave ? {
-          mm: [...selectedVoxelSave.mm],
-          vox: [...selectedVoxelSave.vox]
-        } : undefined,
-        regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
-        // TODO ADJUST FOR MULTIPLE CENTERS
-      }]);
-    }
-
-    return { scoreIncrement }
-  }
-
-  function performEndGame({ finalScore }: { finalScore: number }) {
-    if (gameMode === 'streak') {
-      // Apply blind mode multiplier consistently to the final streak score
-      setFinalStreak(currentStreakRef.current); 
-      setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-      setShowStreakOverlay(true);
-      setHeaderTextMode("failure"); // Indicate streak ended visually
-      setIsGameRunning(false);
-      setFinalScore(finalScore);
-    } else if (gameMode === 'time-attack') {
-      if (!isLoggedIn) {
-        const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        const timeBonus = (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ? BLIND_MODE_MULTIPLIER : 1);
-        finalScore = Math.round((currentScoreRef.current + timeBonus));
-      }
-      endTimeAttack(finalScore)
-    }
-    setHasEnded(true)
-    hasEndedRef.current = true;
-  }
-
-  const handleRecolorization = () => {
-    if (isGameRunning && gameMode === 'navigation' && niivue) {
-      atlasRef.current?.showShuffledRegions()
-      setHeaderText(t('click_to_identify'));
-      selectedVoxelProp.current = null;
-      setHighlightedRegion(null);
-      unHighlight();
-      if (tooltip) {
-        setTooltip({ ...tooltip, visible: false });
-      }
-      niivue.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
-      niivue.drawScene();
-    }
-  }
-
-  const updateGameDisplay = () => {
-    // Update labels based on mode
-    if (gameMode === 'time-attack' || gameMode === 'streak') {
-      setHeaderScore(t('score_label') + `: ${Math.round(currentScore)}`); // Display rounded score for Time Attack
-    } else if (gameMode === 'practice') {
-      setHeaderScore(t('correct_label') + `: ${currentCorrects}`); // Display correct count for other modes
-    }
-
-    if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
-      setHeaderErrors(`${currentErrors}`);
-    }
-    if (gameMode === 'streak') {
-      setHeaderStreak(`${currentStreak}`);
-    }
-
-    if (gameMode === 'navigation') {
-      setHeaderText(highlightedRegion
-        ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
-        : t('click_to_identify'));
-    } else if (currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
-      // Use 'find' translation key directly
-      const prefix = t('find') || 'Find: ';
-      // For time attack, display the current question number
-      if (gameMode === 'time-attack') {
-        setHeaderText(`${currentAttempts}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
-      } else {
-        setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
-      }
-    } else {
-      setHeaderText(''); // No region : cleanup
-    }
-  }
-
-  const configureMobileView = () => {
-    if (!niivue) return;
-    // Save current position
-    // Configure for single view based on orientation
-    niivue.opts.sliceType = mobileOrientationRef.current === "axial" 
-      ? niivue.sliceTypeAxial 
-      : mobileOrientationRef.current === "sagittal" 
-        ? niivue.sliceTypeSagittal 
-        : niivue.sliceTypeCoronal;
-    // Show only one slice
-    niivue.opts.multiplanarForceRender = false;
-
-    // Set layout to single view
-    niivue.setSliceType(niivue.opts.sliceType);
-    
-    // Restore position
-    niivue.drawScene();
-    setTimeout(() => updateScrollThumbFromNiivue(), 0);
-  };
-
-  useEffect(() => {
-    if (isMobileView && niivue) {
-      configureMobileView();
-    }
-  }, [mobileOrientation, isMobileView, niivue]);
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if(!niivue) return
-    // Right mouse button (button 2) for slice scrolling
-    if (e.button === 2) {
-      e.preventDefault();
-      const pos = niivue.getRelativeMousePosition(e.nativeEvent, e.currentTarget);
-      if (pos) {
-        const clickedTileIndex = niivue.tileIndex(pos.x, pos.y);
-        
-        // Determine which slice type based on the tile
-        let axisToModify = 2; // Default to Z-axis (axial)
-        
-        // Check the screenSlices array to determine the slice type for this tile
-        if (niivue.screenSlices && niivue.screenSlices[clickedTileIndex]) {
-          const sliceInfo = niivue.screenSlices[clickedTileIndex];
-          
-          switch (sliceInfo.axCorSag) {
-            case niivue.sliceTypeAxial:
-              axisToModify = 2; // Z-axis
-              break;
-            case niivue.sliceTypeCoronal:
-              axisToModify = 1; // Y-axis
-              break;
-            case niivue.sliceTypeSagittal:
-              axisToModify = 0; // X-axis
-              break;
-            default:
-              // For render view or other types, don't scroll
-              return;
-          }
+        currentTarget.current = regionId
+        if (atlasRef.current) {
+            showNotification('new_target', true, { region: atlasRef.current.labels[currentTarget.current] }, 1500);
         }
-        
-        setCurrentAxis(axisToModify); // Add this state variable
-        setLastSlicePosition(niivue.scene.crosshairPos[axisToModify]);
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-      }
-      // Disable context menu during drag
-      e.currentTarget.oncontextmenu = (e) => e.preventDefault();
-    } else {
-      // Handle left-click normally
-      handleCanvasInteraction(e);
-    }
-  };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if(!niivue) return
-    if (isDragging && dragStart) {
-      e.preventDefault();
-      // Calculate vertical movement
-      const deltaY = e.clientY - dragStart.y;
-      
-      // Calculate new slice position based on movement
-      const sliceIncrement = deltaY*dragSensitivity;
-      
-      // Update crosshair position to change slice
-      const currentPos = [...niivue.scene.crosshairPos];        
-      const newSlicePosition = lastSlicePosition + sliceIncrement;
-      
-      // Clamp the value between 0 and 1
-      currentPos[currentAxis] = Math.max(0, Math.min(1, newSlicePosition));
-      
-      // Set new crosshair position
-      niivue.setCrosshairColor([1, 1, 1, 1]);
-      niivue.scene.crosshairPos = new Float32Array(currentPos);
-      niivue.drawScene();
-    } else if (gameMode === 'navigation') {
-      // Handle normal mouse move for tooltips in navigation mode
-      handleCanvasMouseMove(e);
+        if (currentTarget.current) {
+            setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
+            selectedVoxelProp.current = null; // Reset selected voxel
+            if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
+            atlasRef.current?.showShuffledRegions()
+        }
     }
-  };
 
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 2 && isDragging) {
-      e.preventDefault();
-      setIsDragging(false);
-      setDragStart(null);
-      
-      // Re-enable context menu
-      e.currentTarget.oncontextmenu = null;
+    useEffect(() => {
+        const genericKeyPressCallback = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && showStreakOverlay) {
+                setShowStreakOverlay(false)
+            }
+            if (e.key === 'Escape' && showTimeattackOverlay) {
+                setShowTimeattackOverlay(false)
+            }
+        }
+        if (genericKeyPressCallbackRef) {
+            genericKeyPressCallbackRef.current = genericKeyPressCallback; // Set the callback in the ref
+        }
+    }, [genericKeyPressCallbackRef]);
+
+    useEffect(() => {
+        const canvasInteraction = (clickedRegionLocation: any) => {
+            if (!isGameRunning || !niivue || !atlasRef.current) return;
+            if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
+                selectedVoxelProp.current = clickedRegionLocation;
+                if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
+                    setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
+                    setHighlightedRegion(clickedRegionLocation.idx);
+                    highlightWrapper(clickedRegionLocation.idx, false, true);
+                    if (atlasRef.current) showNotification(atlasRef.current.labels[clickedRegionLocation.idx], true, {}, 1500);
+                    if (tooltip) {
+                        setTooltip({ ...tooltip, visible: false });
+                    }
+                    niivue.opts.crosshairColor = [1, 1, 1, 1];
+                    niivue.drawScene();
+                    window.history.pushState(null, '', `/singleplayer/navigation/${askedAtlas}/${clickedRegionLocation.idx}`);
+                } else {
+                    if (guessButtonRef.current) {
+                        guessButtonRef.current.disabled = false;
+                    }
+                    niivue.opts.crosshairColor = [1, 1, 1, 1];
+                    niivue.drawScene();
+                }
+            } else {
+                selectedVoxelProp.current = null;
+                if (gameMode === 'navigation') {
+                    setHeaderText(t('no_region_selected'));
+                    setHighlightedRegion(null);
+                    unHighlight();
+                } else {
+                    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+                }
+            }
+        }
+        if (canvasInteractionRef) {
+            canvasInteractionRef.current = canvasInteraction; // Set the callback in the ref
+        }
+    }, [isGameRunning, canvasInteractionRef]);
+
+    useEffect(() => {
+        const validateGuess = async () => {
+            if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
+                console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
+                return;
+            }
+            let guessSuccess = null;
+            let isEndgame = false;
+            let clickedRegion = null;
+            let scoreIncrement = 0;
+            let streak = 0;
+            let consecutiveErrors = 0;
+            let quitReason = "";
+            let givenFinalScore = 0;
+            let performHighlight = false;
+            let distance = Infinity;
+            if (isLoggedIn) {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    const response = await fetch('/api/validate-region', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            sessionId: sessionId.current,
+                            sessionToken: sessionToken.current,
+                            coordinates: selectedVoxelProp.current
+                        }),
+                    });
+                    const result = await response.json();
+                    guessSuccess = result.isCorrect;
+                    isEndgame = result.endgame;
+                    clickedRegion = result.voxelValue;
+                    scoreIncrement = result.scoreIncrement;
+                    givenFinalScore = result.finalScore;
+                    performHighlight = result.performHighlight;
+                    distance = result.distance;
+                    streak = result.streak;
+                    consecutiveErrors = result.consecutiveErrors;
+                    quitReason = result.quitReason;
+                } catch (error) {
+                    console.error("Error occured during region validation:", error);
+                    return false;
+                }
+            } else {
+                clickedRegion = selectedVoxelProp.current.idx;
+                guessSuccess = clickedRegion === currentTarget.current;
+                if (gameMode === 'time-attack') {
+                    isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
+                }
+                if (gameMode === 'streak') {
+                    if (guessSuccess) {
+                        currentConsecutiveErrorsRef.current = 0
+                        isEndgame = false
+                    } else {
+                        currentConsecutiveErrorsRef.current += 1
+                        if (atlasRef.current && atlasRef.current.centers) {
+                            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                        }
+                        if (distance > MAX_STREAK_DISTANCE) {
+                            isEndgame = true;
+                            quitReason = "streak-too-far"
+                        } else if (currentConsecutiveErrorsRef.current >= MAX_NUMBER_FAR_STREAK) {
+                            isEndgame = true;
+                            quitReason = "streak-max-errors"
+                        }
+                    }
+                    consecutiveErrors = currentConsecutiveErrorsRef.current;
+                }
+            }
+            let previousScore = currentScoreRef.current;
+            scoreIncrement = getUpdatedScore({
+                isEndgame, guessSuccess, scoreIncrement,
+                performHighlight, distance, streak, consecutiveErrors, quitReason
+            }).scoreIncrement
+
+            if (isEndgame) {
+                performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
+            }
+        }
+        if (validateGuessCallbackRef) {
+            validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
+        }
+    }, [validateGuessCallbackRef, isGameRunning, gameMode]);
+
+    const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity, streak = 0, consecutiveErrors = 0, quitReason = "" }:
+        { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number, streak: number, consecutiveErrors: number, quitReason: string }): { scoreIncrement: number } => {
+        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
+            console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
+            return { scoreIncrement };
+        }
+        const targetName = atlasRef.current && atlasRef.current.labels?.[currentTarget.current] ? atlasRef.current.labels[currentTarget.current] : t('unknown_region');
+        const clickedRegionName = atlasRef.current && selectedVoxelProp.current.idx && atlasRef.current.labels?.[selectedVoxelProp.current.idx] ? atlasRef.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
+        const selectedVoxelSave = selectedVoxelProp.current;
+        if (guessSuccess) {
+            // Correct Guess
+            setCurrentCorrects((cs) => cs + 1); // Increment correct count       
+            if (gameMode === 'time-attack') {
+                // Add full points for correct guess - scoreIncrement already has blind mode multiplier applied if from server
+                const points = isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
+                setCurrentScore((curScore) => curScore + points);
+            }
+            if (gameMode === 'streak') {
+                if (isLoggedIn) {
+                    // Online mode - use server values
+                    setCurrentStreak((cs) => streak);
+                    setCurrentScore((cs) => cs + scoreIncrement);
+                    setCurrentErrors((cs) => consecutiveErrors);
+                } else {
+                    const newStreak = currentStreakRef.current + 1;
+                    setCurrentStreak(newStreak);
+                    let pointsForGuess = 1;
+                    // Apply streak bonus if applicable
+                    if (newStreak % STREAK_BONUS_AFTER === 0) {
+                        pointsForGuess += STREAK_BONUS;
+                    }
+                    // Apply blind mode multiplier if applicable
+                    if (blindMode) {
+                        pointsForGuess = Math.floor(pointsForGuess * BLIND_MODE_MULTIPLIER);
+                    }
+                    // Update score
+                    setCurrentScore((cs) => cs + pointsForGuess);
+                    // Reset consecutive errors on correct guess
+                    setCurrentErrors(0);
+                    currentConsecutiveErrorsRef.current = 0;
+                }
+            }
+            if (gameMode === 'practice') {
+                setCurrentAttempts(0); // Reset attempts on correct guess
+            } else {
+                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
+            }
+
+            setHeaderTextMode("success"); // Indicate correct guess visually
+            atlasRef.current?.showShuffledRegions()
+            selectedVoxelProp.current = null; // Reset selected voxel after guess
+            if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
+
+            // Move to the next target after a short delay to show feedback
+            if (!isEndgame) {
+                setTimeout(() => {
+                    selectNewTarget();
+                }, 100);
+            }
+        } else { // Incorrect Guess
+            if (gameMode === 'practice') {
+                // Use i18next interpolation for the incorrect message
+                const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
+                setHeaderText(incorrectMessage);
+                setHeaderTextMode("failure")
+
+                //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
+
+                //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
+                if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) ||
+                    (isLoggedIn && performHighlight)) {
+                    setHighlightedRegion(currentTarget.current);
+                    highlightWrapper(currentTarget.current, true); // Highlight the target region
+                }
+                // Increased timeout duration to make the incorrect message visible longer
+                setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
+                setTimeout(() => {
+                    const findPrefix = t('find') || 'Find: ';
+                    setHeaderText(findPrefix + targetName);
+                    setHeaderTextMode("normal")
+                }, 3000); // Increased delay to 3 seconds
+            } else if (gameMode === "streak") {
+                if (!isLoggedIn) {
+                    const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
+                    setHeaderText(incorrectMessage);
+                    setHeaderTextMode("failure");
+                } else {
+                    // Use i18next interpolation for the incorrect message
+                    const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
+                    setHeaderText(incorrectMessage);
+                    setHeaderTextMode("failure");
+                }
+                if (isEndgame && quitReason === "streak-too-far") {
+                    if (distance === Infinity) {
+                        showNotification('streak_ended', false);
+                    } else {
+                        showNotification('streak_ended_too_far', false, { distance: Math.round(distance) });
+                    }
+                } else if (isEndgame && quitReason === "streak-max-errors") {
+                    showNotification('streak_ended_max_errors', false, { maxErrors: MAX_NUMBER_FAR_STREAK });
+                } else if (!isEndgame) {
+                    showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
+                }
+                // Automatically move to the next target after a short delay
+                if (!isEndgame) {
+                    setTimeout(async () => {
+                        await selectNewTarget();
+                        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+                        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+                        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
+                    }, 100);
+                }
+            } else if (gameMode === 'time-attack') {
+                // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
+                if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
+                    if (atlasRef.current.centers) {
+                        // Calculate Euclidean distance between centers
+                        distance = Infinity;
+                        distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+
+                        // Calculate score based on distance
+                        if (distance <= MAX_PENALTY_DISTANCE) {
+                            scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                        } else {
+                            scoreIncrement = 0; // No points for too far away
+                        }
+                        if (blindMode) {
+                            scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER); // Apply blind mode multiplier
+                        }
+                    } else {
+                        console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
+                        // Option: award minimal points or 0 if center data is missing
+                        scoreIncrement = 0; // Award 0 points if centers are missing
+                    }
+                }
+
+                setHeaderTextMode("failure"); // Indicate incorrect guess visually
+
+                // Automatically move to the next target after a short delay
+                if (!isEndgame) {
+                    setTimeout(async () => {
+                        await selectNewTarget();
+                        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+                        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
+                        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
+                    }, 100);
+                }
+            } else {
+                setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
+                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
+            }
+
+            selectedVoxelProp.current = null;
+            if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+
+            // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
+            if (gameMode !== 'practice') {
+                setForceDisplayUpdate((u) => u + 1);
+            }
+        }
+
+        // Add region to history
+        if (gameMode === 'time-attack' || gameMode == "streak") {
+            setPastRegions(prev => [...prev, {
+                regionId: currentTarget.current!,
+                regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+                isCorrect: guessSuccess,
+                score: scoreIncrement,
+                distance: guessSuccess ? 0 : distance,
+                clickedPosition: selectedVoxelSave ? {
+                    mm: [...selectedVoxelSave.mm],
+                    vox: [...selectedVoxelSave.vox]
+                } : undefined,
+                regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
+                // TODO ADJUST FOR MULTIPLE CENTERS
+            }]);
+        }
+
+        return { scoreIncrement }
     }
-  };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isGameRunning || !canvasRef.current || !niivue || gameMode !== 'navigation' || highlightedRegion !== null) {
-      setTooltip({ ...tooltip, visible: false });
-      return;
+    function performEndGame({ finalScore }: { finalScore: number }) {
+        if (gameMode === 'streak') {
+            // Apply blind mode multiplier consistently to the final streak score
+            setFinalStreak(currentStreakRef.current);
+            setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
+            setShowStreakOverlay(true);
+            setHeaderTextMode("failure"); // Indicate streak ended visually
+            setIsGameRunning(false);
+            setFinalScore(finalScore);
+        } else if (gameMode === 'time-attack') {
+            if (!isLoggedIn) {
+                const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
+                const timeBonus = (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ? BLIND_MODE_MULTIPLIER : 1);
+                finalScore = Math.round((currentScoreRef.current + timeBonus));
+            }
+            endTimeAttack(finalScore)
+        }
+        setHasEnded(true)
+        hasEndedRef.current = true;
     }
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.pageX;
-    const y = e.clientY - rect.top;
-    const pos = niivue.getNoPaddingNoBorderCanvasRelativeMousePosition(e.nativeEvent, niivue.gl.canvas);
 
-    // Check if mouse is within canvas bounds
-    if (x >= 0 && x < rect.width && y >= 0 && y < rect.height && pos && atlasRef.current && 
-        atlasRef.current.labels && niivue.uiData && niivue.uiData.dpr) {
-      const frac = niivue.canvasPos2frac([pos.x * niivue.uiData.dpr, pos.y * niivue.uiData.dpr]);
-      if (frac[0] >= 0) {
-        const mm = niivue.frac2mm(frac);
-        const vox = niivue.volumes[1].mm2vox(Array.from(mm));
-        const idx = Math.round(atlasRef.current.getValue(vox[0], vox[1], vox[2]));
-        if (isFinite(idx) && idx > 0 && idx in atlasRef.current.labels) { // Ensure valid region ID > 0
-          setTooltip({
-            visible: true, text: atlasRef.current.labels[idx] || t('unknown_region'),
-            x: e.pageX + 15, y: e.pageY + 15
-          });
+    const updateGameDisplay = () => {
+        // Update labels based on mode
+        if (gameMode === 'time-attack' || gameMode === 'streak') {
+            setHeaderScore(t('score_label') + `: ${Math.round(currentScore)}`); // Display rounded score for Time Attack
+        } else if (gameMode === 'practice') {
+            setHeaderScore(t('correct_label') + `: ${currentCorrects}`); // Display correct count for other modes
+        }
+
+        if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
+            setHeaderErrors(`${currentErrors}`);
+        }
+        if (gameMode === 'streak') {
+            setHeaderStreak(`${currentStreak}`);
+        }
+
+        if (gameMode === 'navigation') {
+            setHeaderText(highlightedRegion
+                ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
+                : t('click_to_identify'));
+        } else if (currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
+            // Use 'find' translation key directly
+            const prefix = t('find') || 'Find: ';
+            // For time attack, display the current question number
+            if (gameMode === 'time-attack') {
+                setHeaderText(`${currentAttempts}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+            } else {
+                setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
+            }
         } else {
-          setTooltip({ ...tooltip, visible: false });
+            setHeaderText(''); // No region : cleanup
         }
-      }
-    } else {
-      // Mouse is outside canvas, remove tooltip
-      setTooltip({ ...tooltip, visible: false });
     }
-  }
 
-  const handleScrollStart = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    if (!niivue || !scrollBarRef.current) return;
-    
-    isScrolling.current = true;
-    
-    // Get initial position
-    const clientY = 'touches' in e 
-      ? e.touches[0].clientY 
-      : e.clientY;
-    lastScrollPosition.current = clientY;
-    
-    // Update the scroll thumb position
-    updateScrollThumb(clientY);
-  };
 
-  // Handle scroll move
-  const handleScrollMove = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-    if (!isScrolling.current || !niivue || !scrollBarRef.current) return;
-    
-    const clientY = 'touches' in e 
-      ? e.touches[0].clientY 
-      : e.clientY;
-    
-    updateScrollThumb(clientY);
-    
-    // Prevent default to avoid page scrolling
-    e.preventDefault();
-  };
+    useEffect(() => {
+        updateGameDisplay();
+    }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
 
-  // Handle scroll end
-  const handleScrollEnd = () => {
-    isScrolling.current = false;
-  };
+    useEffect(() => {
+        if (!showStreakOverlay && !showTimeattackOverlay) return;
+        // Add a small delay before attaching the click handler
+        // to ensure the overlay is fully rendered
+        const timeoutId = setTimeout(() => {
+            const handleClick = (event: Event) => {
+                if (
+                    showStreakOverlay &&
+                    streakOverlayRef.current &&
+                    !streakOverlayRef.current.contains(event.target as Node)
+                ) {
+                    setShowStreakOverlay(false);
+                }
+                if (
+                    showTimeattackOverlay &&
+                    timeattackOverlayRef.current &&
+                    !timeattackOverlayRef.current.contains(event.target as Node)
+                ) {
+                    setShowTimeattackOverlay(false);
+                }
+            };
+            document.addEventListener('click', handleClick);
+            return () => {
+                document.removeEventListener('click', handleClick);
+            };
+        }, 300); // 300ms delay should be enough for the overlay to render
 
-  // Update scroll thumb position and slice
-  const updateScrollThumb = (clientY: number) => {
-    if (!scrollBarRef.current || !niivue) return;
-    
-    const scrollBar = scrollBarRef.current;
-    const rect = scrollBar.getBoundingClientRect();
-    
-    // Calculate relative position (0 to 1)
-    let relativePos = (clientY - rect.top) / rect.height;
-    relativePos = Math.max(0, Math.min(1, relativePos));
-    
-    // Update thumb position
-    if (scrollThumbRef.current) {
-      scrollThumbRef.current.style.top = `${relativePos * 100}%`;
-    }
-    
-    // Update slice position based on orientation
-    const currentPos = [...niivue.scene.crosshairPos];
-    let axisToModify = 2; // Z-axis (axial)
-    
-    if (mobileOrientation === "sagittal") {
-      axisToModify = 0; // X-axis
-    } else if (mobileOrientation === "coronal") {
-      axisToModify = 1; // Y-axis
-    }
-    
-    // For axial view, top of scrollbar = bottom of volume
-    if (mobileOrientation === "axial") {
-      relativePos = 1 - relativePos;
-    }
-    
-    currentPos[axisToModify] = relativePos;
-    
-    // Update crosshair position
-    niivue.setCrosshairColor([1, 1, 1, 1]);
-    niivue.scene.crosshairPos = new Float32Array(currentPos);
-    niivue.drawScene();
-  };
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [showStreakOverlay, showTimeattackOverlay])
 
-  const updateScrollThumbFromNiivue = () => {
-    if (!niivue || !scrollThumbRef.current || !scrollBarRef.current) return;
-    // Get current crosshair position
-    const currentPos = niivue.scene.crosshairPos;
-    // Determine which axis to use based on current orientation
-    let axisValue = 0;
-    if (mobileOrientationRef.current === "axial") {
-      axisValue = 1 - currentPos[2]; // Invert for axial view
-    } else if (mobileOrientationRef.current === "sagittal") {
-      axisValue = currentPos[0];
-    } else if (mobileOrientationRef.current === "coronal") {
-      axisValue = currentPos[1];
-    }
-    // Set the thumb position directly
-    scrollThumbRef.current.style.top = `${axisValue * 100}%`;
-  };
+    useEffect(() => {
+        if (!isMobileView) defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions)
+    }, [viewerOptions])
 
-  useEffect(() => {
-    updateGameDisplay();
-  }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
-
-  useEffect(() => {
-    if (!showStreakOverlay && !showTimeattackOverlay) return;
-    // Add a small delay before attaching the click handler
-    // to ensure the overlay is fully rendered
-    const timeoutId = setTimeout(() => {
-      const handleClick = (event: Event) => {
-        if (
-          showStreakOverlay &&
-          streakOverlayRef.current &&
-          !streakOverlayRef.current.contains(event.target as Node)
-        ) {
-          setShowStreakOverlay(false);
+    useLayoutEffect(() => {
+        if (niivue && canvasRef.current && !isLoading) {
+            // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
+            niivue.resizeListener();
         }
-        if (
-          showTimeattackOverlay &&
-          timeattackOverlayRef.current &&
-          !timeattackOverlayRef.current.contains(event.target as Node)
-        ) {
-          setShowTimeattackOverlay(false);
-        }
-      };
-      document.addEventListener('click', handleClick);
-      return () => {
-        document.removeEventListener('click', handleClick);
-      };
-    }, 300); // 300ms delay should be enough for the overlay to render
-    
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [showStreakOverlay, showTimeattackOverlay])
+    }, [niivue, isLoading]);
 
-  useEffect(() => {
-    if(!isMobileView) defineNiiOptions(niivue, atlasRef.current || undefined, viewerOptions)
-  }, [viewerOptions])
-  
-  useLayoutEffect(() => {
-  if (niivue && canvasRef.current && !isLoading) {
-      // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
-      niivue.resizeListener();
-    }
-  }, [niivue, isLoading]);
+    useEffect(() => {
+        setIsNavigationMode(gameMode === 'navigation');
+    }, [gameMode])
 
-  useEffect(()=>{
-    setIsNavigationMode(gameMode === 'navigation');
-  }, [gameMode])
+    const myTitle = gameMode ? `NeuroGuessr - ${t(gameMode + "_mode")}` : t('neuroguessr_singleplayer_title')
 
-  const myTitle = gameMode ? `NeuroGuessr - ${t(gameMode+"_mode")}` : t('neuroguessr_singleplayer_title')
+    return (
+        <>
+            <title>{myTitle}</title>
+            {isLoading && <LoadingScreen />}
+            {!isLoading && gameMode == "navigation" && <SearchBar />}
+            {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-  return (
-    <>
-      <title>{myTitle}</title>
-      {isLoading && <LoadingScreen />}
-      {!isLoading && gameMode == "navigation" && <SearchBar />}
-      {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
+            <BrainViewer />
 
-      <div className='canvas-and-scroll-container'>
-        <div className='canvas-and-info-container'>
-          {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
-            highlightPastRegion={highlightWrapper}/>}
-          <div className="canvas-container">
-            <canvas id="gl1"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd} 
-              onTouchMove={handleTouchMove}
-              onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
-          </div>
-        </div>
-        {isMobileView && (
-          <div className="mobile-controls">
-            {/* Custom scroll bar */}
-            <div 
-              className="mobile-scroll-bar"
-              ref={scrollBarRef}
-              onMouseDown={handleScrollStart}
-              onTouchStart={handleScrollStart}
-              onMouseMove={handleScrollMove}
-              onTouchMove={handleScrollMove}
-              onMouseUp={handleScrollEnd}
-              onTouchEnd={handleScrollEnd}
-              onMouseLeave={handleScrollEnd}
-            >
-              <div 
-                className="mobile-scroll-thumb"
-                ref={scrollThumbRef}
-              />
-            </div>
-            <div className="orientation-buttons">
-              <button 
-                className={`orientation-button ${mobileOrientation === "axial" ? "active" : ""}`}
-                onClick={() => setMobileOrientation("axial")}
-              >
-                Axial
-              </button>
-              <button 
-                className={`orientation-button ${mobileOrientation === "sagittal" ? "active" : ""}`}
-                onClick={() => setMobileOrientation("sagittal")}
-              >
-                Sagittal
-              </button>
-              <button 
-                className={`orientation-button ${mobileOrientation === "coronal" ? "active" : ""}`}
-                onClick={() => setMobileOrientation("coronal")}
-              >
-                Coronal
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-      {!isLoading && <div className="button-container">
-        <button
-            data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
-            className="home-button" onClick={() => { navigate("/welcome") }}>
-          <i className="fas fa-home"></i>
-        </button>
-        {isNavigationMode && <button className="return-button" disabled={highlightedRegion === null}
-            data-umami-event="recolorize button"
-            onClick={handleRecolorization}>{t("restore_color")}</button>}
-        {!isNavigationMode && <button className="guess-button" ref={guessButtonRef} 
-            data-umami-event="guess button" data-umami-event-guesssource={gameMode}
-            onClick={validateGuess}>
-          <span className="confirm-text">{t("confirm_guess")}</span>
-          <span className="space-text">{t("space_key")}</span></button>}
-        {hasEnded && 
-            <button className="restart-button" 
-                data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
-                onClick={() => { startGame() }}>
-              <i className="fas fa-sync-alt"></i>
-            </button>}
-      </div>}
+            {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
+                <div className="overlay-content" ref={streakOverlayRef}>
+                    <h2>{t("streak_ended_title")}</h2>
+                    <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalScore}</span></p>
+                    {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+                    <div className="overlay-buttons">
+                        <button
+                            className="eye-button"
+                            onClick={() => setShowStreakOverlay(false)}
+                            data-umami-event="show review button"
+                            data-umami-event-overlay="streak"
+                        >
+                            <i className="fas fa-eye"></i>
+                        </button>
+                        <button id="go-back-menu-button-streak"
+                            data-umami-event="go back button" data-umami-event-gobacksource="streak"
+                            className="home-button" onClick={() => { navigate("/welcome") }}>
+                            <i className="fas fa-home"></i>
+                        </button>
+                        <button id="restart-button-streak"
+                            data-umami-event="restart button" data-umami-event-restartsource="streak"
+                            className="restart-button" onClick={() => { startGameCallbackRef.current() }}>
+                            <i className="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>}
 
-      {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
-        <div className="overlay-content" ref={streakOverlayRef}>
-          <h2>{t("streak_ended_title")}</h2>
-          <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalScore}</span></p>
-          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
-          <div className="overlay-buttons">
-            <button 
-              className="eye-button" 
-              onClick={() => setShowStreakOverlay(false)}
-              data-umami-event="show review button" 
-              data-umami-event-overlay="streak"
-            >
-              <i className="fas fa-eye"></i>
-            </button>
-            <button id="go-back-menu-button-streak" 
-                data-umami-event="go back button" data-umami-event-gobacksource="streak" 
-                className="home-button" onClick={() => { navigate("/welcome") }}>
-              <i className="fas fa-home"></i>
-            </button>
-            <button id="restart-button-streak" 
-                data-umami-event="restart button" data-umami-event-restartsource="streak" 
-                className="restart-button" onClick={() => { startGame() }}>
-              <i className="fas fa-sync-alt"></i>
-            </button>
-          </div>
-        </div>
-      </div>}
+            {showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
+                <div className="overlay-content" ref={timeattackOverlayRef}>
+                    <h2>{t("time_attack_ended_title")}</h2>
+                    <p><span>{t("time_attack_ended_time")}</span>
+                        <span id="final-time-attack-time">{finalElapsed}</span></p>
+                    <p><span>{t("time_attack_ended_score")}</span></p>
+                    {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+                    <div className="score-progress-bar w3-light-grey w3-round">
+                        <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
+                            style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
+                        <span className="progress-label progress-label-med">{Math.round(MAX_POINTS_TIMEATTACK * 0.5)}</span>
+                        <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
+                    </div>
+                    <div className="overlay-buttons">
+                        <button
+                            className="eye-button"
+                            onClick={() => setShowTimeattackOverlay(false)}
+                            data-umami-event="show review button"
+                            data-umami-event-overlay="time-attack"
+                        >
+                            <i className="fas fa-eye"></i>
+                        </button>
+                        <button id="go-back-menu-button-time-attack" className="home-button"
+                            data-umami-event="go back button" data-umami-event-gobacksource="time-attack"
+                            onClick={() => { navigate("/welcome") }}>
+                            <i className="fas fa-home"></i>
+                        </button>
+                        <button id="restart-button-time-attack" className="restart-button"
+                            data-umami-event="restart button" data-umami-event-restartsource="time-attack"
+                            onClick={() => { setShowTimeattackOverlay(false); startGameCallbackRef.current() }}>
+                            <i className="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>}
 
-      {showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
-        <div className="overlay-content" ref={timeattackOverlayRef}>
-          <h2>{t("time_attack_ended_title")}</h2>
-          <p><span>{t("time_attack_ended_time")}</span>
-            <span id="final-time-attack-time">{finalElapsed}</span></p>
-          <p><span>{t("time_attack_ended_score")}</span></p>
-          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
-          <div className="score-progress-bar w3-light-grey w3-round">
-            <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
-              style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
-            <span className="progress-label progress-label-med">{Math.round(MAX_POINTS_TIMEATTACK * 0.5)}</span>
-            <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
-          </div>
-          <div className="overlay-buttons">
-            <button 
-              className="eye-button" 
-              onClick={() => setShowTimeattackOverlay(false)}
-              data-umami-event="show review button" 
-              data-umami-event-overlay="time-attack"
-            >
-              <i className="fas fa-eye"></i>
-            </button>
-            <button id="go-back-menu-button-time-attack" className="home-button" 
-                data-umami-event="go back button" data-umami-event-gobacksource="time-attack" 
-                onClick={() => { navigate("/welcome") }}>
-              <i className="fas fa-home"></i>
-            </button>
-            <button id="restart-button-time-attack" className="restart-button" 
-                data-umami-event="restart button" data-umami-event-restartsource="time-attack" 
-                onClick={() => { setShowTimeattackOverlay(false); startGame() }}>
-              <i className="fas fa-sync-alt"></i>
-            </button>
-          </div>
-        </div>
-      </div>}
-
-    </>
-  )
+        </>
+    )
 }
 
 

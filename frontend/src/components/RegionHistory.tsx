@@ -4,7 +4,7 @@ import { PastRegion } from "../types";
 import "./RegionHistory.css"
 
 const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
-        {pastRegions:PastRegion[], niivue: any, highlightPastRegion:(regionId:number, moveToCenter:boolean)=>void}) => {
+        {pastRegions:PastRegion[], niivue: any, highlightPastRegion:(regionId:number, moveToCenter:boolean, allowFibers?:boolean)=>void}) => {
     function removeOpenMeshes() {
         if (niivue.meshes.length > 0) {
         let mesh = niivue.meshes[0]

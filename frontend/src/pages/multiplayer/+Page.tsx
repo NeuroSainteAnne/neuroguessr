@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
-import "../singleplayer/GameScreen.css"
+import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
 import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types';
 import config from "../../../config.json"
