@@ -11,37 +11,63 @@ import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { io, Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
+import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 
-const MultiplayerGameScreen = () => {
+export function Page() {
+    const { pageContext } = useApp();
+    const { routeParams } = pageContext;
+    const cleanGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const startGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const resetGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const validateGuessCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { console.log("Not Initialized") });
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { console.log("Not Initialized") });
+    return (
+        <GameProvider gameMode="multiplayer" blindMode={false} 
+            cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
+            validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef}>
+            <MultiPlayer 
+                cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
+                validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef} />
+        </GameProvider>
+    )
+}
+
+const MultiPlayer = ({
+    cleanGameCallbackRef, startGameCallbackRef, resetGameCallbackRef,
+    validateGuessCallbackRef, genericKeyPressCallbackRef, canvasInteractionRef
+}: {
+    cleanGameCallbackRef: React.RefObject<() => void>,
+    startGameCallbackRef: React.RefObject<() => void>,
+    resetGameCallbackRef: React.RefObject<() => void>,
+    validateGuessCallbackRef: React.RefObject<() => void>,
+    genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
+    canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
+}) => {
   const { 
       t, authToken, isLoggedIn, userUsername, viewerOptions, 
       preloadedBackgroundMNI, currentLanguage, pageContext,
       userPublishToLeaderboard,
       setHeaderText, setHeaderTextMode, setHeaderTime, updateToken,
-      showNotification
+      showNotification, askedAtlas, setAskedAtlas
    } = useApp();
+  const { 
+    guessButtonRef, currentTarget, setPastRegions,
+    atlasRef, hasEnded, setHasEnded, hasEndedRef,
+    selectedVoxelProp, hasStarted, setHasStarted,
+    isConnected, setIsConnected
+   } = useGame()
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
   const socketRef = useRef<Socket | null>(null);
   const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
-  const [isLoadedNiivue, setIsLoadedNiivue] = useState<boolean>(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const guessButtonRef = useRef<HTMLButtonElement>(null);
   const [stepCountdown, setStepCountdown] = useState<number | null>(null);
   const countdownInterval = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const stepEndTime = useRef<number | null>(null);
-  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut: ColorMap | undefined, mapping : Record<number,number>, inverseMapping : Record<number,number>, blindMode:boolean}|undefined>(undefined);
-  const [loadedAtlas, setLoadedAtlas] = useState<any|undefined>();
-  const atlasRef = useRef<AtlasImageProxy|null>(null);
-  const [hasStarted, setHasStarted] = useState<boolean>(false);
-  const selectedVoxelProp = useRef<{mm: number[], vox: number[], idx: number | undefined} | null>(null);
-  const currentTarget = useRef<number | null>(null);
-  const lastTouchEvent = useRef<React.Touch | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const isFirstGuess = useRef<boolean>(true);
@@ -50,9 +76,6 @@ const MultiplayerGameScreen = () => {
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
-  const [hasEnded, setHasEnded] = useState<boolean>(false);
-  const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
-  const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
 
   const handleConnect = () => {
     setError(null);
@@ -72,36 +95,24 @@ const MultiplayerGameScreen = () => {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
 
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
-  const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
-  const [currentAxis, setCurrentAxis] = useState<number>(2)
-  const dragSensitivity = 0.01; // Adjust this value to control sensitivity
-
-  const [niivue, setNiivue] = useState<Niivue|null>(null);
-    useEffect(() => {
-      setNiivue(new Niivue({
-                logLevel: "error",
-                show3Dcrosshair: true,
-                dragMode: DRAG_MODE.none,
-                backColor: [0, 0, 0, 1],
-                crosshairColor: [1, 1, 1, 1],
-                doubleTouchTimeout: 0 // Disable double touch to avoid conflicts
-            }));
-      return () => { 
-        cleanHeader()
-        atlasRef.current = null;
-      };
-    }, []);
-
   const cleanHeader = () => {
     setHeaderText("");  
     setHeaderTextMode("")
     setHeaderTime("")
   }
+  
+  useEffect(() => {
+      const cleanGame = () => {
+          cleanHeader();
+      }
+
+      if (cleanGameCallbackRef) {
+          cleanGameCallbackRef.current = cleanGame; // Set the callback in the ref
+      }
+  }, [cleanGameCallbackRef]);
 
   const joinLobby = (inputCode: string) => {
-    if (connected) return;
+    if (isConnected) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
 
     setError(null);
@@ -148,7 +159,7 @@ const MultiplayerGameScreen = () => {
     });
     socket.on('lobby-users', (data) => {
       setLobbyUsers(data.users);
-      setConnected(true);
+      setIsConnected(true);
       if(!isLoggedIn){
         setIsAnonymous(true)
       }
@@ -237,6 +248,7 @@ const MultiplayerGameScreen = () => {
         }]);
       }
       setHasEnded(true)
+      hasEndedRef.current = true
       clearInterface()
       setHasWon(data.youWon)
       setShowMultiplayerOverlay(true)
@@ -279,7 +291,7 @@ const MultiplayerGameScreen = () => {
   };
 
   const tryLaunchGame = async () => {
-    if (socketRef.current && connected && askedSessionCode && askedSessionToken && isLoggedIn) {
+    if (socketRef.current && isConnected && askedSessionCode && askedSessionToken && isLoggedIn) {
       socketRef.current.emit('launch-game', {
         sessionCode: askedSessionCode,
         sessionToken: askedSessionToken,
@@ -325,55 +337,8 @@ const MultiplayerGameScreen = () => {
     updateGameDisplay();
   }, [parameters, currentAttempts, forceDisplayUpdate]);
 
-  const handleSpaceBar = () => {
-    if (guessButtonRef.current && !guessButtonRef.current.disabled && hasStarted && socketRef.current) {
-      validateGuess();
-    }
-  }
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        handleSpaceBar();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      // Remove event listener
-      document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [hasStarted])
-
-  const loadAtlasData = async () => {
-    try {
-      if (!askedAtlas) return
-      const selectedAtlasFiles = atlasFiles[askedAtlas.atlas];
-      const jsonData : ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
-      if (niivue && niivue.volumes.length > 1 && jsonData) {
-          let cmap_en: ColorMap|null = null;
-          if (askedAtlas.atlas === 'xtract') {
-            if(currentLanguage === 'en') {
-              cmap_en = jsonData; // Already in English
-            } else {
-              cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
-            }
-          }
-          atlasRef.current = new AtlasImageProxy({niivue, nvImage:niivue.volumes[1], 
-            labels: jsonData.labels, 
-            centers: jsonData.centers ? jsonData.centers : undefined,
-            proposedLut: askedAtlas.lut, proposedMapping: askedAtlas.mapping, proposedInverseMapping: askedAtlas.inverseMapping,
-            viewerOptions, blindMode: askedAtlas.blindMode, cmap_en});
-        atlasRef.current.showShuffledRegions();
-      }
-    } catch (error) {
-      console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
-      setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
-    }
-  }
-
   function clearInterface () {
-      setConnected(false);
+      setIsConnected(false);
       setHasStarted(false)
       if(countdownInterval.current) clearInterval(countdownInterval.current);
       countdownInterval.current = null;
@@ -403,7 +368,7 @@ const MultiplayerGameScreen = () => {
 
   useEffect(()=>{
     tryLaunchGame()
-  }, [askedSessionToken, connected])
+  }, [askedSessionToken, isConnected])
 
   const checkToken = async () => {
     updateToken(await refreshToken())
@@ -419,221 +384,39 @@ const MultiplayerGameScreen = () => {
     };
   }, [])
 
-  useEffect(()=>{
-    if(niivue && canvasRef.current && hasStarted){
-      initNiivue(niivue, canvasRef.current, viewerOptions, ()=>{
-          setIsLoadedNiivue(true);
-          niivue.opts.doubleTouchTimeout = 500; // Reactivate double touch timeout after loading
-      })
-      loadAtlasNii(niivue, preloadedBackgroundMNI);
-    }
-  }, [niivue, canvasRef.current, hasStarted])
 
   useEffect(() => {
-    if (askedAtlas) {
-        const atlas = atlasFiles[askedAtlas.atlas];
-        if(atlasRef.current) {
-          atlasRef.current.setBlindMode(askedAtlas.blindMode);
+      const validateGuess = async () => {
+        if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
+          console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
+          return;
         }
-        if (atlas) {
-          const niiFile = "/atlas/nii/" + atlas.nii;
-          NVImage.loadFromUrl({url: niiFile}).then((nvImage: any) => {
-              setLoadedAtlas(nvImage);
-          }).catch((error: any) => {
-              console.error("Error loading NIfTI file:", error);
-              setLoadedAtlas(undefined)
-          });
-        }
-    }
-  }, [askedAtlas, NVImage])
+        setHeaderTextMode("");
+        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
-  useEffect(() => {
-    if(niivue && preloadedBackgroundMNI && canvasRef.current && hasStarted){
-      loadAtlasNii(niivue, preloadedBackgroundMNI, loadedAtlas);
-      loadAtlasData();
-    }
-  }, [preloadedBackgroundMNI, isLoadedNiivue, niivue, hasStarted, canvasRef.current, loadedAtlas, askedAtlas])
-
-  useLayoutEffect(() => {
-    if (niivue && canvasRef.current && hasStarted) {
-      // Niivue expects the canvas to be sized by CSS, but sometimes needs a manual resize event
-      niivue.resizeListener();
-    }
-  }, [niivue, hasStarted, connected]);
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Save the last touch event for later use in touchEnd
-    if (e.touches.length > 0) {
-      lastTouchEvent.current = e.touches[0];
-    }
-    handleCanvasInteraction(e);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Save the last touch event for later use in touchEnd
-    if (e.touches.length > 0) {
-      lastTouchEvent.current = e.touches[0];
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // If we have a saved touch event, create a synthetic mouse event
-    // and pass it to the handleCanvasInteraction function
-    if (lastTouchEvent.current && canvasRef.current) {
-      // Create a synthetic event using the last saved touch position
-      const syntheticEvent = {
-        ...e,
-        touches: [lastTouchEvent.current] as unknown as React.TouchList
-      } as React.TouchEvent<HTMLCanvasElement>;
-      // Call the mouse event handler with our synthetic event
-      handleCanvasInteraction(syntheticEvent);
-      // Clear the saved touch event
-      lastTouchEvent.current = null;
-    }
-  };
-
-  const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!niivue || !niivue.gl || !niivue.volumes[1] || !atlasRef.current || !hasStarted || !canvasRef.current) return;
-    const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
-    if(clickedRegionLocation){
-      selectedVoxelProp.current = clickedRegionLocation;
-    }
-  }
-  
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if(!niivue) return
-    // Right mouse button (button 2) for slice scrolling
-    if (e.button === 2) {
-      e.preventDefault();
-      const pos = niivue.getRelativeMousePosition(e.nativeEvent, e.currentTarget);
-      if (pos) {
-        const clickedTileIndex = niivue.tileIndex(pos.x, pos.y);
-        
-        // Determine which slice type based on the tile
-        let axisToModify = 2; // Default to Z-axis (axial)
-        
-        // Check the screenSlices array to determine the slice type for this tile
-        if (niivue.screenSlices && niivue.screenSlices[clickedTileIndex]) {
-          const sliceInfo = niivue.screenSlices[clickedTileIndex];
-          
-          switch (sliceInfo.axCorSag) {
-            case niivue.sliceTypeAxial:
-              axisToModify = 2; // Z-axis
-              break;
-            case niivue.sliceTypeCoronal:
-              axisToModify = 1; // Y-axis
-              break;
-            case niivue.sliceTypeSagittal:
-              axisToModify = 0; // X-axis
-              break;
-            default:
-              // For render view or other types, don't scroll
-              return;
-          }
-        }
-        
-        setCurrentAxis(axisToModify); // Add this state variable
-        setLastSlicePosition(niivue.scene.crosshairPos[axisToModify]);
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
+        hasAnswered.current = true;
+        socketRef.current.emit('validate-guess', {
+          sessionCode: inputCode,
+          userName: isLoggedIn ? userUsername : anonUsername,
+          voxelProp: selectedVoxelProp.current,
+          ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
+          ...(isLoggedIn ? { userToken: authToken } : {})
+        });
       }
-      // Disable context menu during drag
-      e.currentTarget.oncontextmenu = (e) => e.preventDefault();
-    } else {
-      // Handle left-click normally
-      handleCanvasInteraction(e);
-    }
-  };
+      if (validateGuessCallbackRef) {
+          validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
+      }
+  }, [validateGuessCallbackRef, hasStarted, isAnonymous, userUsername, isLoggedIn, authToken]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if(!niivue) return
-    if (isDragging && dragStart) {
-      e.preventDefault();
-      // Calculate vertical movement
-      const deltaY = e.clientY - dragStart.y;
-      
-      // Calculate new slice position based on movement
-      const sliceIncrement = deltaY*dragSensitivity;
-      
-      // Update crosshair position to change slice
-      const currentPos = [...niivue.scene.crosshairPos];        
-      const newSlicePosition = lastSlicePosition + sliceIncrement;
-      
-      // Clamp the value between 0 and 1
-      currentPos[currentAxis] = Math.max(0, Math.min(1, newSlicePosition));
-      
-      // Set new crosshair position
-      niivue.setCrosshairColor([1, 1, 1, 1]);
-      niivue.scene.crosshairPos = new Float32Array(currentPos);
-      niivue.drawScene();
-    }
-  };
-
-  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (e.button === 2 && isDragging) {
-      e.preventDefault();
-      setIsDragging(false);
-      setDragStart(null);
-      
-      // Re-enable context menu
-      e.currentTarget.oncontextmenu = null;
-    }
-  };
-
-  const validateGuess = async () => {
-    if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
-      console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
-      return;
-    }
-    setHeaderTextMode("");
-    if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-
-    hasAnswered.current = true;
-    socketRef.current.emit('validate-guess', {
-      sessionCode: inputCode,
-      userName: isLoggedIn ? userUsername : anonUsername,
-      voxelProp: selectedVoxelProp.current,
-      ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
-      ...(isLoggedIn ? { userToken: authToken } : {})
-    });
-  }
-
-  const highlightWrapper = (regionId: number, moveToCenter: boolean) => {
-    if(atlasRef.current) atlasRef.current.highlightRegion(regionId, moveToCenter);
-  }
-
-  useEffect(() => {
-    if (highlightedRegion) {
-      highlightWrapper(highlightedRegion, true);
-    }
-  }, [highlightedRegion]);
 
   const title = t("neuroguessr_multiplayer_title")
   return (
     <>
       <title>{title}</title>
       
-      <div className='canvas-and-info-container'>
-        {hasEnded && <RegionHistory pastRegions={pastRegions} highlightPastRegion={highlightWrapper} niivue={niivue} />}
-        <div className="canvas-container" style={{display:(((hasStarted && connected) || hasEnded)?"block":"none")}}>
-          <canvas id="gl1"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd} 
-            onTouchMove={handleTouchMove} ref={canvasRef}></canvas>
-        </div>
-      </div>
-      <div style={{display:((hasStarted && connected)?"block":"none")}}>
-        <div className="button-container">
-          <button className="guess-button" ref={guessButtonRef} onClick={validateGuess} data-umami-event="multiplayer guess button">
-            <span className="confirm-text">{t("confirm_guess")}</span>
-            <span className="space-text">{t("space_key")}</span>
-          </button>
-        </div>
-      </div>
-      {(isLoggedIn || config.activateAnonymousMode) && !connected && !askedSessionToken  && <>
+      <BrainViewer />
+      
+      {(isLoggedIn || config.activateAnonymousMode) && !isConnected && !askedSessionToken  && <>
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
           <input
@@ -660,7 +443,7 @@ const MultiplayerGameScreen = () => {
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
           .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
       </>}
-      {(isLoggedIn || isAnonymous) && connected && <div style={{ marginTop: 24 }}>
+      {(isLoggedIn || isAnonymous) && isConnected && <div style={{ marginTop: 24 }}>
         <h4>{t("players_in_lobby")}</h4>
         <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
           {[...lobbyUsers]
@@ -735,5 +518,3 @@ const MultiplayerGameScreen = () => {
     </>
   )
 }
-
-export default MultiplayerGameScreen

@@ -160,7 +160,6 @@ function SinglePlayer({
     const {
         setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
         guessButtonRef, atlasRef, isGameRunning, highlightedRegion, highlightWrapper, setHighlightedRegion, unHighlight,
-        setIsNavigationMode,
         niivue, niivueRef, canvasRef, isLoading,
     } = useGame();
 
@@ -258,7 +257,7 @@ function SinglePlayer({
             setIsGameRunning(true);
             if (!atlasRef.current) return;
 
-            startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas || 'aal', blindMode).then((session) => {
+            startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas?.atlas || 'aal', blindMode).then((session) => {
                 if (session) {
                     sessionToken.current = session.sessionToken;
                     sessionId.current = session.sessionId;
@@ -877,10 +876,6 @@ function SinglePlayer({
             niivue.resizeListener();
         }
     }, [niivue, isLoading]);
-
-    useEffect(() => {
-        setIsNavigationMode(gameMode === 'navigation');
-    }, [gameMode])
 
     const myTitle = gameMode ? `NeuroGuessr - ${t(gameMode + "_mode")}` : t('neuroguessr_singleplayer_title')
 

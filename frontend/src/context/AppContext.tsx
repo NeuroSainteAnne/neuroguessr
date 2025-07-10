@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
-import type { AtlasRegion, DisplayOptions, CustomTokenPayload } from '../types';
+import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap } from '../types';
 import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
@@ -48,7 +48,7 @@ type AppContextType = {
 
   // Atlas data
   atlasRegions: AtlasRegion[];
-  askedAtlas: string | null;
+  askedAtlas: {atlas: string, lut?: ColorMap, mapping? : Record<number,number>, inverseMapping? : Record<number,number>, blindMode?: boolean} | undefined;
   askedRegion: number | null;
   
   // Niivue module
@@ -71,7 +71,7 @@ type AppContextType = {
   setHeaderStreak: (streak: string) => void;
   setHeaderTime: (time: string) => void;
   setViewerOption: (options: DisplayOptions) => void;
-  setAskedAtlas: (atlas: string | null) => void;
+  setAskedAtlas: (atlas: {atlas: string, lut?: ColorMap, mapping? : Record<number,number>, inverseMapping? : Record<number,number>, blindMode?: boolean} | undefined) => void;
   setAskedRegion: (region: number | null) => void;
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
@@ -126,7 +126,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Atlas data
   const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([]);
-  const [askedAtlas, setAskedAtlas] = useState<string | null>(null);
+  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut?: ColorMap, mapping?: Record<number,number>, inverseMapping?: Record<number,number>, blindMode?:boolean}|undefined>(undefined);
   const [askedRegion, setAskedRegion] = useState<number | null>(null);
 
   // Mobile view state
@@ -170,14 +170,14 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // Load requested atlas when it changes
   useEffect(() => {
     if (askedAtlas && nvimageModule) {
-      const atlas = atlasFiles[askedAtlas];
+      const atlas = atlasFiles[askedAtlas.atlas];
       if (atlas) {
         const niiFile = "/atlas/nii/" + atlas.nii;
         nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
           setPreloadedAtlas(nvImage);
         }).catch((error: any) => {
           console.error("Error loading NIfTI file:", error);
-          showNotification('error_loading_atlas', false, { atlas: askedAtlas });
+          showNotification('error_loading_atlas', false, { atlas: askedAtlas.atlas });
           setPreloadedAtlas(null);
         });
       }

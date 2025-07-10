@@ -14,8 +14,8 @@ export const BrainViewer = () => {
         handleCanvasMouseMove, canvasRef, guessButtonRef, scrollBarRef, scrollThumbRef,
         handleScrollStart, handleScrollMove, handleScrollEnd,
         mobileOrientation, setMobileOrientation,
-        isLoading, hasEnded, isNavigationMode, highlightedRegion, handleRecolorization,
-        validateGuessHandler, startGameHandler, gameMode, pastRegions
+        isLoading, hasEnded, highlightedRegion, handleRecolorization,
+        validateGuessHandler, startGameHandler, gameMode, pastRegions, hasStarted, isConnected
     } = useGame();
     const { t, isMobileView } = useApp();
 
@@ -25,7 +25,7 @@ export const BrainViewer = () => {
                 <div className='canvas-and-info-container'>
                     {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
                         highlightPastRegion={highlightWrapper} />}
-                    <div className="canvas-container">
+                    <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (hasStarted && isConnected) || hasEnded)?"block":"none")}}>
                         <canvas id="gl1"
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
@@ -78,16 +78,24 @@ export const BrainViewer = () => {
                     </div>
                 )}
             </div>
-            {!isLoading && <div className="button-container">
+            {gameMode === "multiplayer" && hasStarted && isConnected && 
+                <div className="button-container">
+                <button className="guess-button" ref={guessButtonRef} onClick={validateGuessHandler} data-umami-event="multiplayer guess button">
+                    <span className="confirm-text">{t("confirm_guess")}</span>
+                    <span className="space-text">{t("space_key")}</span>
+                </button>
+                </div>
+            }
+            {gameMode !== "multiplayer" && !isLoading && <div className="button-container">
                 <button
                     data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
                     className="home-button" onClick={() => { navigate("/welcome") }}>
                     <i className="fas fa-home"></i>
                 </button>
-                {isNavigationMode && <button className="return-button" disabled={highlightedRegion === null}
+                {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
                     data-umami-event="recolorize button"
                     onClick={handleRecolorization}>{t("restore_color")}</button>}
-                {!isNavigationMode && <button className="guess-button" ref={guessButtonRef}
+                {gameMode !== 'navigation' && <button className="guess-button" ref={guessButtonRef}
                     data-umami-event="guess button" data-umami-event-guesssource={gameMode}
                     onClick={validateGuessHandler}>
                     <span className="confirm-text">{t("confirm_guess")}</span>
@@ -110,15 +118,16 @@ export function GameProvider({
     tooltip, setTooltip,
 }:
     {
-        children: React.ReactNode, gameMode: string, blindMode: boolean, routedAtlas: string | undefined, routedRegion: number | undefined
+        children: React.ReactNode, gameMode: string, blindMode: boolean, 
+        routedAtlas?: string | undefined, routedRegion?: number | undefined
         cleanGameCallbackRef: React.RefObject<() => void>,
         startGameCallbackRef: React.RefObject<() => void>,
         resetGameCallbackRef: React.RefObject<() => void>,
         validateGuessCallbackRef: React.RefObject<() => void>,
         genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
         canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
-        tooltip: { visible: boolean; text: string; x: number; y: number; }
-        setTooltip: React.Dispatch<React.SetStateAction<{ visible: boolean; text: string; x: number; y: number; }>>
+        tooltip?: { visible: boolean; text: string; x: number; y: number; }
+        setTooltip?: React.Dispatch<React.SetStateAction<{ visible: boolean; text: string; x: number; y: number; }>>
     }) {
     const { t, currentLanguage, askedAtlas, askedRegion,
         preloadedBackgroundMNI, viewerOptions,
@@ -130,8 +139,9 @@ export function GameProvider({
     const [hasEnded, setHasEnded] = useState<boolean>(false);
     const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
     const hasEndedRef = useRef<boolean>(false); // Added ref to track ending state synchronously
+    const [hasStarted, setHasStarted] = useState<boolean>(false);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
-    const [isNavigationMode, setIsNavigationMode] = useState<boolean>(false);
+    const [isConnected, setIsConnected] = useState(false);
     const atlasRef = useRef<AtlasImageProxy | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const currentlyLoadedAtlas = useRef<any>(null);
@@ -162,7 +172,7 @@ export function GameProvider({
 
     useEffect(() => {
         if (!niivue) {
-            if (routedAtlas) setAskedAtlas(routedAtlas);
+            if (routedAtlas) setAskedAtlas({atlas:routedAtlas, blindMode:blindMode});
             if (routedRegion) setAskedRegion(routedRegion);
             console.log("Creating Niivue...");
             const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
@@ -307,19 +317,19 @@ export function GameProvider({
             // 2. Wait for atlas and background to be ready
             if (!preloadedBackgroundMNI || !askedAtlas) return;
 
-            if (currentlyLoadedAtlas.current != askedAtlas) {
-                console.log("Loading atlas and background MNI", askedAtlas);
-                const atlas = atlasFiles[askedAtlas];
+            if (currentlyLoadedAtlas.current != askedAtlas?.atlas) {
+                console.log("Loading atlas and background MNI", askedAtlas?.atlas);
+                const atlas = atlasFiles[askedAtlas?.atlas];
                 if (atlas) {
                     atlasRef.current = null;
                     const niiFile = "/atlas/nii/" + atlas.nii;
                     const altasNv = await NVImage.loadFromUrl({ url: niiFile })
                     loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
                 }
-                currentlyLoadedAtlas.current = askedAtlas
+                currentlyLoadedAtlas.current = askedAtlas?.atlas
 
                 // 3. Load atlas data
-                console.log("Loading atlas regions", askedAtlas);
+                console.log("Loading atlas regions", askedAtlas?.atlas);
                 await loadAtlasData();
             }
 
@@ -355,11 +365,11 @@ export function GameProvider({
     const loadAtlasData = async () => {
         try {
             if (!askedAtlas) return
-            const selectedAtlasFiles = atlasFiles[askedAtlas];
+            const selectedAtlasFiles = atlasFiles[askedAtlas?.atlas];
             const jsonData: ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
             if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
                 let cmap_en: ColorMap | null = null;
-                if (askedAtlas === 'xtract') {
+                if (askedAtlas?.atlas === 'xtract') {
                     if (currentLanguage === 'en') {
                         cmap_en = jsonData; // Already in English
                     } else {
@@ -371,22 +381,21 @@ export function GameProvider({
                     nvImage: niivue.volumes[1],
                     labels: jsonData.labels,
                     centers: jsonData.centers ? jsonData.centers : undefined,
-                    blindMode,
+                    blindMode: askedAtlas?.blindMode || false,
                     viewerOptions,
-                    cmap_en
+                    cmap_en,
+                    proposedLut: askedAtlas?.lut || undefined,
+                    proposedMapping: askedAtlas?.mapping || undefined,
+                    proposedInverseMapping: askedAtlas?.inverseMapping || undefined,
+
                 });
                 atlasRef.current.showShuffledRegions();
             }
         } catch (error) {
-            console.error(`Failed to load atlas data for ${askedAtlas}:`, error);
-            setHeaderText(t('error_loading_data', { atlas: askedAtlas }));
+            console.error(`Failed to load atlas data for ${askedAtlas?.atlas}:`, error);
+            setHeaderText(t('error_loading_data', { atlas: askedAtlas?.atlas }));
         }
     }
-
-    useEffect(() => {
-        setIsNavigationMode(gameMode === 'navigation');
-    }, [gameMode])
-
 
     const handleRecolorization = () => {
         if (isGameRunning && gameMode === 'navigation' && niivue) {
@@ -688,6 +697,9 @@ export function GameProvider({
     const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!niivue || !niivue.gl || !niivue.volumes[1] || !canvasRef.current || !atlasRef.current) return;
         const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
+        if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
+            selectedVoxelProp.current = clickedRegionLocation;
+        }
         canvasInteractionRef.current(clickedRegionLocation)
     }
 
@@ -698,9 +710,10 @@ export function GameProvider({
             isLoading, setIsLoading,
             hasEnded, setHasEnded,
             hasEndedRef,
+            hasStarted, setHasStarted,
+            isConnected, setIsConnected,
             isGameRunning, setIsGameRunning,
             selectedRegion, setSelectedRegion,
-            isNavigationMode, setIsNavigationMode,
             atlasRef,
             canvasRef,
             currentlyLoadedAtlas,
@@ -756,12 +769,14 @@ type GameContextType = {
     hasEnded: boolean,
     setHasEnded: React.Dispatch<React.SetStateAction<boolean>>,
     hasEndedRef: React.RefObject<boolean>;
+    hasStarted: boolean;
+    setHasStarted: React.Dispatch<React.SetStateAction<boolean>>;
+    isConnected: boolean;
+    setIsConnected: React.Dispatch<React.SetStateAction<boolean>>;
     isGameRunning: boolean;
     setIsGameRunning: React.Dispatch<React.SetStateAction<boolean>>;
     selectedRegion: any;
     setSelectedRegion: React.Dispatch<React.SetStateAction<any>>;
-    isNavigationMode: boolean;
-    setIsNavigationMode: React.Dispatch<React.SetStateAction<boolean>>;
     atlasRef: React.RefObject<AtlasImageProxy | null>;
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
     currentlyLoadedAtlas: React.RefObject<any>;
