@@ -464,7 +464,10 @@ export function GameProvider({
             e.preventDefault();
             const pos = niivue.getRelativeMousePosition(e.nativeEvent, e.currentTarget);
             if (pos) {
-                const clickedTileIndex = niivue.tileIndex(pos.x, pos.y);
+                const x = pos.x * (niivue.uiData.dpr || 1);
+                const y = pos.y * (niivue.uiData.dpr || 1);
+                const clickedTileIndex = niivue.tileIndex(x, y);
+                console.log(pos, clickedTileIndex)
 
                 // Determine which slice type based on the tile
                 let axisToModify = 2; // Default to Z-axis (axial)
