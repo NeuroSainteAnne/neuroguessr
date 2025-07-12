@@ -23,7 +23,7 @@ export const BrainViewer = () => {
         <>
             <div className='canvas-and-scroll-container'>
                 <div className='canvas-and-info-container'>
-                    {hasEnded && (gameMode == "time-attack" || gameMode == "streak") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
+                    {hasEnded && (gameMode == "time-attack" || gameMode == "streak" || gameMode == "multiplayer") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
                         highlightPastRegion={highlightWrapper} />}
                     <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (hasStarted && isConnected) || hasEnded)?"block":"none")}}>
                         <canvas id="gl1"
