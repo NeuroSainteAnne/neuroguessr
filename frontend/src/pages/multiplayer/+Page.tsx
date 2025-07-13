@@ -476,7 +476,8 @@ const MultiPlayer = ({
         {parameters && !isGameRunning && "FOR v2" && <><h4>{t("parameters")}</h4>
           {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
           {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
-          {!parameters?.commands &&<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+          {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+          {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
           {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
           {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}

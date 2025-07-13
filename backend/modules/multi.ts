@@ -744,6 +744,7 @@ async function handleUpdateParameters(data: {
     } else {
       gameRef.parameters.commands = undefined
     }
+    gameRef.parameters.totalDuration = gameRef.parameters.commands?.reduce((total, command) => total + (command.duration || 0), 0) || 0;
     
     // Broadcast updated parameters to all lobby members
     broadcastToSession(sessionCode, 'parameters-updated', { 

@@ -16,6 +16,7 @@ export interface MultiplayerParametersType {
   gameoverOnError: boolean;
   blindMode: boolean;
   commands?: ExternalGameCommands[];
+  totalDuration?: number;
 }
 
 export interface MultiplayerGame {

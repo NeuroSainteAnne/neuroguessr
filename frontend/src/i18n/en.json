@@ -210,6 +210,7 @@
   "parameters_manual_commands": "Custom parameters",
   "number_regions": "Number of regions",
   "duration_per_region": "Duration per region (sec)",
+  "parameters_total_duration": "Total duration",
   "gameover_first_error": "Game over on first error",
   "gameover_first_error_activated": "Game over on first error activated",
   "start_game_button": "Start Game",

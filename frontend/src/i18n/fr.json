@@ -209,6 +209,7 @@
   "parameters_manual_commands": "Paramétrage manuel",
   "number_regions": "Nombre de régions",
   "duration_per_region": "Durée par région (sec)",
+  "parameters_total_duration": "Durée totale",
   "gameover_first_error": "Fin de partie à la première erreur",
   "gameover_first_error_activated": "Fin de partie à la première erreur: activé",
   "advanced_settings": "Paramétrage avancé",
