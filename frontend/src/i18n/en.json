@@ -214,6 +214,7 @@
   "gameover_first_error": "Game over on first error",
   "gameover_first_error_activated": "Game over on first error activated",
   "start_game_button": "Start Game",
+  "show_advanced_settings": "Show Advanced Settings",
   "advanced_settings": "Advanced settings",
   "validate_settings": "Validate parameters",
   "select_new_atlas": "Change Atlas",

@@ -340,7 +340,7 @@ const MultiplayerConfigScreen = () => {
                                 className="advanced-settings-show"
                                 onClick={() => { handleShowAdvancedBox() }}
                             >
-                                {showAdvancedSettings ? "Hide Advanced Settings" : "Show Advanced Settings"}
+                                {t("show_advanced_settings")}
                             </button>}
                         </section></>}
                         {showAdvancedSettings && (<div className="advanced-settings-overall">
