@@ -194,6 +194,7 @@ const MultiPlayer = ({
             inverseMapping: data.command.inverseMapping || undefined,
             blindMode: data.command.blindMode || false
           })
+          cleanHeader();
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
       } else if (data.command.action === 'guess') {
@@ -473,10 +474,11 @@ const MultiPlayer = ({
           }
         </ul>
         {parameters && !isGameRunning && "FOR v2" && <><h4>{t("parameters")}</h4>
-          {parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
-          <div>{t("number_regions")}: {parameters.regionsNumber}</div>
-          <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
-          {parameters?.blindMode && <div>{t("blind_mode")}</div>}
+          {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
+          {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
+          {!parameters?.commands &&<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+          {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
+          {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
           {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
         </>}
       </div>}

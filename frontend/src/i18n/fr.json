@@ -199,15 +199,22 @@
 
 
   "beta_version_login_message": "ATTENTION : ce site est en version de développement expérimental. Votre compte ainsi que vos résultats peuvent être supprimés à tout moment",
+
+  "*****MULTIPLAYER CREATE*****":"",
   "game_code": "Votre code de jeu à partager",
   "players_in_lobby": "Joueurs en salle d'attente",
   "wait_players_in_lobby": "Inviter les joueurs et attendre leur arrivée",
   "parameters": "Paramètres",
   "parameters_atlas": "Atlas",
+  "parameters_manual_commands": "Paramétrage manuel",
   "number_regions": "Nombre de régions",
   "duration_per_region": "Durée par région (sec)",
   "gameover_first_error": "Fin de partie à la première erreur",
   "gameover_first_error_activated": "Fin de partie à la première erreur: activé",
+  "advanced_settings": "Paramétrage avancé",
+  "validate_settings": "Valider les paramètres",
+  
+  "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",
   "multiplayer_ended_title": "Partie multijoueur terminée !",
   "multiplayer_ended_score": "Scores finaux",

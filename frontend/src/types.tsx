@@ -12,12 +12,21 @@ export type DisplayOptions = {
   displayOpacity: number;
 }
 
+export interface ExternalGameCommands {
+  action: "load-atlas" | "guess";
+  atlas?: string;
+  regionId?: number;
+  duration: number;
+  blindMode?: boolean;
+}
+
 export interface MultiplayerParametersType {
     atlas?: string
     regionsNumber: number;
     durationPerRegion: number;
     gameoverOnError: boolean;
     blindMode: boolean;
+    commands?: ExternalGameCommands[];
 }
 
 export type ColorMap = {

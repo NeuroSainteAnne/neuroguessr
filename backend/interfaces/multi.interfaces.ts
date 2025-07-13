@@ -15,6 +15,7 @@ export interface MultiplayerParametersType {
   durationPerRegion: number;
   gameoverOnError: boolean;
   blindMode: boolean;
+  commands?: ExternalGameCommands[];
 }
 
 export interface MultiplayerGame {
@@ -51,9 +52,19 @@ export interface AtlasLUT {
 }
 
 export interface GameCommands {
-  action: string;
+  action: "load-atlas" | "guess";
   atlas?: string;
   lut?: AtlasLUT;
+  regionId?: number;
+  duration: number;
+  blindMode?: boolean;
+  mapping?: Record<number, number>
+  inverseMapping?: Record<number, number>
+}
+
+export interface ExternalGameCommands {
+  action: "load-atlas" | "guess";
+  atlas?: string;
   regionId?: number;
   duration: number;
   blindMode?: boolean;

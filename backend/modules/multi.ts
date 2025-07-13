@@ -8,10 +8,25 @@ const config: Config = configJson;
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
 import { MultiSession } from "interfaces/database.interfaces.ts";
-import { GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
+import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
+import Joi from "joi";
+
+const externalGameCommandsSchema = Joi.array().items(
+  Joi.object({
+    action: Joi.string().valid("load-atlas", "guess").required(),
+    atlas: Joi.string().optional(),
+    regionId: Joi.number().integer().optional(),
+    duration: Joi.number().integer().min(5).required(),
+    blindMode: Joi.boolean().optional(),
+  }).required()
+);
+
+const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult => {
+  return externalGameCommandsSchema.validate(commands, { abortEarly: false });
+};
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -120,7 +135,7 @@ export function initSocketHandlers() {
           return;
         }
         const result = await handleUpdateParameters({...data, userName: info.userName});
-        socket.emit('parameters-updated', result);
+        socket.emit('parameters-has-updated', result);
       } catch (error) {
         console.error("Update parameters error:", error);
         socket.emit('error', { message: "Error updating parameters" });
@@ -342,7 +357,8 @@ function createEmptySession(sessionCode: string){
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
         gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
-        blindMode: false
+        blindMode: false,
+        commands: undefined
       },
       hasAnswered: {},
       individualScores: {},
@@ -474,18 +490,14 @@ function shuffleArray<T>(arr: T[]): T[] {
     return a;
 }
 
-function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
-  try {
-    const commands = [];
-    if(!params.atlas) return;
-    // 1. Load atlas
-    const atlasNumberRegions = validRegions[params.atlas].length
+function getRandomLut(atlasName: string) : {lut: ColorMap|undefined, mapping: Record<number,number>|undefined, inverseMapping: Record<number,number>|undefined} {
+    const atlasNumberRegions = validRegions[atlasName].length
     let lut : ColorMap | undefined = undefined;
     let mapping : Record<number,number> | undefined = undefined;
     let inverseMapping : Record<number,number> | undefined = undefined;
     if (atlasNumberRegions > 254) {
       // data shuffle mode
-      const indices: number[] = [...validRegions[params.atlas].keys()].filter(id => id > 0 && Number.isInteger(id))
+      const indices: number[] = [...validRegions[atlasName].keys()].filter(id => id > 0 && Number.isInteger(id))
       const shuffled = shuffleArray(indices);
       mapping = {};
       inverseMapping = {};
@@ -503,9 +515,18 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
           "B": Array(1).fill(0).concat(shuffleArray([...Array(256).keys()]).slice(0, atlasNumberRegions - 1)),
           "A": Array(1).fill(0).concat(Array((atlasNumberRegions || 1) - 1).fill(255)),
           "I": [...Array(atlasNumberRegions).keys()],
-          "labels": (validRegions[params.atlas] || []).map(String) || [],
+          "labels": (validRegions[atlasName] || []).map(String) || [],
         }
     }
+    return {lut, mapping, inverseMapping}
+}
+
+function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
+  try {
+    const commands : GameCommands[] = [];
+    if(!params.atlas) return;
+    const {lut, mapping, inverseMapping} = getRandomLut(params.atlas)
+    // 1. Load atlas
     commands.push({
       action: "load-atlas",
       atlas: params.atlas,
@@ -537,6 +558,51 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   } catch (error) {
       console.error("Error creating commands:", error);
       return []
+  }
+}
+
+function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): GameCommands[]|undefined {
+  try {
+    const { error } = validateExternalGameCommands(externalCommands);
+    if (error) throw error;
+    const commands : GameCommands[] = [];
+    let currentAtlas = undefined;
+    for (const command of externalCommands) {
+      if (command.action === "load-atlas") {
+        currentAtlas = command.atlas || Object.keys(validRegions)[Math.floor(Math.random() * Object.keys(validRegions).length)];
+        if (!validRegions[currentAtlas || ""]) {
+          throw `Atlas "${currentAtlas}" does not exist.`
+        }
+        const {lut, mapping, inverseMapping} = getRandomLut(currentAtlas)
+        commands.push({
+          action: "load-atlas",
+          atlas: command.atlas,
+          lut,
+          mapping,
+          inverseMapping,
+          duration: LOAD_ATLAS_DURATION,
+          blindMode: command.blindMode || false,
+        });
+      } else if (command.action === "guess") {
+        if (!currentAtlas || !validRegions[currentAtlas || ""]) {
+          throw `Atlas "${currentAtlas}" does not exist.`
+        }
+        const regionId = command.regionId || validRegions[currentAtlas][Math.floor(Math.random() * validRegions[currentAtlas].length)];
+        if (!validRegions[currentAtlas].includes(regionId)) {
+          throw `Region "${regionId}" does not exist in atlas "${currentAtlas}".`;
+        }
+        commands.push({
+          action: "guess",
+          regionId: regionId,
+          duration: command.duration,
+        });
+      } else {
+        throw `Unknown action "${command.action}" in external commands.`;
+      }
+    }
+    return commands;
+  } catch (error) {
+      throw error;
   }
 }
 
@@ -579,7 +645,11 @@ async function handleLaunchGame(data: {
     }
 
     console.log("Starting game", sessionCode)
-    gameRef.commands = generateGameCommands(gameRef.parameters) || []
+    if(gameRef.parameters.commands){
+      gameRef.commands = gameRef.parameters.commands;
+    } else {
+      gameRef.commands = generateGameCommands(gameRef.parameters) || []
+    }
     gameRef.hasStarted = true;
     gameRef.duration = Date.now();
     gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
@@ -665,6 +735,14 @@ async function handleUpdateParameters(data: {
       ...gameRef.parameters,
       ...parameters
     };
+
+    if(parameters.commands){
+      const commands = cleanupExternalCommands(parameters.commands)
+      gameRef.parameters.commands = commands
+    } else {
+      gameRef.parameters.commands = undefined
+    }
+    
     // Broadcast updated parameters to all lobby members
     broadcastToSession(sessionCode, 'parameters-updated', { 
       parameters: gameRef.parameters 

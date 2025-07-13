@@ -7,10 +7,26 @@ import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';
 import { Socket, io } from 'socket.io-client';
+import "./MultiplayerConfigScreen.css"
+import Joi from "joi";
+
+const externalGameCommandsSchema = Joi.array().items(
+  Joi.object({
+    action: Joi.string().valid("load-atlas", "guess").required(),
+    atlas: Joi.string().optional(),
+    regionId: Joi.number().integer().optional(),
+    duration: Joi.number().integer().min(1).required(),
+  }).required()
+);
+
+const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult => {
+  return externalGameCommandsSchema.validate(commands, { abortEarly: false });
+};
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
+const LOAD_ATLAS_DURATION = 10;
 
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername } = useApp();
@@ -31,9 +47,14 @@ const MultiplayerConfigScreen = () => {
         regionsNumber: DEFAULT_REGION_NUMBER,
         durationPerRegion: DEFAULT_DURATION_PER_REGION,
         gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
-        blindMode: false
+        blindMode: false,
+        commands: undefined
     })
     const [copiedIcon, setCopiedIcon] = useState<null | "code" | "link">(null);
+    const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    const [advancedSettingsJSON, setAdvancedSettingsJSON] = useState<string>("[]"); // Default to an empty array
+    const [advancedSettingsError, setAdvancedSettingsError] = useState<string | null>(null);
+    const [isValidatedJSON, setIsValidatedJSON] = useState(false);
 
     const createSession = async () => {
         setLoading(true);
@@ -127,6 +148,11 @@ const MultiplayerConfigScreen = () => {
                     setLobbyUsers(prev => prev.filter(u => u !== data.userName));
                 }
             });
+            socket.on('parameters-has-updated', (data) => {
+                if (data && data.success) {
+                    setIsValidatedJSON(true)
+                }
+            });
             return () => {
                 if (socketRef.current) {
                     socketRef.current.disconnect();
@@ -139,6 +165,16 @@ const MultiplayerConfigScreen = () => {
     const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
         if(!socketRef.current) return;
         parametersRef.current = {...parametersRef.current, ...newParameters}
+        if(parametersRef && parametersRef.current && !parametersRef.current.commands){
+            const generatedCommands = [
+                { action: "load-atlas", atlas: parametersRef.current.atlas, duration: LOAD_ATLAS_DURATION },
+                ...Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
+                    action: "guess",
+                    duration: durationPerRegion,
+                })),
+            ];
+            setAdvancedSettingsJSON(JSON.stringify(generatedCommands, null, 2))
+        }
         // Send updated parameters to the server
         if (sessionCode && sessionToken) {
             try {
@@ -149,6 +185,7 @@ const MultiplayerConfigScreen = () => {
                 });
             } catch (err) {
                 setError('Failed to update parameters');
+                throw String(err)
             }
         }
     }
@@ -180,7 +217,7 @@ const MultiplayerConfigScreen = () => {
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
-                        <section className="atlas-selection">
+                        {!showAdvancedSettings && <><section className="atlas-selection">
                             <h2><img src="/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
                             <GameSelectorAtlas />
                         </section>
@@ -244,6 +281,12 @@ const MultiplayerConfigScreen = () => {
                                 </label>
                                 
                             </div>
+                            {<button
+                                className="advanced-settings-show"
+                                onClick={() => { setIsValidatedJSON(false); setShowAdvancedSettings(true) }}
+                            >
+                                {showAdvancedSettings ? "Hide Advanced Settings" : "Show Advanced Settings"}
+                            </button>}
                             {false && "FOR v2" && <div className="mode-buttons">
                                 <label htmlFor="gameoverOnErrorCheckbox" style={{ fontSize: 18, marginRight: 12 }}>
                                     <input
@@ -259,7 +302,40 @@ const MultiplayerConfigScreen = () => {
                                     {t("gameover_first_error")}
                                 </label>
                             </div>}
-                        </section>
+                        </section></>}
+                        {showAdvancedSettings && (
+                            <div className="advanced-settings-container">
+                                <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
+                                <textarea
+                                value={advancedSettingsJSON}
+                                onChange={(e) => setAdvancedSettingsJSON(e.target.value)}
+                                placeholder={t("enter_json") || "Enter JSON here..."}
+                                className="advanced-settings-textarea"
+                                />
+                                {advancedSettingsError && <div style={{ color: "red", marginBottom: "10px" }}>{advancedSettingsError}</div>}
+                                <button
+                                className="advanced-settings-validation"
+                                style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
+                                onClick={() => {
+                                    try {
+                                        const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                        // Validate the JSON structure
+                                        const success = validateExternalGameCommands(parsedJSON);
+                                        if (!success) {
+                                            setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
+                                            return;
+                                        }
+                                        setAdvancedSettingsError(null);
+                                        updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
+                                    } catch (err) {
+                                        setAdvancedSettingsError(String(err) || t("invalid_json"));
+                                    }
+                                }}
+                                >
+                                {t("validate_settings") || "Validate Settings"}
+                                </button>
+                            </div>
+                            )}
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="lobby-wait">
@@ -316,7 +392,7 @@ const MultiplayerConfigScreen = () => {
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
                             </ul>
                             <button
-                                className={(selectedAtlas=="" || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
+                                className={((selectedAtlas=="" || (showAdvancedSettings && !isValidatedJSON)) || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                                 data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
                                 data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
                                 data-umami-event-start-multi-lobbysize={lobbyUsers.length}
