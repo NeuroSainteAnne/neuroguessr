@@ -18,10 +18,10 @@ export function Page() {
     const { routeParams } = pageContext;
     const cleanGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
     const startGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const resetGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const resetGameCallbackRef = useRef<(() => void)>(() => {});
     const validateGuessCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { console.log("Not Initialized") });
-    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { console.log("Not Initialized") });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => {});
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { });
     return (
         <GameProvider gameMode="multiplayer" blindMode={false} 
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
