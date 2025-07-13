@@ -460,7 +460,7 @@ const MultiplayerConfigScreen = () => {
                                         <option value=""></option>
                                         <option value="random">{t("random_region") || "Random Region"}</option>
                                         {listRegions.map((key, value) => (
-                                            <option value={value} key={"region_"+key}>
+                                            <option value={value} key={"region_"+value}>
                                                 {key}
                                             </option>
                                         ))}
