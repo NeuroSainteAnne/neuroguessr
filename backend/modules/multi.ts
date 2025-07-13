@@ -647,12 +647,13 @@ async function handleLaunchGame(data: {
     console.log("Starting game", sessionCode)
     if(gameRef.parameters.commands){
       gameRef.commands = gameRef.parameters.commands;
+      gameRef.totalGuessNumber = gameRef.commands.filter(command => command.action === "guess").length;
     } else {
       gameRef.commands = generateGameCommands(gameRef.parameters) || []
+      gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
     }
     gameRef.hasStarted = true;
     gameRef.duration = Date.now();
-    gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
 
     // broadcast gamestart to all users and start
     broadcastToSession(sessionCode, 'game-start', {});
@@ -739,6 +740,7 @@ async function handleUpdateParameters(data: {
     if(parameters.commands){
       const commands = cleanupExternalCommands(parameters.commands)
       gameRef.parameters.commands = commands
+      gameRef.parameters.regionsNumber = commands?.filter(command => command.action === "guess").length || 0;
     } else {
       gameRef.parameters.commands = undefined
     }
