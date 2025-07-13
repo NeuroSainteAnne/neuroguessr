@@ -15,7 +15,7 @@ export const BrainViewer = () => {
         handleScrollStart, handleScrollMove, handleScrollEnd,
         mobileOrientation, setMobileOrientation,
         isLoading, hasEnded, highlightedRegion, handleRecolorization,
-        validateGuessHandler, startGameHandler, gameMode, pastRegions, hasStarted, isConnected
+        validateGuessHandler, startGameHandler, gameMode, pastRegions, isConnected, isGameRunning
     } = useGame();
     const { t, isMobileView } = useApp();
 
@@ -25,7 +25,7 @@ export const BrainViewer = () => {
                 <div className='canvas-and-info-container'>
                     {hasEnded && (gameMode == "time-attack" || gameMode == "streak" || gameMode == "multiplayer") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
                         highlightPastRegion={highlightWrapper} />}
-                    <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (hasStarted && isConnected) || hasEnded)?"block":"none")}}>
+                    <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (isGameRunning && isConnected) || hasEnded)?"block":"none")}}>
                         <canvas id="gl1"
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
@@ -78,29 +78,21 @@ export const BrainViewer = () => {
                     </div>
                 )}
             </div>
-            {gameMode === "multiplayer" && hasStarted && isConnected && 
-                <div className="button-container">
-                <button className="guess-button" ref={guessButtonRef} onClick={validateGuessHandler} data-umami-event="multiplayer guess button">
-                    <span className="confirm-text">{t("confirm_guess")}</span>
-                    <span className="space-text">{t("space_key")}</span>
-                </button>
-                </div>
-            }
-            {gameMode !== "multiplayer" && !isLoading && <div className="button-container">
-                <button
+            {!isLoading && <div className="button-container">
+                {gameMode !== "multiplayer" && <button
                     data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
                     className="home-button" onClick={() => { navigate("/welcome") }}>
                     <i className="fas fa-home"></i>
-                </button>
+                </button>}
                 {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
                     data-umami-event="recolorize button"
                     onClick={handleRecolorization}>{t("restore_color")}</button>}
-                {gameMode !== 'navigation' && <button className="guess-button" ref={guessButtonRef}
+                {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && <button className="guess-button" ref={guessButtonRef}
                     data-umami-event="guess button" data-umami-event-guesssource={gameMode}
                     onClick={validateGuessHandler}>
                     <span className="confirm-text">{t("confirm_guess")}</span>
                     <span className="space-text">{t("space_key")}</span></button>}
-                {hasEnded &&
+                {hasEnded && gameMode !== "multiplayer" &&
                     <button className="restart-button"
                         data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
                         onClick={() => { startGameHandler() }}>
@@ -139,7 +131,6 @@ export function GameProvider({
     const [hasEnded, setHasEnded] = useState<boolean>(false);
     const [isGameRunning, setIsGameRunning] = useState<boolean>(false);
     const hasEndedRef = useRef<boolean>(false); // Added ref to track ending state synchronously
-    const [hasStarted, setHasStarted] = useState<boolean>(false);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
     const [isConnected, setIsConnected] = useState(false);
     const atlasRef = useRef<AtlasImageProxy | null>(null);
@@ -433,6 +424,7 @@ export function GameProvider({
     }
 
     const handleSpaceBar = () => {
+        console.log(isGameRunning)
         if (guessButtonRef.current && !guessButtonRef.current.disabled && isGameRunning && gameMode !== 'navigation') {
             validateGuessHandler();
         }
@@ -713,7 +705,6 @@ export function GameProvider({
             isLoading, setIsLoading,
             hasEnded, setHasEnded,
             hasEndedRef,
-            hasStarted, setHasStarted,
             isConnected, setIsConnected,
             isGameRunning, setIsGameRunning,
             selectedRegion, setSelectedRegion,
@@ -772,8 +763,6 @@ type GameContextType = {
     hasEnded: boolean,
     setHasEnded: React.Dispatch<React.SetStateAction<boolean>>,
     hasEndedRef: React.RefObject<boolean>;
-    hasStarted: boolean;
-    setHasStarted: React.Dispatch<React.SetStateAction<boolean>>;
     isConnected: boolean;
     setIsConnected: React.Dispatch<React.SetStateAction<boolean>>;
     isGameRunning: boolean;

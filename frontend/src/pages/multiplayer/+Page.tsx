@@ -54,7 +54,7 @@ const MultiPlayer = ({
   const { 
     guessButtonRef, currentTarget, setPastRegions,
     atlasRef, hasEnded, setHasEnded, hasEndedRef,
-    selectedVoxelProp, hasStarted, setHasStarted,
+    selectedVoxelProp, isGameRunning, setIsGameRunning,
     isConnected, setIsConnected
    } = useGame()
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
@@ -163,6 +163,7 @@ const MultiPlayer = ({
       if(!isLoggedIn){
         setIsAnonymous(true)
       }
+      if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       tryLaunchGame()
     });
     socket.on('player-joined', (data) => {
@@ -175,7 +176,7 @@ const MultiPlayer = ({
       setParameters(data.parameters);
     });
     socket.on('game-start', () => {
-      setHasStarted(true);
+      setIsGameRunning(true);
       setCurrentAttempts(0)
       setHasWon(false)
       setForceDisplayUpdate((n)=>n+1)
@@ -307,6 +308,15 @@ const MultiPlayer = ({
     }
   }
 
+  useEffect(() => {
+      const startGame = () => {
+        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+      }
+      if (startGameCallbackRef) {
+          startGameCallbackRef.current = startGame; // Set the callback in the ref
+      }
+  }, [startGameCallbackRef]);
+
   const startStepCountdown = (instruction: string, duration: number) => {
     if (countdownInterval.current) clearInterval(countdownInterval.current);
     const end = Date.now() + duration * 1000;
@@ -326,7 +336,7 @@ const MultiPlayer = ({
   };
 
   const updateGameDisplay = () => {
-    if (hasStarted && socketRef.current && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
+    if (isGameRunning && socketRef.current && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
     } else {
@@ -339,7 +349,7 @@ const MultiPlayer = ({
 
   function clearInterface () {
       setIsConnected(false);
-      setHasStarted(false)
+      setIsGameRunning(false)
       if(countdownInterval.current) clearInterval(countdownInterval.current);
       countdownInterval.current = null;
       setHeaderTextMode("")
@@ -387,8 +397,8 @@ const MultiPlayer = ({
 
   useEffect(() => {
       const validateGuess = async () => {
-        if (!selectedVoxelProp.current || !hasStarted || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
-          console.warn('Cannot validate guess:', { selectedVoxelProp, hasStarted, currentTarget });
+        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
+          console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
           return;
         }
         setHeaderTextMode("");
@@ -406,7 +416,7 @@ const MultiPlayer = ({
       if (validateGuessCallbackRef) {
           validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
       }
-  }, [validateGuessCallbackRef, hasStarted, isAnonymous, userUsername, isLoggedIn, authToken]);
+  }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken]);
 
 
   const title = t("neuroguessr_multiplayer_title")
@@ -462,7 +472,7 @@ const MultiPlayer = ({
             ))
           }
         </ul>
-        {parameters && !hasStarted && "FOR v2" && <><h4>{t("parameters")}</h4>
+        {parameters && !isGameRunning && "FOR v2" && <><h4>{t("parameters")}</h4>
           {parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
           <div>{t("number_regions")}: {parameters.regionsNumber}</div>
           <div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>
