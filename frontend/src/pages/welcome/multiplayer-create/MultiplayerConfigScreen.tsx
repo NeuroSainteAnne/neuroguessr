@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameSelectorAtlas } from '../GameSelectorAtlas';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../../context/AppContext';
-import { ColorMap, MultiplayerParametersType } from '../../../types';
+import { ColorMap, ExternalGameCommands, MultiplayerParametersType } from '../../../types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';
@@ -21,7 +21,8 @@ const externalGameCommandsSchema = Joi.array().items(
   }).required()
 );
 
-const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult => {
+const validateExternalGameCommands = (commands: ExternalGameCommands[]): Joi.ValidationResult => {
+  if (!commands.length) throw "No command given"
   return externalGameCommandsSchema.validate(commands, { abortEarly: false });
 };
 
