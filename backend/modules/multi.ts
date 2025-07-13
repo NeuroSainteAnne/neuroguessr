@@ -580,7 +580,7 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
           lut,
           mapping,
           inverseMapping,
-          duration: LOAD_ATLAS_DURATION,
+          duration: command.duration || LOAD_ATLAS_DURATION,
           blindMode: command.blindMode || false,
         });
       } else if (command.action === "guess") {
