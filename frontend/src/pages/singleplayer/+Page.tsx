@@ -350,6 +350,7 @@ function SinglePlayer({
             setPastRegions(prev => [...prev, {
                 regionId: currentTarget.current!,
                 regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+                atlas: atlasRef.current?.atlas || "",
                 isCorrect: false,
                 score: 0,
                 distance: -1,
@@ -760,6 +761,7 @@ function SinglePlayer({
             setPastRegions(prev => [...prev, {
                 regionId: currentTarget.current!,
                 regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
+                atlas: atlasRef.current?.atlas || "",
                 isCorrect: guessSuccess,
                 score: scoreIncrement,
                 distance: guessSuccess ? 0 : distance,

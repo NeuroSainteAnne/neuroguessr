@@ -123,13 +123,14 @@ export class AtlasImageProxy {
     private regionIndices: Map<number, number[]> = new Map();
     private viewerOptions: DisplayOptions;
     private isShowing: "all-regions" | "highlighted" = "all-regions";
+    public atlas: string;
     private cmap_en: ColorMap|null;
 
-    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en} :
+    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en, atlas} :
         {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
         proposedLut?: ColorMap, proposedMapping?: Record<number, number>, 
         proposedInverseMapping?: Record<number, number>, blindMode: boolean, 
-        viewerOptions: DisplayOptions, cmap_en: ColorMap|null}) {
+        viewerOptions: DisplayOptions, cmap_en: ColorMap|null, atlas: string}) {
         this.niivue = niivue;
         this.origVolume = nvImage;
         this.labels = labels;
@@ -141,6 +142,7 @@ export class AtlasImageProxy {
         this.validRegions = [...this.labels.keys() || []].filter(id => id > 0 && Number.isInteger(id));
         this.viewerOptions = viewerOptions;
         this.cmap_en = cmap_en;
+        this.atlas = atlas;
 
         // Get a complete copy of the data
         this.data = new Float32Array(

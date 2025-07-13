@@ -203,6 +203,7 @@ const MultiPlayer = ({
           setPastRegions(prev => [...prev, {
             regionId: curTar,
             regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+            atlas: atlasRef.current?.atlas || "",
             isCorrect: false,
             score: 0,
             distance: -1, // Special value to indicate no guess was made
@@ -244,6 +245,7 @@ const MultiPlayer = ({
         setPastRegions(prev => [...prev, {
           regionId: curTar,
           regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+          atlas: atlasRef.current?.atlas || "",
           isCorrect: false,
           score: 0,
           distance: -1, // Special value to indicate no guess was made
@@ -261,6 +263,7 @@ const MultiPlayer = ({
           setPastRegions(prev => [...prev, {
             regionId: curTar,
             regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+            atlas: atlasRef.current?.atlas || "",
             isCorrect: data.isCorrect,
             score: data.scoreIncrement,
             distance: data.isCorrect ? 0 : data.distance,

@@ -62,6 +62,7 @@ export type PastRegion = {
     vox: number[];
   };
   regionCenter?: number[];
+  atlas: string;
 }
 
 export type ImageMetadata = {

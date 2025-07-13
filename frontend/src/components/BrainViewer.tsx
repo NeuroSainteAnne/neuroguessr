@@ -375,10 +375,10 @@ export function GameProvider({
                     blindMode: askedAtlas?.blindMode || false,
                     viewerOptions,
                     cmap_en,
+                    atlas: askedAtlas.atlas,
                     proposedLut: askedAtlas?.lut || undefined,
                     proposedMapping: askedAtlas?.mapping || undefined,
                     proposedInverseMapping: askedAtlas?.inverseMapping || undefined,
-
                 });
                 atlasRef.current.showShuffledRegions();
             }
@@ -748,6 +748,8 @@ export function GameProvider({
 
             validateGuessHandler,
             startGameHandler,
+
+            startGameCallbackRef,
         }}>
             {children}
         </GameContext.Provider>
@@ -822,6 +824,8 @@ type GameContextType = {
 
     validateGuessHandler: () => void;
     startGameHandler: () => void;
+
+    startGameCallbackRef: RefObject<() => void>;
 }
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
