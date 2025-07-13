@@ -392,12 +392,12 @@ const MultiplayerConfigScreen = () => {
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
                             </ul>
                             <button
-                                className={((selectedAtlas=="" || (showAdvancedSettings && !isValidatedJSON)) || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
+                                className={(((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON)) || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
                                 data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
                                 data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
                                 data-umami-event-start-multi-lobbysize={lobbyUsers.length}
                                 onClick={(e)=>{
-                                    if(!loading && selectedAtlas && lobbyUsers.length > 1){
+                                    if(!loading && (selectedAtlas || (showAdvancedSettings && isValidatedJSON)) && lobbyUsers.length > 1){
                                         navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
                                     } 
                                 }}
