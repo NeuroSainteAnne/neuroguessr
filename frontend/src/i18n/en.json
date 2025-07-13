@@ -216,6 +216,10 @@
   "start_game_button": "Start Game",
   "advanced_settings": "Advanced settings",
   "validate_settings": "Validate parameters",
+  "select_new_atlas": "Change Atlas",
+  "select_duration": "Duration for new region (sec)",
+  "select_new_region": "Select a region",
+  "random_region": "**Random region***",
   
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",

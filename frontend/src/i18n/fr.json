@@ -214,6 +214,10 @@
   "gameover_first_error_activated": "Fin de partie à la première erreur: activé",
   "advanced_settings": "Paramétrage avancé",
   "validate_settings": "Valider les paramètres",
+  "select_new_atlas": "Changer d'Atlas",
+  "select_duration": "Durée pour nouvelle région (sec)",
+  "select_new_region": "Sélectionner une région",
+  "random_region": "**Région aléatoire***",
   
   "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",

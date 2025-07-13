@@ -59,6 +59,7 @@ const MultiplayerConfigScreen = () => {
     const [advancedLastAtlas, setAdvancedLastAtlas] = useState<string | null>(null);
     const [isValidatedJSON, setIsValidatedJSON] = useState(false);
     const [listRegions, setListRegions] = useState<string[]|null>(null)
+    const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const { currentLanguage } = useApp();
 
     const createSession = async () => {
@@ -389,7 +390,7 @@ const MultiplayerConfigScreen = () => {
                                             const parsedJSON = JSON.parse(advancedSettingsJSON);
                                             const updatedJSON = [
                                                 ...parsedJSON,
-                                                { action: "load-atlas", atlas: newAtlas, duration: LOAD_ATLAS_DURATION }
+                                                { action: "load-atlas", atlas: newAtlas, duration: LOAD_ATLAS_DURATION, blindMode: false }
                                             ]
                                             setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
                                         } catch (err) {
@@ -414,6 +415,19 @@ const MultiplayerConfigScreen = () => {
                                         ))}
                                     </select>
                                     {advancedLastAtlas && listRegions && <>
+                                        <div>
+                                            <label htmlFor="duration-picker" className='duration-picker-header'>
+                                                {t("select_duration")}
+                                            </label>
+                                            <input
+                                                className="region-duration-input"
+                                                type="number"
+                                                min={5}
+                                                max={30}
+                                                value={advancedDurationPerRegion}
+                                                onChange={(e) => setAdvancedDurationPerRegion(Number(e.target.value))}
+                                            />
+                                        </div>
                                         <label htmlFor="region-picker" className='region-picker-header'>
                                             {t("select_new_region") || "Select New Region"}
                                         </label>
@@ -426,16 +440,19 @@ const MultiplayerConfigScreen = () => {
                                             if(newRegion === "") return;
                                             // Update the JSON with the new region
                                             try {
-                                            const parsedJSON = JSON.parse(advancedSettingsJSON);
-                                            const newRegionLine : {action: string, duration: number, regionId?: number} = { action: "guess", duration: DEFAULT_DURATION_PER_REGION }
-                                            if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
-                                            const updatedJSON = [
-                                                ...parsedJSON,
-                                                newRegionLine,
-                                            ];
-                                            setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
+                                                const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                                const newRegionLine : {action: string, duration: number, regionId?: number} = { 
+                                                    action: "guess", 
+                                                    duration: advancedDurationPerRegion || DEFAULT_DURATION_PER_REGION 
+                                                }
+                                                if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
+                                                const updatedJSON = [
+                                                    ...parsedJSON,
+                                                    newRegionLine,
+                                                ];
+                                                setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
                                             } catch (err) {
-                                            setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
+                                                setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
                                             }
                                             e.target.value = ""
                                         }}
@@ -443,7 +460,7 @@ const MultiplayerConfigScreen = () => {
                                         <option value=""></option>
                                         <option value="random">{t("random_region") || "Random Region"}</option>
                                         {listRegions.map((key, value) => (
-                                            <option value={value} key={key}>
+                                            <option value={value} key={"region_"+key}>
                                                 {key}
                                             </option>
                                         ))}

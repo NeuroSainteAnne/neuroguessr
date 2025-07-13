@@ -40,14 +40,21 @@
     color: #fff;
 }
 
-.atlas-picker-header,
-.region-picker-header {
+.region-picker-header,
+.duration-picker-header {
     margin-top: 18px
 }
 
 .atlas-picker,
-.region-picker {
+.region-picker,
+.duration-picker {
     padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.region-duration-input{
+    padding: 4px;
     border: 1px solid #ccc;
     border-radius: 5px;
 }
