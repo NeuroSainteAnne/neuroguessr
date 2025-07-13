@@ -421,7 +421,6 @@ const MultiplayerConfigScreen = () => {
                                         </select>
                                     </div>
                                     {advancedLastAtlas && listRegions && <div>
-                                        <div>
                                             <label htmlFor="duration-picker" className='duration-picker-header'>
                                                 {t("select_duration")}
                                             </label>
@@ -433,7 +432,8 @@ const MultiplayerConfigScreen = () => {
                                                 value={advancedDurationPerRegion}
                                                 onChange={(e) => setAdvancedDurationPerRegion(Number(e.target.value))}
                                             />
-                                        </div>
+                                    </div>}
+                                    {advancedLastAtlas && listRegions && <div>
                                         <label htmlFor="region-picker" className='region-picker-header'>
                                             {t("select_new_region") || "Select New Region"}
                                         </label>
