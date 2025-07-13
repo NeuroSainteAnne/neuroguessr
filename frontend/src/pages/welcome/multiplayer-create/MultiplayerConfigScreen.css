@@ -4,8 +4,25 @@
     color: #fff;
 }
 
+.advanced-settings-overall{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 .advanced-settings-container{
     width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.advanced-settings-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.advanced-settings-picker {
     display: flex;
     flex-direction: column;
 }
@@ -21,4 +38,16 @@
 .advanced-settings-validation{
     padding: 10px 20px;
     color: #fff;
+}
+
+.atlas-picker-header,
+.region-picker-header {
+    margin-top: 18px
+}
+
+.atlas-picker,
+.region-picker {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }

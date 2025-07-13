@@ -2,13 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameSelectorAtlas } from '../GameSelectorAtlas';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../../context/AppContext';
-import { MultiplayerParametersType } from '../../../types';
+import { ColorMap, MultiplayerParametersType } from '../../../types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';
 import { Socket, io } from 'socket.io-client';
 import "./MultiplayerConfigScreen.css"
 import Joi from "joi";
+import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
+import { fetchJSON } from '../../../helper_niivue';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -54,7 +56,10 @@ const MultiplayerConfigScreen = () => {
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
     const [advancedSettingsJSON, setAdvancedSettingsJSON] = useState<string>("[]"); // Default to an empty array
     const [advancedSettingsError, setAdvancedSettingsError] = useState<string | null>(null);
+    const [advancedLastAtlas, setAdvancedLastAtlas] = useState<string | null>(null);
     const [isValidatedJSON, setIsValidatedJSON] = useState(false);
+    const [listRegions, setListRegions] = useState<string[]|null>(null)
+    const { currentLanguage } = useApp();
 
     const createSession = async () => {
         setLoading(true);
@@ -190,6 +195,36 @@ const MultiplayerConfigScreen = () => {
         }
     }
 
+    const handleShowAdvancedBox = () => {
+        setIsValidatedJSON(false);
+        setShowAdvancedSettings(true);
+        if(selectedAtlas) setAdvancedLastAtlas(selectedAtlas)
+    }
+
+    useEffect(()=>{
+        setIsValidatedJSON(false);
+        try {
+            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const loadAtlasCommand = [...parsedJSON].reverse().find((command: any) => command.action === "load-atlas" && command.atlas);
+            if (loadAtlasCommand) {
+                setAdvancedLastAtlas(loadAtlasCommand.atlas); // Update the last atlas based on the JSON
+            } else {
+                setAdvancedLastAtlas(null); // Reset if no atlas is found
+            }
+        } catch (err) {
+            setAdvancedLastAtlas(null); // Reset if JSON is invalid
+        }
+    }, [advancedSettingsJSON])
+
+    
+    useEffect(()=>{
+        if(!advancedLastAtlas) return
+        const selectedAtlasFiles = atlasFiles[advancedLastAtlas];
+        fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json).then((jsonData: ColorMap) => {
+            setListRegions(jsonData.labels)
+        });
+    }, [advancedLastAtlas])
+
     useEffect(()=>{
         if(selectedAtlas){
             updateParameters({atlas:selectedAtlas})
@@ -283,7 +318,7 @@ const MultiplayerConfigScreen = () => {
                             </div>
                             {<button
                                 className="advanced-settings-show"
-                                onClick={() => { setIsValidatedJSON(false); setShowAdvancedSettings(true) }}
+                                onClick={() => { handleShowAdvancedBox() }}
                             >
                                 {showAdvancedSettings ? "Hide Advanced Settings" : "Show Advanced Settings"}
                             </button>}
@@ -303,39 +338,120 @@ const MultiplayerConfigScreen = () => {
                                 </label>
                             </div>}
                         </section></>}
-                        {showAdvancedSettings && (
+                        {showAdvancedSettings && (<div className="advanced-settings-overall">
+                            <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
                             <div className="advanced-settings-container">
-                                <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
-                                <textarea
-                                value={advancedSettingsJSON}
-                                onChange={(e) => setAdvancedSettingsJSON(e.target.value)}
-                                placeholder={t("enter_json") || "Enter JSON here..."}
-                                className="advanced-settings-textarea"
-                                />
-                                {advancedSettingsError && <div style={{ color: "red", marginBottom: "10px" }}>{advancedSettingsError}</div>}
-                                <button
-                                className="advanced-settings-validation"
-                                style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
-                                onClick={() => {
-                                    try {
-                                        const parsedJSON = JSON.parse(advancedSettingsJSON);
-                                        // Validate the JSON structure
-                                        const success = validateExternalGameCommands(parsedJSON);
-                                        if (!success) {
-                                            setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
-                                            return;
+                                <div className="advanced-settings-area">
+                                    <textarea
+                                        value={advancedSettingsJSON}
+                                        onChange={(e) => { setAdvancedSettingsJSON(e.target.value) }}
+                                        placeholder={t("enter_json") || "Enter JSON here..."}
+                                        className="advanced-settings-textarea"
+                                    />
+                                    {advancedSettingsError && <div style={{ color: "red", marginBottom: "10px" }}>{advancedSettingsError}</div>}
+                                    <button
+                                    className="advanced-settings-validation"
+                                    style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
+                                    onClick={() => {
+                                        try {
+                                            const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                            // Validate the JSON structure
+                                            const success = validateExternalGameCommands(parsedJSON);
+                                            if (!success) {
+                                                setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
+                                                return;
+                                            }
+                                            setAdvancedSettingsError(null);
+                                            updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
+                                        } catch (err) {
+                                            setAdvancedSettingsError(String(err) || t("invalid_json"));
                                         }
-                                        setAdvancedSettingsError(null);
-                                        updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
-                                    } catch (err) {
-                                        setAdvancedSettingsError(String(err) || t("invalid_json"));
-                                    }
-                                }}
-                                >
-                                {t("validate_settings") || "Validate Settings"}
-                                </button>
+                                    }}
+                                    >
+                                    {t("validate_settings") || "Validate Settings"}
+                                    </button>
+                                </div>
+                                <div className="advanced-settings-picker">
+                                    <label htmlFor="atlas-picker" className="atlas-picker-header">
+                                        {t("select_new_atlas") || "Select New Atlas"}
+                                    </label>
+                                    <select
+                                        id="atlas-picker"
+                                        value={advancedLastAtlas || ""}
+                                        className='atlas-picker'
+                                        onChange={(e) => {
+                                        const newAtlas = e.target.value;
+                                        setAdvancedLastAtlas(newAtlas);
+
+                                        // Update the JSON with the new atlas
+                                        try {
+                                            setListRegions(null)
+                                            const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                            const updatedJSON = [
+                                                ...parsedJSON,
+                                                { action: "load-atlas", atlas: newAtlas, duration: LOAD_ATLAS_DURATION }
+                                            ]
+                                            setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
+                                        } catch (err) {
+                                            setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
+                                        }
+                                        }}
+                                    >
+                                        {atlasCategories.map((category) => (
+                                        <>
+                                            {/* Unselectable category header */}
+                                            <optgroup label={t(category)} key={category}>
+                                            {Object.entries(atlasFiles)
+                                                .filter(([key, atlas]) => atlas.atlas_category === category)
+                                                .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
+                                                .map(([key, atlas]) => (
+                                                <option value={key} key={key}>
+                                                    {t(atlasFiles[key].name)}
+                                                </option>
+                                                ))}
+                                            </optgroup>
+                                        </>
+                                        ))}
+                                    </select>
+                                    {advancedLastAtlas && listRegions && <>
+                                        <label htmlFor="region-picker" className='region-picker-header'>
+                                            {t("select_new_region") || "Select New Region"}
+                                        </label>
+                                        <select
+                                        id="region-picker"
+                                        className="region-picker"
+                                        value="" // Always reset to the blank option after a change
+                                        onChange={(e) => {
+                                            const newRegion = e.target.value;
+                                            if(newRegion === "") return;
+                                            // Update the JSON with the new region
+                                            try {
+                                            const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                            const newRegionLine : {action: string, duration: number, regionId?: number} = { action: "guess", duration: DEFAULT_DURATION_PER_REGION }
+                                            if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
+                                            const updatedJSON = [
+                                                ...parsedJSON,
+                                                newRegionLine,
+                                            ];
+                                            setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
+                                            } catch (err) {
+                                            setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
+                                            }
+                                            e.target.value = ""
+                                        }}
+                                        >
+                                        <option value=""></option>
+                                        <option value="random">{t("random_region") || "Random Region"}</option>
+                                        {listRegions.map((key, value) => (
+                                            <option value={value} key={key}>
+                                                {key}
+                                            </option>
+                                        ))}
+                                        </select>
+                                    </>}
+                                </div>
                             </div>
-                            )}
+                        </div>)}
                     </div>
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="lobby-wait">
