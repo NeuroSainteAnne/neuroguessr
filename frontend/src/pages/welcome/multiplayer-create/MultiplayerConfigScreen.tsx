@@ -11,6 +11,7 @@ import "./MultiplayerConfigScreen.css"
 import Joi from "joi";
 import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
 import { fetchJSON } from '../../../helper_niivue';
+import { set } from 'date-fns';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -56,10 +57,12 @@ const MultiplayerConfigScreen = () => {
     const [copiedIcon, setCopiedIcon] = useState<null | "code" | "link">(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-    const [advancedSettingsJSON, setAdvancedSettingsJSON] = useState<string>("[]"); // Default to an empty array
+    const [advancedSettingsJSON, setAdvancedSettingsJSON] = useState<string>("[]");
+    const advancedSettingsJSONRef = useRef<string>("[]");
     const [advancedSettingsError, setAdvancedSettingsError] = useState<string | null>(null);
     const [advancedLastAtlas, setAdvancedLastAtlas] = useState<string | null>(null);
     const [isValidatedJSON, setIsValidatedJSON] = useState(false);
+    const [isSavedAdvanced, setIsSavedAdvanced] = useState(false);
     const [listRegions, setListRegions] = useState<string[]|null>(null)
     const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const { currentLanguage } = useApp();
@@ -206,11 +209,14 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(()=>{
         setIsValidatedJSON(false);
+        setIsSavedAdvanced(false);
         if(!advancedSettingsJSON){
             setAdvancedSettingsJSON("[]")
+            advancedSettingsJSONRef.current = "[]";
             return;
         }
         try {
+            advancedSettingsJSONRef.current = advancedSettingsJSON;
             const parsedJSON = JSON.parse(advancedSettingsJSON);
             const loadAtlasCommand = [...parsedJSON].reverse().find((command: any) => command.action === "load-atlas" && command.atlas);
             if (loadAtlasCommand) {
@@ -219,7 +225,7 @@ const MultiplayerConfigScreen = () => {
                 setAdvancedLastAtlas(null); // Reset if no atlas is found
             }
             if (textareaRef.current) {
-            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+                textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
             }
         } catch (err) {
             setAdvancedLastAtlas(null); // Reset if JSON is invalid
@@ -252,6 +258,77 @@ const MultiplayerConfigScreen = () => {
             }
         }
     }, [])
+
+    const handleSaveAdvancedSettings = async () => {
+        setAdvancedSettingsError(null);
+        setIsSavedAdvanced(false);
+        const name = prompt(t("enter_settings_name") || "Enter a name for your advanced settings:");
+        if (!name) {
+            setAdvancedSettingsError(t("name_required") || "Name is required.");
+            return;
+        }
+        try {
+            // Check if the name already exists
+            const response = await fetch(`/api/advanced-game/check-name?name=${encodeURIComponent(name)}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                const result = await response.json();
+                setAdvancedSettingsError(result.message || t("failed_to_check_name") || "Failed to check name availability.");
+                return;
+            }
+
+            const result = await response.json();
+            let existingId = null;
+            if (result.exists) {
+                const overwrite = confirm(
+                    t("name_already_exists_overwrite") || 
+                    "Name already exists. Do you want to overwrite the existing settings?"
+                );
+                if (!overwrite) {
+                    setAdvancedSettingsError(t("overwrite_cancelled") || "Overwrite cancelled.");
+                    return;
+                }
+                existingId = result.id;
+            }
+
+            // Save the advanced settings
+            const saveResponse = await fetch(existingId?'/api/advanced-game/update':'/api/advanced-game/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify(existingId?
+                {
+                    id: existingId,
+                    settings: advancedSettingsJSONRef.current
+                }
+                :{
+                    name,
+                    settings: advancedSettingsJSONRef.current,
+                    public: false, // Default to private
+                }),
+            });
+
+            if (!saveResponse.ok) {
+                const saveResult = await saveResponse.json();
+                setAdvancedSettingsError(saveResult.message || t("failed_to_save_settings") || "Failed to save settings.");
+                return;
+            }
+
+            const saveResult = await saveResponse.json();
+            setAdvancedSettingsError(null);
+            setIsSavedAdvanced(true);
+        } catch (err) {
+            console.error("Error saving advanced settings:", err);
+            setAdvancedSettingsError(t("unexpected_error") || "An unexpected error occurred.");
+        }
+    }
 
     return (
         <div className="page-container">
@@ -356,27 +433,35 @@ const MultiplayerConfigScreen = () => {
                                         className="advanced-settings-textarea"
                                     />
                                     {advancedSettingsError && <div style={{ color: "red", marginBottom: "10px" }}>{advancedSettingsError}</div>}
-                                    <button
-                                        className="advanced-settings-validation"
-                                        style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
-                                        onClick={() => {
-                                            try {
-                                                const parsedJSON = JSON.parse(advancedSettingsJSON);
-                                                // Validate the JSON structure
-                                                const success = validateExternalGameCommands(parsedJSON);
-                                                if (!success) {
-                                                    setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
-                                                    return;
+                                    <div className="advanced-settings-buttons">
+                                        <button
+                                            className="advanced-settings-validation"
+                                            style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
+                                            onClick={() => {
+                                                try {
+                                                    const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                                    // Validate the JSON structure
+                                                    const success = validateExternalGameCommands(parsedJSON);
+                                                    if (!success) {
+                                                        setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
+                                                        return;
+                                                    }
+                                                    setAdvancedSettingsError(null);
+                                                    updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
+                                                } catch (err) {
+                                                    setAdvancedSettingsError(String(err) || t("invalid_json"));
                                                 }
-                                                setAdvancedSettingsError(null);
-                                                updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
-                                            } catch (err) {
-                                                setAdvancedSettingsError(String(err) || t("invalid_json"));
-                                            }
-                                        }}
-                                    >
-                                    {t("validate_settings") || "Validate Settings"}
-                                    </button>
+                                            }}
+                                        >
+                                        {t("validate_settings") || "Validate Settings"}
+                                        </button>
+                                        <button
+                                            style={{backgroundColor:(isValidatedJSON?(isSavedAdvanced?"#4caf50":"#21669f"):"#6665"), 
+                                                cursor:(isValidatedJSON?(isSavedAdvanced?"not-allowed":"pointer"):"not-allowed")}}
+                                            disabled={!isValidatedJSON}
+                                            onClick={isValidatedJSON?handleSaveAdvancedSettings:()=>{}}
+                                            >💾</button>
+                                    </div>
                                 </div>
                                 <div className="advanced-settings-picker">
                                     <div>
