@@ -155,6 +155,19 @@ export const database_init = async () => {
         await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
         await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
 
+        await sql`
+            CREATE TABLE IF NOT EXISTS advanced_game_settings (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                public BOOLEAN NOT NULL DEFAULT FALSE,
+                settings TEXT NOT NULL
+            );
+        `;
+        await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_user_id ON advanced_game_settings(user_id);`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_name ON advanced_game_settings(name);`;
+
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
