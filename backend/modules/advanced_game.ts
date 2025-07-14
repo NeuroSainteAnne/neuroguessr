@@ -266,3 +266,29 @@ export const deleteAdvancedSettings = async (req: Request, res: Response): Promi
     res.status(500).send({ message: "Internal server error" });
   }
 };
+
+/**
+ * Check existing name
+ */
+export const checkAdvancedSettingsName = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { name } = req.query;
+        const userId = (req as AuthenticatedRequest).user.id
+
+        if (!name) {
+            res.status(400).send({ message: "Name is required." });
+            return;
+        }
+
+        const result = await sql`
+            SELECT id FROM advanced_game_settings
+            WHERE name = ${String(name)} AND user_id = ${userId}
+        `;
+
+        const exists = result.length > 0;
+        res.status(200).send({ exists, id: exists ? result[0].id : null });
+    } catch (error) {
+        console.error("Error checking advanced settings name:", error);
+        res.status(500).send({ message: "Internal server error." });
+    }
+};

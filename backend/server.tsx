@@ -78,6 +78,7 @@ app.post('/api/advanced-game/settings-by-id', authenticateToken, getAdvancedSett
 app.post('/api/advanced-game/settings-list', authenticateToken, getAdvancedSettingsList);
 app.post('/api/advanced-game/update', authenticateToken, updateAdvancedSettings);
 app.post('/api/advanced-game/delete', authenticateToken, deleteAdvancedSettings);
+app.get('/api/advanced-game/check-name', authenticateToken, checkAdvancedSettingsName);
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     console.log(path.join(reactRoot, "assets", "favicon"))
@@ -91,7 +92,7 @@ app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 import { initSocketIO } from 'modules/socket.io.ts';
-import { deleteAdvancedSettings, getAdvancedSettingsById, getAdvancedSettingsList, saveAdvancedSettings, updateAdvancedSettings } from 'modules/advanced_game.ts';
+import { checkAdvancedSettingsName, deleteAdvancedSettings, getAdvancedSettingsById, getAdvancedSettingsList, saveAdvancedSettings, updateAdvancedSettings } from 'modules/advanced_game.ts';
 
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
