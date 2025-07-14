@@ -73,7 +73,7 @@ export const saveAdvancedSettings = async (req: Request, res: Response): Promise
  */
 export const getAdvancedSettingsById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.body;
     const userId: number = (req as AuthenticatedRequest).user.id;
     
     // Get settings from database
@@ -142,14 +142,13 @@ export const getAdvancedSettingsList = async (req: Request, res: Response): Prom
  */
 export const updateAdvancedSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { name, settings, public: isPublic } = req.body;
+    const { id, name, settings, public: isPublic } = req.body;
     const userId: number = (req as AuthenticatedRequest).user.id;
-    
+
     // Get existing settings to check ownership
     const existingSettings = await sql`
       SELECT * FROM advanced_game_settings
-      WHERE id = ${parseInt(id)}
+      WHERE id = ${id}
     ` as AdvancedGameSettings[];
     
     if (!existingSettings.length) {
@@ -234,7 +233,7 @@ export const updateAdvancedSettings = async (req: Request, res: Response): Promi
  */
 export const deleteAdvancedSettings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.body;
     const userId: number = (req as AuthenticatedRequest).user.id;
     
     // Get existing settings to check ownership
