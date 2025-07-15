@@ -33,7 +33,7 @@ const DEFAULT_GAMEOVER_ON_ERROR = false;
 const LOAD_ATLAS_DURATION = 10;
 
 const MultiplayerConfigScreen = () => {
-    const { t, authToken, userUsername } = useApp();
+    const { t, authToken, userUsername, currentLanguage } = useApp();
     const { selectedAtlas, setSelectedAtlas } = useGameSelector();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -65,7 +65,8 @@ const MultiplayerConfigScreen = () => {
     const [isSavedAdvanced, setIsSavedAdvanced] = useState(false);
     const [listRegions, setListRegions] = useState<string[]|null>(null)
     const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
-    const { currentLanguage } = useApp();
+    const [advancedPresets, setAdvancedPresets] = useState<{ id: number; name: string; settings: string }[]>([]);
+    const [forcePresetReload, setForcePresetReload] = useState<number>(0);
 
     const createSession = async () => {
         setLoading(true);
@@ -259,6 +260,32 @@ const MultiplayerConfigScreen = () => {
         }
     }, [])
 
+    useEffect(() => {
+        const fetchPresets = async () => {
+            try {
+                const response = await fetch('/api/advanced-game/settings-list', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to fetch presets");
+                    return;
+                }
+
+                const result = await response.json();
+                console.log(result)
+                setAdvancedPresets(result);
+            } catch (err) {
+                console.error("Error fetching presets:", err);
+            }
+        };
+
+        fetchPresets();
+    }, [authToken, ]);
+
     const handleSaveAdvancedSettings = async () => {
         setAdvancedSettingsError(null);
         setIsSavedAdvanced(false);
@@ -324,6 +351,7 @@ const MultiplayerConfigScreen = () => {
             const saveResult = await saveResponse.json();
             setAdvancedSettingsError(null);
             setIsSavedAdvanced(true);
+            setForcePresetReload(prev => prev + 1); // Trigger a reload of presets
         } catch (err) {
             console.error("Error saving advanced settings:", err);
             setAdvancedSettingsError(t("unexpected_error") || "An unexpected error occurred.");
@@ -422,7 +450,28 @@ const MultiplayerConfigScreen = () => {
                             </button>}
                         </section></>}
                         {showAdvancedSettings && (<div className="advanced-settings-overall">
-                            <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
+                            <div className="advanced-settings-header">
+                                <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
+                                <select
+                                    id="preset-picker"
+                                    className="preset-picker"
+                                    value=""
+                                    onChange={(e) => {
+                                        const selectedPreset = advancedPresets.find(preset => preset.id === Number(e.target.value));
+                                        if (selectedPreset) {
+                                            setAdvancedSettingsJSON(selectedPreset.settings);
+                                            setIsValidatedJSON(false); // Reset validation state
+                                        }
+                                    }}
+                                >
+                                    <option value="" key="preset_blank">{t("select_preset") || "Select a preset..."}</option>
+                                    {advancedPresets.map(preset => (
+                                        <option value={preset.id} key={`preset_${preset.id}`}>
+                                            {preset.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <div className="advanced-settings-container">
                                 <div className="advanced-settings-area">
                                     <textarea

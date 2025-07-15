@@ -5,6 +5,15 @@
     color: #fff;
 }
 
+.advanced-settings-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.advanced-settings-header h3, .advanced-settings-header select {
+    margin: 15px 0 15px 0;
+}
+
 .advanced-settings-overall{
     width: 100%;
     display: flex;

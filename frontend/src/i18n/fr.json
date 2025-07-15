@@ -219,6 +219,7 @@
   "select_duration": "Durée pour nouvelle région (sec)",
   "select_new_region": "Sélectionner une région",
   "random_region": "**Région aléatoire***",
+  "select_preset": "Sélectionner un préréglage",
   
   "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",

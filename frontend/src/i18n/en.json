@@ -221,6 +221,7 @@
   "select_duration": "Duration for new region (sec)",
   "select_new_region": "Select a region",
   "random_region": "**Random region***",
+  "select_preset": "Select a preset",
   
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",
