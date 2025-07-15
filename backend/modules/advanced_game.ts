@@ -118,7 +118,7 @@ export const getAdvancedSettingsList = async (req: Request, res: Response): Prom
   try {
     const { public: isPublic } = req.query;
     const userId: number = (req as AuthenticatedRequest).user.id;
-    let query = sql`SELECT id, name, user_id, created_at, public FROM advanced_game_settings WHERE 1=1`;
+    let query = sql`SELECT id, name, user_id, settings, created_at, public FROM advanced_game_settings WHERE 1=1`;
     
     if (isPublic) {
       query = sql`${query} AND public = TRUE`;
