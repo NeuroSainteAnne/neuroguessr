@@ -17,7 +17,11 @@
     flex-direction: row;
     gap: 20px;
 }
-
+.advanced-settings-buttons{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
 .advanced-settings-area {
     display: flex;
     flex-direction: column;
@@ -40,6 +44,7 @@
 .advanced-settings-validation{
     padding: 10px 20px;
     color: #fff;
+    flex: 1;
 }
 
 .atlas-picker,

@@ -101,3 +101,12 @@ export interface MultiSession {
   creator_id: number | null;
   created_at: Date;
 }
+
+export interface AdvancedGameSettings {
+  id: number;
+  name: string;
+  user_id: number;
+  created_at: Date;
+  public: boolean;
+  settings: string;
+}
