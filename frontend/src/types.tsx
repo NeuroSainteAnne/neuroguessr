@@ -40,6 +40,10 @@ export type ColorMap = {
   max?: number;
   labels: string[];
   centers?: number[][][];
+  autocenter?: {
+    center?: number[],
+    zoom?: number
+  }
 };
 
 
