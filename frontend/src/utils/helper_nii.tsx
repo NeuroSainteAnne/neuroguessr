@@ -269,6 +269,37 @@ export class AtlasImageProxy {
         this.niivue.drawScene();
     }
 
+    public performAutocenter(){
+        console.log(this.cmap_en)
+        if (this.cmap_en?.autocenter?.center) {
+            const center = this.cmap_en.autocenter.center;
+            if (Array.isArray(center) && center.length === 3) {
+                // Perform centering using the provided coordinates
+                this.niivue.scene.crosshairPos = this.niivue.vox2frac(new Float32Array(center));
+                this.niivue.createOnLocationChange();
+                console.log(`Autocentering to coordinates: ${center}`);
+            } else {
+                console.error("Invalid autocenter coordinates provided in cmap_en.");
+            }
+        } else {
+            this.niivue.scene.crosshairPos = [0.5,0.5,0.5]
+        }
+        if (this.cmap_en?.autocenter?.zoom && this.cmap_en?.autocenter?.center && this.niivue.volumes[0].matRAS) {
+            const zoomFactor = this.cmap_en.autocenter.zoom;
+            const center = this.cmap_en.autocenter.center;
+            const centermm = this.niivue.vox2mm(center, this.niivue.volumes[0].matRAS)
+            if (typeof zoomFactor === "number" && zoomFactor > 0) {
+                // Adjust the zoom factor
+                this.niivue.setPan2Dxyzmm([-centermm[0], -centermm[1], -centermm[2], zoomFactor]);
+                console.log(`Zoom adjusted to factor: ${zoomFactor}`);
+            } else {
+                console.error("Invalid zoom factor provided in cmap_en.");
+            }
+        } else {
+            this.niivue.setPan2Dxyzmm([0, 0, 0, 1]);
+        }
+    }
+
     public async highlightRegion(highlightedRegion: number, moveToCenter: boolean = true, allowFibers: boolean = false): Promise<void> {
         this.isShowing = "highlighted";
         this.niivue.setOpacity(1, this.viewerOptions.displayOpacity);

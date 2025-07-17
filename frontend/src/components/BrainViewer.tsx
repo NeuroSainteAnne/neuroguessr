@@ -366,6 +366,8 @@ export function GameProvider({
                     } else {
                         cmap_en = await fetchJSON("/atlas/descr/en/" + selectedAtlasFiles.json);
                     }
+                } else {
+                    cmap_en = jsonData; // Already in English
                 }
                 atlasRef.current = new AtlasImageProxy({
                     niivue,
@@ -381,6 +383,7 @@ export function GameProvider({
                     proposedInverseMapping: askedAtlas?.inverseMapping || undefined,
                 });
                 atlasRef.current.showShuffledRegions();
+                atlasRef.current.performAutocenter();
             }
         } catch (error) {
             console.error(`Failed to load atlas data for ${askedAtlas?.atlas}:`, error);
