@@ -30,6 +30,7 @@
     display: flex;
     flex-direction: row;
     gap: 10px;
+    justify-content: center;
 }
 .advanced-settings-area {
     display: flex;
@@ -68,4 +69,136 @@
     padding: 4px;
     border: 1px solid #ccc;
     border-radius: 5px;
+}
+
+.advanced-settings-ui {
+    margin-top: 20px;
+}
+.atlas-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    background-color: #0b0b0bcc;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    gap: 30px;
+}
+.atlas-header:hover {
+    background-color: #2f2f2fcc;
+}
+.atlas-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.atlas-header-right {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+}
+
+.header-label {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 14px;
+    color: #666;
+}
+
+.header-input {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.atlas-block {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    background-color: #3f3f3fcc;
+    justify-content: space-between;
+}
+.atlas-block-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.atlas-block-right {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.region-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 5px;
+    gap: 10px;
+    margin-bottom: 10px;
+    margin-left: 25px;
+    margin-right: 25px;
+}
+.region-blocks{
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+}
+.toggle-button {
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.arrow {
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.arrow.collapsed {
+    transform: rotate(0deg); /* Default state for collapsed */
+}
+
+.arrow.expanded {
+    transform: rotate(90deg); /* Rotated state for expanded */
+}
+
+.remove-atlas-button, .remove-block-button {
+    padding: 0;
+    background: none;
+    border: none;
+    color: #ff4d4f;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.remove-atlas-button:hover, .remove-block-button:hover {
+    color: #d9363e;
+}
+
+.region-picker-ui {
+    display: flex;
+    align-items: baseline;
+    flex-direction: row;
+    margin-top: 10px;
+    gap: 10px;
+    margin-left: 25px;
+}
+.atlas-picker-ui {
+    background-color: #0b0b0bcc;
+    display: flex;
+    align-items: baseline;
+    flex-direction: row;
+    padding-top: 10px;
+    padding-left: 15px;
+    padding-bottom: 10px;
+    gap: 10px;
 }

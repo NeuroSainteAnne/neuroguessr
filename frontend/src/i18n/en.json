@@ -222,6 +222,11 @@
   "select_new_region": "Select a region",
   "random_region": "**Random region***",
   "select_preset": "Select a preset",
+  "region_name": "Region",
+  "loading_duration": "Loading time (sec)",
+  "add_new_region": "Insert new region",
+  "add_atlas": "Insert new atlas",
+  "enter_settings_name": "Enter preset name",
   
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",
