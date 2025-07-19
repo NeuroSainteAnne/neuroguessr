@@ -12,7 +12,7 @@
         "dev": "cd frontend && npm run dev"
     },
     "dependencies": {
-        "@niivue/niivue": "^0.57.0",
+        "@niivue/niivue": "^0.61.0",
         "@qalisa/vike-plugin-sitemap": "^1.5.4",
         "@vitejs/plugin-react": "^4.5.1",
         "altcha": "^2.0.3",
