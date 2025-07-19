@@ -45,7 +45,7 @@ export const defineNiiOptions = (myniivue: any, myAtlasProxy: AtlasImageProxy | 
     }
 }
 
-export const initNiivue = (myniivue: any, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, 
+export const initNiivue = (myniivue: Niivue, canvas: HTMLCanvasElement, viewerOptions: DisplayOptions, 
                             callback: () => void, overrideOptions = false) => {
     if ((myniivue as any)._isInitialized) {
         if (callback) callback();
@@ -270,7 +270,6 @@ export class AtlasImageProxy {
     }
 
     public performAutocenter(){
-        console.log(this.cmap_en)
         if (this.cmap_en?.autocenter?.center) {
             const center = this.cmap_en.autocenter.center;
             if (Array.isArray(center) && center.length === 3) {
