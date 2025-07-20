@@ -567,6 +567,7 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
     if (error) throw error;
     const commands : GameCommands[] = [];
     let currentAtlas = undefined;
+    let regionPool: number[] = [];
     for (const command of externalCommands) {
       if (command.action === "load-atlas") {
         currentAtlas = command.atlas || Object.keys(validRegions)[Math.floor(Math.random() * Object.keys(validRegions).length)];
@@ -576,18 +577,35 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
         const {lut, mapping, inverseMapping} = getRandomLut(currentAtlas)
         commands.push({
           action: "load-atlas",
-          atlas: command.atlas,
+          atlas: currentAtlas,
           lut,
           mapping,
           inverseMapping,
           duration: command.duration || LOAD_ATLAS_DURATION,
           blindMode: command.blindMode || false,
         });
+        regionPool = [...validRegions[currentAtlas]];
       } else if (command.action === "guess") {
         if (!currentAtlas || !validRegions[currentAtlas || ""]) {
           throw `Atlas "${currentAtlas}" does not exist.`
         }
-        const regionId = command.regionId || validRegions[currentAtlas][Math.floor(Math.random() * validRegions[currentAtlas].length)];
+        // If pool is empty, refill with all regions (to allow repeats only after all have been used)
+        if (regionPool.length === 0) {
+          regionPool = [...validRegions[currentAtlas]];
+        }
+        let idx = -1;
+        let regionId = -1;
+        if(command.regionId) {
+          regionId = command.regionId;
+          if(regionPool.includes(regionId)) {
+            idx = regionPool.indexOf(regionId);
+            regionPool.splice(idx, 1); // Remove from pool
+          }
+        } else {
+          idx = Math.floor(Math.random() * regionPool.length);
+          regionId = regionPool[idx];
+          regionPool.splice(idx, 1); // Remove from pool
+        }
         if (!validRegions[currentAtlas].includes(regionId)) {
           throw `Region "${regionId}" does not exist in atlas "${currentAtlas}".`;
         }
