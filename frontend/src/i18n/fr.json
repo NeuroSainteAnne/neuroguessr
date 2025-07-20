@@ -225,6 +225,7 @@
   "add_new_region": "Insérer une région",
   "add_atlas": "Insérer un atlas",
   "enter_settings_name": "Entrez le nom du préréglage",
+  "region_duration": "Durée de la région (sec)",
 
   "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",
