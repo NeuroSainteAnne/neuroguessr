@@ -77,6 +77,7 @@ type AppContextType = {
   setShowLegalOverlay: (show: boolean) => void;
   setIsMobileView: (isMobile: boolean) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
+  copyToClipboard: (text: string) => Promise<boolean>;
 };
 
 // Create the context
@@ -338,6 +339,41 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       }
     }
   }, [isLoggedIn, authToken, t]);
+
+  const copyToClipboard = async (text: string) : Promise<boolean> => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      // Modern approach (Chrome, Edge, etc.)
+      return navigator.clipboard.writeText(text)
+        .then(() => true)
+        .catch(() => {
+          // Fall back to execCommand if Clipboard API fails
+          return fallbackCopyToClipboard(text);
+        });
+    } else {
+      // Fallback for Firefox and older browsers
+      return fallbackCopyToClipboard(text);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text: string): boolean => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      // Make the textarea out of viewport
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-999999px';
+      textarea.style.top = '-999999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return success;
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      return false;
+    }
+  };
   
   return (
     <AppContext.Provider value={{
@@ -402,6 +438,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setShowHelpOverlay,
       setShowLegalOverlay,
       setIsMobileView,
+      copyToClipboard,
 
       // language functions
       t

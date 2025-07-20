@@ -33,7 +33,7 @@ const DEFAULT_GAMEOVER_ON_ERROR = false;
 const LOAD_ATLAS_DURATION = 10;
 
 const MultiplayerConfigScreen = () => {
-    const { t, authToken, userUsername, currentLanguage } = useApp();
+    const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
     const { selectedAtlas, setSelectedAtlas } = useGameSelector();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -904,7 +904,7 @@ const MultiplayerConfigScreen = () => {
                                         style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
-                                                navigator.clipboard.writeText(sessionCode);
+                                                copyToClipboard(sessionCode);
                                                 setCopiedIcon("code");
                                                 setTimeout(() => setCopiedIcon(null), 1000);
                                             }
@@ -923,7 +923,7 @@ const MultiplayerConfigScreen = () => {
                                         onClick={() => {
                                             if (sessionCode && sessionToken) {
                                                 const url = `${window.location.origin}/multiplayer/${sessionCode}`;
-                                                navigator.clipboard.writeText(url);
+                                                copyToClipboard(url);
                                                 setCopiedIcon("link");
                                                 setTimeout(() => setCopiedIcon(null), 1000);
                                             }
