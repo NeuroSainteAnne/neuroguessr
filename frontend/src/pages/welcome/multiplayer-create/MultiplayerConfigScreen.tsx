@@ -71,6 +71,7 @@ const MultiplayerConfigScreen = () => {
     const [forcePresetReload, setForcePresetReload] = useState<number>(0);
     const [expandedAtlases, setExpandedAtlases] = useState<{ [key: number]: boolean }>({});
     const [atlasRegionNames, setAtlasRegionNames] = useState<{ [atlasKey: string]: string[] }>({});
+    const [totalDuration, setTotalDuration] = useState<number>(0);
 
     const createSession = async () => {
         setLoading(true);
@@ -162,6 +163,11 @@ const MultiplayerConfigScreen = () => {
             socket.on('player-left', (data) => {
                 if (data.userName) {
                     setLobbyUsers(prev => prev.filter(u => u !== data.userName));
+                }
+            });
+            socket.on('parameters-updated', (data) => {
+                if(data && data.parameters && data.parameters.totalDuration) {
+                    setTotalDuration(data.parameters.totalDuration);
                 }
             });
             socket.on('parameters-has-updated', (data) => {
@@ -834,6 +840,14 @@ const MultiplayerConfigScreen = () => {
                                     {renderAtlasBlocks()}
                                     <div className='atlas-picker-ui'>
                                         {renderAtlasPicker()}
+                                        {totalDuration > 0 && <div className="total-duration">
+                                            <label htmlFor="total-duration">{t("total_duration") || "Total Duration"}:</label>&nbsp;
+                                            <span id="total-duration">
+                                                {Math.floor(totalDuration / 60) > 0 ? 
+                                                    `${Math.floor(totalDuration / 60)} ${t("min") || "min"} ${totalDuration % 60} ${totalDuration < 60 ? t("sec") : ""}` : 
+                                                    `${totalDuration} ${t("sec")}`}
+                                            </span>
+                                        </div>}
                                     </div>
                                 </div>
                                 {renderAdvancedButtons()}

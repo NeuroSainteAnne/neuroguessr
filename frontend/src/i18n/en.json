@@ -227,7 +227,8 @@
   "add_new_region": "Insert new region",
   "add_atlas": "Insert new atlas",
   "enter_settings_name": "Enter preset name",
-  "region_duration": "Region duration (sec)",
+  "region_duration": "Region duration",
+  "total_duration": "Total duration",
   
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",
