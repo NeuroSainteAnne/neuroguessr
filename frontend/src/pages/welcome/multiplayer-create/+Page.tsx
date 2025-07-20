@@ -17,9 +17,7 @@ export function Page() {
       {atlasRegions.length > 0 && <SearchBar />}
       <GameSelectorProvider>
         <GameSelector />
-        <div className="page-container">
-            <MultiplayerConfigScreen />
-        </div>
+        <MultiplayerConfigScreen />
       </GameSelectorProvider>
     </>
   );
