@@ -552,7 +552,8 @@ const MultiplayerConfigScreen = () => {
                 } catch (err) {
                     setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
                 }
-                e.target.value = ""
+                e.target.value = "";
+                e.target.blur();
             }}
             >
             <option value=""></option>
@@ -698,6 +699,7 @@ const MultiplayerConfigScreen = () => {
         } catch (err) {
             setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
         }
+        e.target.blur();
     };
 
     const toggleAtlasCollapse = (atlasIndex: number) => {

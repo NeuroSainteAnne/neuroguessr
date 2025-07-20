@@ -57,12 +57,31 @@
     flex: 1;
 }
 
+.region-picker-ui {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    flex-direction: row;
+    margin-top: 10px;
+    gap: 10px;
+    margin-left: 25px;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
 .atlas-picker,
 .region-picker,
 .duration-picker {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .region-duration-input{
@@ -77,6 +96,7 @@
 .atlas-header{
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
     align-items: baseline;
     padding: 10px;
     border-bottom: 1px solid #ccc;
@@ -139,12 +159,21 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-top: 5px;
+    padding-top: 5px;
     gap: 10px;
-    margin-bottom: 10px;
-    margin-left: 25px;
-    margin-right: 25px;
+    padding-bottom: 10px;
+    padding-left: 25px;
+    padding-right: 25px;
+    flex-wrap: wrap;
 }
+.region-block:nth-child(odd) {
+    background-color: #4b5b75;
+}
+
+.region-block:nth-child(even) {
+    background-color: #222c3c;
+}
+
 .region-blocks{
     padding-bottom: 10px;
     border-bottom: 1px solid #ccc;
@@ -184,14 +213,6 @@
     color: #d9363e;
 }
 
-.region-picker-ui {
-    display: flex;
-    align-items: baseline;
-    flex-direction: row;
-    margin-top: 10px;
-    gap: 10px;
-    margin-left: 25px;
-}
 .atlas-picker-ui {
     background-color: #0b0b0bcc;
     display: flex;
@@ -201,4 +222,5 @@
     padding-left: 15px;
     padding-bottom: 10px;
     gap: 10px;
+    flex-wrap: wrap;
 }
