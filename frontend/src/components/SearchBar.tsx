@@ -23,8 +23,8 @@ function Searchbar() {
       .filter(region => region.name.toLowerCase().includes(lowerQuery))
       .sort((a, b) => {
         if(askedAtlas && isNavigation){
-          if (a.atlas === askedAtlas && b.atlas !== askedAtlas) return -1;
-          if (a.atlas !== askedAtlas && b.atlas === askedAtlas) return 1;
+          if (a.atlas === askedAtlas.atlas && b.atlas !== askedAtlas.atlas) return -1;
+          if (a.atlas !== askedAtlas.atlas && b.atlas === askedAtlas.atlas) return 1;
         }
         const aIndex = a.name.toLowerCase().indexOf(lowerQuery);
         const bIndex = b.name.toLowerCase().indexOf(lowerQuery);
@@ -36,7 +36,7 @@ function Searchbar() {
   function handleSearchValidate(atlas: string, region: number) {
     if(isNavigation){
       // Update state and URL without page reload
-      setAskedAtlas(atlas)
+      setAskedAtlas({ atlas })
       setAskedRegion(region)
       setSuggestionList([])
       // Use history.pushState to update URL without page reload
@@ -63,7 +63,7 @@ function Searchbar() {
           {suggestionList.length > 0 && 
             <div id="search-suggestions" className="search-suggestions">
             {suggestionList.map((region) => {
-              const isCurrentAtlas = (region.atlas === askedAtlas && isNavigation);
+              const isCurrentAtlas = askedAtlas && (region.atlas === askedAtlas.atlas && isNavigation);
               const suggestionClassName = isCurrentAtlas ? "search-suggestion current-atlas" : "search-suggestion";
               return(<div
                 key={region.atlasName+"_"+region.name+"_"+region.id}
