@@ -130,7 +130,12 @@ export const database_init = async () => {
         `;
 
         await sql`
-            ALTER TABLE game_sessions 
+            ALTER TABLE game_progress 
+            ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+        `;
+
+        await sql`
+            ALTER TABLE finished_sessions 
             ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
         `;
 
