@@ -52,21 +52,22 @@ async function startOnlineSession(isLoggedIn: boolean, token: string, mode: stri
     }
 }
 
-function getDistance(centers: number[][], coordinates: { mm: number[], vox: number[] }): number {
-    let minDistance = Infinity;
+function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): {distance: number, center: number[]|undefined} {
     const [xMm, yMm, zMm] = coordinates.mm;
-    // Find the minimum distance to any center of the region
+    let minDistance = Infinity;
+    let nearestCenter: number[]|undefined = undefined;
     for (const center of centers) {
-        const distance = Math.sqrt(
+        const dist = Math.sqrt(
             Math.pow(center[0] - xMm, 2) +
             Math.pow(center[1] - yMm, 2) +
             Math.pow(center[2] - zMm, 2)
         );
-        if (distance < minDistance) {
-            minDistance = distance;
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearestCenter = center;
         }
     }
-    return minDistance;
+    return { distance: minDistance, center: nearestCenter };
 }
 
 export function Page() {
@@ -523,6 +524,7 @@ function SinglePlayer({
             let givenFinalScore = 0;
             let performHighlight = false;
             let distance = Infinity;
+            let nearestCenter: number[]|undefined = undefined;
             if (isLoggedIn) {
                 try {
                     const token = localStorage.getItem('authToken');
@@ -549,6 +551,8 @@ function SinglePlayer({
                     streak = result.streak;
                     consecutiveErrors = result.consecutiveErrors;
                     quitReason = result.quitReason;
+                    nearestCenter = result.nearestCenter;
+                    console.log("Nearest centr", nearestCenter)
                 } catch (error) {
                     console.error("Error occured during region validation:", error);
                     return false;
@@ -566,7 +570,9 @@ function SinglePlayer({
                     } else {
                         currentConsecutiveErrorsRef.current += 1
                         if (atlasRef.current && atlasRef.current.centers) {
-                            distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                            const {distance:minDistance, center} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                            distance = minDistance;
+                            nearestCenter = center;
                         }
                         if (distance > MAX_STREAK_DISTANCE) {
                             isEndgame = true;
@@ -582,7 +588,7 @@ function SinglePlayer({
             let previousScore = currentScoreRef.current;
             scoreIncrement = getUpdatedScore({
                 isEndgame, guessSuccess, scoreIncrement,
-                performHighlight, distance, streak, consecutiveErrors, quitReason
+                performHighlight, distance, nearestCenter, streak, consecutiveErrors, quitReason
             }).scoreIncrement
 
             if (isEndgame) {
@@ -594,8 +600,12 @@ function SinglePlayer({
         }
     }, [validateGuessCallbackRef, isGameRunning, gameMode]);
 
-    const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, distance = Infinity, streak = 0, consecutiveErrors = 0, quitReason = "" }:
-        { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean, distance: number, streak: number, consecutiveErrors: number, quitReason: string }): { scoreIncrement: number } => {
+    const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, 
+        distance = Infinity, nearestCenter = undefined, 
+        streak = 0, consecutiveErrors = 0, quitReason = "" }:
+        { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean,
+            distance: number, nearestCenter: number[]|undefined,
+            streak: number, consecutiveErrors: number, quitReason: string }): { scoreIncrement: number } => {
         if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
             console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
             return { scoreIncrement };
@@ -712,9 +722,9 @@ function SinglePlayer({
                 if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
                     if (atlasRef.current.centers) {
                         // Calculate Euclidean distance between centers
-                        distance = Infinity;
-                        distance = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
-
+                        const {distance:minDistance, center} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                        distance = minDistance;
+                        nearestCenter = center;
                         // Calculate score based on distance
                         if (distance <= MAX_PENALTY_DISTANCE) {
                             scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
@@ -769,8 +779,7 @@ function SinglePlayer({
                     mm: [...selectedVoxelSave.mm],
                     vox: [...selectedVoxelSave.vox]
                 } : undefined,
-                regionCenter: (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
-                // TODO ADJUST FOR MULTIPLE CENTERS
+                regionCenter: nearestCenter ? nearestCenter : ((atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined)
             }]);
         }
 
