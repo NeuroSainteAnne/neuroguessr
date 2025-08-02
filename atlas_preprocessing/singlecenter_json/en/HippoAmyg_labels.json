@@ -1,0 +1,46 @@
+{
+	"R": [
+		0, 255, 255, 0, 0, 220, 240, 178, 46, 199, 124, 218, 65, 255, 50,
+		240, 255, 189, 138, 0, 233, 30, 205, 34, 255, 255, 0, 106, 72, 180
+	],
+	"G": [
+		0, 0, 215, 200, 105, 20, 230, 34, 139, 21, 252, 165, 105, 99, 205,
+		128, 165, 183, 43, 255, 150, 144, 92, 139, 20, 255, 191, 90, 61, 70
+	],
+	"B": [
+		0, 0, 0, 80, 255, 60, 140, 34, 87, 133, 0, 32, 225, 71, 50, 128, 0,
+		107, 226, 127, 122, 255, 92, 34, 147, 0, 255, 205, 139, 200
+	],
+	"labels": [
+		"Background",
+		"Hippocampal_tail",
+		"subiculum-body",
+		"CA1-body",
+		"subiculum-head",
+		"hippocampal-fissure",
+		"presubiculum-head",
+		"alveus",
+		"CA1-head",
+		"presubiculum-body",
+		"parasubiculum",
+		"molecular_layer_HP-head",
+		"molecular_layer_HP-body",
+		"GC-ML-DG-head",
+		"CA3-body",
+		"GC-ML-DG-body",
+		"CA4-head",
+		"CA4-body",
+		"fimbria",
+		"CA3-head",
+		"HATA",
+		"Lateral-nucleus",
+		"Basal-nucleus",
+		"Accessory-Basal-nucleus",
+		"Anterior-amygdaloid-area-AAA",
+		"Central-nucleus",
+		"Medial-nucleus",
+		"Cortical-nucleus",
+		"Corticoamygdaloid-transitio",
+		"Paralaminar-nucleus"
+	]
+}
