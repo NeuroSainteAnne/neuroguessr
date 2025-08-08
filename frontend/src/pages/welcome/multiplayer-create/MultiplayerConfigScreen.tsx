@@ -58,6 +58,7 @@ const MultiplayerConfigScreen = () => {
     const [copiedIcon, setCopiedIcon] = useState<null | "code" | "link">(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    const showAdvancedSettingsRef = useRef<boolean>(false);
     const [advancedMode, setAdvancedMode] = useState<"ui"|"code">("ui");
     const advancedModeRef = useRef<"ui"|"code">("ui");
     const [advancedSettingsJSON, setAdvancedSettingsJSON] = useState<string>("[]");
@@ -240,7 +241,7 @@ const MultiplayerConfigScreen = () => {
             if (textareaRef.current) {
                 textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
             }
-            if(advancedModeRef.current === "ui"){
+            if(showAdvancedSettingsRef.current && advancedModeRef.current === "ui"){
                 const success = validateExternalGameCommands(parsedJSON);
                 if (!success) {
                     setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
@@ -254,6 +255,9 @@ const MultiplayerConfigScreen = () => {
         }
     }, [advancedSettingsJSON])
 
+    useEffect(() => {
+        showAdvancedSettingsRef.current = showAdvancedSettings;
+    }, [showAdvancedSettings]);
     useEffect(() => {
         advancedModeRef.current = advancedMode;
     }, [advancedMode]);
