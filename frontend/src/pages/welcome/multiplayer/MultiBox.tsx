@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { useGameSelector } from "../../../context/GameSelectorContext";
 import "./MultiBox.css";
+import { Socket, io } from 'socket.io-client';
 
 export function MultiBox() {
     const { t, isLoggedIn } = useApp();
@@ -20,24 +21,50 @@ export function MultiBox() {
     const [loadingPublic, setLoadingPublic] = useState(false);
     const [errorPublic, setErrorPublic] = useState<string | null>(null);
 
+    // Socket ref for public lobbies subscription
+    const publicSocketRef = useRef<Socket | null>(null);
+
     useEffect(() => {
-        const fetchPublic = async () => {
+        setLoadingPublic(true);
+        setErrorPublic(null);
+        const socket = io('/', {
+            path: '/socket.io',
+            transports: ['polling', 'websocket'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 20000,
+            forceNew: true,
+        });
+        publicSocketRef.current = socket;
+
+        socket.on('connect', () => {
+            socket.emit('connect-public');
+        });
+        socket.on('public-lobbies-update', (payload: any) => {
+            const lobbies = Array.isArray(payload?.lobbies) ? payload.lobbies : [];
+            setPublicLobbies(lobbies);
+            setLoadingPublic(false);
+            setErrorPublic(null);
+        });
+        socket.on('connect_error', (err: Error) => {
+            setErrorPublic(`Connection error: ${err.message}`);
+            setLoadingPublic(false);
+        });
+        socket.on('error', (err: any) => {
+            const msg = typeof err === 'string' ? err : (err?.message || 'Socket error');
+            setErrorPublic(msg);
+            setLoadingPublic(false);
+        });
+
+        return () => {
             try {
-                setLoadingPublic(true);
-                setErrorPublic(null);
-                const res = await fetch("/api/multi/public-lobbies");
-                if (!res.ok) throw new Error("Failed to load public lobbies");
-                const data = await res.json();
-                setPublicLobbies(Array.isArray(data?.lobbies) ? data.lobbies : []);
-            } catch (e: any) {
-                setErrorPublic(e?.message || "Failed to load public lobbies");
-            } finally {
-                setLoadingPublic(false);
-            }
+                socket.off('public-lobbies-update');
+                socket.off('connect_error');
+                socket.off('error');
+                socket.disconnect();
+            } catch {}
+            publicSocketRef.current = null;
         };
-        fetchPublic();
-        const id = setInterval(fetchPublic, 15000);
-        return () => clearInterval(id);
     }, []);
 
     const formatDuration = (seconds?: number) => {

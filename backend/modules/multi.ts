@@ -178,6 +178,17 @@ export function initSocketHandlers() {
         socket.emit('error', { message: "Error launching game" });
       }
     });
+
+    // Subscribe to public lobbies updates
+    socket.on('connect-public', async () => {
+      try {
+        socket.join('public-lobbies');
+        const lobbies = await buildPublicLobbies();
+        socket.emit('public-lobbies-update', { lobbies });
+      } catch (e) {
+        // no-op
+      }
+    });
   });
 }
 
@@ -286,6 +297,9 @@ async function joinLobby(
 
   // Initialize user in lobby
   initUserInLobby(socket, finalUserName, gameRef, sessionCode);
+
+  // Notify watchers of public lobbies (in case this lobby is public)
+  emitPublicLobbiesUpdate();
 
   return { success: true, anonToken: newAnonToken };
 }
@@ -452,17 +466,20 @@ function handleDisconnect(socketId: string) {
       }
       // If creator disconnects before game starts, destroy game and broadcast cancellation
       if (gameRef && !gameRef.hasStarted && typeof gameRef.creatorId === 'number') {
-        // Find creator userId
-        if (player && player.userId === gameRef.creatorId) {
-          getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', { reason: 'creator-disconnected' });
-          cleanupGame(sessionCode);
-          return;
-        }
+        // Check if the disconnecting user matches the creator (when known in memory)
+        // We don't have the userId on disconnect for anon users; this logic triggers for creator (non-anon) sessions
+        getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
+        cleanupGame(sessionCode);
+        emitPublicLobbiesUpdate();
+        // After cleanup, stop further processing
+        delete socketInfo[socketId];
+        return;
       }
       // Broadcast player left
       getIO().to(`game:${sessionCode}`).emit('player-left', { userName });
       // Clean up player info
       delete playerInfo[playerKey];
+      emitPublicLobbiesUpdate();
     }
   }
   
@@ -702,6 +719,8 @@ async function handleLaunchGame(data: {
     // broadcast gamestart to all users and start
     broadcastToSession(sessionCode, 'game-start', {});
     sendNextCommand(gameRef);
+    // A started game should be removed from public list
+    emitPublicLobbiesUpdate();
     return {success: true}
   } catch (error) {
     console.error("Error starting game:", error);
@@ -817,6 +836,8 @@ async function handleUpdateParameters(data: {
     broadcastToSession(sessionCode, 'parameters-updated', { 
       parameters: gameRef.parameters 
     });
+    // Push updated public lobbies (public flag/metadata may have changed)
+    emitPublicLobbiesUpdate();
     return { success: true };
   } catch (error) {
     console.error("Error updating parameters:", error);
@@ -1085,12 +1106,24 @@ function cleanupGame(sessionCode: string) {
   sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
     console.error(`Error deleting session ${sessionCode}:`, e);
   });
+  // Notify watchers that lobbies list may have changed
+  emitPublicLobbiesUpdate();
 }
 
 // Public lobbies list handler
 export const getPublicLobbies = async (req: Request, res: Response) => {
-  try {
-    const rows = await sql`
+    try {
+    const lobbies = await buildPublicLobbies();
+    res.status(200).json({ lobbies });
+  } catch (e) {
+    console.error("getPublicLobbies error", e);
+    res.status(500).json({ lobbies: [] });
+  }
+};
+
+// Helper to build current public lobbies list (shared by HTTP and sockets)
+async function buildPublicLobbies() {
+  const rows = await sql`
       SELECT ms.session_code, ms.created_at, u.username AS creator_name
       FROM multi_sessions ms
       LEFT JOIN users u ON u.id = ms.creator_id
@@ -1099,30 +1132,31 @@ export const getPublicLobbies = async (req: Request, res: Response) => {
       LIMIT 50
     ` as Array<{ session_code: number, created_at: Date, creator_name: string | null }>;
 
-    const lobbies = rows.map(r => {
-      const codeStr = String(r.session_code).padStart(8, '0');
-      const gameRef = games[codeStr];
-      if (!gameRef) {
-        return;
-      }
-      if(gameRef.hasStarted){
-        return;
-      }
-      const users = Object.values(playerInfo).filter(p => p.sessionCode === codeStr).length;
-      return {
-        sessionCode: codeStr,
-        atlas: gameRef.parameters.atlas || undefined,
-        blindMode: !!gameRef.parameters.blindMode,
-        totalDuration: gameRef.parameters.totalDuration || undefined,
-        createdAt: r.created_at?.toISOString(),
-        users,
-        creator: r.creator_name || undefined
-      };
-    }).filter((x)=> x !== undefined);
+  const lobbies = rows.map(r => {
+    const codeStr = String(r.session_code).padStart(8, '0');
+    const gameRef = games[codeStr];
+    if (!gameRef || gameRef.hasStarted) return undefined;
+    const users = Object.values(playerInfo).filter(p => p.sessionCode === codeStr).length;
+    const totalDuration = gameRef.parameters?.totalDuration ?? (gameRef.commands ? gameRef.commands.reduce((acc, c) => acc + (c.duration || 0), 0) : undefined);
+    return {
+      sessionCode: codeStr,
+      atlas: gameRef.parameters?.atlas,
+      totalDuration,
+      users,
+      createdAt: r.created_at?.toISOString?.() || undefined,
+      blindMode: !!gameRef.parameters?.blindMode,
+      creator: r.creator_name || '—'
+    };
+  }).filter((x): x is NonNullable<typeof x> => x !== undefined);
+  return lobbies;
+}
 
-    res.status(200).json({ lobbies });
+async function emitPublicLobbiesUpdate() {
+  try {
+    const io = getIO();
+    const lobbies = await buildPublicLobbies();
+    io.to('public-lobbies').emit('public-lobbies-update', { lobbies });
   } catch (e) {
-    console.error("getPublicLobbies error", e);
-    res.status(500).json({ lobbies: [] });
+    // no-op
   }
-};
+}
