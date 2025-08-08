@@ -1,4 +1,3 @@
-
 /*  MULTIPLAYER */
 export interface PlayerInfo {
   isAnonymous?: boolean;
@@ -41,6 +40,7 @@ export interface MultiplayerGame {
   anonymousUsernames: string[];
   lastActivity: number;
   isCurrentlyBlind: boolean;
+  creatorId?: number;
 } 
 
 export interface AtlasLUT {

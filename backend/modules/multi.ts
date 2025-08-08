@@ -96,7 +96,7 @@ export function initSocketHandlers() {
           handleDisconnect(socket.id);
         });
 
-        // Rest of join-lobby logic (converted from createSSEClient)
+        // Rest of join-lobby logic 
         const result = await joinLobby(socket, sessionCode, userName, isAnonymous, token, anonToken);
         
         if (result.error) {
@@ -202,10 +202,10 @@ async function joinLobby(
   const sessionResult = await sql`
     SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
   ` as MultiSession[];
-  
   if (!sessionResult.length) {
     return { error: "Lobby does not exist" };
   }
+  const creatorId = sessionResult[0]?.creator_id;
 
   // Authentication logic (similar to your existing code)
   if (!isAnonymous) {
@@ -251,7 +251,7 @@ async function joinLobby(
 
   // Create game if it doesn't exist
   if (!games[sessionCode]) {
-    createEmptySession(sessionCode);
+    createEmptySession(sessionCode, creatorId ?? undefined);
   }
   
   const gameRef = games[sessionCode];
@@ -360,7 +360,7 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
   }
 };
 
-function createEmptySession(sessionCode: string){
+function createEmptySession(sessionCode: string, creatorId?: number){
     games[sessionCode] = {
       sessionCode: sessionCode,
       hasStarted: false,
@@ -385,7 +385,8 @@ function createEmptySession(sessionCode: string){
       individualCorrectDurations: {},
       anonymousUsernames: [],
       lastActivity: Date.now(),
-      isCurrentlyBlind: false
+      isCurrentlyBlind: false,
+      ...(creatorId !== undefined ? { creatorId } : {})
     }
 }
 
@@ -434,7 +435,8 @@ function handleDisconnect(socketId: string) {
   
   const { sessionCode, userName } = info;
   const playerKey = `${sessionCode}:${userName}`;
-  
+  const gameRef = games[sessionCode];
+
   // Remove from socketClients
   if (socketClients[playerKey]) {
     socketClients[playerKey] = socketClients[playerKey].filter(id => id !== socketId);
@@ -444,14 +446,21 @@ function handleDisconnect(socketId: string) {
       delete socketClients[playerKey];
       
       const player = playerInfo[playerKey];
-      if (player && player.isAnonymous && games[sessionCode]) {
-        games[sessionCode].anonymousUsernames = 
-          games[sessionCode].anonymousUsernames.filter(name => name !== userName);
+      if (player && player.isAnonymous && gameRef) {
+        gameRef.anonymousUsernames = 
+          gameRef.anonymousUsernames.filter(name => name !== userName);
       }
-      
+      // If creator disconnects before game starts, destroy game and broadcast cancellation
+      if (gameRef && !gameRef.hasStarted && typeof gameRef.creatorId === 'number') {
+        // Find creator userId
+        if (player && player.userId === gameRef.creatorId) {
+          getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', { reason: 'creator-disconnected' });
+          cleanupGame(sessionCode);
+          return;
+        }
+      }
       // Broadcast player left
       getIO().to(`game:${sessionCode}`).emit('player-left', { userName });
-      
       // Clean up player info
       delete playerInfo[playerKey];
     }
