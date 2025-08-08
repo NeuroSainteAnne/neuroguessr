@@ -46,6 +46,7 @@ const MultiplayerConfigScreen = () => {
     const [durationPerRegion, setDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const [blindMode, setBlindMode] = useState(false);
     const [gameoverOnError, setGameoverOnError] = useState<boolean>(DEFAULT_GAMEOVER_ON_ERROR);
+    const [isPublic, setIsPublic] = useState<boolean>(false);
     const parametersRef = useRef<MultiplayerParametersType>({
         atlas: undefined,
         regionsNumber: DEFAULT_REGION_NUMBER,
@@ -96,6 +97,7 @@ const MultiplayerConfigScreen = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 },
+                body: JSON.stringify({ isPublic, atlas: selectedAtlas || undefined, blindMode })
             });
             if (!response.ok) {
                 const result = await response.json();
@@ -807,6 +809,17 @@ const MultiplayerConfigScreen = () => {
                                     </div>
                                 </label>
                                 
+                            </div>
+                            <div className="mode-buttons">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={isPublic}
+                                        onChange={(e) => { setIsPublic(e.target.checked); updateParameters({public: e.target.checked})}}
+                                        style={{ marginRight: 8 }}
+                                    />
+                                    {t('public_lobby') || 'Public lobby (show in list)'}
+                                </label>
                             </div>
                             {false && "FOR v2" && <div className="mode-buttons">
                                 <label htmlFor="gameoverOnErrorCheckbox" style={{ fontSize: 18, marginRight: 12 }}>

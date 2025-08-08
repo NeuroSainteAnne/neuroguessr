@@ -28,6 +28,7 @@ export interface MultiplayerParametersType {
     blindMode: boolean;
     commands?: ExternalGameCommands[];
     totalDuration?: number;
+    public?: boolean;
 }
 
 export type ColorMap = {

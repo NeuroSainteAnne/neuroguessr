@@ -119,7 +119,8 @@ export const database_init = async () => {
                 session_code INTEGER NOT NULL,
                 session_token TEXT NOT NULL,
                 creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                public BOOLEAN NOT NULL DEFAULT FALSE
             );`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
         await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
@@ -172,6 +173,13 @@ export const database_init = async () => {
         `;
         await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_user_id ON advanced_game_settings(user_id);`;
         await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_name ON advanced_game_settings(name);`;
+
+        // New: Public lobbies metadata
+        await sql`
+            ALTER TABLE multi_sessions 
+            ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
+        `;
+        await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_public ON multi_sessions(public);`;
 
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){

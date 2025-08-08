@@ -776,10 +776,33 @@ async function handleUpdateParameters(data: {
       const commands = cleanupExternalCommands(parameters.commands)
       gameRef.parameters.commands = commands
       gameRef.parameters.regionsNumber = commands?.filter(command => command.action === "guess").length || 0;
+      // If no atlas explicitly set, derive from first load-atlas action
+      const firstLoad = commands?.find(c => c.action === 'load-atlas');
+      if (firstLoad && firstLoad.atlas) {
+        gameRef.parameters.atlas = firstLoad.atlas;
+      }
+      // If any load-atlas sets blindMode, use the last one as current default
+      const lastBlind = [...(commands||[])].reverse().find(c => c.action==='load-atlas' && typeof c.blindMode === 'boolean');
+      if (lastBlind && typeof lastBlind.blindMode === 'boolean') {
+        gameRef.parameters.blindMode = lastBlind.blindMode as boolean;
+      }
     } else {
       gameRef.parameters.commands = undefined
     }
-    gameRef.parameters.totalDuration = gameRef.parameters.commands?.reduce((total, command) => total + (command.duration || 0), 0) || 0;
+    // Total duration: sum of commands or estimate
+    if (gameRef.parameters.commands && gameRef.parameters.commands.length) {
+      gameRef.parameters.totalDuration = gameRef.parameters.commands.reduce((total, command) => total + (command.duration || 0), 0);
+    } else {
+      const regions = gameRef.parameters.regionsNumber || 0;
+      const dur = gameRef.parameters.durationPerRegion || 0;
+      gameRef.parameters.totalDuration = (regions > 0 && dur > 0) ? (LOAD_ATLAS_DURATION + regions * dur) : 0;
+    }
+
+    // If a public flag is provided, persist it
+    const publicFlag = (parameters as any)?.public;
+    if (typeof publicFlag === 'boolean') {
+      await sql`UPDATE multi_sessions SET public = ${publicFlag} WHERE session_code = ${sessionCode}`;
+    }
     
     // Broadcast updated parameters to all lobby members
     broadcastToSession(sessionCode, 'parameters-updated', { 
@@ -1054,3 +1077,43 @@ function cleanupGame(sessionCode: string) {
     console.error(`Error deleting session ${sessionCode}:`, e);
   });
 }
+
+// Public lobbies list handler
+export const getPublicLobbies = async (req: Request, res: Response) => {
+  try {
+    const rows = await sql`
+      SELECT ms.session_code, ms.created_at, u.username AS creator_name
+      FROM multi_sessions ms
+      LEFT JOIN users u ON u.id = ms.creator_id
+      WHERE ms.public = TRUE
+      ORDER BY ms.created_at DESC
+      LIMIT 50
+    ` as Array<{ session_code: number, created_at: Date, creator_name: string | null }>;
+
+    const lobbies = rows.map(r => {
+      const codeStr = String(r.session_code).padStart(8, '0');
+      const gameRef = games[codeStr];
+      if (!gameRef) {
+        return;
+      }
+      if(gameRef.hasStarted){
+        return;
+      }
+      const users = Object.values(playerInfo).filter(p => p.sessionCode === codeStr).length;
+      return {
+        sessionCode: codeStr,
+        atlas: gameRef.parameters.atlas || undefined,
+        blindMode: !!gameRef.parameters.blindMode,
+        totalDuration: gameRef.parameters.totalDuration || undefined,
+        createdAt: r.created_at?.toISOString(),
+        users,
+        creator: r.creator_name || undefined
+      };
+    }).filter((x)=> x !== undefined);
+
+    res.status(200).json({ lobbies });
+  } catch (e) {
+    console.error("getPublicLobbies error", e);
+    res.status(500).json({ lobbies: [] });
+  }
+};
