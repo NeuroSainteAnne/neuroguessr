@@ -10,7 +10,7 @@ import { Socket, io } from 'socket.io-client';
 import "./MultiplayerConfigScreen.css"
 import Joi from "joi";
 import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
-import { fetchJSON } from '../../../helper_niivue';
+import { fetchJSON } from '../../../utils/helper_nii';
 import { add, set } from 'date-fns';
 
 const externalGameCommandsSchema = Joi.array().items(
