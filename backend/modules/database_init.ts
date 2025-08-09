@@ -10,7 +10,18 @@ const config: Config = configJson;
 // Create a new database or open an existing one
 export const sql = postgres(
     encodeURI(config.pgConnectionString), 
-    {debug: true,
+    {
+        debug: true,
+        max: 20,                    // Maximum connections in pool
+        idle_timeout: 20,           // Close idle connections after 20s
+        connect_timeout: 10,        // Connection timeout
+        prepare: false,             // Better for dynamic queries
+        transform: {
+            column: {
+                from: postgres.fromCamel,
+                to: postgres.toCamel
+            }
+        },
         types: {
             date: {
                 // Ensure dates are properly parsed
@@ -20,166 +31,193 @@ export const sql = postgres(
                 // Optionally, specify the PostgreSQL type OIDs for dates (here 1082 for "date")
                 from: [1082]
             }
+        },
+        // Add connection retry logic
+        connection: {
+            application_name: 'neuroguessr_backend'
         }
     }); 
+
 export const database_init = async () => {
     try {
-        await sql`
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username TEXT NOT NULL,
-                firstname TEXT NOT NULL,
-                lastname TEXT NOT NULL,
-                email TEXT NOT NULL,
-                password TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                verified BOOLEAN NOT NULL DEFAULT FALSE,
-                language TEXT NOT NULL DEFAULT 'fr',
-                publish_to_leaderboard BOOLEAN DEFAULT NULL,
-                clinical_trial_gender TEXT DEFAULT NULL,
-                clinical_trial_age INTEGER DEFAULT NULL,
-                clinical_trial_country TEXT DEFAULT NULL,
-                clinical_trial_occupation TEXT DEFAULT NULL,
-                clinical_trial_consent TEXT DEFAULT NULL,
-                clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`
+        console.log('Initializing database schema...');
+        // Create tables with optimized indexes
+        await sql.begin(async sql => {
+            await sql`
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    firstname TEXT NOT NULL,
+                    lastname TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    password TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    language TEXT NOT NULL DEFAULT 'fr',
+                    publish_to_leaderboard BOOLEAN DEFAULT NULL,
+                    clinical_trial_gender TEXT DEFAULT NULL,
+                    clinical_trial_age INTEGER DEFAULT NULL,
+                    clinical_trial_country TEXT DEFAULT NULL,
+                    clinical_trial_occupation TEXT DEFAULT NULL,
+                    clinical_trial_consent TEXT DEFAULT NULL,
+                    clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_verified ON users(verified);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_language ON users(language);`;
 
-        await sql`CREATE TABLE IF NOT EXISTS tokens (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                token TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );`
-        await sql`CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`
+            await sql`
+                CREATE TABLE IF NOT EXISTS tokens (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    token TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);`
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`
 
-        await sql`CREATE TABLE IF NOT EXISTS game_sessions (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                token TEXT NOT NULL,
-                mode TEXT NOT NULL,
-                atlas TEXT NOT NULL,
-                blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                current_score INTEGER NOT NULL DEFAULT 0,
-                current_streak INTEGER DEFAULT 0,
-                consecutive_errors INTEGER DEFAULT 0
-            );`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);`
+            await sql`
+                CREATE TABLE IF NOT EXISTS game_sessions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    token TEXT NOT NULL,
+                    mode TEXT NOT NULL,
+                    atlas TEXT NOT NULL,
+                    blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    current_score INTEGER NOT NULL DEFAULT 0,
+                    current_streak INTEGER DEFAULT 0,
+                    consecutive_errors INTEGER DEFAULT 0
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_created ON game_sessions(user_id, created_at);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_mode_atlas ON game_sessions(mode, atlas);`;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`;
 
-        await sql`CREATE TABLE IF NOT EXISTS game_progress (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
-                session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
-                region_id INTEGER NOT NULL,
-                time_taken INTEGER NOT NULL,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                is_correct BOOLEAN NOT NULL DEFAULT FALSE,
-                score_increment INTEGER NOT NULL DEFAULT 0,
-                attempts INTEGER NOT NULL DEFAULT 0,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`
+            await sql`
+                CREATE TABLE IF NOT EXISTS game_progress (
+                    id SERIAL PRIMARY KEY,
+                    session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
+                    session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
+                    region_id INTEGER NOT NULL,
+                    time_taken INTEGER NOT NULL,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+                    score_increment INTEGER NOT NULL DEFAULT 0,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`;
 
-        await sql`CREATE TABLE IF NOT EXISTS finished_sessions (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-                mode TEXT NOT NULL,
-                atlas TEXT NOT NULL,
-                blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
-                score INTEGER NOT NULL CHECK (score >= 0),
-                attempts INTEGER,
-                correct INTEGER,
-                incorrect INTEGER,
-                min_time_per_region INTEGER,
-                max_time_per_region INTEGER,
-                avg_time_per_region INTEGER,
-                min_time_per_correct_region INTEGER,
-                max_time_per_correct_region INTEGER,
-                avg_time_per_correct_region INTEGER,
-                quit_reason TEXT,
-                multiplayer_games_won INTEGER DEFAULT 0,
-                duration INTEGER NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );`
-        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);`
-        await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);`
+            await sql`
+                CREATE TABLE IF NOT EXISTS finished_sessions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                    mode TEXT NOT NULL,
+                    atlas TEXT NOT NULL,
+                    blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
+                    score INTEGER NOT NULL CHECK (score >= 0),
+                    attempts INTEGER,
+                    correct INTEGER,
+                    incorrect INTEGER,
+                    min_time_per_region INTEGER,
+                    max_time_per_region INTEGER,
+                    avg_time_per_region INTEGER,
+                    min_time_per_correct_region INTEGER,
+                    max_time_per_correct_region INTEGER,
+                    avg_time_per_correct_region INTEGER,
+                    quit_reason TEXT,
+                    multiplayer_games_won INTEGER DEFAULT 0,
+                    duration INTEGER NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_mode ON finished_sessions(mode);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas ON finished_sessions(atlas);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_created_at ON finished_sessions(created_at);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_leaderboard ON finished_sessions(mode, atlas, blind_mode, score DESC);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_stats ON finished_sessions(user_id, created_at, score);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_atlas_count ON finished_sessions(atlas) WHERE atlas IS NOT NULL;`;
 
-        await sql`CREATE TABLE IF NOT EXISTS multi_sessions (
-                id SERIAL PRIMARY KEY,
-                session_code INTEGER NOT NULL,
-                session_token TEXT NOT NULL,
-                creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                public BOOLEAN NOT NULL DEFAULT FALSE
-            );`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
-        await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
-        
-        await sql`
-            ALTER TABLE finished_sessions 
-            ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
-        `;
+            await sql`
+                CREATE TABLE IF NOT EXISTS multi_sessions (
+                    id SERIAL PRIMARY KEY,
+                    session_code INTEGER NOT NULL,
+                    session_token TEXT NOT NULL,
+                    creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    public BOOLEAN NOT NULL DEFAULT FALSE
+                );
+            `;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`;
 
-        await sql`
-            ALTER TABLE game_progress 
-            ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
-        `;
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
 
-        await sql`
-            ALTER TABLE finished_sessions 
-            ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
-        `;
+            await sql`
+                ALTER TABLE game_progress 
+                ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+            `;
 
-        // Add clinical_trial variables if they don't exist
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_age INTEGER DEFAULT NULL;`
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_country TEXT DEFAULT NULL;`
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
-        await sql`
-            ALTER TABLE game_sessions 
-            ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0;
-        `;
-        await sql`
-            ALTER TABLE game_sessions 
-            ADD COLUMN IF NOT EXISTS consecutive_errors INTEGER DEFAULT 0;
-        `;
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
 
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
-        await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
+        // Update old versions of the database schema
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_age INTEGER DEFAULT NULL;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_country TEXT DEFAULT NULL;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
+            await sql`
+                ALTER TABLE game_sessions 
+                ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0;
+            `;
+            await sql`
+                ALTER TABLE game_sessions 
+                ADD COLUMN IF NOT EXISTS consecutive_errors INTEGER DEFAULT 0;
+            `;
 
-        await sql`
-            CREATE TABLE IF NOT EXISTS advanced_game_settings (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                public BOOLEAN NOT NULL DEFAULT FALSE,
-                settings TEXT NOT NULL
-            );
-        `;
-        await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_user_id ON advanced_game_settings(user_id);`;
-        await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_name ON advanced_game_settings(name);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
 
-        // New: Public lobbies metadata
-        await sql`
-            ALTER TABLE multi_sessions 
-            ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
-        `;
-        await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_public ON multi_sessions(public);`;
+            await sql`
+                CREATE TABLE IF NOT EXISTS advanced_game_settings (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    name TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    public BOOLEAN NOT NULL DEFAULT FALSE,
+                    settings TEXT NOT NULL
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_user_id ON advanced_game_settings(user_id);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_advanced_game_settings_name ON advanced_game_settings(name);`;
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_public ON multi_sessions(public);`;
+        });
 
         console.log("Database schema initialized successfully.");
         if(config.addTestUser){
