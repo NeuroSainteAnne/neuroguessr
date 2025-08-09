@@ -4,7 +4,7 @@ import type { Niivue, NVImage } from '@niivue/niivue';
 import { usePageContext } from 'vike-react/usePageContext';
 import { useApp } from '../context/AppContext';
 
-export async function fetchJSON(fnm: string): Promise<any> {
+export async function fetchJSON(fnm: string): Promise<ColorMap> {
     try {
         const response = await fetch(fnm);
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
