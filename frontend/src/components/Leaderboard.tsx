@@ -315,7 +315,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="no-data">
+                  <td colSpan={6} className="no-data">
                     {t('no_leaderboard_data')}
                   </td>
                 </tr>
