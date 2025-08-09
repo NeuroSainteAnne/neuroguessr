@@ -54,6 +54,7 @@ export default {
   ],
   server: {
     port: 9876,
+    host: true,
     proxy: {
       '/api': {
         target: "http://localhost:3000",
@@ -81,7 +82,8 @@ export default {
     }
   },
   preview: {
-    port: 9876
+    port: 9876,
+    host: true,
   },
   build: {
     sourcemap: false
