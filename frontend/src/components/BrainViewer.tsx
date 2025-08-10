@@ -6,7 +6,10 @@ import { AtlasImageProxy, initNiivue, loadAtlasNii, fetchJSON, defineNiiOptions 
 import { useApp } from '../context/AppContext';
 import atlasFiles from "../utils/atlas_files";
 import { navigate } from "vike/client/router";
+import { loadNIfTIFromCache } from "../utils/nifti_cache";
+import { prefetchLikelyAtlases } from "../utils/performance_optimizer";
 import "./BrainViewer.css"
+import { consoleLog } from "../utils/logging";
 
 export const BrainViewer = () => {
     const { highlightWrapper, niivue, handleMouseDown, handleMouseMove,
@@ -309,12 +312,13 @@ export function GameProvider({
             if (!preloadedBackgroundMNI || !askedAtlas) return;
 
             if (currentlyLoadedAtlas.current != askedAtlas?.atlas) {
-                console.log("Loading atlas and background MNI", askedAtlas?.atlas);
+                consoleLog('verbose', `🗺️ Loading atlas and background MNI ${askedAtlas?.atlas}`);
                 const atlas = atlasFiles[askedAtlas?.atlas];
                 if (atlas) {
                     atlasRef.current = null;
                     const niiFile = "/atlas/nii/" + atlas.nii;
-                    const altasNv = await NVImage.loadFromUrl({ url: niiFile })
+                    consoleLog('normal', `🗺️ Loading atlas ${askedAtlas?.atlas} from cache...`);
+                    const altasNv = await loadNIfTIFromCache(niiFile);
                     loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
                 }
                 currentlyLoadedAtlas.current = askedAtlas?.atlas
@@ -322,6 +326,13 @@ export function GameProvider({
                 // 3. Load atlas data
                 console.log("Loading atlas regions", askedAtlas?.atlas);
                 await loadAtlasData();
+                
+                // 4. Prefetch related atlases in the background
+                setTimeout(() => {
+                    prefetchLikelyAtlases(askedAtlas?.atlas).catch(error => {
+                        console.warn('Background prefetching failed:', error);
+                    });
+                }, 1000); // Wait 1 second after loading current atlas
             }
 
 

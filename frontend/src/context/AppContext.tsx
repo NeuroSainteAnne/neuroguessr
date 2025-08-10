@@ -7,6 +7,9 @@ import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
 import { useTranslation } from 'react-i18next';
 import type { NVImage } from '@niivue/niivue';
+import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas, warmupCache } from '../utils/nifti_cache';
+import { startAtlasSession, endAtlasSession, getPreloadRecommendations } from '../utils/atlas_usage_tracker';
+import { consoleLog } from '../utils/logging';
 
 type NVImageConstructor = {
   new (): NVImage;
@@ -78,6 +81,12 @@ type AppContextType = {
   setIsMobileView: (isMobile: boolean) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
   copyToClipboard: (text: string) => Promise<boolean>;
+  
+  // Cache management
+  getCacheStats: () => ReturnType<typeof getCacheStats>;
+  preloadAtlas: (atlasKey: string) => Promise<void>;
+  warmupCache: (atlasKeys: string[]) => Promise<void>;
+  clearCache: () => void;
 };
 
 // Create the context
@@ -139,6 +148,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     import('@niivue/niivue').then((mod) => {
       if (isMounted) {
         setnvimageModule(() => mod.NVImage);
+        // Initialize the cache with the NVImage module
+        niftiCache.initialize(mod.NVImage);
       }
     });
     return () => { isMounted = false; };
@@ -158,8 +169,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   useEffect(() => {
     if (nvimageModule) {
       const niiFile = "/atlas/mni152_downsampled.nii.gz";
-      nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
+      loadNIfTIFromCache(niiFile).then((nvImage) => {
         setPreloadedBackgroundMNI(nvImage);
+        consoleLog('normal', `🧠 MNI background loaded from cache`);
       }).catch((error: any) => {
         console.error("Error loading NIfTI file:", error);
         showNotification('error_loading_atlas', false, { atlas: 'MNI152' });
@@ -173,9 +185,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (askedAtlas && nvimageModule) {
       const atlas = atlasFiles[askedAtlas.atlas];
       if (atlas) {
+        // Track atlas usage for smart preloading
+        startAtlasSession(askedAtlas.atlas);
+        
         const niiFile = "/atlas/nii/" + atlas.nii;
-        nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
+        loadNIfTIFromCache(niiFile).then((nvImage) => {
           setPreloadedAtlas(nvImage);
+          consoleLog('normal', `🗺️ Atlas ${askedAtlas.atlas} loaded from cache`);
         }).catch((error: any) => {
           console.error("Error loading NIfTI file:", error);
           showNotification('error_loading_atlas', false, { atlas: askedAtlas.atlas });
@@ -183,12 +199,36 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         });
       }
     }
+    
+    // End previous atlas session when switching atlases
+    return () => {
+      if (askedAtlas) {
+        endAtlasSession();
+      }
+    };
   }, [askedAtlas, nvimageModule]);
 
   // Load atlas regions 
   useEffect(() => {
     loadAtlasLabels()
   }, [currentLanguage])
+
+  // Preload popular atlases when the app starts
+  useEffect(() => {
+    if (nvimageModule) {
+      setTimeout(() => {
+        // Get smart recommendations based on user's historical usage
+        const recommendations = getPreloadRecommendations(4);
+        consoleLog('normal', `🤖 Smart preloading recommendations: ${recommendations.join(', ')}`);
+
+        warmupCache(recommendations).then(() => {
+          consoleLog('verbose', `🔥 Smart atlas preloading completed successfully`);
+        }).catch(error => {
+          consoleLog('normal', `⚠️ Smart atlas preloading failed: ${error}`);
+        });
+      }, 2000); // Wait 2 seconds after app initialization
+    }
+  }, [nvimageModule]);
 
     // Load labels for all atlases
   async function loadAtlasLabels() {
@@ -441,7 +481,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       copyToClipboard,
 
       // language functions
-      t
+      t,
+      
+      // Cache management functions
+      getCacheStats,
+      preloadAtlas,
+      warmupCache,
+      clearCache: niftiCache.clearCache
     }}>
       {children}
     </AppContext.Provider>

@@ -13,6 +13,7 @@ import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBo
 import RegionHistory from '../../components/RegionHistory';
 import SearchBar from '../../components/SearchBar';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
+import CacheMonitor from '../../components/CacheMonitor';
 
 
 async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string, blindMode: boolean): Promise<{ sessionToken: string, sessionId: string } | null> {
@@ -157,6 +158,7 @@ function SinglePlayer({
     const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
     const timeattackOverlayRef = useRef<HTMLDivElement>(null);
     const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
+    const [showCacheMonitor, setShowCacheMonitor] = useState<boolean>(false);
 
     const {
         setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
@@ -463,11 +465,19 @@ function SinglePlayer({
             if (e.key === 'Escape' && showTimeattackOverlay) {
                 setShowTimeattackOverlay(false)
             }
+            if (e.key === 'Escape' && showCacheMonitor) {
+                setShowCacheMonitor(false)
+            }
+            // Toggle cache monitor with Ctrl+Shift+C (development feature)
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                setShowCacheMonitor(prev => !prev);
+                e.preventDefault();
+            }
         }
         if (genericKeyPressCallbackRef) {
             genericKeyPressCallbackRef.current = genericKeyPressCallback; // Set the callback in the ref
         }
-    }, [genericKeyPressCallbackRef]);
+    }, [genericKeyPressCallbackRef, showStreakOverlay, showTimeattackOverlay, showCacheMonitor]);
 
     useEffect(() => {
         const canvasInteraction = (clickedRegionLocation: any) => {
@@ -962,6 +972,11 @@ function SinglePlayer({
                     </div>
                 </div>
             </div>}
+
+            <CacheMonitor 
+                isVisible={showCacheMonitor} 
+                onClose={() => setShowCacheMonitor(false)} 
+            />
 
         </>
     )
