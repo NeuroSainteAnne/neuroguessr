@@ -414,12 +414,23 @@ export class NIfTICacheManager {
   }
 
   /**
-   * Estimate memory usage (rough approximation)
+   * Estimate memory usage based on actual file sizes
    */
   private getEstimatedMemoryUsageMB(): number {
-    // Rough estimation: each NVImage is approximately 10-50MB
-    // This is a simplified calculation - in reality it depends on image dimensions
-    return this.cache.size * 25; // Average of 25MB per image
+    let totalSizeMB = 0;
+    
+    for (const url of this.cache.keys()) {
+      // Estimate memory usage based on known file sizes
+      if (url.includes('reconstructed_allen_05mm_uint.nii.gz')) {
+        totalSizeMB += 4; // 4MB for Allen atlas
+      } else if (url.includes('mni152_downsampled.nii.gz')) {
+        totalSizeMB += 0.9; // 900KB for MNI background
+      } else {
+        totalSizeMB += 0.5; // 500KB for other atlases
+      }
+    }
+    
+    return totalSizeMB;
   }
 
   /**

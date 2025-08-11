@@ -1,6 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { useGameSelector } from "../../context/GameSelectorContext";
 import atlasFiles, { atlasCategories } from "../../utils/atlas_files";
+import { loadNIfTIFromCache } from "../../utils/nifti_cache";
 import './GameSelector.css';
 
 export const GameSelectorAtlas = () => {
@@ -12,7 +13,9 @@ export const GameSelectorAtlas = () => {
     
     // Start preloading the selected atlas
     try {
-      await preloadAtlas(atlasKey);
+      const atlas = atlasFiles[atlasKey];
+      const niiFile = "/atlas/nii/" + atlas.nii;
+      await loadNIfTIFromCache(niiFile);
     } catch (error) {
       console.error(`Failed to preload atlas ${atlasKey}:`, error);
       // Don't show user notification for preload failures - it's not critical
