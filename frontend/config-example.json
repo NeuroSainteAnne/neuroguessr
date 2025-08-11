@@ -3,5 +3,8 @@
         "activate": false
     },
     "activateAnonymousMode": true,
-    "customHeaderScript": ""
+    "customHeaderScript": "",
+    "cache": {
+        "verbosity": "normal"
+    }
 }
