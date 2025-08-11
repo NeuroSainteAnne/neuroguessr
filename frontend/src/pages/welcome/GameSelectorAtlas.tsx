@@ -4,8 +4,20 @@ import atlasFiles, { atlasCategories } from "../../utils/atlas_files";
 import './GameSelector.css';
 
 export const GameSelectorAtlas = () => {
-  const {t} = useApp();
+  const {t, preloadAtlas} = useApp();
   const { selectedAtlas, setSelectedAtlas, selectedCategory, setSelectedCategory } = useGameSelector();
+
+  const handleAtlasSelection = async (atlasKey: string) => {
+    setSelectedAtlas(atlasKey);
+    
+    // Start preloading the selected atlas
+    try {
+      await preloadAtlas(atlasKey);
+    } catch (error) {
+      console.error(`Failed to preload atlas ${atlasKey}:`, error);
+      // Don't show user notification for preload failures - it's not critical
+    }
+  };
 
   return (<>
     <div className="atlas-layout">
@@ -27,7 +39,7 @@ export const GameSelectorAtlas = () => {
             <button key={atlas.name}
               className={selectedAtlas == key ? "panel-button selected" : "panel-button"}
               data-umami-event="select atlas" data-umami-event-atlas={key.toLowerCase()}
-              onClick={() => setSelectedAtlas(key)}>
+              onClick={() => handleAtlasSelection(key)}>
               <span className="atlas-info" dangerouslySetInnerHTML={{ __html: t(key.toLowerCase() + "_info") }}></span>
               {atlas.difficulty > 0 && (
                 <span className="difficulty-icons">
