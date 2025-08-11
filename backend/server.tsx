@@ -22,6 +22,7 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
 import { generateChallenge } from 'modules/altcha.ts';
+import rateLimit from 'express-rate-limit';
 
 const config: Config = configJson;
 
@@ -38,12 +39,19 @@ if(config.server.globalAuthentication.enabled){
 }
 
 // login.ts
-app.post('/api/login', login);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Too many authentication attempts',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.post('/api/login', authLimiter, login);
 app.post('/api/refresh-token', refreshToken);
 app.get('/api/user-info', authenticateToken, getUserInfo);
 
 // register.ts
-app.post('/api/register', register);
+app.post('/api/register', authLimiter, register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
