@@ -52,6 +52,7 @@ export const database_init = async () => {
                     lastname TEXT NOT NULL,
                     email TEXT NOT NULL,
                     password TEXT NOT NULL,
+                    admin BOOLEAN NOT NULL default FALSE,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     verified BOOLEAN NOT NULL DEFAULT FALSE,
                     language TEXT NOT NULL DEFAULT 'fr',
@@ -180,6 +181,7 @@ export const database_init = async () => {
             `;
 
         // Update old versions of the database schema
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS admin BOOLEAN NOT NULL default FALSE;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_age INTEGER DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_country TEXT DEFAULT NULL;`

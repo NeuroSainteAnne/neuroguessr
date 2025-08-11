@@ -7,6 +7,7 @@ export interface User {
     password: string;
     created_at: string; // ISO date string
     verified: boolean;
+    admin: boolean;
     publish_to_leaderboard: boolean | null;
     language: string;
     clinical_trial_gender: "male" | "female" | "other" | null;
