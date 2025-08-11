@@ -81,6 +81,14 @@ export function initSocketHandlers() {
   const io = getIO();
 
   io.on('connection', (socket) => {
+    const clientIP = socket.handshake.address || 'unknown';
+    
+    logger.info('Socket connection established', {
+      socketId: socket.id,
+      clientIP,
+      timestamp: new Date().toISOString()
+    });
+
     // Handle join lobby
     socket.on('join-lobby', async (data: {
       sessionCode: string,
@@ -89,16 +97,53 @@ export function initSocketHandlers() {
       token?: string,
       anonToken?: string
     }) => {
+      const startTime = Date.now();
+      logger.info('Join lobby attempt', {
+        socketId: socket.id,
+        sessionCode: data?.sessionCode,
+        userName: data?.userName,
+        isAnonymous: data?.isAnonymous,
+        clientIP,
+        timestamp: new Date().toISOString()
+      });
+
       try {
         const { sessionCode, userName, isAnonymous, token, anonToken } = data;
         
         // Set up cleanup function for when this socket disconnects
         socket.on('disconnect', () => {
+          logger.info('Socket disconnecting', {
+            socketId: socket.id,
+            sessionCode: socketInfo[socket.id]?.sessionCode,
+            userName: socketInfo[socket.id]?.userName,
+            clientIP
+          });
           handleDisconnect(socket.id);
         });
 
         // Rest of join-lobby logic 
         const result = await joinLobby(socket, sessionCode, userName, isAnonymous, token, anonToken);
+        
+        const duration = Date.now() - startTime;
+        if (result.success) {
+          logger.info('Join lobby successful', {
+            socketId: socket.id,
+            sessionCode,
+            userName,
+            isAnonymous,
+            clientIP,
+            duration: `${duration}ms`
+          });
+        } else {
+          logger.warn('Join lobby failed', {
+            socketId: socket.id,
+            sessionCode,
+            userName,
+            error: result.error || 'Unknown error',
+            clientIP,
+            duration: `${duration}ms`
+          });
+        }
         
         if (result.error) {
           socket.emit('error', { message: result.error });

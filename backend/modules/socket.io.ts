@@ -12,6 +12,8 @@ let io: SocketServer;
 
 // Initialize Socket.io with your HTTP server
 export function initSocketIO(server: Server) {
+  logger.info('Initializing Socket.IO server');
+
   io = new SocketServer(server, {
     path: '/socket.io',
     cors: {
@@ -25,13 +27,42 @@ export function initSocketIO(server: Server) {
   });
 
   io.on('connection', (socket) => {
-    logger.info('New socket connection:', socket.id);
+    const clientIP = socket.handshake.address || 'unknown';
+    const userAgent = socket.handshake.headers['user-agent'] || 'unknown';
+    const connectTime = Date.now();
+    
+    logger.info('New socket connection established', {
+      socketId: socket.id,
+      clientIP,
+      userAgent,
+      transport: socket.conn.transport.name,
+      timestamp: new Date().toISOString()
+    });
 
     // Handle disconnection
-    socket.on('disconnect', () => {
-      logger.info('Client disconnected:', socket.id);
+    socket.on('disconnect', (reason) => {
+      const connectionDuration = Date.now() - connectTime;
+      logger.info('Socket client disconnected', {
+        socketId: socket.id,
+        clientIP,
+        reason,
+        connectionDuration: `${connectionDuration}ms`,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    // Handle connection errors
+    socket.on('error', (error) => {
+      logger.error('Socket connection error', {
+        socketId: socket.id,
+        clientIP,
+        error: error.message || 'Unknown socket error',
+        stack: error.stack
+      });
     });
   });
+
+  logger.info('Socket.IO server initialized successfully');
 
   return io;
 }

@@ -23,11 +23,19 @@ import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
 import { generateChallenge } from 'modules/altcha.ts';
 import rateLimit from 'express-rate-limit';
+import { logger } from './modules/logging.ts';
 
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
+
+logger.info('Starting NeuroGuessr server', {
+  port: PORT,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  configLoaded: !!config,
+  timestamp: new Date().toISOString()
+});
 
 await database_init()
 
@@ -35,6 +43,7 @@ app.use(express.json());
 app.use(transformResponseToCamelCase);
 
 if(config.server.globalAuthentication.enabled){
+    logger.info('Global authentication enabled');
     app.use(globalAuthentication);
 }
 
@@ -101,7 +110,6 @@ import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 import { initSocketIO } from 'modules/socket.io.ts';
 import { checkAdvancedSettingsName, deleteAdvancedSettings, getAdvancedSettingsById, getAdvancedSettingsList, saveAdvancedSettings, updateAdvancedSettings } from 'modules/advanced_game.ts';
-import { logger } from 'modules/logging.ts';
 
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));

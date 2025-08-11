@@ -12,6 +12,17 @@ import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    logger.info('Login attempt started', {
+        username: req.body?.username,
+        clientIP,
+        userAgent,
+        timestamp: new Date().toISOString()
+    });
+
     try {
         const validate = (data: LoginRequestBody): Joi.ValidationResult<LoginRequestBody> => {
             const schema = Joi.object({
@@ -23,6 +34,13 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
 
         const { error } = validate(req.body);
         if (error){
+            const duration = Date.now() - startTime;
+            logger.warn('Login validation failed', {
+                username: req.body?.username,
+                clientIP,
+                error: error.details[0].message,
+                duration: `${duration}ms`
+            });
             res.status(400).send({ message: error.details[0].message });
             return;
         } 
@@ -31,6 +49,13 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
             SELECT * FROM users WHERE username = ${req.body.username} LIMIT 1
         `;
         if (!users.length){
+            const duration = Date.now() - startTime;
+            logger.warn('Login failed - user not found', {
+                username: req.body.username,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'user_not_found'
+            });
             res.status(401).send({ message: "Invalid Username or Password" });
             return;
         }
@@ -39,37 +64,95 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
         const validPassword: boolean = await bcrypt.compare(req.body.password, user.password);
 
         if (!validPassword){
+            const duration = Date.now() - startTime;
+            logger.warn('Login failed - invalid password', {
+                username: req.body.username,
+                userId: user.id,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'invalid_password'
+            });
             res.status(401).send({ message: "Invalid Username or Password" });
             return;
         }
 
         if (!user.verified) {
+            const duration = Date.now() - startTime;
+            logger.warn('Login failed - email not verified', {
+                username: req.body.username,
+                userId: user.id,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'email_not_verified'
+            });
             res.status(403).send({ message: "Please verify your e-mail." });
             return;
         }
+        
         const token = getUserToken(user);
+        const duration = Date.now() - startTime;
+        
+        logger.info('Login successful', {
+            username: user.username,
+            userId: user.id,
+            clientIP,
+            userAgent,
+            duration: `${duration}ms`,
+            tokenGenerated: true
+        });
+        
         res.status(200).send({ 
             token: token, 
             message: "user was successfully logged in" 
         });
     } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.error('Login error - internal server error', {
+            username: req.body?.username,
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 }
 
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    logger.info('Token refresh attempt', {
+        clientIP,
+        userAgent: req.headers['user-agent'] || 'unknown',
+        timestamp: new Date().toISOString()
+    });
+
     try {
         const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
         const token: string | undefined = authHeader && authHeader.split(' ')[1];
 
         if (!token) {
+            const duration = Date.now() - startTime;
+            logger.warn('Token refresh failed - no token provided', {
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'no_token'
+            });
             res.status(401).send({ message: "No token provided" });
             return;
         }
 
         // Verify the existing token
         jwt.verify(token, config.jwt_secret, (err: any, decoded: any) => {
+            const duration = Date.now() - startTime;
+            
             if (err) {
+                logger.warn('Token refresh failed - invalid token', {
+                    clientIP,
+                    duration: `${duration}ms`,
+                    reason: 'invalid_token',
+                    errorType: err.name || 'unknown'
+                });
                 return res.status(403).send({ message: "Invalid or expired token" });
             }
 
@@ -79,13 +162,27 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
             // Generate a new token with a refreshed expiration time
             const newToken = getUserToken(user);
 
+            logger.info('Token refresh successful', {
+                userId: user.id,
+                username: user.username,
+                clientIP,
+                duration: `${duration}ms`,
+                tokenRefreshed: true
+            });
+
             res.status(200).send({ 
                 token: newToken, 
                 message: "Token refreshed successfully" 
             });
         });
     } catch (error: unknown) {
-        logger.error("Error during token refresh", error);
+        const duration = Date.now() - startTime;
+        logger.error("Error during token refresh", {
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 };

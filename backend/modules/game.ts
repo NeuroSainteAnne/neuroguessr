@@ -74,13 +74,49 @@ function getDistance(centers: number[][], coordinates: {mm: number[], vox: numbe
 }
 
 export const startGameSession = async (req: StartGameSessionRequest, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const userId = req.user.id;
+    
+    logger.info('Game session start attempt', {
+        userId,
+        mode: req.body?.mode,
+        atlas: req.body?.atlas,
+        blindMode: req.body?.blindMode,
+        clientIP,
+        timestamp: new Date().toISOString()
+    });
+
     try {
         const { mode, atlas, blindMode } = req.body;
-        const userId = req.user.id; // Extract user ID from the authenticated user
 
         // Validate the required fields
         if (!mode || !atlas) {
+            const duration = Date.now() - startTime;
+            logger.warn('Game session start failed - missing parameters', {
+                userId,
+                mode,
+                atlas,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'missing_parameters'
+            });
             res.status(400).send({ message: "Mode and atlas are required to start a session." });
+            return;
+        }
+
+        // Validate atlas exists
+        if (!validRegions[atlas]) {
+            const duration = Date.now() - startTime;
+            logger.warn('Game session start failed - invalid atlas', {
+                userId,
+                mode,
+                atlas,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'invalid_atlas'
+            });
+            res.status(400).send({ message: "Invalid atlas specified." });
             return;
         }
 
@@ -94,6 +130,18 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
             RETURNING id
         ` as {id: number}[];
 
+        const duration = Date.now() - startTime;
+        logger.info('Game session started successfully', {
+            userId,
+            sessionId: result[0].id,
+            mode,
+            atlas,
+            blindMode: blindMode || false,
+            clientIP,
+            duration: `${duration}ms`,
+            sessionToken: sessionToken.substring(0, 8) + '...' // Log partial token for security
+        });
+
         // Respond with the session token
         res.status(200).send({
             message: "Game session started successfully.",
@@ -101,7 +149,16 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
             sessionId: result[0].id,
         });
     } catch (error) {
-        logger.error("Error starting game session:", error);
+        const duration = Date.now() - startTime;
+        logger.error('Game session start error', {
+            userId,
+            mode: req.body?.mode,
+            atlas: req.body?.atlas,
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
@@ -110,6 +167,15 @@ export const getNextRegion = async (
     req: GetNextRegionRequest,
     res: Response
 ): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    logger.info('Get next region request', {
+        sessionId: req.body?.sessionId,
+        clientIP,
+        timestamp: new Date().toISOString()
+    });
+
     try {
         const { sessionId, sessionToken } = req.body;
 
@@ -118,6 +184,13 @@ export const getNextRegion = async (
             SELECT * FROM game_sessions WHERE id = ${sessionId} AND token = ${sessionToken}
         ` as GameSession[];
         if (!sessionResult.length) {
+            const duration = Date.now() - startTime;
+            logger.warn('Get next region failed - invalid session', {
+                sessionId,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'invalid_session_token'
+            });
             res.status(403).send({ message: "Invalid session or token mismatch" });
             return;
         }
@@ -126,6 +199,15 @@ export const getNextRegion = async (
         // Get the atlas length
         const atlasValidRegions = validRegions[session.atlas];
         if (!atlasValidRegions) {
+            const duration = Date.now() - startTime;
+            logger.error('Get next region failed - invalid atlas', {
+                sessionId,
+                atlas: session.atlas,
+                userId: session.user_id,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'invalid_atlas'
+            });
             res.status(400).send({ message: "Invalid atlas specified in the session." });
             return;
         }
@@ -136,6 +218,16 @@ export const getNextRegion = async (
             if (elapsedTime >= MAX_TIME_IN_SECONDS * 1000) {
                 // Time is up, end the game and notify frontend
                 let {finalScore} = await endGame({ session, quitReason: "timeout" });
+                const duration = Date.now() - startTime;
+                logger.info('Time attack game ended - timeout', {
+                    sessionId,
+                    userId: session.user_id,
+                    atlas: session.atlas,
+                    finalScore,
+                    elapsedTime: `${elapsedTime}ms`,
+                    duration: `${duration}ms`,
+                    reason: 'timeout'
+                });
                 res.status(200).send({
                     message: "Time is up! Game over.",
                     regionId: -1,
@@ -155,6 +247,14 @@ export const getNextRegion = async (
             WHERE session_id = ${sessionId} AND is_active = TRUE
         ` as GameProgress[];
         if (activeProgresses.length > 0) {
+            const duration = Date.now() - startTime;
+            logger.info('Returning existing active region', {
+                sessionId,
+                userId: session.user_id,
+                regionId: activeProgresses[0].region_id,
+                clientIP,
+                duration: `${duration}ms`
+            });
             // There is already an active region, return it
             res.status(200).send({
                 message: "Ongoing region found.",
@@ -202,6 +302,17 @@ export const getNextRegion = async (
                 VALUES (${sessionId}, ${sessionToken}, ${randomRegionId}, 0, TRUE, FALSE, NOW())
             `;
 
+            const duration = Date.now() - startTime;
+            logger.info('New region selected successfully', {
+                sessionId,
+                userId: session.user_id,
+                atlas: session.atlas,
+                mode: session.mode,
+                regionId: randomRegionId,
+                clientIP,
+                duration: `${duration}ms`
+            });
+
             res.status(200).send({
                 message: "Next region selected successfully.",
                 regionId: randomRegionId,
@@ -209,7 +320,14 @@ export const getNextRegion = async (
             });
         }
     }  catch (error: unknown) {
-        logger.error(error);
+        const duration = Date.now() - startTime;
+        logger.error('Get next region error', {
+            sessionId: req.body?.sessionId,
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
