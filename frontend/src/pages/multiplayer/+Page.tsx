@@ -2,13 +2,14 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
 import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
+import { useSocket } from '../../context/SocketContext';
 import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types/types';
 import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
 import { AtlasImageProxy, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { refreshToken } from '../../utils/helper_login';
 import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
@@ -58,6 +59,7 @@ const MultiPlayer = ({
     selectedVoxelProp, isGameRunning, setIsGameRunning,
     isConnected, setIsConnected
    } = useGame()
+  const { createSocket, getSocket } = useSocket();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -120,24 +122,13 @@ const MultiPlayer = ({
 
     setError(null);
 
-    // Create socket connection
-    const socket = io('/', {
-      path: '/socket.io',
-      transports: ['polling', 'websocket'], // Start with polling first, then try websocket
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000,
-      forceNew: true
-    });
-    socketRef.current = socket;
-
-    // Connection events
-    socket.on('connect', () => {
-      consoleLog('verbose', 'Socket connected');
+    // Get or create socket connection (this will reuse existing connection if available)
+    const socket = createSocket((newSocket: Socket) => {
+      consoleLog('verbose', 'Socket connected in multiplayer lobby');
       consoleLog('verbose', `Joining lobby ${inputCode} as ${isLoggedIn ? userUsername : anonUsername}`);
-      
+    
       // Join the lobby
-      socket.emit('join-lobby', {
+      newSocket.emit('join-lobby', {
         sessionCode: inputCode,
         userName: isLoggedIn ? userUsername : anonUsername,
         isAnonymous: !isLoggedIn,
@@ -145,24 +136,25 @@ const MultiPlayer = ({
         anonToken: anonTokenRef.current
       });
     });
+    socketRef.current = socket;
 
     // Connection error
-    socket.on('connect_error', (err) => {
+    socket.on('connect_error', (err: any) => {
       consoleLog("verbose", `Multiplayer connection error: ${err.message}`);
       setError(`Connection error: ${err.message}`);
       cleanupSocket();
     });
-    socket.on('error', (data) => {
+    socket.on('error', (data: any) => {
       setError(data.message);
     });
-    socket.on('fatal-error', (data) => {
+    socket.on('fatal-error', (data: any) => {
       setError(data.message);
       cleanupSocket();
     });
-    socket.on('anon-token', (data) => {
+    socket.on('anon-token', (data: any) => {
       anonTokenRef.current = data.anonToken;
     });
-    socket.on('lobby-users', (data) => {
+    socket.on('lobby-users', (data: any) => {
       setLobbyUsers(data.users);
       setIsConnected(true);
       if(!isLoggedIn){
@@ -171,13 +163,13 @@ const MultiPlayer = ({
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       tryLaunchGame()
     });
-    socket.on('player-joined', (data) => {
+    socket.on('player-joined', (data: any) => {
       setLobbyUsers(prev => [...prev, data.userName]);
     });
-    socket.on('player-left', (data) => {
+    socket.on('player-left', (data: any) => {
       setLobbyUsers(prev => prev.filter(user => user !== data.userName));
     });
-    socket.on('parameters-updated', (data) => {
+    socket.on('parameters-updated', (data: any) => {
       setParameters(data.parameters);
     });
     socket.on('game-start', () => {
@@ -188,7 +180,7 @@ const MultiPlayer = ({
       isFirstGuess.current = true;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
     });
-    socket.on('game-command', (data) => {
+    socket.on('game-command', (data: any) => {
       if (data.command.action === 'load-atlas') {
         // Load the specified atlas in the viewer
         if (data.command.atlas) {
@@ -235,16 +227,16 @@ const MultiPlayer = ({
         }, 1000);
       }
     });
-    socket.on('score-update', (data) => {
+    socket.on('score-update', (data: any) => {
       setPlayerScores(prev => ({
         ...prev,
         [data.user]: data.score
       }));
     });
-    socket.on('all-scores-update', (data) => {
+    socket.on('all-scores-update', (data: any) => {
       setPlayerScores(data.scores);
     });
-    socket.on('game-end', (data) => {
+    socket.on('game-end', (data: any) => {
       if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {
         const curTar = currentTarget.current;
         setPastRegions(prev => [...prev, {
@@ -262,7 +254,7 @@ const MultiPlayer = ({
       setHasWon(data.youWon)
       setShowMultiplayerOverlay(true)
     });
-    socket.on('guess-result', (data) => {
+    socket.on('guess-result', (data: any) => {
         if(currentTarget.current){
           const curTar = currentTarget.current;
           setPastRegions(prev => [...prev, {
@@ -286,27 +278,49 @@ const MultiPlayer = ({
         }
     })
     
-    // Cleanup on unmount
+    // Clean up event listeners on unmount, but don't disconnect the socket
     return () => {
-      cleanupSocket();
+      cleanupSocketEventListeners();
     };
   };
 
   const cleanupSocket = () => {
+    // Clean up event listeners but don't disconnect socket (managed by SocketProvider)
     if (socketRef.current) {
-      socketRef.current.disconnect();
+      cleanupSocketEventListeners();
       socketRef.current = null;
     }
   };
 
+  const cleanupSocketEventListeners = () => {
+    if (socketRef.current) {
+      socketRef.current.off('connect');
+      socketRef.current.off('connect_error');
+      socketRef.current.off('error');
+      socketRef.current.off('fatal-error');
+      socketRef.current.off('anon-token');
+      socketRef.current.off('lobby-users');
+      socketRef.current.off('player-joined');
+      socketRef.current.off('player-left');
+      socketRef.current.off('parameters-updated');
+      socketRef.current.off('game-start');
+      socketRef.current.off('game-command');
+      socketRef.current.off('score-update');
+      socketRef.current.off('all-scores-update');
+      socketRef.current.off('game-end');
+      socketRef.current.off('guess-result');
+    }
+  };
+
   const tryLaunchGame = async () => {
-    if (socketRef.current && isConnected && askedSessionCode && askedSessionToken && isLoggedIn) {
-      socketRef.current.emit('launch-game', {
+    const socket = getSocket();
+    if (socket && socket.connected && isConnected && askedSessionCode && askedSessionToken && isLoggedIn) {
+      socket.emit('launch-game', {
         sessionCode: askedSessionCode,
         sessionToken: askedSessionToken,
         userToken: authToken
       });
-      socketRef.current.once('game-launched', (data) => {
+      socket.once('game-launched', (data: any) => {
         if (data.success) {
           consoleLog('verbose', 'Game launched successfully');
         } else {
@@ -344,7 +358,8 @@ const MultiPlayer = ({
   };
 
   const updateGameDisplay = () => {
-    if (isGameRunning && socketRef.current && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
+    const socket = getSocket();
+    if (isGameRunning && socket && socket.connected && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
     } else {
@@ -405,7 +420,8 @@ const MultiPlayer = ({
 
   useEffect(() => {
       const validateGuess = async () => {
-        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !socketRef.current || isGuessCooldownRef.current) {
+        const socket = getSocket();
+        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !socket || !socket.connected || isGuessCooldownRef.current) {
           console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
           return;
         }
@@ -413,7 +429,7 @@ const MultiPlayer = ({
         if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
         hasAnswered.current = true;
-        socketRef.current.emit('validate-guess', {
+        socket.emit('validate-guess', {
           sessionCode: inputCode,
           userName: isLoggedIn ? userUsername : anonUsername,
           voxelProp: selectedVoxelProp.current,
@@ -424,7 +440,7 @@ const MultiPlayer = ({
       if (validateGuessCallbackRef) {
           validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
       }
-  }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken]);
+  }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken, getSocket]);
 
 
   const title = t("neuroguessr_multiplayer_title")

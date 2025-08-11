@@ -313,14 +313,44 @@ async function joinLobby(
   
   const gameRef = games[sessionCode];
   const playerKey = `${sessionCode}:${finalUserName}`;
+  let rejoiningMode = false;
 
-  // Prevent duplicate user in lobby
-  if (playerInfo[playerKey] && !anonToken) {
-    return { error: "User already in lobby" };
+  // Check if user is already in lobby
+  if (playerInfo[playerKey]) {
+    if (isAnonymous && anonToken) {
+      // Anonymous user with existing token is rejoining
+      if (playerInfo[playerKey].anonToken === anonToken) {
+        rejoiningMode = true;
+        logger.info('Anonymous user rejoining lobby', {
+          sessionCode,
+          userName: finalUserName
+        });
+      } else {
+        return { error: "Invalid anonymous token" };
+      }
+    } else if (!isAnonymous) {
+      // Allow the creator to rejoin (e.g., when navigating from create page to lobby page)
+      const isCreator = userId && gameRef.creatorId === userId;
+      if (!isCreator) {
+        return { error: "User already in lobby" };
+      }
+      // Creator is rejoining - don't add them again to anonymous usernames or duplicate their info
+      logger.info('Creator rejoining lobby', {
+        sessionCode,
+        userName: finalUserName,
+        userId
+      });
+      rejoiningMode = true;
+    } else {
+      return { error: "User already in lobby" };
+    }
   }
 
-  if (isAnonymous) {
-    gameRef.anonymousUsernames.push(finalUserName);
+  if (isAnonymous && !rejoiningMode) {
+    // Only add to anonymous usernames if not already present
+    if (!gameRef.anonymousUsernames.includes(finalUserName)) {
+      gameRef.anonymousUsernames.push(finalUserName);
+    }
   }
 
   // Add socket to room
@@ -330,7 +360,10 @@ async function joinLobby(
   if (!socketClients[playerKey]) {
     socketClients[playerKey] = [];
   }
-  socketClients[playerKey].push(socket.id);
+  // Only add socket if it's not already in the array to prevent duplicates
+  if (!socketClients[playerKey].includes(socket.id)) {
+    socketClients[playerKey].push(socket.id);
+  }
 
   // Update player info
   updatePlayerInfo(sessionCode, finalUserName, {
@@ -342,7 +375,7 @@ async function joinLobby(
   });
 
   // Initialize user in lobby
-  initUserInLobby(socket, finalUserName, gameRef, sessionCode);
+  initUserInLobby(socket, finalUserName, gameRef, sessionCode, rejoiningMode);
 
   // Notify watchers of public lobbies (in case this lobby is public)
   emitPublicLobbiesUpdate();
@@ -450,7 +483,7 @@ function createEmptySession(sessionCode: string, creatorId?: number){
     }
 }
 
-function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerGame, sessionCode: string) {
+function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerGame, sessionCode: string, rejoiningMode: boolean = false) {
   if (!(userName in gameRef.individualScores)) {
     gameRef.individualScores[userName] = 0;
     gameRef.individualAttempts[userName] = 0;
@@ -469,10 +502,14 @@ function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerG
   socket.emit('lobby-users', { users: userList });
   socket.emit('parameters-updated', { parameters: gameRef.parameters });
 
-  logger.info("broadcast player joined")
-  
-  // Broadcast to others that a new player joined
-  socket.to(`game:${sessionCode}`).emit('player-joined', { userName });
+  // Only broadcast "player-joined" for new users, not rejoining ones
+  if (!rejoiningMode) {
+    logger.info("broadcast player joined")
+    // Broadcast to others that a new player joined
+    socket.to(`game:${sessionCode}`).emit('player-joined', { userName });
+  } else {
+    logger.info("user rejoining lobby - no broadcast needed")
+  }
   
   // If game is already in progress, send current state
   if (gameRef.hasStarted) {
@@ -1115,6 +1152,9 @@ setupInactiveGameCheck();
 
 // Create a dedicated cleanup function
 function cleanupGame(sessionCode: string) {
+  logger.info("Cleaning up session", {
+    sessionCode
+  })
   const io = getIO();
   // Clean up SSE clients
   const socketIdsToDisconnect: string[] = [];

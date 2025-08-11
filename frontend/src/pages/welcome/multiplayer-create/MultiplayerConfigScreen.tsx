@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameSelectorAtlas } from '../GameSelectorAtlas';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../../context/AppContext';
+import { useSocket } from '../../../context/SocketContext';
 import { ColorMap, ExternalGameCommands, MultiplayerParametersType } from '../../../types/types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';
-import { Socket, io } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import "./MultiplayerConfigScreen.css"
 import Joi from "joi";
 import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
@@ -36,6 +37,7 @@ const LOAD_ATLAS_DURATION = 10;
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
     const { selectedAtlas, setSelectedAtlas } = useGameSelector();
+    const { createSocket, getSocket } = useSocket();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
@@ -128,81 +130,80 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(() => {
         if (sessionCode && sessionToken && userUsername && authToken) {
-            // Create socket connection
-            const socket = io('/', {
-                path: '/socket.io',
-                transports: ['polling', 'websocket'], // Start with polling first, then try websocket
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000,
-                timeout: 20000,
-                forceNew: true
-            });
-            socketRef.current = socket;
-            
-            // Connection events
-            socket.on('connect', () => {
-                consoleLog('normal', 'Socket connected');
+            // Get or create socket connection
+            const socket = createSocket((newSocket: Socket) => {
+                consoleLog('normal', `Socket connected, joinong lobby ${sessionCode}`);
                 
                 // Join the lobby
-                socket.emit('join-lobby', {
+                newSocket.emit('join-lobby', {
                     sessionCode,
                     userName: userUsername,
                     isAnonymous: false,
                     token: authToken
                 });
             });
-            
+            socketRef.current = socket;
+
             // Connection error
-            socket.on('connect_error', (err) => {
+            socket.on('connect_error', (err: any) => {
                 setError(`Connection error: ${err.message}`);
             });
-            socket.on('error', (data) => {
+            socket.on('error', (data: any) => {
                 setError(data.message);
             });
-            socket.on('fatal-error', (data) => {
+            socket.on('fatal-error', (data: any) => {
                 setError(data.message);
             });
-            socket.on('lobby-users', (data) => {
+            socket.on('lobby-users', (data: any) => {
                 consoleLog("verbose", `Received lobby users update: ${data.users?.length} users`);
                 if (Array.isArray(data.users)) {
                     setLobbyUsers(data.users);
                 }
             });
-            socket.on('player-joined', (data) => {
+            socket.on('player-joined', (data: any) => {
                 consoleLog("verbose", `Player joined lobby: ${data.userName}`);
                 if (data.userName) {
                     setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
                 }
             });
-            socket.on('player-left', (data) => {
+            socket.on('player-left', (data: any) => {
                 consoleLog("verbose", `Player left lobby: ${data.userName}`);
                 if (data.userName) {
                     setLobbyUsers(prev => prev.filter(u => u !== data.userName));
                 }
             });
-            socket.on('parameters-updated', (data) => {
+            socket.on('parameters-updated', (data: any) => {
                 consoleLog("verbose", `Game parameters updated, total duration: ${data?.parameters?.totalDuration}s`);
                 if(data && data.parameters && data.parameters.totalDuration) {
                     setTotalDuration(data.parameters.totalDuration);
                 }
             });
-            socket.on('parameters-has-updated', (data) => {
+            socket.on('parameters-has-updated', (data: any) => {
                 consoleLog("verbose", `Parameters validation result: ${data?.success ? 'valid' : 'invalid'}`);
                 if (data && data.success) {
                     setIsValidatedJSON(true)
                 }
             });
+            
+            // Don't disconnect on unmount - let the socket persist for navigation
             return () => {
-                if (socketRef.current) {
-                    socketRef.current.disconnect();
-                    socketRef.current = null;
-                }
+                // Clean up event listeners but keep the socket connected
+                socket.off('connect');
+                socket.off('connect_error');
+                socket.off('error');
+                socket.off('fatal-error');
+                socket.off('lobby-users');
+                socket.off('player-joined');
+                socket.off('player-left');
+                socket.off('parameters-updated');
+                socket.off('parameters-has-updated');
             };
         }
-    }, [sessionCode, sessionToken, userUsername, authToken]);
+    }, [sessionCode, sessionToken, userUsername, authToken, createSocket]);
 
     const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
-        if(!socketRef.current) return;
+        const socket = getSocket();
+        if(!socket || !socket.connected) return;
         parametersRef.current = {...parametersRef.current, ...newParameters}
         consoleLog("verbose", `Updating multiplayer parameters:`, parametersRef.current);
         if(parametersRef && parametersRef.current && !parametersRef.current.commands){
@@ -220,7 +221,7 @@ const MultiplayerConfigScreen = () => {
         if (sessionCode && sessionToken) {
             consoleLog("verbose", `Sending parameter update to server for session ${sessionCode}`);
             try {
-                socketRef.current.emit('update-parameters', {
+                socket.emit('update-parameters', {
                     sessionCode,
                     sessionToken,
                     parameters: parametersRef.current
@@ -318,11 +319,9 @@ const MultiplayerConfigScreen = () => {
 
     useEffect(() => {
         createSession()
+        // Don't disconnect socket on unmount - let it persist for navigation
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-            }
+            // Socket cleanup is now handled by the SocketProvider
         }
     }, [])
 
