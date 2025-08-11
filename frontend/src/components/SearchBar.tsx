@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { AtlasRegion } from '../types';
+import { AtlasRegion } from '../types/types';
 import "./SearchBar.css"
 import { navigate } from 'vike/client/router'
 

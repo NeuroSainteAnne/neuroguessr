@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
 import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
-import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types';
+import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types/types';
 import config from "../../../config.json"
 import atlasFiles from '../../utils/atlas_files';
 import { AtlasImageProxy, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameSelectorAtlas } from '../GameSelectorAtlas';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../../context/AppContext';
-import { ColorMap, ExternalGameCommands, MultiplayerParametersType } from '../../../types';
+import { ColorMap, ExternalGameCommands, MultiplayerParametersType } from '../../../types/types';
 import { isTokenValid, refreshToken } from '../../../utils/helper_login';
 import { useGameSelector } from '../../../context/GameSelectorContext';
 import { navigate } from 'vike/client/router';

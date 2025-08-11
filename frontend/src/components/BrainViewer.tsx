@@ -1,5 +1,5 @@
 import { createContext, RefObject, useContext, useEffect, useRef, useState } from "react";
-import { ColorMap, PastRegion } from "../types";
+import { ColorMap, PastRegion } from "../types/types";
 import { Niivue, NVImage, DRAG_MODE } from "@niivue/niivue";
 import RegionHistory from "./RegionHistory";
 import { AtlasImageProxy, initNiivue, loadAtlasNii, fetchJSON, defineNiiOptions } from "../utils/helper_nii";

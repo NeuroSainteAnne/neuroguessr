@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type Tou
 import { isTokenValid, refreshToken } from '../../utils/helper_login';
 import { AtlasImageProxy, defineNiiOptions, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
 import { useApp } from '../../context/AppContext';
-import { ColorMap, ImageMetadata, PastRegion } from '../../types';
+import { ColorMap, ImageMetadata, PastRegion } from '../../types/types';
 import atlasFiles from '../../utils/atlas_files';
 import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';

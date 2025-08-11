@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
-import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap } from '../types';
+import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap } from '../types/types';
 import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';

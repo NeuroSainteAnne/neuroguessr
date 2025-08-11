@@ -1,5 +1,5 @@
 import React from 'react';
-import { ColorMap, DisplayOptions, ImageMetadata } from '../types';
+import { ColorMap, DisplayOptions, ImageMetadata } from '../types/types';
 import type { Niivue, NVImage } from '@niivue/niivue';
 import { usePageContext } from 'vike-react/usePageContext';
 import { useApp } from '../context/AppContext';

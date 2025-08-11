@@ -1,6 +1,6 @@
 import { LabelAnchorPoint } from "@niivue/niivue";
 import { useApp } from "../context/AppContext";
-import { PastRegion } from "../types";
+import { PastRegion } from "../types/types";
 import "./RegionHistory.css"
 import { useGame } from "./BrainViewer";
 
