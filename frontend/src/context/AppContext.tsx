@@ -326,6 +326,22 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const updateToken = (token: string | null) => {
     consoleLog("verbose", `Updating authentication token: ${token ? 'token provided' : 'token cleared'}`);
     if (token) {
+      try {
+        // Decode token to get expiration info - use generic payload type for exp
+        const payload = jwtDecode<CustomTokenPayload & { exp?: number }>(token);
+        if (payload.exp) {
+          const expirationDate = new Date(payload.exp * 1000); // Convert from seconds to milliseconds
+          const timeUntilExpiry = expirationDate.getTime() - Date.now();
+          const minutesUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60));
+          
+          consoleLog("verbose", `Token expires at: ${expirationDate.toISOString()} (in ${minutesUntilExpiry} minutes)`);
+        } else {
+          consoleLog("verbose", "Token has no expiration date");
+        }
+      } catch (error) {
+        consoleLog("verbose", "Could not decode token for expiration info");
+      }
+      
       if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('authToken', token);
       setAuthToken(token);
       setIsLoggedIn(true);
@@ -361,6 +377,55 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setIsLoggedIn(true);
     }
   }, []);
+
+  // Automatic token refresh for logged-in users
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | null = null;
+
+    if (isLoggedIn && authToken) {
+      // Log current token expiration when starting refresh interval
+      try {
+        const payload = jwtDecode<CustomTokenPayload & { exp?: number }>(authToken);
+        if (payload.exp) {
+          const expirationDate = new Date(payload.exp * 1000);
+          const timeUntilExpiry = expirationDate.getTime() - Date.now();
+          const minutesUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60));
+          consoleLog("verbose", `Starting automatic token refresh - current token expires at: ${expirationDate.toISOString()} (in ${minutesUntilExpiry} minutes)`);
+        }
+      } catch (error) {
+        consoleLog("verbose", "Starting automatic token refresh - could not decode current token expiration");
+      }
+      
+      refreshInterval = setInterval(async () => {
+        try {
+          consoleLog("verbose", "Attempting automatic token refresh");
+          const newToken = await refreshToken();
+          
+          if (newToken) {
+            consoleLog("verbose", "Token refreshed successfully");
+            updateToken(newToken);
+          } else {
+            consoleLog("verbose", "Token refresh failed - logging out user");
+            logout();
+            showNotification('session_expired', false);
+          }
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          consoleLog("verbose", `Token refresh error: ${error}`);
+          logout();
+          showNotification('session_expired', false);
+        }
+      }, 5*60000); // Refresh 5 minute (5*60,000 ms)
+    }
+
+    // Cleanup function
+    return () => {
+      if (refreshInterval) {
+        consoleLog("verbose", "Stopping automatic token refresh");
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [isLoggedIn, authToken]);
   
   // Effect to update user info when logged in
   useEffect(() => {
