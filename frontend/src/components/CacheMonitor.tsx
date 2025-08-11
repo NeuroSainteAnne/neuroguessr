@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { getAtlasUsageStats } from '../utils/atlas_usage_tracker';
 import './CacheMonitor.css';
 
 interface CacheMonitorProps {
@@ -11,7 +10,6 @@ interface CacheMonitorProps {
 export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, onClose }) => {
   const { getCacheStats, clearCache, t } = useApp();
   const [stats, setStats] = useState<ReturnType<typeof getCacheStats> | null>(null);
-  const [usageStats, setUsageStats] = useState<ReturnType<typeof getAtlasUsageStats> | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Refresh stats periodically when visible
@@ -19,7 +17,6 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, o
     if (isVisible) {
       const updateStats = () => {
         setStats(getCacheStats());
-        setUsageStats(getAtlasUsageStats());
       };
       
       updateStats(); // Initial update
@@ -40,7 +37,6 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, o
   const handleClearCache = () => {
     clearCache();
     setStats(getCacheStats()); // Refresh stats immediately
-    setUsageStats(getAtlasUsageStats());
   };
 
   if (!isVisible || !stats) {
@@ -120,33 +116,6 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, o
             </span>
           </div>
         </div>
-
-        {usageStats && (
-          <div className="usage-stats">
-            <h4>📊 Usage Analytics</h4>
-            <div className="stat-row">
-              <span className="stat-label">Atlases Used:</span>
-              <span className="stat-value">{usageStats.totalAtlases}</span>
-            </div>
-            
-            <div className="stat-row">
-              <span className="stat-label">Total Sessions:</span>
-              <span className="stat-value">{usageStats.totalSessions}</span>
-            </div>
-            
-            <div className="stat-row">
-              <span className="stat-label">Total Time:</span>
-              <span className="stat-value">{(usageStats.totalTime / 60000).toFixed(1)} min</span>
-            </div>
-            
-            {usageStats.mostUsed && (
-              <div className="stat-row">
-                <span className="stat-label">Most Used:</span>
-                <span className="stat-value success">{usageStats.mostUsed}</span>
-              </div>
-            )}
-          </div>
-        )}
         
         <div className="cache-actions">
           <button 

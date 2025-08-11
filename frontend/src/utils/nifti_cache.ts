@@ -78,10 +78,6 @@ export class NIfTICacheManager {
   // Preload configuration
   private preloadList: string[] = [
     '/atlas/mni152_downsampled.nii.gz', // Background MNI
-    // Add frequently used atlases
-    '/atlas/nii/HarvardOxford-cort-maxprob-thr25-1mm.nii.gz',
-    '/atlas/nii/remapped_destrieux_stride_uint.nii.gz',
-    '/atlas/nii/remapped_dk_stride.nii.gz',
   ];
 
   constructor(maxCacheSize: number = 50, maxMemoryMB: number = 500) {
@@ -461,9 +457,26 @@ export class NIfTICacheManager {
     
     for (const url of this.preloadList) {
       try {
-        // Check if already cached
+        // Check if already cached in memory or IndexedDB
         if (this.cache.has(url)) {
-          consoleLog('verbose', `⏭️ Skipping ${url} - already cached`);
+          consoleLog('verbose', `⏭️ Skipping ${url} - already cached in memory`);
+          continue;
+        }
+
+        // Check IndexedDB cache as well
+        const indexedDBData = await this.loadFromIndexedDB(url);
+        if (indexedDBData) {
+          consoleLog('verbose', `⏭️ Skipping ${url} - already cached in IndexedDB`);
+          // Load into memory cache for faster access
+          try {
+            const nvImage = await this.createNVImageFromArrayBuffer(indexedDBData);
+            await this.addToCache(url, nvImage);
+            consoleLog('verbose', `📋 Moved ${url} from IndexedDB to memory cache`);
+          } catch (error) {
+            console.warn(`Failed to load from IndexedDB during preload for ${url}:`, error);
+            // Remove corrupted entry
+            await this.removeFromIndexedDB(url);
+          }
           continue;
         }
 
@@ -501,10 +514,27 @@ export class NIfTICacheManager {
 
     const url = `/atlas/nii/${atlas.nii}`;
     
-    // Check if already cached
+    // Check if already cached in memory
     if (this.cache.has(url)) {
-      consoleLog('verbose', `⏭️ Atlas ${atlasKey} already cached`);
+      consoleLog('verbose', `⏭️ Atlas ${atlasKey} already cached in memory`);
       return;
+    }
+
+    // Check IndexedDB cache as well
+    const indexedDBData = await this.loadFromIndexedDB(url);
+    if (indexedDBData) {
+      consoleLog('verbose', `⏭️ Atlas ${atlasKey} already cached in IndexedDB`);
+      // Load into memory cache for faster access
+      try {
+        const nvImage = await this.createNVImageFromArrayBuffer(indexedDBData);
+        await this.addToCache(url, nvImage);
+        consoleLog('minimal', `📋 Atlas ${atlasKey} moved from IndexedDB to memory cache`);
+        return;
+      } catch (error) {
+        console.warn(`Failed to load atlas ${atlasKey} from IndexedDB:`, error);
+        // Remove corrupted entry and continue with network load
+        await this.removeFromIndexedDB(url);
+      }
     }
 
     consoleLog("verbose", `Preloading atlas ${atlasKey} from ${url}`);
@@ -519,10 +549,24 @@ export class NIfTICacheManager {
   }
 
   /**
-   * Check if a file is cached
+   * Check if a file is cached in memory
    */
   public isCached(url: string): boolean {
     return this.cache.has(url);
+  }
+
+  /**
+   * Check if a file is cached in either memory or IndexedDB
+   */
+  public async isAnywhereCached(url: string): Promise<boolean> {
+    // Check memory cache first (faster)
+    if (this.cache.has(url)) {
+      return true;
+    }
+    
+    // Check IndexedDB cache
+    const indexedDBData = await this.loadFromIndexedDB(url);
+    return indexedDBData !== null;
   }
 
   /**
@@ -594,6 +638,14 @@ export class NIfTICacheManager {
   }
 
   /**
+   * Get cache entry details (for debugging)
+   */
+  public getCacheEntry(url: string): CacheEntry | null {
+    const entry = this.cache.get(url);
+    return entry ? { ...entry } : null;
+  }
+
+  /**
    * Warmup cache with specific atlases
    */
   public async warmupCache(atlasKeys: string[]): Promise<void> {
@@ -604,14 +656,6 @@ export class NIfTICacheManager {
     }
     
     consoleLog('normal', '🔥 Cache warmup completed');
-  }
-
-  /**
-   * Get cache entry details (for debugging)
-   */
-  public getCacheEntry(url: string): CacheEntry | null {
-    const entry = this.cache.get(url);
-    return entry ? { ...entry } : null;
   }
 
   /**

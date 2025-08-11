@@ -7,8 +7,7 @@ import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
 import { useTranslation } from 'react-i18next';
 import type { NVImage } from '@niivue/niivue';
-import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas, warmupCache } from '../utils/nifti_cache';
-import { startAtlasSession, endAtlasSession, getPreloadRecommendations } from '../utils/atlas_usage_tracker';
+import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas } from '../utils/nifti_cache';
 import { consoleLog } from '../utils/logging';
 
 type NVImageConstructor = {
@@ -85,7 +84,6 @@ type AppContextType = {
   // Cache management
   getCacheStats: () => ReturnType<typeof getCacheStats>;
   preloadAtlas: (atlasKey: string) => Promise<void>;
-  warmupCache: (atlasKeys: string[]) => Promise<void>;
   clearCache: () => void;
 };
 
@@ -184,10 +182,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   useEffect(() => {
     if (askedAtlas && nvimageModule) {
       const atlas = atlasFiles[askedAtlas.atlas];
-      if (atlas) {
-        // Track atlas usage for smart preloading
-        startAtlasSession(askedAtlas.atlas);
-        
+      if (atlas) {        
         const niiFile = "/atlas/nii/" + atlas.nii;
         loadNIfTIFromCache(niiFile).then((nvImage) => {
           setPreloadedAtlas(nvImage);
@@ -199,13 +194,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         });
       }
     }
-    
-    // End previous atlas session when switching atlases
-    return () => {
-      if (askedAtlas) {
-        endAtlasSession();
-      }
-    };
   }, [askedAtlas, nvimageModule]);
 
   // Load atlas regions 
@@ -213,24 +201,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     loadAtlasLabels()
   }, [currentLanguage])
 
-  // Preload popular atlases when the app starts
-  useEffect(() => {
-    if (nvimageModule) {
-      setTimeout(() => {
-        // Get smart recommendations based on user's historical usage
-        const recommendations = getPreloadRecommendations(4);
-        consoleLog('normal', `🤖 Smart preloading recommendations: ${recommendations.join(', ')}`);
-
-        warmupCache(recommendations).then(() => {
-          consoleLog('verbose', `🔥 Smart atlas preloading completed successfully`);
-        }).catch(error => {
-          consoleLog('normal', `⚠️ Smart atlas preloading failed: ${error}`);
-        });
-      }, 2000); // Wait 2 seconds after app initialization
-    }
-  }, [nvimageModule]);
-
-    // Load labels for all atlases
+  // Load labels for all atlases
   async function loadAtlasLabels() {
     const loadingAtlasRegions : AtlasRegion[] = [];
     for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
@@ -563,7 +534,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       // Cache management functions
       getCacheStats,
       preloadAtlas,
-      warmupCache,
       clearCache: niftiCache.clearCache
     }}>
       {children}
