@@ -90,7 +90,6 @@ app.post('/api/advanced-game/delete', authenticateToken, deleteAdvancedSettings)
 app.get('/api/advanced-game/check-name', authenticateToken, checkAdvancedSettingsName);
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
-    console.log(path.join(reactRoot, "assets", "favicon"))
     res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
 });
 
@@ -102,6 +101,7 @@ import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
 import { initSocketIO } from 'modules/socket.io.ts';
 import { checkAdvancedSettingsName, deleteAdvancedSettings, getAdvancedSettingsById, getAdvancedSettingsList, saveAdvancedSettings, updateAdvancedSettings } from 'modules/advanced_game.ts';
+import { logger } from 'modules/logging.ts';
 
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
@@ -138,7 +138,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
             const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
             i18next.changeLanguage(preferredLang)
 
-            console.log("Rendering page for URL:", req.originalUrl);
+            logger.info("Rendering page for URL:", req.originalUrl);
 
             const pageContextInit = {
                 urlOriginal: req.originalUrl,
@@ -155,7 +155,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 }
                 
                 const { body, statusCode, headers } = httpResponse;
-                //console.log(body)
+
                 // Add i18n configuration script to the HTML
                 const htmlWithI18n = body.replace(
                     '</head>',
@@ -174,7 +174,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 
                 res.status(statusCode).send(htmlWithI18n);
             } catch (error) {
-                console.error("Error rendering page:", error);
+                logger.error("Error rendering page:", error);
                 res.status(500).send('Internal Server Error');
             }
         })
@@ -201,7 +201,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 if (clientRoutedPaths.includes(baseRoute)) {
                     // This is a client-routed path, serve the base route's index.html
                     fsPath = path.join(reactRoot, 'client', baseRoute, 'index.html');
-                    console.log(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
+                    logger.info(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
                     if (segments.length > 1) {
                         const baseRoute = segments[0];
                         if (baseRoute === 'singleplayer') {
@@ -304,12 +304,12 @@ if(config.server.mode == "https"){
     
     server = https.createServer(httpOptions, app);
     server.listen(PORT, () => {
-        console.log(`Server is running on https://localhost:${PORT}`);
+        logger.info(`Server is running on https://localhost:${PORT}`);
     });
 } else {
     server = http.createServer(app);
     server.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
+        logger.info(`Server is running on http://localhost:${PORT}`);
     });
 }
 

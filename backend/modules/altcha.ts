@@ -3,6 +3,7 @@ import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import { logger } from './logging.ts';
 
 /**
  * Generates an ALTCHA challenge
@@ -12,7 +13,7 @@ export const generateChallenge = async (req: Request, res: Response) => {
     const challenge = await createChallenge({hmacKey: configJson.altcha_secret, maxNumber: 500000});
     res.status(200).json(challenge);
   } catch (error) {
-    console.error('Error generating ALTCHA challenge:', error);
+    logger.error('Error generating ALTCHA challenge:', error);
     res.status(500).json({ error: 'Failed to generate challenge' });
   }
 };

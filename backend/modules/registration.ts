@@ -16,6 +16,7 @@ import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import backendI18n from "./backend-i18n.ts";
 import { verifyAltcha } from "./altcha.ts";
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 export const register = async (req: RegisterRequest, res: Response): Promise<void> => {
@@ -93,7 +94,6 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 return;
             }
             const captchaOk = await verifyAltcha(captchaToken);
-            console.log("Captcha verification result:", captchaOk);
             if (!captchaOk) {
                 res.status(400).send({ message: "Captcha verification failed" });
                 return;
@@ -176,7 +176,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             .status(201)
             .send({ preverified: false, message: "An Email sent to your account please verify" });
     } catch (error) {
-        console.log(error);
+        logger.error(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };

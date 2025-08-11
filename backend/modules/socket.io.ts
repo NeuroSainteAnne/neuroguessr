@@ -3,6 +3,7 @@ import { Server } from 'http';
 import jwt from 'jsonwebtoken';
 import { Config } from '../interfaces/config.interfaces.ts';
 import configJson from '../config.json' with { type: "json" };
+import { logger } from './logging.ts';
 
 const config: Config = configJson;
 
@@ -24,11 +25,11 @@ export function initSocketIO(server: Server) {
   });
 
   io.on('connection', (socket) => {
-    console.log('New socket connection:', socket.id);
+    logger.info('New socket connection:', socket.id);
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
+      logger.info('Client disconnected:', socket.id);
     });
   });
 

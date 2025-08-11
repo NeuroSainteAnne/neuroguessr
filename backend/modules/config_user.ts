@@ -9,6 +9,7 @@ import configJson from '../config.json' with { type: "json" };
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest, ConfigUserBody } from "../interfaces/requests.interfaces.ts";
 import type { User } from "../interfaces/database.interfaces.ts";
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 
@@ -158,7 +159,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).send({ message: "User updated successfully", token: updatedToken });
     } catch (error: unknown) {
-        console.log(error);
+        logger.error(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };

@@ -8,6 +8,7 @@ import type { Request, Response, NextFunction } from "express";
 import type { AuthenticatedRequest, LoginRequestBody } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Response): Promise<void> => {
@@ -84,7 +85,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
             });
         });
     } catch (error: unknown) {
-        console.error(error);
+        logger.error("Error during token refresh", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
@@ -112,7 +113,7 @@ export const authenticateToken = (
             next(); // Proceed to the next middleware or route handler
         });
     } catch (error) {
-        console.error("Error authenticating token:", error);
+        logger.error("Error authenticating token:", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
@@ -145,7 +146,7 @@ export const getUserInfo = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).send({ user });
     } catch (error: unknown) {
-        console.error("Error fetching user info:", error);
+        logger.error("Error fetching user info:", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }

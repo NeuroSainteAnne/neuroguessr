@@ -4,6 +4,7 @@ import type { GameProgress, GameSession } from "../interfaces/database.interface
 import type { GetLeaderboardRequest, GetMostUsedAtlasRequest } from "../interfaces/requests.interfaces.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 interface LeaderboardEntry {
@@ -72,7 +73,7 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
         leaderboard = leaderboard.concat(summedLeaderboard);
         res.status(200).json({ leaderboard });
     }  catch (error) {
-        console.error("Error getting leaderboard:", error);
+        logger.error("Error getting leaderboard:", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }
@@ -114,7 +115,7 @@ export const getMostUsedAtlases = async (req: GetMostUsedAtlasRequest, res: Resp
             atlases: result
         });
     } catch (error) {
-        console.error('Error fetching most used atlases:', error);
+        logger.error('Error fetching most used atlases:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching most used atlases'

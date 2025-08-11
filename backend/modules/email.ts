@@ -11,6 +11,7 @@ import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import path from "path";
 import fs from "fs";
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 // Read and encode the image as base64
@@ -132,15 +133,14 @@ export const sendEmail = async (
           html: message,
         })
         .then(() => {
-          console.log("Email sent Successfully");
+          logger.info("Email sent Successfully");
         })
         .catch((e: Error) => {
-          console.log(e);
+          logger.error(e);
         });
     }
   } catch (error) {
-    console.log("Email not sent");
-    console.log(error);
+    logger.error("Email not sent", error);
     return error as Error;
   }
 };

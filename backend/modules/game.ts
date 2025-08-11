@@ -11,6 +11,7 @@ import type { ClotureGameSessionRequest, GetNextRegionRequest, StartGameSessionR
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import crypto from 'crypto';
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -100,7 +101,7 @@ export const startGameSession = async (req: StartGameSessionRequest, res: Respon
             sessionId: result[0].id,
         });
     } catch (error) {
-        console.error("Error starting game session:", error);
+        logger.error("Error starting game session:", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
@@ -208,7 +209,7 @@ export const getNextRegion = async (
             });
         }
     }  catch (error: unknown) {
-        console.log(error);
+        logger.error(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
@@ -405,7 +406,7 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             nearestCenter
         });
     } catch (error: unknown) {
-        console.log(error);
+        logger.error(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }
@@ -439,7 +440,7 @@ export const manualClotureGameSession = async (req: ClotureGameSessionRequest, r
         });
         return;
     } catch (error: unknown) {
-        console.log(error);
+        logger.error(error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }
@@ -536,7 +537,7 @@ const endGame = async ({session, finalScore, elapsedTime, quitReason, bonusTime}
 
         return {finalScore, elapsedTime}
     } catch (error: unknown) {
-        console.log(error);
+        logger.error(error);
         return {finalScore:0, elapsedTime:0}
     }
 }

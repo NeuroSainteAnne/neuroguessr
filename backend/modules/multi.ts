@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
 import Joi from "joi";
+import { logger } from "./logging.ts";
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -113,7 +114,7 @@ export function initSocketHandlers() {
         }
         
       } catch (error) {
-        console.error("Socket join error:", error);
+        logger.error("Socket join error:", error);
         socket.emit('error', { message: "Internal server error" });
       }
     });
@@ -134,7 +135,7 @@ export function initSocketHandlers() {
         }
         const result = await handleValidateGuess({...data, userName: info.userName});
       } catch (error) {
-        console.error("Validate guess error:", error);
+        logger.error("Validate guess error:", error);
         socket.emit('error', { message: "Error validating guess" });
       }
     });
@@ -154,7 +155,7 @@ export function initSocketHandlers() {
         const result = await handleUpdateParameters({...data, userName: info.userName});
         socket.emit('parameters-has-updated', result);
       } catch (error) {
-        console.error("Update parameters error:", error);
+        logger.error("Update parameters error:", error);
         socket.emit('error', { message: "Error updating parameters" });
       }
     });
@@ -174,7 +175,7 @@ export function initSocketHandlers() {
         const result = await handleLaunchGame({...data, userName: info.userName});
         socket.emit('game-launched', result);
       } catch (error) {
-        console.error("Launch game error:", error);
+        logger.error("Launch game error:", error);
         socket.emit('error', { message: "Error launching game" });
       }
     });
@@ -369,7 +370,7 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
         sessionToken
     });
   } catch (error) {
-        console.error("Error creating multiplayer session:", error);
+        logger.error("Error creating multiplayer session:", error);
         res.status(500).send({ message: "Internal Server Error" });
   }
 };
@@ -423,7 +424,7 @@ function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerG
   socket.emit('lobby-users', { users: userList });
   socket.emit('parameters-updated', { parameters: gameRef.parameters });
 
-  console.log("broadcast player joined")
+  logger.info("broadcast player joined")
   
   // Broadcast to others that a new player joined
   socket.to(`game:${sessionCode}`).emit('player-joined', { userName });
@@ -599,7 +600,7 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
 
     return commands;
   } catch (error) {
-      console.error("Error creating commands:", error);
+      logger.error("Error creating commands:", error);
       return []
   }
 }
@@ -705,7 +706,7 @@ async function handleLaunchGame(data: {
       return {success: false};
     }
 
-    console.log("Starting game", sessionCode)
+    logger.info("Starting game", sessionCode)
     if(gameRef.parameters.commands){
       gameRef.commands = gameRef.parameters.commands;
       gameRef.totalGuessNumber = gameRef.commands.filter(command => command.action === "guess").length;
@@ -723,7 +724,7 @@ async function handleLaunchGame(data: {
     emitPublicLobbiesUpdate();
     return {success: true}
   } catch (error) {
-    console.error("Error starting game:", error);
+    logger.error("Error starting game:", error);
     emitToUser(data.sessionCode, data.userName, "error", { message: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -767,7 +768,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
       }, nextDuration);
     }
   } catch (error) {
-      console.error("Error sending next command:", error);
+      logger.error("Error sending next command:", error);
   }
 }
 
@@ -840,7 +841,7 @@ async function handleUpdateParameters(data: {
     emitPublicLobbiesUpdate();
     return { success: true };
   } catch (error) {
-    console.error("Error updating parameters:", error);
+    logger.error("Error updating parameters:", error);
     emitToUser(data.sessionCode, data.userName, "error", { message: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -949,7 +950,7 @@ async function handleValidateGuess(data: {
     })
     return { success: true };
   } catch (error) {
-      console.error("Error validating guess:", error);
+      logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
   }
 }
@@ -1005,7 +1006,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
             ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()
           )
         `.catch(e => {
-          console.error(`Error saving stats for ${username}:`, e);
+          logger.error(`Error saving stats for ${username}:`, e);
         })
       );
     }
@@ -1017,7 +1018,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     const sessionCode = gameRef.sessionCode;
     await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
       .catch(e => {
-        console.error(`Error deleting session ${sessionCode}:`, e);
+        logger.error(`Error deleting session ${sessionCode}:`, e);
       });
     
     // Use the common cleanup function
@@ -1029,7 +1030,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     // Cleanup: close all SSE connections for this session
     cleanupGame(sessionCode);
   } catch (error) {
-    console.error("Error cloturing game:", error);
+    logger.error("Error cloturing game:", error);
     if (gameRef && gameRef.sessionCode) {
       cleanupGame(gameRef.sessionCode);
     }
@@ -1049,7 +1050,7 @@ function setupInactiveGameCheck() {
       // Check if the game has been inactive
       const lastActivity = game.lastActivity || game.duration || 0;
       if (now - lastActivity > INACTIVE_GAME_TIMEOUT_MS) {
-        console.log(`Cleaning up inactive game: ${sessionCode}`);
+        logger.info(`Cleaning up inactive game: ${sessionCode}`);
         
         // For games that haven't started, just clean up
         if (!game.hasStarted) {
@@ -1104,7 +1105,7 @@ function cleanupGame(sessionCode: string) {
   
   // Delete from database if it exists
   sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
-    console.error(`Error deleting session ${sessionCode}:`, e);
+    logger.error(`Error deleting session ${sessionCode}:`, e);
   });
   // Notify watchers that lobbies list may have changed
   emitPublicLobbiesUpdate();
@@ -1116,7 +1117,7 @@ export const getPublicLobbies = async (req: Request, res: Response) => {
     const lobbies = await buildPublicLobbies();
     res.status(200).json({ lobbies });
   } catch (e) {
-    console.error("getPublicLobbies error", e);
+    logger.error("getPublicLobbies error", e);
     res.status(500).json({ lobbies: [] });
   }
 };

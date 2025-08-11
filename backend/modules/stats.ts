@@ -5,6 +5,7 @@ import type { AuthenticatedRequest, GetStatsRequest } from '../interfaces/reques
 import type { Request, Response } from "express";
 import { FinishedSession, FinishedSessionCamelCase } from 'interfaces/database.interfaces.ts';
 import { transformKeysSnakeToCamel } from "../middlewares/case-transformer.ts";
+import { logger } from './logging.ts';
 
 export const getUserStats = async (req: GetStatsRequest, res: Response): Promise<void> => {
     try {
@@ -157,7 +158,7 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
             sessions
         });
     } catch (error) {
-        console.error("Error getting stats:", error);
+        logger.error("Error getting stats:", error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }

@@ -4,6 +4,7 @@ import { sql } from "./database_init.ts";
 import Joi from 'joi';
 import { GameCommands } from 'interfaces/multi.interfaces.ts';
 import { AuthenticatedRequest } from 'interfaces/requests.interfaces.ts';
+import { logger } from './logging.ts';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -63,7 +64,7 @@ export const saveAdvancedSettings = async (req: Request, res: Response): Promise
     
     res.status(201).send(result[0]);
   } catch (error) {
-    console.error("Error saving advanced settings:", error);
+    logger.error("Error saving advanced settings:", error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -105,7 +106,7 @@ export const getAdvancedSettingsById = async (req: Request, res: Response): Prom
     
     res.status(200).send(settings);
   } catch (error) {
-    console.error("Error getting advanced settings:", error);
+    logger.error("Error getting advanced settings:", error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -132,7 +133,7 @@ export const getAdvancedSettingsList = async (req: Request, res: Response): Prom
     
     res.status(200).send(result);
   } catch (error) {
-    console.error("Error getting advanced settings list:", error);
+    logger.error("Error getting advanced settings list:", error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -223,7 +224,7 @@ export const updateAdvancedSettings = async (req: Request, res: Response): Promi
     
     res.status(200).send(result[0]);
   } catch (error) {
-    console.error("Error updating advanced settings:", error);
+    logger.error("Error updating advanced settings:", error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -261,7 +262,7 @@ export const deleteAdvancedSettings = async (req: Request, res: Response): Promi
     
     res.status(204).send();
   } catch (error) {
-    console.error("Error deleting advanced settings:", error);
+    logger.error("Error deleting advanced settings:", error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -287,7 +288,7 @@ export const checkAdvancedSettingsName = async (req: Request, res: Response): Pr
         const exists = result.length > 0;
         res.status(200).send({ exists, id: exists ? result[0].id : null });
     } catch (error) {
-        console.error("Error checking advanced settings name:", error);
+        logger.error("Error checking advanced settings name:", error);
         res.status(500).send({ message: "Internal server error." });
     }
 };

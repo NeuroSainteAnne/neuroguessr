@@ -5,6 +5,7 @@ import { __dirname } from "./utils.ts";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
 import { debug } from 'console';
+import { logger } from './logging.ts';
 const config: Config = configJson;
 
 // Create a new database or open an existing one
@@ -40,7 +41,7 @@ export const sql = postgres(
 
 export const database_init = async () => {
     try {
-        console.log('Initializing database schema...');
+        logger.info('Initializing database schema...');
         // Create tables with optimized indexes
         await sql.begin(async sql => {
             await sql`
@@ -219,7 +220,7 @@ export const database_init = async () => {
             await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_public ON multi_sessions(public);`;
         });
 
-        console.log("Database schema initialized successfully.");
+        logger.info("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
             const hashedPassword = await bcrypt.hash("test", salt);
@@ -228,10 +229,10 @@ export const database_init = async () => {
                 VALUES ('test', 'Test', 'User', '', ${hashedPassword}, ${true})
                 ON CONFLICT (username) DO NOTHING
             `;
-            console.log("Test user added successfully.");
+            logger.info("Test user added successfully.");
         }
     } catch (err) {
-        console.error("Error initializing database schema:", (err instanceof Error ? err.message : err));
+        logger.error("Error initializing database schema:", (err instanceof Error ? err.message : err));
     }
 }
 
@@ -242,10 +243,10 @@ export const cleanExpiredTokens = async () => {
             WHERE created_at <= NOW() - INTERVAL '1 hour'
         `;
         if(result.count !== 0){
-            console.log(`Cleaned up ${result.count} expired tokens.`);
+            logger.info(`Cleaned up ${result.count} expired tokens.`);
         }
     } catch (err) {
-        console.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
+        logger.error("Error cleaning expired tokens:", (err instanceof Error ? err.message : err));
     }
 };
 
@@ -260,7 +261,7 @@ export const cleanOldGameSessions = async () => {
             )
         `;
         if(result.count !== 0){
-            console.log(`Cleaned up ${result.count} old gameprogress entries.`);
+            logger.info(`Cleaned up ${result.count} old gameprogress entries.`);
         }
         // Delete from gamesessions older than 1 hour
         const resultSessions = await sql`
@@ -268,7 +269,7 @@ export const cleanOldGameSessions = async () => {
             WHERE created_at <= NOW() - INTERVAL '1 hour'
         `;
         if (resultSessions.count !== 0) {
-            console.log(`Cleaned up ${resultSessions.count} old game_sessions.`);
+            logger.info(`Cleaned up ${resultSessions.count} old game_sessions.`);
         }
         // Delete from multisessions older than 1 hour
         const resultMultiSessions = await sql`
@@ -276,9 +277,9 @@ export const cleanOldGameSessions = async () => {
             WHERE created_at <= NOW() - INTERVAL '1 hour'
         `;
         if (resultMultiSessions.count !== 0) {
-            console.log(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);
+            logger.info(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);
         }
     } catch (err) {
-        console.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
+        logger.error("Error cleaning old game sessions:", (err instanceof Error ? err.message : err));
     }
 }
