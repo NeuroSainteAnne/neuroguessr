@@ -14,6 +14,7 @@ import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBo
 import RegionHistory from '../../components/RegionHistory';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import { consoleLog } from '../../utils/logging';
+import { prefetchAtlasJSON, preloadAtlas } from '../../utils/nifti_cache';
 
 export function Page() {
     const { pageContext } = useApp();
@@ -194,6 +195,21 @@ const MultiPlayer = ({
           cleanHeader();
         }
         startStepCountdown(t("prepare-yourself"), data.command.duration);
+      } else if (data.command === 'preload-atlas') {
+        // Handle preload command for multiple atlases
+        if (data.atlasesToPreload && Array.isArray(data.atlasesToPreload)) {
+          consoleLog('minimal', `🚀 Preloading ${data.atlasesToPreload.length} atlases: ${data.atlasesToPreload.join(', ')}`);
+          
+          // Preload each atlas in the background
+          data.atlasesToPreload.forEach((atlasKey: string) => {
+            try {
+              preloadAtlas(atlasKey);
+              prefetchAtlasJSON(atlasKey);
+            } catch (error) {
+              console.error(`Failed to preload atlas ${atlasKey}:`, error);
+            }
+          });
+        }
       } else if (data.command.action === 'guess') {
         if (currentTarget.current !== null && !hasAnswered.current) {
           const curTar = currentTarget.current;    

@@ -1,6 +1,6 @@
 /*  MULTIPLAYER */
 export interface PlayerInfo {
-  isAnonymous?: boolean;
+  isAnonymous: boolean;
   userName: string;
   gameRef: MultiplayerGame;
   sessionCode: string;

@@ -616,6 +616,20 @@ function shuffleArray<T>(arr: T[]): T[] {
     return a;
 }
 
+function getAtlasesToPreload(commands: GameCommands[]): string[] {
+  const atlases = new Set<string>();
+  
+  // Find all unique atlases in the commands, excluding the first one
+  for (let i = 0; i < commands.length; i++) {
+    const command = commands[i];
+    if (command.action === "load-atlas" && command.atlas && i !== 0) {
+      atlases.add(command.atlas);
+    }
+  }
+  
+  return Array.from(atlases);
+}
+
 function getRandomLut(atlasName: string) : {lut: ColorMap|undefined, mapping: Record<number,number>|undefined, inverseMapping: Record<number,number>|undefined} {
     const atlasNumberRegions = validRegions[atlasName].length
     let lut : ColorMap | undefined = undefined;
@@ -840,6 +854,20 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     // Broadcast command and scores to all users via SSE
     broadcastToSession(gameRef.sessionCode, 'game-command', { command });
     broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores });
+
+    // After the first load-atlas command, check for additional atlases to preload
+    if (gameRef.currentCommandIndex === 0) {
+      const atlasesToPreload = getAtlasesToPreload(gameRef.commands);
+      if (atlasesToPreload.length > 0) {
+        // Send preload command immediately after the load-atlas command
+        setTimeout(() => {
+          broadcastToSession(gameRef.sessionCode, 'game-command', { 
+            command: "preload-atlas", 
+            atlasesToPreload 
+          });
+        }, 1000); // 1 sec delay to ensure load-atlas is processed first
+      }
+    }
 
     // Schedule next command
     if (gameRef.currentCommandIndex < gameRef.commands.length) {
