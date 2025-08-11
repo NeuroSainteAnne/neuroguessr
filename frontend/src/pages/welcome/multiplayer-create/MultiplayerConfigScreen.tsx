@@ -667,6 +667,18 @@ const MultiplayerConfigScreen = () => {
                         <i className="fas fa-desktop"></i>
                     }</button>
             </div>
+            <div className="mode-buttons">
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={isPublic}
+                        onChange={(e) => { setIsPublic(e.target.checked); 
+                            updateParameters({public: e.target.checked})}}
+                        style={{ marginRight: 8 }}
+                    />
+                    {t('public_lobby') || 'Public lobby (show in list)'}
+                </label>
+            </div>
         </>)
     }
 
