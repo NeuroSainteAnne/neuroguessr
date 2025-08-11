@@ -7,7 +7,6 @@ import { useApp } from '../context/AppContext';
 import atlasFiles from "../utils/atlas_files";
 import { navigate } from "vike/client/router";
 import { loadNIfTIFromCache } from "../utils/nifti_cache";
-import { prefetchLikelyAtlases } from "../utils/performance_optimizer";
 import "./BrainViewer.css"
 import { consoleLog } from "../utils/logging";
 
@@ -328,13 +327,6 @@ export function GameProvider({
                 // 3. Load atlas data
                 consoleLog("verbose", "Loading atlas regions", askedAtlas?.atlas);
                 await loadAtlasData();
-                
-                // 4. Prefetch related atlases in the background
-                setTimeout(() => {
-                    prefetchLikelyAtlases(askedAtlas?.atlas).catch(error => {
-                        console.warn('Background prefetching failed:', error);
-                    });
-                }, 1000); // Wait 1 second after loading current atlas
             }
 
 

@@ -1105,6 +1105,26 @@ export class NIfTICacheManager {
       console.warn('Failed to clear IndexedDB:', error);
     }
   }
+
+  public async prefetchAtlasJSON(atlasKey: string): Promise<void> {
+    const atlas = atlasFiles[atlasKey];
+    if (!atlas) return;
+
+    const languages = ['en', 'fr']; // Add other languages as needed
+    const prefetchPromises: Promise<any>[] = [];
+
+    for (const lang of languages) {
+        const jsonUrl = `/atlas/descr/${lang}/${atlas.json}`;
+        prefetchPromises.push(
+        loadJSONFromCache(jsonUrl).catch(error => {
+            // Don't throw on individual language failures
+            console.warn(`Failed to prefetch JSON for ${atlasKey} (${lang}):`, error);
+        })
+        );
+    }
+
+    await Promise.allSettled(prefetchPromises);
+  }
 }
 
 // Create a singleton instance
@@ -1113,6 +1133,7 @@ export const niftiCache = new NIfTICacheManager();
 // Export convenience functions
 export const loadNIfTIFromCache = niftiCache.loadNIfTI;
 export const loadJSONFromCache = niftiCache.loadJSON;
+export const prefetchAtlasJSON = niftiCache.prefetchAtlasJSON;
 export const preloadAtlas = niftiCache.preloadAtlas.bind(niftiCache);
 export const warmupCache = niftiCache.warmupCache.bind(niftiCache);
 export const getCacheStats = niftiCache.getStats.bind(niftiCache);

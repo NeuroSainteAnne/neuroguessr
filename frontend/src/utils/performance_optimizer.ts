@@ -63,23 +63,23 @@ export function analyzeAtlasLoadingStrategy(atlasKey: string): LoadingStrategy {
 function estimateAtlasSize(atlasKey: string): number {
   // These are rough estimates based on typical atlas sizes
   const sizeEstimates: Record<string, number> = {
-    'tissues': 8,           // Tissue segmentation - smaller
-    'harvard-oxford': 12,   // Standard cortical atlas
-    'desikan': 15,          // DK atlas
-    'destrieux': 18,        // Destrieux - more detailed
-    'allen': 25,            // Allen atlas - high resolution
-    'yeo7': 10,            // Functional networks
-    'yeo17': 12,           // More networks
-    'subcortical': 14,      // Subcortical structures
-    'cerebellum': 16,       // Cerebellum specific
-    'thalamus': 12,         // Thalamic nuclei
-    'HippoAmyg': 8,        // Hippocampus/Amygdala
-    'xtract': 20,          // White matter tracts
-    'JHU': 18,             // JHU atlas
-    'territories': 14       // Arterial territories
+    'tissues': 0.6,           // Tissue segmentation - smaller
+    'harvard-oxford': 0.6,   // Standard cortical atlas
+    'desikan': 0.6,          // DK atlas
+    'destrieux': 0.6,        // Destrieux - more detailed
+    'allen': 2,            // Allen atlas - high resolution
+    'yeo7': 0.6,            // Functional networks
+    'yeo17': 0.6,           // More networks
+    'subcortical': 0.6,      // Subcortical structures
+    'cerebellum': 0.6,       // Cerebellum specific
+    'thalamus': 0.6,         // Thalamic nuclei
+    'HippoAmyg': 0.6,        // Hippocampus/Amygdala
+    'xtract': 0.6,          // White matter tracts
+    'JHU': 0.6,             // JHU atlas
+    'territories': 0.6       // Arterial territories
   };
 
-  return sizeEstimates[atlasKey] || 15; // Default 15MB
+  return sizeEstimates[atlasKey] || 3; // Default 15MB
 }
 
 /**
@@ -164,85 +164,4 @@ function getPerformanceRating(stats: ReturnType<typeof niftiCache.getStats>): 'e
   if (hitRate >= 0.6) return 'good';
   if (hitRate >= 0.4) return 'fair';
   return 'poor';
-}
-
-/**
- * Prefetch atlases likely to be needed next
- */
-export async function prefetchLikelyAtlases(currentAtlas: string): Promise<void> {
-  // Define atlas relationships (atlases commonly used together)
-  const atlasRelationships: Record<string, string[]> = {
-    'harvard-oxford': ['desikan', 'destrieux'],
-    'desikan': ['harvard-oxford', 'destrieux'],
-    'destrieux': ['harvard-oxford', 'desikan'],
-    'tissues': ['harvard-oxford', 'subcortical'],
-    'subcortical': ['tissues', 'thalamus'],
-    'yeo7': ['yeo17'],
-    'yeo17': ['yeo7'],
-  };
-
-  const relatedAtlases = atlasRelationships[currentAtlas] || [];
-  consoleLog("verbose", `Prefetching related atlases for ${currentAtlas}: ${relatedAtlases.join(', ')}`);
-  
-  for (const atlasKey of relatedAtlases) {
-    if (shouldPreloadAtlas(atlasKey)) {
-      consoleLog("verbose", `Starting prefetch for related atlas: ${atlasKey}`);
-      try {
-        // Preload both NIfTI and JSON files
-        await Promise.all([
-          niftiCache.preloadAtlas(atlasKey),
-          prefetchAtlasJSON(atlasKey)
-        ]);
-        consoleLog('verbose', `🔮 Prefetched related atlas: ${atlasKey} (NIfTI + JSON)`);
-      } catch (error) {
-        console.warn(`Failed to prefetch ${atlasKey}:`, error);
-        consoleLog("verbose", `Prefetch failed for ${atlasKey}: ${error}`);
-      }
-    } else {
-      consoleLog("verbose", `Skipping prefetch for ${atlasKey} (already cached or low priority)`);
-    }
-  }
-}
-
-/**
- * Prefetch JSON files for an atlas in all available languages
- */
-async function prefetchAtlasJSON(atlasKey: string): Promise<void> {
-  const atlas = atlasFiles[atlasKey];
-  if (!atlas) return;
-
-  const languages = ['en', 'fr']; // Add other languages as needed
-  const prefetchPromises: Promise<any>[] = [];
-
-  for (const lang of languages) {
-    const jsonUrl = `/atlas/descr/${lang}/${atlas.json}`;
-    prefetchPromises.push(
-      loadJSONFromCache(jsonUrl).catch(error => {
-        // Don't throw on individual language failures
-        console.warn(`Failed to prefetch JSON for ${atlasKey} (${lang}):`, error);
-      })
-    );
-  }
-
-  await Promise.allSettled(prefetchPromises);
-}
-
-/**
- * Log performance insights
- */
-export function logPerformanceInsights(): void {
-  const metrics = getCacheEfficiencyMetrics();
-  const stats = niftiCache.getStats();
-  
-  consoleLog('verbose', '🔍 NIfTI Cache Performance Insights:');
-  consoleLog('verbose', `   Efficiency: ${(metrics.efficiency * 100).toFixed(1)}%`);
-  consoleLog('verbose', `   Memory Usage: ${metrics.memoryUtilization.toFixed(1)} MB`);
-  consoleLog('verbose', `   Rating: ${metrics.performance}`);
-  consoleLog('verbose', `   Recommendation: ${metrics.recommendedAction}`);
-  consoleLog('verbose', `   Memory Cache: ${stats.entryCount} entries`);
-  consoleLog('verbose', `   JSON Cache: ${stats.jsonEntryCount} entries`);
-  consoleLog('verbose', `   IndexedDB Cache: ${stats.indexedDBEntryCount} entries`);
-  consoleLog('verbose', `   Memory Hit/Miss: ${stats.cacheHits}/${stats.cacheMisses}`);
-  consoleLog('verbose', `   JSON Hit/Miss: ${stats.jsonCacheHits}/${stats.jsonCacheMisses}`);
-  consoleLog('verbose', `   IndexedDB Hit/Miss: ${stats.indexedDBCacheHits}/${stats.indexedDBCacheMisses}`);
 }
