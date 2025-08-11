@@ -115,6 +115,8 @@ const MultiPlayer = ({
   const joinLobby = (inputCode: string) => {
     if (isConnected) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
+    
+    consoleLog("verbose", `Attempting to join multiplayer lobby: ${inputCode} as ${isLoggedIn ? 'logged-in user' : 'anonymous'}`);
 
     setError(null);
 
@@ -132,6 +134,7 @@ const MultiPlayer = ({
     // Connection events
     socket.on('connect', () => {
       consoleLog('verbose', 'Socket connected');
+      consoleLog('verbose', `Joining lobby ${inputCode} as ${isLoggedIn ? userUsername : anonUsername}`);
       
       // Join the lobby
       socket.emit('join-lobby', {
@@ -145,6 +148,7 @@ const MultiPlayer = ({
 
     // Connection error
     socket.on('connect_error', (err) => {
+      consoleLog("verbose", `Multiplayer connection error: ${err.message}`);
       setError(`Connection error: ${err.message}`);
       cleanupSocket();
     });

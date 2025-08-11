@@ -301,6 +301,7 @@ export class AtlasImageProxy {
     }
 
     public async highlightRegion(highlightedRegion: number, moveToCenter: boolean = true, allowFibers: boolean = false): Promise<void> {
+        consoleLog("verbose", `Highlighting region ${highlightedRegion}, moveToCenter: ${moveToCenter}, allowFibers: ${allowFibers}`);
         this.isShowing = "highlighted";
         this.niivue.setOpacity(1, this.viewerOptions.displayOpacity);
 
@@ -310,10 +311,14 @@ export class AtlasImageProxy {
         if(this.cmap_en && allowFibers){
             tractLabel = this.cmap_en.labels[highlightedRegion].replace(/\s+/g, '_');
             tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
+            consoleLog("verbose", `Checking tractography availability: ${tractUrl}`);
             try {
                 const response = await fetch(tractUrl, { method: 'HEAD' });
                 if (response.ok) {
                     useTractography = true;
+                    consoleLog("verbose", `Tractography available for ${tractLabel}`);
+                } else {
+                    consoleLog("verbose", `Tractography not available (${response.status}) for ${tractLabel}`);
                 }
             } catch (error) {
                 consoleLog("verbose", `Tractography not available for ${tractLabel}:`, error);

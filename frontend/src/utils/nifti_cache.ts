@@ -474,14 +474,17 @@ export class NIfTICacheManager {
    * Preload a specific atlas
    */
   public async preloadAtlas(atlasKey: string): Promise<void> {
+    consoleLog("verbose", `Starting preload for atlas: ${atlasKey}`);
     if (!this.nvImageModule) {
       console.warn('Cannot preload atlas: NVImage module not initialized');
+      consoleLog("verbose", `Preload failed for ${atlasKey}: NVImage module not initialized`);
       return;
     }
 
     const atlas = atlasFiles[atlasKey];
     if (!atlas) {
       console.warn(`Atlas ${atlasKey} not found`);
+      consoleLog("verbose", `Preload failed for ${atlasKey}: atlas not found in files`);
       return;
     }
 
@@ -493,6 +496,7 @@ export class NIfTICacheManager {
       return;
     }
 
+    consoleLog("verbose", `Preloading atlas ${atlasKey} from ${url}`);
     try {
       consoleLog('verbose', `⬇️ Preloading atlas ${atlasKey}...`);
       const nvImage = await this.nvImageModule.loadFromUrl({ url });

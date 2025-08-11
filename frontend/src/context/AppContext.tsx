@@ -248,13 +248,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
                 atlasName: name
                 }));
             loadingAtlasRegions.push(...regions);
-            //console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+            consoleLog('verbose', `Loaded ${regions.length} regions for ${atlas} (${name})`);
         } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
             showNotification('error_loading_atlas', false, { atlas: name });
         }
     }
-    //console.log('Total regions loaded:', atlasRegions.length);
+    consoleLog('verbose', 'Total regions loaded:', atlasRegions.length);
     if (loadingAtlasRegions.length === 0) {
         showNotification('no_regions_loaded', false);
         setAtlasRegions([])
@@ -296,10 +296,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Language handler
   const handleChangeLanguage = async (lang: string) => {
+    consoleLog("verbose", `Changing language from ${currentLanguage} to ${lang}`);
     setCurrentLanguage(lang);
     i18n.changeLanguage(lang);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('language', lang);
     if(isLoggedIn && authToken) {
+        consoleLog("verbose", `Syncing language preference ${lang} to server for logged-in user`);
         try {
             // Send the data to the server
             const response = await fetch('/api/config-user', {
@@ -311,23 +313,28 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
                 body: JSON.stringify({"language": lang}),
             });
             await response.json();
+            consoleLog("verbose", `Language preference ${lang} synced to server successfully`);
         } catch (error) {
             // Handle network or other errors
             console.error('Error updating language config:', error);
+            consoleLog("verbose", `Failed to sync language preference to server: ${error}`);
         }
     }
   };
   
   // Authentication handlers
   const updateToken = (token: string | null) => {
+    consoleLog("verbose", `Updating authentication token: ${token ? 'token provided' : 'token cleared'}`);
     if (token) {
       if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('authToken', token);
       setAuthToken(token);
       setIsLoggedIn(true);
+      consoleLog("verbose", "User logged in successfully, token stored");
     } else {
       if(typeof window !== 'undefined' && window.localStorage) localStorage.removeItem('authToken');
       setAuthToken("");
       setIsLoggedIn(false);
+      consoleLog("verbose", "User logged out, token removed");
     }
   };
   
@@ -360,10 +367,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (isLoggedIn && authToken) {
       setIsGuest(false);
       if(localStorage !== undefined) localStorage.setItem('guestMode', 'false');
+      consoleLog("verbose", "Processing user authentication token for user info extraction");
 
       
       try {
         const payload = jwtDecode<CustomTokenPayload>(authToken);
+        consoleLog("verbose", `Decoded JWT payload for user: ${payload.username}, id: ${payload.id}`);
         setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'));
         setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'));
         setUserLastName(payload.lastname || "");
@@ -371,10 +380,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
           payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard
         );
         if (typeof window !== 'undefined' && (window as any).umami && payload.id) {
+          consoleLog("verbose", `Identifying user ${payload.id} to analytics`);
           (window as any).umami.identify(payload.id, {username: payload.username || ""})
         }
+        consoleLog("verbose", `User info loaded: ${payload.username}, leaderboard: ${payload.publishToLeaderboard}`);
       } catch (error) {
         console.error("Error decoding token:", error);
+        consoleLog("verbose", `Token decode failed, logging out user: ${error}`);
         logout();
       }
     }

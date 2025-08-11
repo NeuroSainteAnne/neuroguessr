@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { navigate } from 'vike/client/router';
 import Altcha from '../../components/Altcha';
 import ClinicalTrialBox, { ClinicalTrialProps } from '../../components/ClinicalTrialBox';
+import { consoleLog } from '../../utils/logging';
 
 function RegisterScreen() {
   const { t, currentLanguage } = useApp();
@@ -40,6 +41,9 @@ function RegisterScreen() {
     const lastname = lastnameInput.current?.value;
     const password = passwordInput.current?.value;
     const confirmPassword = confirmPasswordInput.current?.value;
+    
+    consoleLog("verbose", `Registration attempt for user: ${username}, email: ${email?.substring(0, 3)}***`);
+    
     // Email format validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     // Validate password complexity
@@ -111,6 +115,8 @@ function RegisterScreen() {
     if(activateCaptcha){
       formData.captcha_token = captchaToken;
     }
+    
+    consoleLog("verbose", "Sending registration request to server");
 
     try {
         // Send the data to the server
@@ -123,18 +129,22 @@ function RegisterScreen() {
             body: JSON.stringify(formData),
         });
         const result = await response.json();
+        consoleLog("verbose", `Registration response: ${response.ok ? 'success' : 'failure'}`);
         if (response.ok) {
             if(result.preverified){
+                consoleLog("verbose", "Registration successful (pre-verified), redirecting to login");
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success_no_verification'));
                 setTimeout(() => {
                     navigate("/login");
                 }, 1000);
             } else {
+                consoleLog("verbose", "Registration successful, email verification required");
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success'));
             }
         } else {
+            consoleLog("verbose", `Registration failed: ${result.message}`);
             setRegisterErrorText(result.message || t('register_failed')); 
             setSentRequest(false);
         }
@@ -156,11 +166,11 @@ function RegisterScreen() {
       } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
         // continue
       } else {
-        console.log("Altcha error:", altchaEvent.detail);
+        console.warn("Altcha error:", altchaEvent.detail);
         setRegisterErrorText(t('error_captcha'));
       }
     } else {
-      console.log("No Altcha");
+      console.warn("No Altcha");
       setCaptchaToken("");
       setRegisterErrorText(t('error_captcha'));
     }

@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext';
 import './LoginScreen.css';
 import { navigate } from 'vike/client/router'
 import Altcha from '../../components/Altcha';
+import { consoleLog } from '../../utils/logging';
 
 function LoginScreen() {
     const { t, currentLanguage, updateToken } = useApp();
@@ -35,15 +36,19 @@ function LoginScreen() {
         event.preventDefault();
         const username = usernameInput.current?.value.trim();
         const password = passwordInput.current?.value.trim();
+        
+        consoleLog("verbose", `Login attempt for user: ${username}`);
 
         // Clear previous error messages
         setLoginErrorText('');
 
         if (!username || !password) {
+          consoleLog("verbose", "Login failed: empty username or password");
           setLoginErrorText(t('error_empty_fields'));
           return;
         }
 
+        consoleLog("verbose", "Sending login request to server");
         try {
           // Send login request to the server
           const response = await fetch('/api/login', {
@@ -55,6 +60,7 @@ function LoginScreen() {
           });
 
           const result = await response.json();
+          consoleLog("verbose", `Login response received: ${response.ok ? 'success' : 'failure'}`);
 
           if (response.ok) {            // Handle successful login
             setLoginErrorText('');
@@ -64,31 +70,40 @@ function LoginScreen() {
             const redirectParam = urlParams.get('redirect');
             const returnUrl = urlParams.get('returnURL');
             
+            consoleLog("verbose", `Login successful, processing redirect: ${redirectParam || returnUrl || 'default'}`);
+            
             if (redirectParam) {
               window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
               if(redirectParam == "multiplayer-game"){
                 const askedSC = urlParams.get('redirect_asked_session_code') || "";
                 const askedST = urlParams.get('redirect_asked_session_token') || undefined;
+                consoleLog("verbose", `Redirecting to multiplayer game: ${askedSC}`);
                 navigate(`multiplayer-game/${askedSC}${askedST?"/"+askedST:""}`);
               } else if(redirectParam == "welcome"){
                 const askedSubpage = urlParams.get('redirect_subpage') || "";
+                consoleLog("verbose", `Redirecting to welcome subpage: ${askedSubpage}`);
                 navigate(`/welcome/${askedSubpage}`);
               } else {
+                consoleLog("verbose", `Redirecting to: ${redirectParam}`);
                 navigate(`/${redirectParam}`);
               }
             } else if (returnUrl) {
               window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
+              consoleLog("verbose", `Redirecting to return URL: ${returnUrl}`);
               navigate(returnUrl);
             } else {
+              consoleLog("verbose", "No redirect specified, going to welcome page");
               navigate("/welcome");
             }
           } else {
             // Handle login failure
+            consoleLog("verbose", `Login failed: ${result.message || 'unknown error'}`);
             setLoginErrorText(result.message || t('login_failed'));
           }
         } catch (error) {
           // Handle network or server errors
           console.error('Error during login:', error);
+          consoleLog("verbose", `Login network error: ${error}`);
           setLoginErrorText(t('server_error'));
         }
     }
@@ -96,19 +111,24 @@ function LoginScreen() {
     const handleRecovery = async () => {
         const email = recoveryEmailInput.current?.value.trim();
         const recoveryMessage = document.getElementById('recovery-message');
+        
+        consoleLog("verbose", `Password recovery attempt for email: ${email?.substring(0, 3)}***`);
 
         // Clear previous messages
         setRecoveryErrorText("");
 
         if (!email) {
+          consoleLog("verbose", "Password recovery failed: empty email");
           setRecoveryErrorText(t('error_empty_email'));
           return;
         } else if(activateCaptcha && !captchaToken){
+          consoleLog("verbose", "Password recovery failed: captcha not verified");
           setRecoveryErrorText(t('error_captcha'));
           return;
         } 
 
         setShowRecoveryButton(false)
+        consoleLog("verbose", "Sending password recovery request");
         
         try {
           let formData: {
@@ -132,21 +152,26 @@ function LoginScreen() {
           });
 
           const result = await response.json();
+          consoleLog("verbose", `Password recovery response: ${response.ok ? 'success' : 'failure'}`);
 
           if (response.ok) {
             if(result.preverified){
+                consoleLog("verbose", `Pre-verified recovery, redirecting to: ${result.redirect_url}`);
                 navigate(result.redirect_url);
             } else {
+              consoleLog("verbose", "Recovery email sent successfully");
               setRecoverySuccessText(t('recovery_email_sent'));
               setTimeout(()=>{
                 setRecoveryModalDisplay(false)
               }, 1000)
             }
           } else {
+            consoleLog("verbose", `Password recovery failed: ${result.message}`);
             setRecoveryErrorText(result.message || t('recovery_failed'));
           }
         } catch (error) {
           console.error('Error during password recovery:', error);
+          consoleLog("verbose", `Password recovery network error: ${error}`);
           setRecoveryErrorText(t('server_error'));
         }
 
@@ -161,11 +186,11 @@ function LoginScreen() {
         } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
           // continue
         } else {
-          console.log("Altcha error:", altchaEvent.detail);
+          console.warn("Altcha error:", altchaEvent.detail);
           setRecoveryErrorText(t('error_captcha'));
         }
       } else {
-        console.log("No Altcha");
+        console.warn("No Altcha");
         setCaptchaToken("");
         setRecoveryErrorText(t('error_captcha'));
       }

@@ -51,7 +51,6 @@ function ResetPasswordScreen() {
         event.preventDefault();
         const newPassword = passwordInput.current?.value;
         const confirmPassword = confirmPasswordInput.current?.value;
-        console.log(newPassword, confirmPassword)
         // Validate password complexity
           const complexityOptions = {
               min: 8,

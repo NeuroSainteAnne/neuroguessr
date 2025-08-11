@@ -169,6 +169,7 @@ export function GameProvider({
             if (routedAtlas) setAskedAtlas({atlas:routedAtlas, blindMode:blindMode});
             if (routedRegion) setAskedRegion(routedRegion);
             consoleLog("normal", "Creating Niivue...");
+            consoleLog("verbose", `Initializing NiiVue with atlas: ${routedAtlas}, region: ${routedRegion}, blindMode: ${blindMode}`);
             const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
             setIsMobileView(isMobile);
             const niivueInstance = new Niivue({
@@ -268,6 +269,7 @@ export function GameProvider({
 
     const configureMobileView = () => {
         if (!niivue) return;
+        consoleLog("verbose", `Configuring mobile view orientation: ${mobileOrientationRef.current}`);
         // Save current position
         // Configure for single view based on orientation
         niivue.opts.sliceType = mobileOrientationRef.current === "axial"
@@ -706,6 +708,7 @@ export function GameProvider({
     const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!niivue || !niivue.gl || !niivue.volumes[1] || !canvasRef.current || !atlasRef.current) return;
         const clickedRegionLocation = atlasRef.current.getClickedRegion(canvasRef.current, e)
+        consoleLog("verbose", `Canvas interaction: ${clickedRegionLocation ? `region ${clickedRegionLocation.idx} at ${clickedRegionLocation.mm}` : 'no region'}`);
         if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
             selectedVoxelProp.current = clickedRegionLocation;
         }

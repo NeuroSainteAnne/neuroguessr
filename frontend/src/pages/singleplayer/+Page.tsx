@@ -383,8 +383,10 @@ function SinglePlayer({
     }
 
     const selectNewTarget = async () => {
+        consoleLog("verbose", `Selecting new target for ${gameMode} mode`);
         let regionId = -1;
         if (isLoggedIn) { // network region fetching
+            consoleLog("verbose", "Fetching next region from server");
             try {
                 const response = await fetch('/api/get-next-region', {
                     method: 'POST',
@@ -397,11 +399,13 @@ function SinglePlayer({
                 if (!response.ok) {
                     const result = await response.json();
                     console.error("Failed to get next region:", result.message || "Unknown error");
+                    consoleLog("verbose", `Server request for next region failed: ${response.status} - ${result.message}`);
                     return false;
                 }
                 const result = await response.json();
                 if (result.regionId >= 0) {
                     regionId = result.regionId;
+                    consoleLog("verbose", `Server provided region ID: ${regionId}`);
                 } else {
                     console.warn("No valid region ID received from server.");
                     return false;

@@ -22,6 +22,7 @@ export interface LoadingStrategy {
 export function analyzeAtlasLoadingStrategy(atlasKey: string): LoadingStrategy {
   const atlas = atlasFiles[atlasKey];
   if (!atlas) {
+    consoleLog("verbose", `Atlas analysis failed: atlas '${atlasKey}' not found`);
     return {
       shouldPreload: false,
       priority: 'low',
@@ -45,6 +46,8 @@ export function analyzeAtlasLoadingStrategy(atlasKey: string): LoadingStrategy {
   let priority: 'high' | 'medium' | 'low' = 'medium';
   if (atlas.difficulty <= 1) priority = 'high';
   else if (atlas.difficulty >= 4) priority = 'low';
+  
+  consoleLog("verbose", `Atlas ${atlasKey} analysis: cached=${isCached}, size=${estimatedSizeMB}MB, loadTime=${estimatedLoadTime}ms, priority=${priority}`);
   
   return {
     shouldPreload: atlas.difficulty <= 2 && !isCached,
@@ -179,9 +182,11 @@ export async function prefetchLikelyAtlases(currentAtlas: string): Promise<void>
   };
 
   const relatedAtlases = atlasRelationships[currentAtlas] || [];
+  consoleLog("verbose", `Prefetching related atlases for ${currentAtlas}: ${relatedAtlases.join(', ')}`);
   
   for (const atlasKey of relatedAtlases) {
     if (shouldPreloadAtlas(atlasKey)) {
+      consoleLog("verbose", `Starting prefetch for related atlas: ${atlasKey}`);
       try {
         // Preload both NIfTI and JSON files
         await Promise.all([
@@ -191,7 +196,10 @@ export async function prefetchLikelyAtlases(currentAtlas: string): Promise<void>
         consoleLog('verbose', `🔮 Prefetched related atlas: ${atlasKey} (NIfTI + JSON)`);
       } catch (error) {
         console.warn(`Failed to prefetch ${atlasKey}:`, error);
+        consoleLog("verbose", `Prefetch failed for ${atlasKey}: ${error}`);
       }
+    } else {
+      consoleLog("verbose", `Skipping prefetch for ${atlasKey} (already cached or low priority)`);
     }
   }
 }

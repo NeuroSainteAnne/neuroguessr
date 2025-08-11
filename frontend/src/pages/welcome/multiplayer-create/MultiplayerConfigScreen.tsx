@@ -79,19 +79,24 @@ const MultiplayerConfigScreen = () => {
     const createSession = async () => {
         setLoading(true);
         setError(null);
+        consoleLog("verbose", "Starting multiplayer session creation");
         // Check if the player is logged in
         if (!authToken) {
+            consoleLog("verbose", "Session creation failed: no auth token");
             setError('Please log in');
             return;
         }
         if (!isTokenValid(authToken)) {
+            consoleLog("verbose", "Session creation failed: invalid auth token");
             setError('Please log in');
             return;
         }
         if (!refreshToken()) {
+            consoleLog("verbose", "Session creation failed: token refresh failed");
             setError('Please log in again');
             return;
         }
+        consoleLog("verbose", `Creating session with atlas: ${selectedAtlas}, public: ${isPublic}, blindMode: ${blindMode}`);
         try {
             const response = await fetch('/api/create-multiplayer-session', {
                 method: 'POST',
@@ -103,15 +108,18 @@ const MultiplayerConfigScreen = () => {
             });
             if (!response.ok) {
                 const result = await response.json();
+                consoleLog("verbose", `Session creation failed: ${result.message}`);
                 setError(result.message || 'Failed to create session');
                 setLoading(false);
                 return;
             }
             const result = await response.json();
+            consoleLog("verbose", `Session created successfully: ${result.sessionCode}, ID: ${result.sessionId}`);
             setSessionCode(result.sessionCode);
             setSessionId(result.sessionId);
             setSessionToken(result.sessionToken);
         } catch (err) {
+            consoleLog("verbose", `Session creation network error: ${err}`);
             setError('Network error');
         } finally {
             setLoading(false);
@@ -155,26 +163,31 @@ const MultiplayerConfigScreen = () => {
                 setError(data.message);
             });
             socket.on('lobby-users', (data) => {
+                consoleLog("verbose", `Received lobby users update: ${data.users?.length} users`);
                 if (Array.isArray(data.users)) {
                     setLobbyUsers(data.users);
                 }
             });
             socket.on('player-joined', (data) => {
+                consoleLog("verbose", `Player joined lobby: ${data.userName}`);
                 if (data.userName) {
                     setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
                 }
             });
             socket.on('player-left', (data) => {
+                consoleLog("verbose", `Player left lobby: ${data.userName}`);
                 if (data.userName) {
                     setLobbyUsers(prev => prev.filter(u => u !== data.userName));
                 }
             });
             socket.on('parameters-updated', (data) => {
+                consoleLog("verbose", `Game parameters updated, total duration: ${data?.parameters?.totalDuration}s`);
                 if(data && data.parameters && data.parameters.totalDuration) {
                     setTotalDuration(data.parameters.totalDuration);
                 }
             });
             socket.on('parameters-has-updated', (data) => {
+                consoleLog("verbose", `Parameters validation result: ${data?.success ? 'valid' : 'invalid'}`);
                 if (data && data.success) {
                     setIsValidatedJSON(true)
                 }
@@ -191,6 +204,7 @@ const MultiplayerConfigScreen = () => {
     const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
         if(!socketRef.current) return;
         parametersRef.current = {...parametersRef.current, ...newParameters}
+        consoleLog("verbose", `Updating multiplayer parameters:`, parametersRef.current);
         if(parametersRef && parametersRef.current && !parametersRef.current.commands){
             const generatedCommands = [
                 { action: "load-atlas", atlas: parametersRef.current.atlas, duration: LOAD_ATLAS_DURATION },
@@ -199,10 +213,12 @@ const MultiplayerConfigScreen = () => {
                     duration: durationPerRegion,
                 })),
             ];
+            consoleLog("verbose", `Generated game commands: ${generatedCommands.length} total`);
             setAdvancedSettingsJSON(JSON.stringify(generatedCommands, null, 2))
         }
         // Send updated parameters to the server
         if (sessionCode && sessionToken) {
+            consoleLog("verbose", `Sending parameter update to server for session ${sessionCode}`);
             try {
                 socketRef.current.emit('update-parameters', {
                     sessionCode,
@@ -210,6 +226,7 @@ const MultiplayerConfigScreen = () => {
                     parameters: parametersRef.current
                 });
             } catch (err) {
+                consoleLog("verbose", `Failed to send parameter update: ${err}`);
                 setError('Failed to update parameters');
                 throw String(err)
             }
