@@ -9,6 +9,7 @@ import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { navigate } from 'vike/client/router';
+import { consoleLog } from '../../utils/logging';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
 import SearchBar from '../../components/SearchBar';
@@ -79,12 +80,12 @@ export function Page() {
     const routedAtlas = routeParams?.atlas
     const routedRegion = parseInt(routeParams?.region) || undefined
     const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
-    const cleanGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const startGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const resetGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const validateGuessCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { console.log("Not Initialized") });
-    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { console.log("Not Initialized") });
+    const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
+    const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
+    const resetGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Reset game callback not initialized") });
+    const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { consoleLog("verbose", "Generic key press callback not initialized") });
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { consoleLog("verbose", "Canvas interaction callback not initialized") });
     return (
         <GameProvider gameMode={gameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
@@ -264,7 +265,7 @@ function SinglePlayer({
                 if (session) {
                     sessionToken.current = session.sessionToken;
                     sessionId.current = session.sessionId;
-                    //console.log("Online session started:", session);
+                    consoleLog("verbose", "Online session started:", session);
                 } else {
                     console.warn("Failed to start online session, proceeding in offline mode.");
                 }
@@ -277,7 +278,7 @@ function SinglePlayer({
                         if (atlasRef.current && atlasRef.current.validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
                             atlasRef.current.validRegions.sort(() => 0.5 - Math.random());
                             atlasRef.current.validRegions = atlasRef.current.validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
-                            //console.log(`Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack:`, validRegions);
+                            consoleLog("verbose", `Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack: ${atlasRef.current.validRegions}`);
                         } else if (atlasRef.current && atlasRef.current.validRegions.length > 0) {
                             console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${atlasRef.current.validRegions.length} available regions.`);
                             atlasRef.current.validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
@@ -562,9 +563,9 @@ function SinglePlayer({
                     consecutiveErrors = result.consecutiveErrors;
                     quitReason = result.quitReason;
                     nearestCenter = result.nearestCenter;
-                    console.log("Nearest centr", nearestCenter)
+                    consoleLog("verbose", "Nearest center:", nearestCenter);
                 } catch (error) {
-                    console.error("Error occured during region validation:", error);
+                    consoleLog("normal", "Error occurred during region validation:", error);
                     return false;
                 }
             } else {
@@ -680,9 +681,9 @@ function SinglePlayer({
                 setHeaderText(incorrectMessage);
                 setHeaderTextMode("failure")
 
-                //console.log(`Incorrect guess: ${clickedRegionName} (ID: ${clickedRegion}), Expected: ${targetName} (ID: ${currentTarget})`);
+                consoleLog("verbose", `Incorrect guess: ${clickedRegionName} (ID: ${clickedRegionName}), Expected: ${targetName} (ID: ${currentTarget})`);
 
-                //console.log(currentAttempts, MAX_ATTEMPTS_BEFORE_HIGHLIGHT);
+                consoleLog("verbose", `Current attempts: ${currentAttempts}/${MAX_ATTEMPTS_BEFORE_HIGHLIGHT}`);
                 if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) ||
                     (isLoggedIn && performHighlight)) {
                     setHighlightedRegion(currentTarget.current);

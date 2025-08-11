@@ -12,6 +12,7 @@ import Joi from "joi";
 import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
 import { fetchJSON } from '../../../utils/helper_nii';
 import { add, set } from 'date-fns';
+import { consoleLog } from '../../../utils/logging';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -132,7 +133,7 @@ const MultiplayerConfigScreen = () => {
             
             // Connection events
             socket.on('connect', () => {
-                console.log('Socket connected');
+                consoleLog('normal', 'Socket connected');
                 
                 // Join the lobby
                 socket.emit('join-lobby', {

@@ -168,7 +168,7 @@ export function GameProvider({
         if (!niivue) {
             if (routedAtlas) setAskedAtlas({atlas:routedAtlas, blindMode:blindMode});
             if (routedRegion) setAskedRegion(routedRegion);
-            console.log("Creating Niivue...");
+            consoleLog("normal", "Creating Niivue...");
             const isMobile = window.innerWidth <= 768; // Adjust breakpoint as needed
             setIsMobileView(isMobile);
             const niivueInstance = new Niivue({
@@ -295,7 +295,7 @@ export function GameProvider({
     useEffect(() => {
         let cancelled = false;
         const isMobile = window.innerWidth <= 768;
-        console.log(isMobile ? "Mobile view detected" : "Desktop view detected");
+        consoleLog("verbose", isMobile ? "Mobile view detected" : "Desktop view detected");
         const doSequentialLoad = async () => {
             setIsLoading(true);
 
@@ -324,7 +324,7 @@ export function GameProvider({
                 currentlyLoadedAtlas.current = askedAtlas?.atlas
 
                 // 3. Load atlas data
-                console.log("Loading atlas regions", askedAtlas?.atlas);
+                consoleLog("verbose", "Loading atlas regions", askedAtlas?.atlas);
                 await loadAtlasData();
                 
                 // 4. Prefetch related atlases in the background
@@ -338,14 +338,14 @@ export function GameProvider({
 
             // 4. Start game
             if (!cancelled) {
-                console.log("Starting game...");
+                consoleLog("normal", "Starting game...");
                 startGameCallbackRef.current();
                 setIsLoading(false);
             }
 
             // 5. load region
             if (askedRegion && !cancelled) {
-                console.log("Loading region...", askedRegion);
+                consoleLog("verbose", "Loading region...", askedRegion);
                 setHighlightedRegion(askedRegion)
                 highlightWrapper(askedRegion, true, gameMode === 'navigation');
                 if (atlasRef.current) showNotification(atlasRef.current.labels[askedRegion], true, {}, 1500);
@@ -438,7 +438,7 @@ export function GameProvider({
     }
 
     const handleSpaceBar = () => {
-        console.log(isGameRunning)
+        consoleLog("verbose", "Space bar pressed, isGameRunning:", isGameRunning);
         if (guessButtonRef.current && !guessButtonRef.current.disabled && isGameRunning && gameMode !== 'navigation') {
             validateGuessHandler();
         }
@@ -473,7 +473,7 @@ export function GameProvider({
                 const x = pos.x * (niivue.uiData.dpr || 1);
                 const y = pos.y * (niivue.uiData.dpr || 1);
                 const clickedTileIndex = niivue.tileIndex(x, y);
-                console.log(pos, clickedTileIndex)
+                consoleLog("verbose", "Mouse wheel at position:", pos, "tile index:", clickedTileIndex);
 
                 // Determine which slice type based on the tile
                 let axisToModify = 2; // Default to Z-axis (axial)

@@ -123,7 +123,7 @@ class AtlasUsageTracker {
         this.saveUsageData();
       }
 
-      console.log(`📊 Ended atlas session: ${atlas} (${(sessionTime / 1000).toFixed(1)}s)`);
+      consoleLog('verbose', `📊 Ended atlas session: ${atlas} (${(sessionTime / 1000).toFixed(1)}s)`);
       this.currentSession = null;
     }
   }
@@ -226,7 +226,7 @@ class AtlasUsageTracker {
       localStorage.removeItem(this.STORAGE_KEY);
     }
     
-    console.log('🧹 Atlas usage data cleared');
+    consoleLog('verbose', '🧹 Atlas usage data cleared');
   }
 
   /**

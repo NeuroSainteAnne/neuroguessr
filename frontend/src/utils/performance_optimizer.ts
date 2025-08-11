@@ -226,15 +226,15 @@ export function logPerformanceInsights(): void {
   const metrics = getCacheEfficiencyMetrics();
   const stats = niftiCache.getStats();
   
-  console.log('🔍 NIfTI Cache Performance Insights:');
-  console.log(`   Efficiency: ${(metrics.efficiency * 100).toFixed(1)}%`);
-  console.log(`   Memory Usage: ${metrics.memoryUtilization.toFixed(1)} MB`);
-  console.log(`   Rating: ${metrics.performance}`);
-  console.log(`   Recommendation: ${metrics.recommendedAction}`);
-  console.log(`   Memory Cache: ${stats.entryCount} entries`);
-  console.log(`   JSON Cache: ${stats.jsonEntryCount} entries`);
-  console.log(`   IndexedDB Cache: ${stats.indexedDBEntryCount} entries`);
-  console.log(`   Memory Hit/Miss: ${stats.cacheHits}/${stats.cacheMisses}`);
-  console.log(`   JSON Hit/Miss: ${stats.jsonCacheHits}/${stats.jsonCacheMisses}`);
-  console.log(`   IndexedDB Hit/Miss: ${stats.indexedDBCacheHits}/${stats.indexedDBCacheMisses}`);
+  consoleLog('verbose', '🔍 NIfTI Cache Performance Insights:');
+  consoleLog('verbose', `   Efficiency: ${(metrics.efficiency * 100).toFixed(1)}%`);
+  consoleLog('verbose', `   Memory Usage: ${metrics.memoryUtilization.toFixed(1)} MB`);
+  consoleLog('verbose', `   Rating: ${metrics.performance}`);
+  consoleLog('verbose', `   Recommendation: ${metrics.recommendedAction}`);
+  consoleLog('verbose', `   Memory Cache: ${stats.entryCount} entries`);
+  consoleLog('verbose', `   JSON Cache: ${stats.jsonEntryCount} entries`);
+  consoleLog('verbose', `   IndexedDB Cache: ${stats.indexedDBEntryCount} entries`);
+  consoleLog('verbose', `   Memory Hit/Miss: ${stats.cacheHits}/${stats.cacheMisses}`);
+  consoleLog('verbose', `   JSON Hit/Miss: ${stats.jsonCacheHits}/${stats.jsonCacheMisses}`);
+  consoleLog('verbose', `   IndexedDB Hit/Miss: ${stats.indexedDBCacheHits}/${stats.indexedDBCacheMisses}`);
 }

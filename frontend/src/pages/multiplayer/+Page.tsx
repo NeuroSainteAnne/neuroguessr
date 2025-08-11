@@ -12,14 +12,15 @@ import { io, Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import RegionHistory from '../../components/RegionHistory';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
+import { consoleLog } from '../../utils/logging';
 
 export function Page() {
     const { pageContext } = useApp();
     const { routeParams } = pageContext;
-    const cleanGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
-    const startGameCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
+    const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
     const resetGameCallbackRef = useRef<(() => void)>(() => {});
-    const validateGuessCallbackRef = useRef<(() => void)>(() => { console.log("Not Initialized") });
+    const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
     const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => {});
     const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { });
     return (
@@ -130,7 +131,7 @@ const MultiPlayer = ({
 
     // Connection events
     socket.on('connect', () => {
-      console.log('Socket connected');
+      consoleLog('verbose', 'Socket connected');
       
       // Join the lobby
       socket.emit('join-lobby', {
@@ -303,7 +304,7 @@ const MultiPlayer = ({
       });
       socketRef.current.once('game-launched', (data) => {
         if (data.success) {
-          console.log('Game launched successfully');
+          consoleLog('verbose', 'Game launched successfully');
         } else {
           setError(data.message || t('error_launching_game'));
         }

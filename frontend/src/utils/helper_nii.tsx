@@ -4,6 +4,7 @@ import type { Niivue, NVImage } from '@niivue/niivue';
 import { usePageContext } from 'vike-react/usePageContext';
 import { useApp } from '../context/AppContext';
 import { loadJSONFromCache } from './nifti_cache';
+import { consoleLog } from './logging';
 
 export async function fetchJSON(fnm: string): Promise<ColorMap> {
     try {
@@ -52,7 +53,7 @@ export const initNiivue = (myniivue: Niivue, canvas: HTMLCanvasElement, viewerOp
         return;
     }
     (myniivue as any)._isInitialized = true;
-    console.log("Initializing Niivue...");
+    consoleLog("normal", "Initializing Niivue...");
 
     myniivue.attachToCanvas(canvas).then(() => {
         myniivue.setInterpolation(false);
@@ -276,7 +277,7 @@ export class AtlasImageProxy {
                 // Perform centering using the provided coordinates
                 this.niivue.scene.crosshairPos = this.niivue.vox2frac(new Float32Array(center));
                 this.niivue.createOnLocationChange();
-                console.log(`Autocentering to coordinates: ${center}`);
+                consoleLog("verbose", `Autocentering to coordinates: ${center}`);
             } else {
                 console.error("Invalid autocenter coordinates provided in cmap_en.");
             }
@@ -290,7 +291,7 @@ export class AtlasImageProxy {
             if (typeof zoomFactor === "number" && zoomFactor > 0) {
                 // Adjust the zoom factor
                 this.niivue.setPan2Dxyzmm([-centermm[0], -centermm[1], -centermm[2], zoomFactor]);
-                console.log(`Zoom adjusted to factor: ${zoomFactor}`);
+                consoleLog("verbose", `Zoom adjusted to factor: ${zoomFactor}`);
             } else {
                 console.error("Invalid zoom factor provided in cmap_en.");
             }
@@ -315,7 +316,7 @@ export class AtlasImageProxy {
                     useTractography = true;
                 }
             } catch (error) {
-                console.log(`Tractography not available for ${tractLabel}:`, error);
+                consoleLog("verbose", `Tractography not available for ${tractLabel}:`, error);
             }
         }
 
