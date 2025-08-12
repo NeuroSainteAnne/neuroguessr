@@ -21,6 +21,7 @@ export interface MultiplayerParametersType {
 export interface MultiplayerGame {
   sessionCode: string;
   hasStarted: boolean;
+  hasFinishedCountdown: boolean;
   hasEnded: boolean;
   parameters: MultiplayerParametersType;
   commands?: GameCommands[];

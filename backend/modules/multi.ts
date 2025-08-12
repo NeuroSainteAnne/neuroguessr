@@ -347,6 +347,11 @@ async function joinLobby(
     }
   }
 
+  // Prevent new users from joining if countdown has finished (allow rejoining users)
+  if (gameRef.hasFinishedCountdown && !rejoiningMode) {
+    return { error: "Game has already started, cannot join lobby" };
+  }
+
   if (isAnonymous && !rejoiningMode) {
     // Only add to anonymous usernames if not already present
     if (!gameRef.anonymousUsernames.includes(finalUserName)) {
@@ -458,6 +463,7 @@ function createEmptySession(sessionCode: string, creatorId?: number){
     games[sessionCode] = {
       sessionCode: sessionCode,
       hasStarted: false,
+      hasFinishedCountdown: false,
       hasEnded: false,
       currentCommandIndex: 0,
       totalGuessNumber: 0,
@@ -877,6 +883,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     if(command.action == "load-atlas"){
       gameRef.currentAtlas = command.atlas || "";
       gameRef.isCurrentlyBlind = command.blindMode || false;
+      gameRef.hasFinishedCountdown = true;
     }
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
     // Broadcast command and scores to all users via SSE
