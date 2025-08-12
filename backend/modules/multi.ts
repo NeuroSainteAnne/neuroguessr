@@ -17,7 +17,7 @@ import { logger } from "./logging.ts";
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
-    action: Joi.string().valid("load-atlas", "guess").required(),
+    action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
     duration: Joi.number().integer().min(5).required(),
@@ -32,7 +32,8 @@ const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult =
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
-const LOAD_ATLAS_DURATION = 10;
+const DEFAULT_LOAD_ATLAS_DURATION = 5; // seconds to load atlas
+const DEFAULT_COUNTDOWN_TIME = 5; // 5 seconds countdown before game start
 const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
 const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
@@ -622,7 +623,7 @@ function getAtlasesToPreload(commands: GameCommands[]): string[] {
   // Find all unique atlases in the commands, excluding the first one
   for (let i = 0; i < commands.length; i++) {
     const command = commands[i];
-    if (command.action === "load-atlas" && command.atlas && i !== 0) {
+    if (command.action === "load-atlas" && command.atlas) {
       atlases.add(command.atlas);
     }
   }
@@ -665,13 +666,18 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   try {
     const commands : GameCommands[] = [];
     if(!params.atlas) return;
+    // 0. Game countdown
+    commands.push({
+      action: "countdown",
+      duration: DEFAULT_COUNTDOWN_TIME
+    });
     const {lut, mapping, inverseMapping} = getRandomLut(params.atlas)
     // 1. Load atlas
     commands.push({
       action: "load-atlas",
       atlas: params.atlas,
       lut, mapping, inverseMapping,
-      duration: LOAD_ATLAS_DURATION,
+      duration: DEFAULT_LOAD_ATLAS_DURATION,
       blindMode: params.blindMode || false
     });
 
@@ -708,7 +714,29 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
     const commands : GameCommands[] = [];
     let currentAtlas = undefined;
     let regionPool: number[] = [];
+    let index = 0;
+    
     for (const command of externalCommands) {
+      if (command.action === "countdown") {
+        if(index === 0) {
+          commands.push({
+            action: "countdown",
+            duration: command.duration || DEFAULT_COUNTDOWN_TIME,
+          });
+        } else {
+          throw `Countdown command must be the first command.`;
+        }
+        index++;
+        continue;
+      } else {
+        if(index === 0) {
+          commands.push({
+            action: "countdown",
+            duration: DEFAULT_COUNTDOWN_TIME,
+          });
+        }
+      }
+      
       if (command.action === "load-atlas") {
         currentAtlas = command.atlas || Object.keys(validRegions)[Math.floor(Math.random() * Object.keys(validRegions).length)];
         if (!validRegions[currentAtlas || ""]) {
@@ -721,7 +749,7 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
           lut,
           mapping,
           inverseMapping,
-          duration: command.duration || LOAD_ATLAS_DURATION,
+          duration: command.duration || DEFAULT_LOAD_ATLAS_DURATION,
           blindMode: command.blindMode || false,
         });
         regionPool = [...validRegions[currentAtlas]];
@@ -757,6 +785,7 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
       } else {
         throw `Unknown action "${command.action}" in external commands.`;
       }
+      index++;
     }
     return commands;
   } catch (error) {
@@ -860,12 +889,10 @@ function sendNextCommand(gameRef: MultiplayerGame) {
       const atlasesToPreload = getAtlasesToPreload(gameRef.commands);
       if (atlasesToPreload.length > 0) {
         // Send preload command immediately after the load-atlas command
-        setTimeout(() => {
-          broadcastToSession(gameRef.sessionCode, 'game-command', { 
+        broadcastToSession(gameRef.sessionCode, 'game-command', { 
             command: "preload-atlas", 
             atlasesToPreload 
-          });
-        }, 1000); // 1 sec delay to ensure load-atlas is processed first
+        });
       }
     }
 
@@ -934,7 +961,7 @@ async function handleUpdateParameters(data: {
     } else {
       const regions = gameRef.parameters.regionsNumber || 0;
       const dur = gameRef.parameters.durationPerRegion || 0;
-      gameRef.parameters.totalDuration = (regions > 0 && dur > 0) ? (LOAD_ATLAS_DURATION + regions * dur) : 0;
+      gameRef.parameters.totalDuration = (regions > 0 && dur > 0) ? (DEFAULT_LOAD_ATLAS_DURATION + regions * dur) : 0;
     }
 
     // If a public flag is provided, persist it

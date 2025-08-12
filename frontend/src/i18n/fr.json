@@ -219,6 +219,7 @@
   "show_advanced_settings": "Voir les paramètres avancés",
   "advanced_settings": "Paramétrage avancé",
   "validate_settings": "Valider les paramètres",
+  "countdown_duration": "Durée du compte à rebours (sec)",
   "select_new_atlas": "Changer d'Atlas",
   "select_duration": "Durée pour nouvelle région (sec)",
   "select_new_region": "Sélectionner une région",
@@ -229,6 +230,7 @@
   "add_new_region": "Insérer une région",
   "add_atlas": "Insérer un atlas",
   "enter_settings_name": "Entrez le nom du préréglage",
+  "name_already_exists_overwrite": "Un préréglage avec ce nom existe déjà. Voulez-vous le remplacer ?",
   "region_duration": "Durée de la région (sec)",
   "total_duration": "Durée totale",
 

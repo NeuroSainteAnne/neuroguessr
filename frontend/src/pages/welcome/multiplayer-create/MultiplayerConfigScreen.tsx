@@ -14,10 +14,11 @@ import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
 import { fetchJSON } from '../../../utils/helper_nii';
 import { add, set } from 'date-fns';
 import { consoleLog } from '../../../utils/logging';
+import { get } from 'http';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
-    action: Joi.string().valid("load-atlas", "guess").required(),
+    action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
     duration: Joi.number().integer().min(1).required(),
@@ -26,13 +27,20 @@ const externalGameCommandsSchema = Joi.array().items(
 
 const validateExternalGameCommands = (commands: ExternalGameCommands[]): Joi.ValidationResult => {
   if (!commands.length) throw "No command given"
+  
+  // Check if first command is countdown
+  if (commands[0].action !== "countdown") {
+    throw "First command must be a countdown action"
+  }
+  
   return externalGameCommandsSchema.validate(commands, { abortEarly: false });
 };
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
-const LOAD_ATLAS_DURATION = 10;
+const DEFAULT_LOAD_ATLAS_DURATION = 5;
+const DEFAULT_COUNTDOWN_TIME = 5;
 
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
@@ -208,7 +216,8 @@ const MultiplayerConfigScreen = () => {
         consoleLog("verbose", `Updating multiplayer parameters:`, parametersRef.current);
         if(parametersRef && parametersRef.current && !parametersRef.current.commands){
             const generatedCommands = [
-                { action: "load-atlas", atlas: parametersRef.current.atlas, duration: LOAD_ATLAS_DURATION },
+                { action: "countdown", duration: DEFAULT_COUNTDOWN_TIME },
+                { action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION },
                 ...Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
                     action: "guess",
                     duration: durationPerRegion,
@@ -251,6 +260,13 @@ const MultiplayerConfigScreen = () => {
         try {
             advancedSettingsJSONRef.current = advancedSettingsJSON;
             const parsedJSON = JSON.parse(advancedSettingsJSON);
+            
+            // Check if first command is countdown when there are commands
+            if (parsedJSON.length > 0 && parsedJSON[0].action !== "countdown") {
+                setAdvancedSettingsError(t("first_command_must_be_countdown") || "First command must be a countdown action");
+                return;
+            }
+            
             const loadAtlasCommand = [...parsedJSON].reverse().find((command: any) => command.action === "load-atlas" && command.atlas);
             if (loadAtlasCommand) {
                 setAdvancedLastAtlas(loadAtlasCommand.atlas); // Update the last atlas based on the JSON
@@ -471,7 +487,7 @@ const MultiplayerConfigScreen = () => {
             const totalRegions = atlas.regions.length; // Calculate the total number of regions
             const regionNames = atlasRegionNames[atlas.atlas] || []; // Get preloaded region names
 
-            return (<>
+            return (
                 <div key={`atlas_${atlasIndex}`}>
                     <div className="atlas-header" onClick={() => toggleAtlasCollapse(atlasIndex)}>
                         <div className="atlas-header-left">
@@ -548,7 +564,7 @@ const MultiplayerConfigScreen = () => {
                         </div>
                     )}
                 </div>
-            </>)
+            )
         });
     };
 
@@ -634,6 +650,13 @@ const MultiplayerConfigScreen = () => {
                     onClick={() => {
                         try {
                             const parsedJSON = JSON.parse(advancedSettingsJSON);
+                            
+                            // Check if first command is countdown when there are commands
+                            if (parsedJSON.length > 0 && parsedJSON[0].action !== "countdown") {
+                                setAdvancedSettingsError(t("first_command_must_be_countdown") || "First command must be a countdown action");
+                                return;
+                            }
+                            
                             // Validate the JSON structure
                             const success = validateExternalGameCommands(parsedJSON);
                             if (!success) {
@@ -687,6 +710,39 @@ const MultiplayerConfigScreen = () => {
         updateJSONFromGroupedData(groupedByAtlas);
     };
 
+    const getCountdownDuration = (): number => {
+        try {
+            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const countdownCommand = parsedJSON.find((command: any) => command.action === "countdown");
+            return countdownCommand ? countdownCommand.duration : DEFAULT_COUNTDOWN_TIME;
+        } catch (err) {
+            return DEFAULT_COUNTDOWN_TIME;
+        }
+    };
+
+    const updateCountdownDuration = (index: number, duration: number) => {
+        try {
+            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const countdownIndex = parsedJSON.findIndex((command: any) => command.action === "countdown");
+            
+            if (countdownIndex !== -1 && countdownIndex !== 0) {
+                // Remove countdown from wrong position and add at beginning
+                parsedJSON.splice(countdownIndex, 1);
+                parsedJSON.unshift({ action: "countdown", duration: duration });
+            } else if (countdownIndex === 0) {
+                // Update existing countdown at the correct position
+                parsedJSON[0].duration = duration;
+            } else {
+                // Add countdown command at the beginning if it doesn't exist
+                parsedJSON.unshift({ action: "countdown", duration: duration });
+            }
+            
+            setAdvancedSettingsJSON(JSON.stringify(parsedJSON, null, 2));
+        } catch (err) {
+            console.error("Failed to update countdown duration:", err);
+        }
+    };
+
     const updateAtlasBlindMode = (atlasIndex: number, blindMode: boolean) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
         groupedByAtlas[atlasIndex].blindMode = blindMode;
@@ -712,10 +768,16 @@ const MultiplayerConfigScreen = () => {
     };
 
     const updateJSONFromGroupedData = (groupedByAtlas: any[]) => {
-        const updatedJSON = groupedByAtlas.flatMap((atlas) => [
-            { action: "load-atlas", atlas: atlas.atlas, duration: atlas.duration, blindMode: atlas.blindMode },
-            ...atlas.regions.map((region: {regionId: number, duration: number}) => ({ action: "guess", regionId: region.regionId, duration: region.duration })),
-        ]);
+        // Preserve existing countdown command
+        const currentCountdownDuration = getCountdownDuration();
+        
+        const updatedJSON = [
+            { action: "countdown", duration: currentCountdownDuration },
+            ...groupedByAtlas.flatMap((atlas) => [
+                { action: "load-atlas", atlas: atlas.atlas, duration: atlas.duration, blindMode: atlas.blindMode },
+                ...atlas.regions.map((region: {regionId: number, duration: number}) => ({ action: "guess", regionId: region.regionId, duration: region.duration })),
+            ])
+        ];
         setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
     };
 
@@ -727,10 +789,17 @@ const MultiplayerConfigScreen = () => {
         try {
             setListRegions(null)
             const parsedJSON = JSON.parse(advancedSettingsJSON);
+            
+            // Ensure countdown is preserved at the beginning
+            const countdownCommand = parsedJSON.find((cmd: any) => cmd.action === "countdown");
+            const nonCountdownCommands = parsedJSON.filter((cmd: any) => cmd.action !== "countdown");
+            
             const updatedJSON = [
-                ...parsedJSON,
-                { action: "load-atlas", atlas: newAtlas, duration: LOAD_ATLAS_DURATION, blindMode: false }
-            ]
+                countdownCommand || { action: "countdown", duration: DEFAULT_COUNTDOWN_TIME },
+                ...nonCountdownCommands,
+                { action: "load-atlas", atlas: newAtlas, duration: DEFAULT_LOAD_ATLAS_DURATION, blindMode: false }
+            ];
+            
             setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
 
             // Close all atlases and open the last one
@@ -883,8 +952,19 @@ const MultiplayerConfigScreen = () => {
                                     { renderPresetPicker() }
                                 </div>
                                 <div className="atlas-block">
+                                    <div className='atlas-picker-ui' key="countdown-duration">
+                                        {t("countdown_duration")}
+                                        <input
+                                            type="number"
+                                            min={5}
+                                            max={30}
+                                            value={getCountdownDuration()}
+                                            onChange={(e) => updateCountdownDuration(0, Number(e.target.value))}
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                        />
+                                    </div>
                                     {renderAtlasBlocks()}
-                                    <div className='atlas-picker-ui'>
+                                    <div className='atlas-picker-ui' key="atlas-picker">
                                         {renderAtlasPicker()}
                                         {totalDuration > 0 && <div className="total-duration">
                                             <label htmlFor="total-duration">{t("total_duration") || "Total Duration"}:</label>&nbsp;

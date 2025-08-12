@@ -221,6 +221,7 @@
   "show_advanced_settings": "Show Advanced Settings",
   "advanced_settings": "Advanced settings",
   "validate_settings": "Validate parameters",
+  "countdown_duration": "Countdown duration (sec)",
   "select_new_atlas": "Change Atlas",
   "select_duration": "Duration for new region (sec)",
   "select_new_region": "Select a region",
@@ -231,6 +232,7 @@
   "add_new_region": "Insert new region",
   "add_atlas": "Insert new atlas",
   "enter_settings_name": "Enter preset name",
+  "name_already_exists_overwrite": "A preset with this name already exists. Do you want to overwrite it?",
   "region_duration": "Region duration",
   "total_duration": "Total duration",
   

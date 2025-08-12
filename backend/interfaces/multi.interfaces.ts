@@ -53,7 +53,7 @@ export interface AtlasLUT {
 }
 
 export interface GameCommands {
-  action: "load-atlas" | "guess";
+  action: "load-atlas" | "guess" | "countdown";
   atlas?: string;
   lut?: AtlasLUT;
   regionId?: number;
@@ -64,7 +64,7 @@ export interface GameCommands {
 }
 
 export interface ExternalGameCommands {
-  action: "load-atlas" | "guess";
+  action: "load-atlas" | "guess" | "countdown";
   atlas?: string;
   regionId?: number;
   duration: number;

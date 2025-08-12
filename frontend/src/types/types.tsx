@@ -13,7 +13,7 @@ export type DisplayOptions = {
 }
 
 export interface ExternalGameCommands {
-  action: "load-atlas" | "guess";
+  action: "load-atlas" | "guess" | "countdown";
   atlas?: string;
   regionId?: number;
   duration: number;

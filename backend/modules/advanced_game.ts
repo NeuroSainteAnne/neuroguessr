@@ -8,7 +8,7 @@ import { logger } from './logging.ts';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
-    action: Joi.string().valid("load-atlas", "guess").required(),
+    action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
     duration: Joi.number().integer().min(5).required(),
