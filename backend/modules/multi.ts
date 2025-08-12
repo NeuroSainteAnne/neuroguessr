@@ -1324,6 +1324,40 @@ export const getPublicLobbies = async (req: Request, res: Response) => {
   }
 };
 
+// Get multiplayer session info for meta tag generation
+export const getMultiplayerSessionStartDate = async (req: Request, res: Response) => {
+  try {
+    const { sessionCode } = req.params;
+    
+    if (!sessionCode || typeof sessionCode !== 'string' || sessionCode.length !== 8) {
+      return res.status(400).json({ error: 'Invalid session code' });
+    }
+    
+    // Check if game exists in memory first
+    const gameRef = games[sessionCode];
+    if (!gameRef) {
+      return res.status(404).json({ error: 'Session not found or expired' });
+    }
+
+    // Extract startTime from countdown command if it exists
+    let startTime = null;
+    if (gameRef.parameters.commands) {
+      const countdownCommand = gameRef.parameters.commands.find(cmd => cmd.action === 'countdown' && cmd.startTime);
+      if (countdownCommand && countdownCommand.startTime) {
+        startTime = countdownCommand.startTime;
+      }
+    }
+    
+    return res.status(200).json({
+      startTime
+    });
+    
+  } catch (error) {
+    logger.error("getMultiplayerSessionStartDate error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Helper to build current public lobbies list (shared by HTTP and sockets)
 async function buildPublicLobbies() {
   const rows = await sql`

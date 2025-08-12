@@ -241,6 +241,7 @@
   "game_starting_in": "Game starting in",
   "get_ready": "Get ready!",
   "loading-atlas": "Loading atlas...",
+  "multiplayer_scheduled_description": "Join this multiplayer NeuroGuessr game scheduled to start on {{time}}",
 
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",

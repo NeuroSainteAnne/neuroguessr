@@ -239,6 +239,7 @@
   "game_starting_in": "Début de la partie commence dans",
   "get_ready": "Préparez-vous !",
   "loading-atlas": "Chargement de l'atlas",
+  "multiplayer_scheduled_description": "Rejoignez cette partie multijoueur de NeuroGuessr prévue pour commencer le {{time}}",
 
   "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",

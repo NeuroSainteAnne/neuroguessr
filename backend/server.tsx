@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, initSocketHandlers, getPublicLobbies } from "./modules/multi.ts";
+import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getMultiplayerSessionStartDate } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -97,6 +97,9 @@ app.post('/api/advanced-game/settings-list', authenticateToken, getAdvancedSetti
 app.post('/api/advanced-game/update', authenticateToken, updateAdvancedSettings);
 app.post('/api/advanced-game/delete', authenticateToken, deleteAdvancedSettings);
 app.get('/api/advanced-game/check-name', authenticateToken, checkAdvancedSettingsName);
+app.get('/api/advanced-game/getstartdate/:sessionCode', (req, res, next) => {
+    Promise.resolve(getMultiplayerSessionStartDate(req, res)).catch(next);
+})
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
     res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
