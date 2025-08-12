@@ -246,7 +246,7 @@ const MultiplayerConfigScreen = () => {
             
             const generatedCommands = [
                 countdownCommand,
-                { action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION },
+                ...(parametersRef.current.atlas ? [{ action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION }] : []),
                 ...Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
                     action: "guess",
                     duration: durationPerRegion,
