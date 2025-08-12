@@ -80,6 +80,8 @@ const MultiPlayer = ({
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
+  const [countdownDuration, setCountdownDuration] = useState<number | null>(null);
+  const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
 
   const handleConnect = () => {
     setError(null);
@@ -174,7 +176,6 @@ const MultiPlayer = ({
       setParameters(data.parameters);
     });
     socket.on('game-start', () => {
-      setIsGameRunning(true);
       setCurrentAttempts(0)
       setHasWon(false)
       setForceDisplayUpdate((n)=>n+1)
@@ -182,7 +183,32 @@ const MultiPlayer = ({
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
     });
     socket.on('game-command', (data: any) => {
-      if (data.command.action === 'load-atlas') {
+      if (data.command.action === 'countdown') {
+        // Handle countdown command
+        const duration = data.command.duration || 5; // Default to 5 seconds
+        setCountdownDuration(duration);
+        setCountdownRemaining(duration);
+        
+        // Start countdown timer
+        if (countdownInterval.current) {
+          clearInterval(countdownInterval.current);
+        }
+        
+        countdownInterval.current = setInterval(() => {
+          setCountdownRemaining(prev => {
+            if (prev === null || prev <= 1) {
+              if (countdownInterval.current) {
+                clearInterval(countdownInterval.current);
+                countdownInterval.current = null;
+              }
+              setCountdownDuration(null);
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else if (data.command.action === 'load-atlas') {
+        setIsGameRunning(true);
         // Load the specified atlas in the viewer
         if (data.command.atlas) {
           setAskedAtlas({
@@ -194,7 +220,7 @@ const MultiPlayer = ({
           })
           cleanHeader();
         }
-        startStepCountdown(t("prepare-yourself"), data.command.duration);
+        startStepCountdown(`${t("loading-atlas")} ${data.command.atlas}`, data.command.duration);
       } else if (data.command === 'preload-atlas') {
         // Handle preload command for multiple atlases
         if (data.atlasesToPreload && Array.isArray(data.atlasesToPreload)) {
@@ -301,6 +327,14 @@ const MultiPlayer = ({
   };
 
   const cleanupSocket = () => {
+    // Clean up countdown interval
+    if (countdownInterval.current) {
+      clearInterval(countdownInterval.current);
+      countdownInterval.current = null;
+    }
+    setCountdownDuration(null);
+    setCountdownRemaining(null);
+    
     // Clean up event listeners but don't disconnect socket (managed by SocketProvider)
     if (socketRef.current) {
       cleanupSocketEventListeners();
@@ -459,14 +493,9 @@ const MultiPlayer = ({
   }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken, getSocket]);
 
 
-  const title = t("neuroguessr_multiplayer_title")
-  return (
-    <>
-      <title>{title}</title>
-      
-      <BrainViewer />
-      
-      {(isLoggedIn || config.activateAnonymousMode) && !isConnected && !askedSessionToken  && <>
+  const renderWaitingContent = () => {
+    if ((isLoggedIn || config.activateAnonymousMode) && !isConnected && !askedSessionToken) {
+      return (<div className="waiting-content">
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
           <input
@@ -492,36 +521,67 @@ const MultiPlayer = ({
         {!isLoggedIn && <div className="multiplayer-suggest-login" 
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
           .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
-      </>}
-      {(isLoggedIn || isAnonymous) && isConnected && <div style={{ marginTop: 24 }}>
-        <h4>{t("players_in_lobby")}</h4>
-        <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
-          {[...lobbyUsers]
-            .sort((a, b) => {
-              const scoreA = playerScores[a];
-              const scoreB = playerScores[b];
-              if (scoreA === undefined && scoreB === undefined) return 0;
-              if (scoreA === undefined) return 1;
-              if (scoreB === undefined) return -1;
-              return scoreB - scoreA;
-            })
-            .map((u) => (
-              <li key={u}>
-                {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
-              </li>
-            ))
-          }
-        </ul>
-        {parameters && !isGameRunning && "FOR v2" && <><h4>{t("parameters")}</h4>
-          {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
-          {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
-          {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
-          {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
-          {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
-          {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
-          {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
-        </>}
-      </div>}
+      </div>)
+    }
+
+    if (isConnected && !isGameRunning) {
+      return (
+        <div className="waiting-content">
+          {countdownRemaining !== null ? (
+            <div className="countdown-display">
+              <h3>{t("game_starting_in") || "Game starting in..."}</h3>
+              <div className="countdown-number" style={{ 
+                fontSize: '48px', 
+                fontWeight: 'bold', 
+                color: '#ff6b6b',
+                textAlign: 'center',
+                margin: '20px 0'
+              }}>
+                {countdownRemaining}
+              </div>
+              <p>{t("get_ready") || "Get ready!"}</p>
+            </div>
+          ) : (
+            <>
+              <h3>{t("waiting_game_start") || "Waiting for game to start..."}</h3>
+              <div className="waiting-display">
+                <div>
+                  <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {lobbyUsers.map((user, index) => (
+                      <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
+                        {user}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {parameters && <div>
+                  <h4>{t("parameters")}</h4>
+                  {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
+                  {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
+                  {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+                  {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
+                  {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
+                  {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
+                  {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
+                </div>}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
+  const title = t("neuroguessr_multiplayer_title")
+  return (
+    <>
+      <title>{title}</title>
+      
+      <BrainViewer alternateContent={renderWaitingContent()} />
+      
       {!isLoggedIn && !config.activateAnonymousMode && 
           <div className="multiplayer-please-login" 
             dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")

@@ -10,7 +10,7 @@ import { loadNIfTIFromCache } from "../utils/nifti_cache";
 import "./BrainViewer.css"
 import { consoleLog } from "../utils/logging";
 
-export const BrainViewer = () => {
+export const BrainViewer = ({ alternateContent }: { alternateContent?: React.ReactNode }) => {
     const { highlightWrapper, niivue, handleMouseDown, handleMouseMove,
         handleMouseUp, handleTouchStart, handleTouchEnd, handleTouchMove,
         handleCanvasMouseMove, canvasRef, guessButtonRef, scrollBarRef, scrollThumbRef,
@@ -37,6 +37,12 @@ export const BrainViewer = () => {
                             onTouchMove={handleTouchMove}
                             onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
                     </div>
+                    {/* Show alternate content when canvas is hidden in multiplayer mode */}
+                    {gameMode === "multiplayer" && alternateContent && (
+                        <div className="alternate-content-container">
+                            {alternateContent}
+                        </div>
+                    )}
                 </div>
                 {isMobileView && (
                     <div className="mobile-controls">

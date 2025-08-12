@@ -233,6 +233,10 @@
   "name_already_exists_overwrite": "Un préréglage avec ce nom existe déjà. Voulez-vous le remplacer ?",
   "region_duration": "Durée de la région (sec)",
   "total_duration": "Durée totale",
+  "waiting_game_start": "En attente du lancement de la partie...",
+  "game_starting_in": "Début de la partie commence dans",
+  "get_ready": "Préparez-vous !",
+  "loading-atlas": "Chargement de l'atlas",
 
   "*****MULTIPLAYER GAME*****":"",
   "start_game_button": "Lancer partie",

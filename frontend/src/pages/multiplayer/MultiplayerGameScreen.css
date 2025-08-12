@@ -17,3 +17,86 @@
 .multiplayer-suggest-login{
     margin-top: 25px;
 }
+
+.waiting-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+    color: white;
+    padding: 2rem;
+    width: 100%;
+}
+
+.waiting-content h3 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    color: #fff;
+}
+
+.waiting-content p {
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+    color: #ccc;
+}
+
+.waiting-content ul {
+    max-width: 300px;
+    width: 100%;
+}
+
+.waiting-content li {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    margin: 0.25rem 0;
+    font-size: 1rem;
+}
+
+.waiting-display{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+
+.countdown-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    animation: pulse 1s infinite;
+}
+
+.countdown-number {
+    font-size: 4rem !important;
+    font-weight: bold !important;
+    color: #ff6b6b !important;
+    text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+    animation: countdown-pulse 1s infinite;
+    margin: 2rem 0 !important;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes countdown-pulse {
+    0% { 
+        transform: scale(1); 
+        text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+    }
+    50% { 
+        transform: scale(1.1); 
+        text-shadow: 0 0 30px rgba(255, 107, 107, 0.8);
+    }
+    100% { 
+        transform: scale(1); 
+        text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+    }
+}

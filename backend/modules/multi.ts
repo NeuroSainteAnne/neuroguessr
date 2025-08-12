@@ -545,11 +545,10 @@ function handleDisconnect(socketId: string) {
       
       const player = playerInfo[playerKey];
       if (player && player.isAnonymous && gameRef) {
-        gameRef.anonymousUsernames = 
-          gameRef.anonymousUsernames.filter(name => name !== userName);
+        gameRef.anonymousUsernames = gameRef.anonymousUsernames.filter(name => name !== userName);
       }
       // If creator disconnects before game starts, destroy game and broadcast cancellation
-      if (gameRef && !gameRef.hasStarted && typeof gameRef.creatorId === 'number') {
+      if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
         // Check if the disconnecting user matches the creator (when known in memory)
         // We don't have the userId on disconnect for anon users; this logic triggers for creator (non-anon) sessions
         getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});

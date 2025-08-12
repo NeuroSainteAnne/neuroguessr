@@ -235,7 +235,11 @@
   "name_already_exists_overwrite": "A preset with this name already exists. Do you want to overwrite it?",
   "region_duration": "Region duration",
   "total_duration": "Total duration",
-  
+  "waiting_game_start": "Waiting for game to start...",
+  "game_starting_in": "Game starting in",
+  "get_ready": "Get ready!",
+  "loading-atlas": "Loading atlas...",
+
   "*****MULTIPLAYER GAME*****":"",
   "multiplayer_ended_title": "Multiplayer game ended!",
   "multiplayer_ended_score": "Final scores",
