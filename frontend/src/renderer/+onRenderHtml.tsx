@@ -37,7 +37,6 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
  const { t, language:languageNew } = i18nInstance
  
  // Check if this is a multiplayer game URL and fetch session startTime
- // NB INCOMPATIBLE WITH SSG
  let dynamicDescription = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language });
  const urlPathname = pageContext.urlPathname || '';
  const multiplayerMatch = urlPathname.match(/^\/multiplayer\/([0-9]{8})(?:\/.*)?$/);
