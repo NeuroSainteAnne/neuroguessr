@@ -493,7 +493,7 @@ const MultiPlayer = ({
   }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken, getSocket]);
 
 
-  const renderWaitingContent = () => {
+  const renderWaitingContent = ({error}: {error: string|null}) => {
     if ((isLoggedIn || config.activateAnonymousMode) && !isConnected && !askedSessionToken) {
       return (<div className="waiting-content">
         <div className="join-multiplayer-box">
@@ -517,6 +517,7 @@ const MultiPlayer = ({
             />
           }
           <button className="join-multiplayer-button"  data-umami-event="multiplayer join button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
+          {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
         </div>
         {!isLoggedIn && <div className="multiplayer-suggest-login" 
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
@@ -568,6 +569,7 @@ const MultiPlayer = ({
               </div>
             </>
           )}
+          {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
         </div>
       );
     }
@@ -580,7 +582,7 @@ const MultiPlayer = ({
     <>
       <title>{title}</title>
       
-      <BrainViewer alternateContent={renderWaitingContent()} />
+      <BrainViewer alternateContent={renderWaitingContent({error})} />
       
       {!isLoggedIn && !config.activateAnonymousMode && 
           <div className="multiplayer-please-login" 
@@ -626,7 +628,6 @@ const MultiPlayer = ({
           </div>
         </div>
       </div>}
-      {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
     </>
   )
 }
