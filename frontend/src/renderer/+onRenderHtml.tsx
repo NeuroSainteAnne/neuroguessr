@@ -36,51 +36,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
 
  const { t, language:languageNew } = i18nInstance
  
- // Check if this is a multiplayer game URL and fetch session startTime
  let dynamicDescription = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language });
- const urlPathname = pageContext.urlPathname || '';
- const multiplayerMatch = urlPathname.match(/^\/multiplayer\/([0-9]{8})(?:\/.*)?$/);
-
- if (multiplayerMatch) {
-   const sessionCode = multiplayerMatch[1];
-   try {
-     // Make internal API call to get session data
-     const baseUrl = backendConfig.server.external_address
-     const response = await fetch(`${baseUrl}/api/advanced-game/getstartdate/${sessionCode}`, {
-       method: 'GET',
-       headers: {
-         'Content-Type': 'application/json',
-       },
-     });
-     if (response.ok) {
-       const sessionData = await response.json();
-       if (sessionData.startTime) {
-          const startTime = new Date(sessionData.startTime);
-          const now = new Date();
-          
-          if (startTime > now) {
-            // Format the start time nicely
-            const dateFormatter = new Intl.DateTimeFormat(languageNew, {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              timeZoneName: 'short'
-            });
-            
-            const formattedTime = dateFormatter.format(startTime);
-            dynamicDescription = t('multiplayer_scheduled_description', {
-              time: formattedTime,
-            });
-          }
-       }
-     }
-   } catch (error) {
-     console.error('Failed to fetch multiplayer session data:', error);
-     // Fall back to default description
-   }
- }
  
  const title = t((pageContext.config as any).title || 'NeuroGuessr', { lng: language })
  const description = dynamicDescription
@@ -97,6 +53,7 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
+  <meta property="og:description" content="${description}" />
   <meta property="og:image" content="https://neuroguessr.org${image}" />
   <meta property="og:url" content="https://neuroguessr.org${pageContext.urlPathname || ""}" />
   <meta property="og:type" content="website" />
@@ -275,6 +232,46 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
   </script>
   <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha@main/dist/altcha.min.js" type="module"></script>
   <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist_i18n/fr-fr.min.js" type="module"></script>
+  <script>
+    // Client-side meta tag updating for multiplayer sessions (SSG compatible)
+    (function() {
+      if (typeof window !== 'undefined') {
+        const urlPathname = window.location.pathname;
+        const multiplayerMatch = urlPathname.match(/^\\/multiplayer\\/([0-9]{8})(?:\\/.*)?$/);
+        
+        if (multiplayerMatch) {
+          const sessionCode = multiplayerMatch[1];
+          fetch(\`/api/advanced-game/getstartdate/\${sessionCode}\`)
+            .then(response => response.json())
+            .then(sessionData => {
+              if (sessionData.startTime) {
+                const startTime = new Date(sessionData.startTime);
+                const now = new Date();
+                
+                if (startTime > now) {
+                  const dateFormatter = new Intl.DateTimeFormat(window.__INITIAL_LANGUAGE__ || 'en', {
+                    year: 'numeric',
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                  });
+                  
+                  const formattedTime = dateFormatter.format(startTime);
+                  const newDescription = \`Multiplayer game scheduled for \${formattedTime}\`;
+                  
+                  // Update meta tags
+                  document.querySelector('meta[name="description"]').setAttribute('content', newDescription);
+                  document.querySelector('meta[property="og:description"]').setAttribute('content', newDescription);
+                }
+              }
+            })
+            .catch(error => console.log('Could not fetch session info:', error));
+        }
+      }
+    })();
+  </script>
 
 </head>
 
