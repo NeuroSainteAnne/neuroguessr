@@ -743,6 +743,13 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
             if (isNaN(startTime.getTime())) {
               throw `Invalid startTime format. Must be a valid ISO date string.`;
             }
+            
+            // Validate that startTime is in the future
+            const now = new Date();
+            if (startTime.getTime() <= now.getTime()) {
+              throw `Countdown start time must be in the future. Provided: ${command.startTime}`;
+            }
+            
             countdownCommand.startTime = command.startTime;
             // Duration will be computed at game launch
           } else {
@@ -908,6 +915,16 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     if (command.action === "countdown" && command.startTime) {
       const startTime = new Date(command.startTime);
       const now = new Date();
+      
+      // Validate that startTime is in the future
+      if (startTime.getTime() <= now.getTime()) {
+        logger.error(`Game ${gameRef.sessionCode}: startTime ${command.startTime} is not in the future`);
+        broadcastToSession(gameRef.sessionCode, 'game-error', { 
+          error: 'Countdown start time must be in the future' 
+        });
+        return;
+      }
+      
       const timeUntilStart = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
       effectiveDuration = timeUntilStart;
       

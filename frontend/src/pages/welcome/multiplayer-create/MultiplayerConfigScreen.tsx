@@ -43,6 +43,15 @@ const validateExternalGameCommands = (commands: ExternalGameCommands[]): Joi.Val
     throw "First command must be a countdown action"
   }
   
+  // Check if countdown startTime is in the future
+  if (commands[0].startTime) {
+    const startTime = new Date(commands[0].startTime);
+    const now = new Date();
+    if (startTime <= now) {
+      throw "Countdown start time must be in the future"
+    }
+  }
+  
   return externalGameCommandsSchema.validate(commands, { abortEarly: false });
 };
 
@@ -61,6 +70,22 @@ function convertToLocale(defaultTime: Date) {
     const localString = `${year}-${month}-${day}T${hours}:${minutes}`;
     return localString;
 }
+
+const validateCountdownStartTime = (advancedSettingsJSON: string): { isValid: boolean; error?: string } => {
+    try {
+        const parsedJSON = JSON.parse(advancedSettingsJSON);
+        if (parsedJSON.length > 0 && parsedJSON[0].action === "countdown" && parsedJSON[0].startTime) {
+            const startTime = new Date(parsedJSON[0].startTime);
+            const now = new Date();
+            if (startTime <= now) {
+                return { isValid: false, error: "Countdown start time must be in the future" };
+            }
+        }
+        return { isValid: true };
+    } catch (err) {
+        return { isValid: false, error: "Invalid game configuration" };
+    }
+};
 
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
@@ -1212,6 +1237,14 @@ const MultiplayerConfigScreen = () => {
                                 data-umami-event-start-multi-lobbysize={lobbyUsers.length}
                                 onClick={(e)=>{
                                     if(!loading && (selectedAtlas || (showAdvancedSettings && isValidatedJSON)) && lobbyUsers.length > 1){
+                                        // Additional validation for countdown start time before starting game
+                                        if (showAdvancedSettings) {
+                                            const validation = validateCountdownStartTime(advancedSettingsJSON);
+                                            if (!validation.isValid) {
+                                                setError(validation.error || "Invalid countdown configuration");
+                                                return;
+                                            }
+                                        }
                                         navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
                                     } 
                                 }}
