@@ -272,10 +272,10 @@ const MultiplayerConfigScreen = () => {
             const generatedCommands = [
                 countdownCommand,
                 ...(parametersRef.current.atlas ? [{ action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION }] : []),
-                ...Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
+                ...(parametersRef.current.atlas ? Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
                     action: "guess",
                     duration: durationPerRegion,
-                })),
+                })) : []),
             ];
             consoleLog("verbose", `Generated game commands: ${generatedCommands.length} total`);
             setAdvancedSettingsJSON(JSON.stringify(generatedCommands, null, 2))
