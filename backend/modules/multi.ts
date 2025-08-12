@@ -20,7 +20,16 @@ const externalGameCommandsSchema = Joi.array().items(
     action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
-    duration: Joi.number().integer().min(5).required(),
+    duration: Joi.number().integer().min(5).when('action', {
+      is: 'countdown',
+      then: Joi.optional(),
+      otherwise: Joi.required()
+    }),
+    startTime: Joi.string().isoDate().when('action', {
+      is: 'countdown',
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    }),
     blindMode: Joi.boolean().optional(),
   }).required()
 );
@@ -724,10 +733,23 @@ function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): Game
     for (const command of externalCommands) {
       if (command.action === "countdown") {
         if(index === 0) {
-          commands.push({
-            action: "countdown",
-            duration: command.duration || DEFAULT_COUNTDOWN_TIME,
-          });
+          let countdownCommand: any = {
+            action: "countdown"
+          };
+          
+          // Handle startTime vs duration
+          if (command.startTime) {
+            const startTime = new Date(command.startTime);
+            if (isNaN(startTime.getTime())) {
+              throw `Invalid startTime format. Must be a valid ISO date string.`;
+            }
+            countdownCommand.startTime = command.startTime;
+            // Duration will be computed at game launch
+          } else {
+            countdownCommand.duration = command.duration || DEFAULT_COUNTDOWN_TIME;
+          }
+          
+          commands.push(countdownCommand);
         } else {
           throw `Countdown command must be the first command.`;
         }
@@ -880,14 +902,31 @@ function sendNextCommand(gameRef: MultiplayerGame) {
 
     gameRef.stepStartTime = Date.now();
     const command = gameRef.commands[gameRef.currentCommandIndex];
+    
+    // Compute duration for countdown commands with startTime
+    let effectiveDuration = command.duration;
+    if (command.action === "countdown" && command.startTime) {
+      const startTime = new Date(command.startTime);
+      const now = new Date();
+      const timeUntilStart = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
+      effectiveDuration = timeUntilStart;
+      
+      // Update the command with computed duration for client
+      const modifiedCommand = { ...command, duration: effectiveDuration };
+      broadcastToSession(gameRef.sessionCode, 'game-command', { command: modifiedCommand });
+    } else {
+      // Broadcast command as-is
+      broadcastToSession(gameRef.sessionCode, 'game-command', { command });
+    }
+    
     if(command.action == "load-atlas"){
       gameRef.currentAtlas = command.atlas || "";
       gameRef.isCurrentlyBlind = command.blindMode || false;
       gameRef.hasFinishedCountdown = true;
     }
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
-    // Broadcast command and scores to all users via SSE
-    broadcastToSession(gameRef.sessionCode, 'game-command', { command });
+    
+    // Broadcast scores to all users
     broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores });
 
     // After the first load-atlas command, check for additional atlases to preload
@@ -904,7 +943,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
 
     // Schedule next command
     if (gameRef.currentCommandIndex < gameRef.commands.length) {
-      const nextDuration = command.duration * 1000; // convert to ms
+      const nextDuration = (effectiveDuration || command.duration || 0) * 1000; // convert to ms
       gameRef.commandTimeout = setTimeout(() => { 
         gameRef.currentCommandIndex += 1; 
         sendNextCommand(gameRef)
@@ -1053,7 +1092,7 @@ async function handleValidateGuess(data: {
       let bonus = 0;
       minDistance = 0;
       if (gameRef.commands && gameRef.commands[gameRef.currentCommandIndex]) {
-        if (gameRef.stepStartTime) {
+        if (gameRef.stepStartTime && command.duration) {
           const bonusTime = Math.max(0, command.duration - (elapsed/1000));
           bonus = Math.floor(bonusTime * BONUS_POINTS_PER_SECOND);
         }

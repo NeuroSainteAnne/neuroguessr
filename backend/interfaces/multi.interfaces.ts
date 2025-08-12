@@ -58,7 +58,8 @@ export interface GameCommands {
   atlas?: string;
   lut?: AtlasLUT;
   regionId?: number;
-  duration: number;
+  duration?: number;
+  startTime?: string; // ISO date string for countdown action
   blindMode?: boolean;
   mapping?: Record<number, number>
   inverseMapping?: Record<number, number>
@@ -68,6 +69,7 @@ export interface ExternalGameCommands {
   action: "load-atlas" | "guess" | "countdown";
   atlas?: string;
   regionId?: number;
-  duration: number;
+  duration?: number;
+  startTime?: string; // ISO date string for countdown action
   blindMode?: boolean;
 }

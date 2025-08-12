@@ -16,7 +16,8 @@ export interface ExternalGameCommands {
   action: "load-atlas" | "guess" | "countdown";
   atlas?: string;
   regionId?: number;
-  duration: number;
+  duration?: number;
+  startTime?: string; // ISO date string for countdown action
   blindMode?: boolean;
 }
 

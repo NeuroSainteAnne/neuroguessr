@@ -21,7 +21,17 @@ const externalGameCommandsSchema = Joi.array().items(
     action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
-    duration: Joi.number().integer().min(1).required(),
+    duration: Joi.number().integer().min(1).when('action', {
+      is: 'countdown',
+      then: Joi.optional(),
+      otherwise: Joi.required()
+    }),
+    startTime: Joi.string().isoDate().when('action', {
+      is: 'countdown',
+      then: Joi.optional(),
+      otherwise: Joi.forbidden()
+    }),
+    blindMode: Joi.boolean().optional(),
   }).required()
 );
 
@@ -41,6 +51,16 @@ const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
 const DEFAULT_LOAD_ATLAS_DURATION = 5;
 const DEFAULT_COUNTDOWN_TIME = 5;
+
+function convertToLocale(defaultTime: Date) {
+    const year = defaultTime.getFullYear();
+    const month = String(defaultTime.getMonth() + 1).padStart(2, '0');
+    const day = String(defaultTime.getDate()).padStart(2, '0');
+    const hours = String(defaultTime.getHours()).padStart(2, '0');
+    const minutes = String(defaultTime.getMinutes()).padStart(2, '0');
+    const localString = `${year}-${month}-${day}T${hours}:${minutes}`;
+    return localString;
+}
 
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
@@ -85,6 +105,8 @@ const MultiplayerConfigScreen = () => {
     const [expandedAtlases, setExpandedAtlases] = useState<{ [key: number]: boolean }>({});
     const [atlasRegionNames, setAtlasRegionNames] = useState<{ [atlasKey: string]: string[] }>({});
     const [totalDuration, setTotalDuration] = useState<number>(0);
+    const [countdownMode, setCountdownMode] = useState<"duration" | "startTime">("duration");
+    const [countdownStartTime, setCountdownStartTime] = useState<string>("");
 
     const createSession = async () => {
         setLoading(true);
@@ -215,8 +237,15 @@ const MultiplayerConfigScreen = () => {
         parametersRef.current = {...parametersRef.current, ...newParameters}
         consoleLog("verbose", `Updating multiplayer parameters:`, parametersRef.current);
         if(parametersRef && parametersRef.current && !parametersRef.current.commands){
+            let countdownCommand: any = { action: "countdown" };
+            if (countdownMode === "startTime" && countdownStartTime) {
+                countdownCommand.startTime = countdownStartTime;
+            } else {
+                countdownCommand.duration = DEFAULT_COUNTDOWN_TIME;
+            }
+            
             const generatedCommands = [
-                { action: "countdown", duration: DEFAULT_COUNTDOWN_TIME },
+                countdownCommand,
                 { action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION },
                 ...Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
                     action: "guess",
@@ -265,6 +294,20 @@ const MultiplayerConfigScreen = () => {
             if (parsedJSON.length > 0 && parsedJSON[0].action !== "countdown") {
                 setAdvancedSettingsError(t("first_command_must_be_countdown") || "First command must be a countdown action");
                 return;
+            }
+            
+            // Update countdown mode based on JSON content
+            if (parsedJSON.length > 0 && parsedJSON[0].action === "countdown") {
+                const countdownCommand = parsedJSON[0];
+                if (countdownCommand.startTime) {
+                    setCountdownMode("startTime");
+                    // Convert ISO time to local time format for datetime-local input
+                    const date = new Date(countdownCommand.startTime);
+                    const localTime = convertToLocale(date);
+                    setCountdownStartTime(localTime);
+                } else {
+                    setCountdownMode("duration");
+                }
             }
             
             const loadAtlasCommand = [...parsedJSON].reverse().find((command: any) => command.action === "load-atlas" && command.atlas);
@@ -720,6 +763,16 @@ const MultiplayerConfigScreen = () => {
         }
     };
 
+    const getCountdownStartTime = (): string => {
+        try {
+            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const countdownCommand = parsedJSON.find((command: any) => command.action === "countdown");
+            return countdownCommand && countdownCommand.startTime ? countdownCommand.startTime : "";
+        } catch (err) {
+            return "";
+        }
+    };
+
     const updateCountdownDuration = (index: number, duration: number) => {
         try {
             const parsedJSON = JSON.parse(advancedSettingsJSON);
@@ -731,7 +784,7 @@ const MultiplayerConfigScreen = () => {
                 parsedJSON.unshift({ action: "countdown", duration: duration });
             } else if (countdownIndex === 0) {
                 // Update existing countdown at the correct position
-                parsedJSON[0].duration = duration;
+                parsedJSON[0] = { action: "countdown", duration: duration };
             } else {
                 // Add countdown command at the beginning if it doesn't exist
                 parsedJSON.unshift({ action: "countdown", duration: duration });
@@ -740,6 +793,29 @@ const MultiplayerConfigScreen = () => {
             setAdvancedSettingsJSON(JSON.stringify(parsedJSON, null, 2));
         } catch (err) {
             console.error("Failed to update countdown duration:", err);
+        }
+    };
+
+    const updateCountdownStartTime = (startTime: string) => {
+        try {
+            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const countdownIndex = parsedJSON.findIndex((command: any) => command.action === "countdown");
+            
+            if (countdownIndex !== -1 && countdownIndex !== 0) {
+                // Remove countdown from wrong position and add at beginning
+                parsedJSON.splice(countdownIndex, 1);
+                parsedJSON.unshift({ action: "countdown", startTime: startTime });
+            } else if (countdownIndex === 0) {
+                // Update existing countdown at the correct position
+                parsedJSON[0] = { action: "countdown", startTime: startTime };
+            } else {
+                // Add countdown command at the beginning if it doesn't exist
+                parsedJSON.unshift({ action: "countdown", startTime: startTime });
+            }
+            
+            setAdvancedSettingsJSON(JSON.stringify(parsedJSON, null, 2));
+        } catch (err) {
+            console.error("Failed to update countdown start time:", err);
         }
     };
 
@@ -770,9 +846,17 @@ const MultiplayerConfigScreen = () => {
     const updateJSONFromGroupedData = (groupedByAtlas: any[]) => {
         // Preserve existing countdown command
         const currentCountdownDuration = getCountdownDuration();
+        const currentCountdownStartTime = getCountdownStartTime();
+        
+        let countdownCommand: any = { action: "countdown" };
+        if (currentCountdownStartTime) {
+            countdownCommand.startTime = currentCountdownStartTime;
+        } else {
+            countdownCommand.duration = currentCountdownDuration;
+        }
         
         const updatedJSON = [
-            { action: "countdown", duration: currentCountdownDuration },
+            countdownCommand,
             ...groupedByAtlas.flatMap((atlas) => [
                 { action: "load-atlas", atlas: atlas.atlas, duration: atlas.duration, blindMode: atlas.blindMode },
                 ...atlas.regions.map((region: {regionId: number, duration: number}) => ({ action: "guess", regionId: region.regionId, duration: region.duration })),
@@ -794,8 +878,15 @@ const MultiplayerConfigScreen = () => {
             const countdownCommand = parsedJSON.find((cmd: any) => cmd.action === "countdown");
             const nonCountdownCommands = parsedJSON.filter((cmd: any) => cmd.action !== "countdown");
             
+            let defaultCountdown: any = { action: "countdown" };
+            if (countdownMode === "startTime" && countdownStartTime) {
+                defaultCountdown.startTime = countdownStartTime;
+            } else {
+                defaultCountdown.duration = DEFAULT_COUNTDOWN_TIME;
+            }
+            
             const updatedJSON = [
-                countdownCommand || { action: "countdown", duration: DEFAULT_COUNTDOWN_TIME },
+                countdownCommand || defaultCountdown,
                 ...nonCountdownCommands,
                 { action: "load-atlas", atlas: newAtlas, duration: DEFAULT_LOAD_ATLAS_DURATION, blindMode: false }
             ];
@@ -952,8 +1043,33 @@ const MultiplayerConfigScreen = () => {
                                     { renderPresetPicker() }
                                 </div>
                                 <div className="atlas-block">
-                                    <div className='atlas-picker-ui' key="countdown-duration">
-                                        {t("countdown_duration")}
+                                    <div className='atlas-picker-ui' key="countdown-config">
+                                    <div style={{ display: 'flex', flexDirection: 'row'}}>
+                                        <label style={{ marginRight: '10px' }}>
+                                            {t("countdown_mode") || "Countdown Mode"}:
+                                        </label>
+                                        <select
+                                            value={countdownMode}
+                                            onChange={(e) => {
+                                                const newMode = e.target.value as "duration" | "startTime";
+                                                setCountdownMode(newMode);
+                                                if (newMode === "duration") {
+                                                    updateCountdownDuration(0, getCountdownDuration() || DEFAULT_COUNTDOWN_TIME);
+                                                } else {
+                                                    const defaultTime = new Date();
+                                                    defaultTime.setMinutes(defaultTime.getMinutes() + 5);
+                                                    const localString = convertToLocale(defaultTime);
+                                                    setCountdownStartTime(localString);
+                                                    updateCountdownStartTime(new Date(localString).toISOString());
+                                                }
+                                            }}
+                                            style={{ marginRight: '15px' }}
+                                        >
+                                            <option value="duration">{t("countdown_duration") || "Duration (seconds)"}</option>
+                                            <option value="startTime">{t("countdown_start_time") || "Specific Start Time"}</option>
+                                        </select>
+                                    </div>
+                                    {countdownMode === "duration" ? (
                                         <input
                                             type="number"
                                             min={5}
@@ -961,8 +1077,24 @@ const MultiplayerConfigScreen = () => {
                                             value={getCountdownDuration()}
                                             onChange={(e) => updateCountdownDuration(0, Number(e.target.value))}
                                             onClick={(e) => { e.stopPropagation(); }}
+                                            placeholder={t("seconds") || "seconds"}
                                         />
-                                    </div>
+                                    ) : (
+                                        <input
+                                            type="datetime-local"
+                                            value={countdownStartTime}
+                                            onChange={(e) => {
+                                                const localValue = e.target.value;
+                                                const isoString = new Date(localValue).toISOString();
+                                                console.log("upd", localValue)
+                                                setCountdownStartTime(localValue);
+                                                updateCountdownStartTime(isoString);
+                                            }}
+                                            onClick={(e) => { e.stopPropagation(); }}
+                                            min={new Date().toISOString().slice(0, 19)}
+                                        />
+                                    )}
+                                </div>
                                     {renderAtlasBlocks()}
                                     <div className='atlas-picker-ui' key="atlas-picker">
                                         {renderAtlasPicker()}
@@ -1095,3 +1227,4 @@ const MultiplayerConfigScreen = () => {
 };
 
 export default MultiplayerConfigScreen;
+
