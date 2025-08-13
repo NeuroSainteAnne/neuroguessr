@@ -159,7 +159,9 @@ export const database_init = async () => {
                     session_token TEXT NOT NULL,
                     creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    public BOOLEAN NOT NULL DEFAULT FALSE
+                    public BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_challenge BOOLEAN NOT NULL DEFAULT FALSE,
+                    persistent_config TEXT DEFAULT NULL
                 );
             `;
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`;
@@ -220,6 +222,17 @@ export const database_init = async () => {
                 ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
             `;
             await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_public ON multi_sessions(public);`;
+            
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS is_challenge BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_challenge ON multi_sessions(is_challenge);`;
+            
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS persistent_config TEXT DEFAULT NULL;
+            `;
         });
 
         logger.info("Database schema initialized successfully.");
@@ -277,6 +290,7 @@ export const cleanOldGameSessions = async () => {
         const resultMultiSessions = await sql`
             DELETE FROM multi_sessions
             WHERE created_at <= NOW() - INTERVAL '1 hour'
+            AND is_challenge = FALSE
         `;
         if (resultMultiSessions.count !== 0) {
             logger.info(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);

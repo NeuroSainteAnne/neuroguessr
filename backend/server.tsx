@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getMultiplayerSessionStartDate } from "./modules/multi.ts";
+import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getMultiplayerSessionStartDate, restorePersistentChallengeSessions } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -327,6 +327,9 @@ if(config.server.mode == "https"){
 // Initialize Socket.io
 initSocketIO(server);
 initSocketHandlers()
+
+// Restore persistent challenge sessions on server startup
+restorePersistentChallengeSessions();
 
 process.on('SIGINT', async () => {
   await sql.end();

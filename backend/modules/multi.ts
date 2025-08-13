@@ -8,7 +8,7 @@ const config: Config = configJson;
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
 import { MultiSession } from "interfaces/database.interfaces.ts";
-import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo } from "interfaces/multi.interfaces.ts";
+import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
@@ -235,6 +235,25 @@ export function initSocketHandlers() {
       }
     });
 
+    // Handle save as challenge
+    socket.on('save-as-challenge', async (data: {
+      sessionCode: string,
+      sessionToken: string,
+      userToken: string
+    }) => {
+      try {
+        const info = socketInfo[socket.id];
+        if (!info) {
+          socket.emit('error', { message: "Not authenticated" });
+          return;
+        }
+        const result = await handleSaveAsChallenge({...data, userName: info.userName});
+      } catch (error) {
+        logger.error("Save as challenge error:", error);
+        socket.emit('error', { message: "Error saving challenge" });
+      }
+    })
+
     // Subscribe to public lobbies updates
     socket.on('connect-public', async () => {
       try {
@@ -318,7 +337,7 @@ async function joinLobby(
 
   // Create game if it doesn't exist
   if (!games[sessionCode]) {
-    createEmptySession(sessionCode, creatorId ?? undefined);
+    await createEmptySession(sessionCode, creatorId ?? undefined);
   }
   
   const gameRef = games[sessionCode];
@@ -468,35 +487,89 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
   }
 };
 
-function createEmptySession(sessionCode: string, creatorId?: number){
-    games[sessionCode] = {
-      sessionCode: sessionCode,
-      hasStarted: false,
-      hasFinishedCountdown: false,
-      hasEnded: false,
-      currentCommandIndex: 0,
-      totalGuessNumber: 0,
-      currentAtlas: "",
-      currentRegionId: -1,
-      duration: 0,
-      parameters: {
-        regionsNumber: DEFAULT_REGION_NUMBER,
-        durationPerRegion: DEFAULT_DURATION_PER_REGION,
-        gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
-        blindMode: false,
-        commands: undefined
-      },
-      hasAnswered: {},
-      individualScores: {},
-      individualAttempts: {},
-      individualSuccesses: {},
-      individualDurations: {},
-      individualCorrectDurations: {},
-      anonymousUsernames: [],
-      lastActivity: Date.now(),
-      isCurrentlyBlind: false,
-      ...(creatorId !== undefined ? { creatorId } : {})
+async function createEmptySession(sessionCode: string, creatorId?: number) {
+  // Fetch session data from database to check if it's a challenge
+  let isChallenge = false;
+  let persistentConfig: string | null = null;
+  
+  try {
+    const sessionResult = await sql`
+      SELECT is_challenge, persistent_config FROM multi_sessions 
+      WHERE session_code = ${sessionCode} 
+      LIMIT 1
+    `;
+    
+    if (sessionResult.length > 0) {
+      isChallenge = sessionResult[0].is_challenge || false;
+      persistentConfig = sessionResult[0].persistent_config || null;
     }
+  } catch (error) {
+    logger.error("Error fetching session data for createEmptySession:", error);
+  }
+
+  // If we have persistent config, restore from it
+  if (persistentConfig && isChallenge) {
+    try {
+      const persistentState: PersistentGameState = JSON.parse(persistentConfig);
+      
+      // Create base game state with runtime-only properties
+      const baseGameState: MultiplayerGame = {
+        ...persistentState,
+        currentCommandIndex: 0,
+        currentAtlas: "",
+        currentRegionId: -1,
+        stepStartTime: undefined,
+        commandTimeout: undefined,
+        totalGuessNumber: persistentState.commands?.filter(cmd => cmd.action === "guess").length || 0,
+        hasAnswered: {},
+        individualScores: {},
+        individualAttempts: {},
+        individualSuccesses: {},
+        individualDurations: {},
+        individualCorrectDurations: {},
+        anonymousUsernames: [],
+        isCurrentlyBlind: false,
+        lastActivity: Date.now() // Update activity time
+      };
+      
+      games[sessionCode] = baseGameState;
+      return;
+    } catch (parseError) {
+      logger.error("Error parsing persistent config, creating default session:", parseError);
+    }
+  }
+
+  // Create default session (fallback or non-challenge)
+  games[sessionCode] = {
+    sessionCode: sessionCode,
+    hasStarted: false,
+    hasFinishedCountdown: false,
+    hasEnded: false,
+    currentCommandIndex: 0,
+    totalGuessNumber: 0,
+    currentAtlas: "",
+    currentRegionId: -1,
+    duration: 0,
+    parameters: {
+      regionsNumber: DEFAULT_REGION_NUMBER,
+      durationPerRegion: DEFAULT_DURATION_PER_REGION,
+      gameoverOnError: DEFAULT_GAMEOVER_ON_ERROR,
+      blindMode: false,
+      commands: undefined,
+      isChallenge
+    },
+    hasAnswered: {},
+    individualScores: {},
+    individualAttempts: {},
+    individualSuccesses: {},
+    individualDurations: {},
+    individualCorrectDurations: {},
+    anonymousUsernames: [],
+    lastActivity: Date.now(),
+    isCurrentlyBlind: false,
+    isChallenge,
+    ...(creatorId !== undefined ? { creatorId } : {})
+  }
 }
 
 function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerGame, sessionCode: string, rejoiningMode: boolean = false) {
@@ -532,9 +605,36 @@ function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerG
     socket.emit('game-start');
     
     if (gameRef.commands && gameRef.currentCommandIndex < gameRef.commands.length) {
-      socket.emit('game-command', { 
-        command: gameRef.commands[gameRef.currentCommandIndex] 
-      });
+      const currentCommand = gameRef.commands[gameRef.currentCommandIndex];
+      
+      // Adjust duration for countdown commands
+      if (currentCommand.action === "countdown") {
+        if (currentCommand.startTime) {
+          // For countdown with startTime, calculate time until start
+          const startTime = new Date(currentCommand.startTime);
+          const now = new Date();
+          const timeUntilStart = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
+          
+          // Send modified command with adjusted duration
+          const modifiedCommand = { ...currentCommand, duration: timeUntilStart };
+          socket.emit('game-command', { command: modifiedCommand });
+        } else if (currentCommand.duration && gameRef.stepStartTime) {
+          // For standard countdown with duration, calculate remaining time
+          const now = Date.now();
+          const elapsed = Math.floor((now - gameRef.stepStartTime) / 1000); // elapsed time in seconds
+          const remainingDuration = Math.max(0, currentCommand.duration - elapsed);
+          
+          // Send modified command with remaining duration
+          const modifiedCommand = { ...currentCommand, duration: remainingDuration };
+          socket.emit('game-command', { command: modifiedCommand });
+        } else {
+          // Fallback: send command as-is
+          socket.emit('game-command', { command: currentCommand });
+        }
+      } else {
+        // For non-countdown commands, send as-is
+        socket.emit('game-command', { command: currentCommand });
+      }
     }
     
     socket.emit('all-scores-update', { scores: gameRef.individualScores });
@@ -721,7 +821,7 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   }
 }
 
-function cleanupExternalCommands(externalCommands: ExternalGameCommands[]): GameCommands[]|undefined {
+function cleanupExternalCommands(externalCommands: ExternalGameCommands[], isChallenge: boolean = false): GameCommands[]|undefined {
   try {
     const { error } = validateExternalGameCommands(externalCommands);
     if (error) throw error;
@@ -888,7 +988,7 @@ async function handleLaunchGame(data: {
   }
 }
 
-function sendNextCommand(gameRef: MultiplayerGame) {
+async function sendNextCommand(gameRef: MultiplayerGame) {
   try {
     if (!gameRef.commands) return;
 
@@ -911,26 +1011,9 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     const command = gameRef.commands[gameRef.currentCommandIndex];
     
     // Compute duration for countdown commands with startTime
-    let effectiveDuration = command.duration;
+    let effectiveDuration = command.duration || 0;
     if (command.action === "countdown" && command.startTime) {
-      const startTime = new Date(command.startTime);
-      const now = new Date();
-      
-      // Validate that startTime is in the future
-      if (startTime.getTime() <= now.getTime()) {
-        logger.error(`Game ${gameRef.sessionCode}: startTime ${command.startTime} is not in the future`);
-        broadcastToSession(gameRef.sessionCode, 'game-error', { 
-          error: 'Countdown start time must be in the future' 
-        });
-        return;
-      }
-      
-      const timeUntilStart = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
-      effectiveDuration = timeUntilStart;
-      
-      // Update the command with computed duration for client
-      const modifiedCommand = { ...command, duration: effectiveDuration };
-      broadcastToSession(gameRef.sessionCode, 'game-command', { command: modifiedCommand });
+      effectiveDuration = await broadcastCountdown(gameRef, command)
     } else {
       // Broadcast command as-is
       broadcastToSession(gameRef.sessionCode, 'game-command', { command });
@@ -946,7 +1029,7 @@ function sendNextCommand(gameRef: MultiplayerGame) {
     // Broadcast scores to all users
     broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores });
 
-    // After the first load-atlas command, check for additional atlases to preload
+    // After the first command, check for additional atlases to preload
     if (gameRef.currentCommandIndex === 0) {
       const atlasesToPreload = getAtlasesToPreload(gameRef.commands);
       if (atlasesToPreload.length > 0) {
@@ -969,6 +1052,44 @@ function sendNextCommand(gameRef: MultiplayerGame) {
   } catch (error) {
       logger.error("Error sending next command:", error);
   }
+}
+
+async function broadcastCountdown(gameRef: MultiplayerGame, command: GameCommands) {
+  if (!command.startTime) return 0;
+  let effectiveDuration = command.duration || 0;
+  const startTime = new Date(command.startTime);
+  const now = new Date();
+  
+  // Validate that startTime is in the future
+  if (startTime.getTime() <= now.getTime()) {
+    logger.error(`Game ${gameRef.sessionCode}: startTime ${command.startTime} is not in the future`);
+    // Find creator name based on creatorId
+    let creatorName: string | undefined = undefined;
+    if (gameRef.creatorId !== undefined) {
+      try {
+      const creatorResult = await sql`
+        SELECT username FROM users WHERE id = ${gameRef.creatorId}
+      `;
+      if (creatorResult.length > 0) {
+        creatorName = creatorResult[0].username;
+      }
+      } catch (e) {
+      logger.error("Error fetching creator name:", e);
+      }
+    }
+    emitToUser(gameRef.sessionCode, creatorName || "", "error", {message: "Countdown start time must be in the future"});
+
+    return 0;
+  }
+  
+  const timeUntilStart = Math.max(0, Math.floor((startTime.getTime() - now.getTime()) / 1000));
+  effectiveDuration = timeUntilStart;
+  
+  // Update the command with computed duration for client
+  const modifiedCommand = { ...command, duration: effectiveDuration };
+  broadcastToSession(gameRef.sessionCode, 'game-command', { command: modifiedCommand });
+
+  return effectiveDuration;
 }
 
 async function handleUpdateParameters(data: {
@@ -1001,7 +1122,7 @@ async function handleUpdateParameters(data: {
     };
 
     if(parameters.commands){
-      const commands = cleanupExternalCommands(parameters.commands)
+      const commands = cleanupExternalCommands(parameters.commands, gameRef.isChallenge || false)
       gameRef.parameters.commands = commands
       gameRef.parameters.regionsNumber = commands?.filter(command => command.action === "guess").length || 0;
       // If no atlas explicitly set, derive from first load-atlas action
@@ -1358,6 +1479,99 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
   }
 };
 
+// Save persistent configuration for challenge mode
+export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName}: {sessionCode: string, sessionToken: string, userToken: string, userName: string}) => {
+  try {
+    if (!sessionCode || typeof sessionCode !== 'string' || sessionCode.length !== 8) {
+      emitToUser(sessionCode, userName, "error", { message: "Invalid session code" });
+      return;
+    }
+    
+    // Validate that this is a challenge session
+    const gameRef = games[sessionCode];
+    if (!gameRef) {
+      emitToUser(sessionCode, userName, "error", { message: "Game does not exist" });
+      return;
+    }
+
+    gameRef.commands = gameRef.parameters.commands
+
+    if (!gameRef.commands || gameRef.commands.length === 0) {
+      emitToUser(sessionCode, userName, "error", { message: "Game with custom commands is required" });
+      return;
+    }
+
+    if (!gameRef.commands[0] || gameRef.commands[0].action !== "countdown" || !gameRef.commands[0].startTime) {
+      emitToUser(sessionCode, userName, "error", { message: "Programmed Start Time is required" });
+      return;
+    }
+
+    if (gameRef.hasStarted) {
+      emitToUser(sessionCode, userName, "error", { message: "Game has already started" });
+      return;
+    }
+
+    // Verify user is admin
+    if (!userToken) {
+      emitToUser(sessionCode, userName, "error", { message: "Authentication token required" });
+      return;
+    }
+
+    try {
+      const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+      if (!jwtPayload || !jwtPayload.admin) {
+        emitToUser(sessionCode, userName, "error", { message: "Admin privileges required for challenge mode" });
+        return;
+      }
+    } catch (err) {
+      emitToUser(sessionCode, userName, "error", { message: "Invalid authentication token" });
+      return;
+    }
+
+    // Validate session token
+    const sessionResult = await sql`
+      SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+    ` as { session_token: string }[];
+    
+    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
+      emitToUser(sessionCode, userName, "error", { message: "Invalid session token" });
+      return;
+    }
+    
+    // Activate challenge mode and update game state
+    gameRef.isChallenge = true;
+    gameRef.hasStarted = true;
+    gameRef.totalGuessNumber = gameRef.commands?.filter(command => command.action === "guess").length || 0;
+    gameRef.duration = Date.now();
+    gameRef.lastActivity = Date.now();
+
+    // Extract and save the persistent game state
+    const persistentState = extractPersistentState(gameRef);
+    await sql`
+      UPDATE multi_sessions 
+      SET persistent_config = ${JSON.stringify(persistentState)},
+      is_challenge = TRUE
+      WHERE session_code = ${sessionCode}
+    `;
+    
+    logger.info(`Challenge configuration saved for session ${sessionCode}`);
+    updateGameActivity(sessionCode);
+    
+    // Broadcast game preparation to all users
+    broadcastToSession(sessionCode, 'challenge-prepared', {
+      message: 'Challenge has been prepared and will start at the scheduled time'
+    });
+    
+    // Start the first command (countdown with startTime)
+    sendNextCommand(gameRef);
+    
+    emitToUser(sessionCode, userName, "save-as-challenge", { message: "success" });    
+  } catch (error) {
+    logger.error("saveChallengeConfig error", error);
+    emitToUser(sessionCode, userName, "error", { message: "Internal server error" });
+  }
+};
+
 // Helper to build current public lobbies list (shared by HTTP and sockets)
 async function buildPublicLobbies() {
   const rows = await sql`
@@ -1395,5 +1609,157 @@ async function emitPublicLobbiesUpdate() {
     io.to('public-lobbies').emit('public-lobbies-update', { lobbies });
   } catch (e) {
     // no-op
+  }
+}
+
+// Helper function to extract persistent state from gameRef
+function extractPersistentState(gameRef: MultiplayerGame): PersistentGameState {
+  return {
+    sessionCode: gameRef.sessionCode,
+    hasStarted: gameRef.hasStarted,
+    hasFinishedCountdown: gameRef.hasFinishedCountdown,
+    hasEnded: gameRef.hasEnded,
+    parameters: gameRef.parameters,
+    commands: gameRef.commands,
+    duration: gameRef.duration,
+    lastActivity: gameRef.lastActivity,
+    creatorId: gameRef.creatorId,
+    isChallenge: gameRef.isChallenge
+  };
+}
+
+// Helper function to restore game state from persistent state
+function restoreFromPersistentState(persistentState: PersistentGameState, existingGameRef?: MultiplayerGame): MultiplayerGame {
+  const baseState = existingGameRef || {
+    currentCommandIndex: 0,
+    currentAtlas: "",
+    currentRegionId: -1,
+    stepStartTime: undefined,
+    commandTimeout: undefined,
+    totalGuessNumber: 0,
+    hasAnswered: {},
+    individualScores: {},
+    individualAttempts: {},
+    individualSuccesses: {},
+    individualDurations: {},
+    individualCorrectDurations: {},
+    anonymousUsernames: [],
+    isCurrentlyBlind: false
+  };
+
+  return {
+    ...baseState,
+    ...persistentState,
+    totalGuessNumber: persistentState.commands?.filter(cmd => cmd.action === "guess").length || 0
+  };
+}
+
+// Function to restore all persistent challenge sessions on server startup
+export async function restorePersistentChallengeSessions() {
+  try {
+    // First clean up expired sessions from database
+    await cleanupExpiredChallengeSessions();
+
+    logger.info("Restoring persistent challenge sessions...");
+    
+    const persistentSessions = await sql`
+      SELECT session_code, persistent_config, creator_id, is_challenge 
+      FROM multi_sessions 
+      WHERE is_challenge = TRUE AND persistent_config IS NOT NULL
+    ` as Array<{ 
+      session_code: string, 
+      persistent_config: string, 
+      creator_id: number, 
+      is_challenge: boolean 
+    }>;
+    
+    let restoredCount = 0;
+    let skippedCount = 0;
+    
+    for (const session of persistentSessions) {
+      const sessionCode = String(session.session_code).padStart(8, '0');
+      
+      try {
+        const persistentState: PersistentGameState = JSON.parse(session.persistent_config);
+        
+        // Check if the session has ended or if the start time has passed significantly
+        const now = Date.now();
+        const lastActivity = persistentState.lastActivity || 0;
+        const timeSinceLastActivity = now - lastActivity;
+        
+        // Skip sessions that have been inactive for more than 2 hours
+        if (timeSinceLastActivity > 2 * 60 * 60 * 1000) {
+          logger.info(`Skipping expired challenge session ${sessionCode} (inactive for ${Math.round(timeSinceLastActivity / 60000)} minutes)`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Skip sessions that have already ended
+        if (persistentState.hasEnded) {
+          logger.info(`Skipping ended challenge session ${sessionCode}`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Restore the game state
+        const baseGameState: MultiplayerGame = {
+          ...persistentState,
+          currentCommandIndex: 0,
+          currentAtlas: "",
+          currentRegionId: -1,
+          stepStartTime: undefined,
+          commandTimeout: undefined,
+          totalGuessNumber: persistentState.commands?.filter(cmd => cmd.action === "guess").length || 0,
+          hasAnswered: {},
+          individualScores: {},
+          individualAttempts: {},
+          individualSuccesses: {},
+          individualDurations: {},
+          individualCorrectDurations: {},
+          anonymousUsernames: [],
+          isCurrentlyBlind: false,
+          lastActivity: now // Update activity time
+        };
+        
+        games[sessionCode] = baseGameState;
+        
+        // Resume countdown
+        sendNextCommand(games[sessionCode])
+        
+        restoredCount++;
+        logger.info(`Restored challenge session ${sessionCode}`);
+        
+      } catch (parseError) {
+        logger.error(`Error parsing persistent config for session ${sessionCode}:`, parseError);
+        skippedCount++;
+      }
+    }
+    
+    logger.info(`Challenge session restoration complete: ${restoredCount} restored, ${skippedCount} skipped`);
+    
+  } catch (error) {
+    logger.error("Error restoring persistent challenge sessions:", error);
+  }
+}
+
+// Function to clean up expired challenge sessions from the database
+async function cleanupExpiredChallengeSessions() {
+  try {
+    const currentTime = new Date().toISOString();
+    
+    const result = await sql`
+      DELETE FROM multi_sessions 
+      WHERE is_challenge = TRUE 
+      AND persistent_config IS NOT NULL
+      AND (persistent_config::jsonb->'commands'->0->>'startTime') < ${currentTime}
+    `;
+    
+    const deletedCount = result.count || 0;
+    if (deletedCount > 0) {
+      logger.info(`Cleaned up ${deletedCount} expired challenge sessions from database`);
+    }
+    
+  } catch (error) {
+    logger.error("Error cleaning up expired challenge sessions:", error);
   }
 }

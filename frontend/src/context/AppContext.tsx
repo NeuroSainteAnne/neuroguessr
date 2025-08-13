@@ -27,6 +27,7 @@ type AppContextType = {
   userUsername: string;
   userFirstName: string;
   userLastName: string;
+  userIsAdmin: boolean;
   userPublishToLeaderboard: boolean | null;
   
   // UI state
@@ -111,6 +112,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [userUsername, setUserUsername] = useState<string>("");
   const [userFirstName, setUserFirstName] = useState<string>("");
   const [userLastName, setUserLastName] = useState<string>("");
+  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(false);
   const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean | null>(null);
   
   // UI state
@@ -412,6 +414,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'));
         setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'));
         setUserLastName(payload.lastname || "");
+        setUserIsAdmin(payload.admin || false);
         setUserPublishToLeaderboard(
           payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard
         );
@@ -475,6 +478,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       userUsername,
       userFirstName,
       userLastName,
+      userIsAdmin,
       userPublishToLeaderboard,
       
       // UI state

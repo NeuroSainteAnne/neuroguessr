@@ -16,6 +16,7 @@ export interface MultiplayerParametersType {
   blindMode: boolean;
   commands?: ExternalGameCommands[];
   totalDuration?: number;
+  isChallenge?: boolean;
 }
 
 export interface MultiplayerGame {
@@ -42,6 +43,21 @@ export interface MultiplayerGame {
   lastActivity: number;
   isCurrentlyBlind: boolean;
   creatorId?: number;
+  isChallenge?: boolean;
+} 
+
+// Persistent game state for challenge mode (saved to database)
+export interface PersistentGameState {
+  sessionCode: string;
+  hasStarted: boolean;
+  hasFinishedCountdown: boolean;
+  hasEnded: boolean;
+  parameters: MultiplayerParametersType;
+  commands?: GameCommands[];
+  duration: number;
+  lastActivity: number;
+  creatorId?: number;
+  isChallenge?: boolean;
 } 
 
 export interface AtlasLUT {

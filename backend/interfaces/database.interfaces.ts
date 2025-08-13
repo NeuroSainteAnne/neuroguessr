@@ -101,6 +101,9 @@ export interface MultiSession {
   session_token: string;
   creator_id: number | null;
   created_at: Date;
+  public?: boolean;
+  is_challenge?: boolean;
+  persistent_config?: string | null;
 }
 
 export interface AdvancedGameSettings {

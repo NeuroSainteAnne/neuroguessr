@@ -87,8 +87,19 @@ const validateCountdownStartTime = (advancedSettingsJSON: string): { isValid: bo
     }
 };
 
+const hasCountdownWithStartTime = (advancedSettingsJSON: string): boolean => {
+    try {
+        const parsedJSON = JSON.parse(advancedSettingsJSON);
+        return parsedJSON.length > 0 && 
+               parsedJSON[0].action === "countdown" && 
+               parsedJSON[0].startTime;
+    } catch (err) {
+        return false;
+    }
+};
+
 const MultiplayerConfigScreen = () => {
-    const { t, authToken, userUsername, currentLanguage, copyToClipboard } = useApp();
+    const { t, authToken, userUsername, userIsAdmin, currentLanguage, copyToClipboard } = useApp();
     const { selectedAtlas, setSelectedAtlas } = useGameSelector();
     const { createSocket, getSocket } = useSocket();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -122,6 +133,8 @@ const MultiplayerConfigScreen = () => {
     const [advancedSettingsError, setAdvancedSettingsError] = useState<string | null>(null);
     const [advancedLastAtlas, setAdvancedLastAtlas] = useState<string | null>(null);
     const [isValidatedJSON, setIsValidatedJSON] = useState(false);
+    const [saveAsChallengeLoading, setSaveAsChallengeLoading] = useState(false);
+    const [challengeSavedSuccessfully, setChallengeSavedSuccessfully] = useState(false);
     const [isSavedAdvanced, setIsSavedAdvanced] = useState(false);
     const [listRegions, setListRegions] = useState<string[]|null>(null)
     const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
@@ -202,12 +215,15 @@ const MultiplayerConfigScreen = () => {
             // Connection error
             socket.on('connect_error', (err: any) => {
                 setError(`Connection error: ${err.message}`);
+                setSaveAsChallengeLoading(false);
             });
             socket.on('error', (data: any) => {
                 setError(data.message);
+                setSaveAsChallengeLoading(false);
             });
             socket.on('fatal-error', (data: any) => {
                 setError(data.message);
+                setSaveAsChallengeLoading(false);
             });
             socket.on('lobby-users', (data: any) => {
                 consoleLog("verbose", `Received lobby users update: ${data.users?.length} users`);
@@ -240,6 +256,24 @@ const MultiplayerConfigScreen = () => {
                 }
             });
             
+            socket.on('save-as-challenge', (data: any) => {
+                setSaveAsChallengeLoading(false);
+                if (data && data.message === "success") {
+                    // Challenge saved successfully
+                    setError(null);
+                    setChallengeSavedSuccessfully(true);
+                    consoleLog("verbose", "Challenge saved successfully");
+                    // Optionally show success message or redirect
+                } else {
+                    setError("Failed to save challenge");
+                }
+            });
+            
+            socket.on('challenge-prepared', (data: any) => {
+                consoleLog("verbose", "Challenge has been prepared and will start at the scheduled time");
+                // Optionally show preparation message
+            });
+            
             // Don't disconnect on unmount - let the socket persist for navigation
             return () => {
                 // Clean up event listeners but keep the socket connected
@@ -252,6 +286,8 @@ const MultiplayerConfigScreen = () => {
                 socket.off('player-left');
                 socket.off('parameters-updated');
                 socket.off('parameters-has-updated');
+                socket.off('save-as-challenge');
+                socket.off('challenge-prepared');
             };
         }
     }, [sessionCode, sessionToken, userUsername, authToken, createSocket]);
@@ -294,6 +330,45 @@ const MultiplayerConfigScreen = () => {
                 setError('Failed to update parameters');
                 throw String(err)
             }
+        }
+    }
+
+    const handleSaveAsChallenge = async () => {
+        if (!showAdvancedSettings || !hasCountdownWithStartTime(advancedSettingsJSON)) {
+            setError("Challenge mode requires advanced settings with a scheduled countdown");
+            return;
+        }
+
+        const validation = validateCountdownStartTime(advancedSettingsJSON);
+        if (!validation.isValid) {
+            setError(validation.error || "Invalid countdown configuration");
+            return;
+        }
+
+        const socket = getSocket();
+        if (!socket || !socket.connected) {
+            setError("Not connected to server");
+            return;
+        }
+
+        if (!sessionCode || !sessionToken) {
+            setError("Session information missing");
+            return;
+        }
+
+        setSaveAsChallengeLoading(true);
+        setError(null);
+
+        try {
+            socket.emit('save-as-challenge', {
+                sessionCode,
+                sessionToken,
+                userToken: authToken
+            });
+        } catch (err) {
+            setSaveAsChallengeLoading(false);
+            setError('Failed to save challenge');
+            consoleLog("verbose", `Failed to save challenge: ${err}`);
         }
     }
 
@@ -772,6 +847,114 @@ const MultiplayerConfigScreen = () => {
         </>)
     }
 
+    const renderQRCodeContainer = ({qrCodeColor = "#FFFFFF", textColor = "inherit", 
+        showDescription = false, customDescription} : {qrCodeColor?: string, textColor?: string, showDescription?: boolean, customDescription?: string}) => {
+        
+        // Convert countdownStartTime to readable format
+        const getReadableStartTime = () => {
+            if (!countdownStartTime) return "";
+            try {
+                const date = new Date(countdownStartTime);
+                return date.toLocaleString(currentLanguage === 'fr' ? 'fr-FR' : 'en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                });
+            } catch (err) {
+                return countdownStartTime; // Fallback to original if parsing fails
+            }
+        };
+
+        return (
+            <div className="qr-code-container">
+                <div style={{ 
+                    fontSize: 32, 
+                    fontWeight: 'bold', 
+                    letterSpacing: 4, 
+                    userSelect: 'all',
+                    marginBottom: showDescription ? '15px' : undefined,
+                    color: textColor
+                }}>
+                    {sessionCode}
+                    <button
+                        title="Copy game number"
+                        data-umami-event="copy game code button"
+                        style={{ 
+                            border: 'none', 
+                            background: 'none', 
+                            cursor: 'pointer', 
+                            padding: 0, 
+                            color: copiedIcon === "code" ? "#2196f3" : textColor 
+                        }}
+                        onClick={() => {
+                            if (sessionCode && sessionToken) {
+                                copyToClipboard(sessionCode);
+                                setCopiedIcon("code");
+                                setTimeout(() => setCopiedIcon(null), 1000);
+                            }
+                        }}
+                    >
+                        {/* Simple copy icon SVG */}
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                    </button>
+                    <button
+                        title="Copy game link (link icon)"
+                        data-umami-event="copy game link button"
+                        style={{ 
+                            border: 'none', 
+                            background: 'none', 
+                            cursor: 'pointer', 
+                            padding: 0, 
+                            color: copiedIcon === "link" ? "#2196f3" : textColor, 
+                            marginLeft: 4 
+                        }}
+                        onClick={() => {
+                            if (sessionCode && sessionToken) {
+                                const url = `${window.location.origin}/multiplayer/${sessionCode}`;
+                                copyToClipboard(url);
+                                setCopiedIcon("link");
+                                setTimeout(() => setCopiedIcon(null), 1000);
+                            }
+                        }}
+                    >
+                        {/* Link icon SVG */}
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
+                            <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
+                        </svg>
+                    </button>
+                </div>
+                <QRCodeSVG 
+                    value={`${window.location.origin}/multiplayer/${sessionCode}`}
+                    bgColor="#00000000" 
+                    fgColor={qrCodeColor} 
+                />
+                <h3 style={{ 
+                    color: textColor, 
+                    margin: showDescription ? '10px 0' : undefined 
+                }}>
+                    {t("game_code")}
+                </h3>
+                {showDescription && (
+                    <p style={{ 
+                        color: textColor === "#333" ? '#666' : '#ccc', 
+                        fontSize: '16px', 
+                        marginTop: '15px',
+                        lineHeight: '1.5'
+                    }}>
+                        {customDescription || (t("challenge_ready_message", {startTime: getReadableStartTime()}))}
+                    </p>
+                )}
+            </div>
+        );
+    }
+
     const updateAtlasDuration = (atlasIndex: number, duration: number) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
         groupedByAtlas[atlasIndex].duration = duration;
@@ -963,7 +1146,7 @@ const MultiplayerConfigScreen = () => {
         <div className="page-container">
             <title>NeuroGuessr - Create multiplayer game</title>
             {!sessionCode && <div>'Creating multiplayer session...'</div>}
-            {sessionCode && (
+            {sessionCode && !challengeSavedSuccessfully && (
                 <div style={{ marginTop: 24 }}>
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
                     </div>
@@ -1176,56 +1359,13 @@ const MultiplayerConfigScreen = () => {
                             </div>
                         </div>)}
                     </div>
+                    {error && <div style={{ color: 'red', textAlign: 'center', display: 'block' }}>{error}</div>}
                     <div id="single-player-options" className="single-player-options-container">
                         <section className="lobby-wait">
                             <h2><img src="/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
-                            <div>
-                                <div style={{ fontSize: 32, fontWeight: 'bold', letterSpacing: 4, userSelect: 'all' }}>{sessionCode}
-                                    <button
-                                        title="Copy game number"
-                                        data-umami-event="copy game code button"
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "code" ? "#2196f3" : "inherit" }}
-                                        onClick={() => {
-                                            if (sessionCode && sessionToken) {
-                                                copyToClipboard(sessionCode);
-                                                setCopiedIcon("code");
-                                                setTimeout(() => setCopiedIcon(null), 1000);
-                                            }
-                                        }}
-                                    >
-                                        {/* Simple copy icon SVG */}
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        title="Copy game link (link icon)"
-                                        data-umami-event="copy game link button"
-                                        style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: copiedIcon === "link" ? "#2196f3" : "inherit", marginLeft: 4 }}
-                                        onClick={() => {
-                                            if (sessionCode && sessionToken) {
-                                                const url = `${window.location.origin}/multiplayer/${sessionCode}`;
-                                                copyToClipboard(url);
-                                                setCopiedIcon("link");
-                                                setTimeout(() => setCopiedIcon(null), 1000);
-                                            }
-                                        }}
-                                    >
-                                        {/* Link icon SVG */}
-                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
-                                            <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <QRCodeSVG value={`${window.location.origin}/multiplayer/${sessionCode}`}
-                                    bgColor="#00000000" fgColor="#FFFFFF" />
-                                <h3>{t("game_code")}</h3>
-                            </div>
+                            {renderQRCodeContainer({})}
                         </section>
-                        <div>
-                            <h2>&nbsp;</h2>
+                        <div className='lobby-and-buttons-container'>
                             <h3>{t("players_in_lobby")}</h3>
                             <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
                                 {lobbyUsers.map(u => <li key={u}>{u}</li>)}
@@ -1250,11 +1390,50 @@ const MultiplayerConfigScreen = () => {
                                 }}
                             >
                                 {t("start_game_button")}
-                        </button></div>
+                            </button>
+                            
+                            {/* Save as Challenge button - only show if user is admin, advanced mode with countdown startTime */}
+                            {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
+                                <button
+                                    className={saveAsChallengeLoading ? "play-button disabled" : "play-button enabled"}
+                                    style={{ marginTop: '10px', backgroundColor: saveAsChallengeLoading ? '#bb9385ff' : '#ff6b35' }}
+                                    disabled={saveAsChallengeLoading}
+                                    onClick={handleSaveAsChallenge}
+                                >
+                                    {saveAsChallengeLoading ? t("saving-in-progress") : t("save-as-challenge")}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
-            {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+            
+            {/* Challenge Success UI - Show only QR code with success message */}
+            {sessionCode && challengeSavedSuccessfully && (
+                <div style={{ marginTop: 24, textAlign: 'center' }}>
+                    <div style={{ 
+                        backgroundColor: '#4caf50', 
+                        color: 'white', 
+                        padding: '20px', 
+                        borderRadius: '10px', 
+                        marginBottom: '20px',
+                        fontSize: '24px',
+                        fontWeight: 'bold'
+                    }}>
+                        ✅ {t("challenge_saved_successfully") || "Challenge Saved Successfully!"}
+                    </div>
+                    
+                    <div style={{ 
+                        backgroundColor: '#f0f0f0', 
+                        padding: '20px', 
+                        borderRadius: '10px',
+                        color: '#333'
+                    }}>
+                        {renderQRCodeContainer({ qrCodeColor: "#333", textColor: "#333", showDescription: true })}
+
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
