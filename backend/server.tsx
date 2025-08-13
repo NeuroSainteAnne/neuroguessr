@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getNextChallenge, getMultiplayerSessionStartDate, restorePersistentChallengeSessions } from "./modules/multi.ts";
+import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getNextChallenge, getAllChallenges, getMultiplayerSessionStartDate, restorePersistentChallengeSessions } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -91,6 +91,9 @@ app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayer
 app.get('/api/multi/public-lobbies', getPublicLobbies)
 app.get('/api/multi/next-challenge', (req, res, next) => {
     Promise.resolve(getNextChallenge(req, res)).catch(next);
+})
+app.get('/api/challenges', (req, res, next) => {
+    Promise.resolve(getAllChallenges(req, res)).catch(next);
 })
 
 // advanced_game.ts

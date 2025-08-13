@@ -26,29 +26,43 @@ export function NextChallenge() {
     return date.toLocaleString();
   };
 
-  const handleJoinChallenge = () => {
-    if (nextChallenge) {
-      window.location.href = `/multiplayer/${nextChallenge.sessionCode}`;
-    }
-  };
-
   if (nextChallengeLoading || nextChallengeError || !nextChallenge) {
     return (<></>);
   }
 
   return (
+    <SingleChallenge 
+      isNext={true}
+      sessionCode={nextChallenge.sessionCode}
+      startTime={formatTimeUntilStart(nextChallenge.startTime)}
+      scheduledTime={formatDateTime(nextChallenge.startTime)} />
+  );
+}
+
+export function SingleChallenge({ isNext=false, sessionCode, startTime, scheduledTime }: { isNext?:boolean, sessionCode: string; startTime: string; scheduledTime: string; }) {
+  const { 
+    t
+  } = useApp();
+
+  const handleJoinChallenge = () => {
+    if (sessionCode) {
+      window.location.href = `/multiplayer/${sessionCode}`;
+    }
+  };
+
+  return (
     <div className="next-challenge-widget">
       <div className="challenge-info">
-        <h3>{t('next_challenge')}</h3>
-        <span className="session-code">#{nextChallenge.sessionCode}</span>
+        {isNext && <h3>{t('next_challenge')}</h3>}
+        <span className="session-code">#{sessionCode}</span>
       </div>
         
       <div className="challenge-details">
         <div className="start-time">
-          <strong>{formatTimeUntilStart(nextChallenge.startTime)}</strong>
+          <strong>{startTime}</strong>
         </div>
         <div className="scheduled-time">
-          {t('scheduled_for')}: {formatDateTime(nextChallenge.startTime)}
+          {t('scheduled_for')}: {scheduledTime}
         </div>
       </div>
         

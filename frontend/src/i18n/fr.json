@@ -28,6 +28,7 @@
   "select_params": "Définir les paramètres",
   "single_player_button" : "Solo",
   "multiplayer_button" : "Multi-joueur",
+  "challenges_button" : "Défis",
   "multiplayer_mode": "Multi-joueur",
   "join_multiplayer_lobby": "Rejoindre une partie",
   "multi_8_digits": "Code 8 chiffres",
@@ -242,6 +243,7 @@
   "multiplayer_scheduled_description": "Rejoignez cette partie multijoueur de NeuroGuessr prévue pour commencer le {{time}}",
   "save-as-challenge": "Créer un défi",
   "saving-in-progress": "Enregistrement...",
+  "challenge_saved_successfully": "Défi enregistré avec succès !",
   "challenge_ready_message": "Votre défi a été programmé et commencera automatiquement le {{startTime}}. Les joueurs peuvent le rejoindre en utilisant le code ci-dessus.",
 
   "*****MULTIPLAYER GAME*****":"",
@@ -404,5 +406,17 @@
   "minutes": "minutes",
   "join_challenge": "Rejoindre le Défi",
   "no_upcoming_challenges": "Aucun défi à venir",
-  "error_loading_challenge": "Erreur lors du chargement du défi"
+  "error_loading_challenge": "Erreur lors du chargement du défi",
+
+  "*****CHALLENGES*****":"",
+  "neuroguessr_challenges_title": "Défis NeuroGuessr",
+  "neuroguessr_challenges_description": "Participez à des défis ouverts multijoueurs !",
+  "all_challenges": "Tous les défis",
+  "public_challenges": "Défis publics",
+  "private_challenges": "Défis privés",
+  "no_public_challenges": "Aucun défi public disponible",
+  "no_private_challenges": "Aucun défi privé disponible",
+  "error_loading_challenges": "Échec du chargement des défis",
+  "loading_challenges": "Chargement des défis...",
+  "refresh": "Actualiser"
 }

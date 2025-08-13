@@ -1420,7 +1420,7 @@ const MultiplayerConfigScreen = () => {
                         fontSize: '24px',
                         fontWeight: 'bold'
                     }}>
-                        ✅ {t("challenge_saved_successfully") || "Challenge Saved Successfully!"}
+                        ✅ {t("challenge_saved_successfully")}
                     </div>
                     
                     <div style={{ 

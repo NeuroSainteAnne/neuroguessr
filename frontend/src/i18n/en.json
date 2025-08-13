@@ -40,6 +40,7 @@
   "blind_mode_description": "Identify regions without labels (x1.5 score)",
   "single_player_button" : "Singleplayer",
   "multiplayer_button" : "Multiplayer",
+  "challenges_button" : "Challenges",
   "multiplayer_mode": "Multiplayer",
   "join_multiplayer_lobby": "Join multiplayer game",
   "multi_8_digits": "8-digits code",
@@ -404,5 +405,17 @@
   "minutes": "minutes",
   "join_challenge": "Join Challenge",
   "no_upcoming_challenges": "No upcoming challenges",
-  "error_loading_challenge": "Error loading challenge"
+  "error_loading_challenge": "Error loading challenge",
+
+  "*****CHALLENGES*****":"",
+  "neuroguessr_challenges_title": "NeuroGuessr Challenges",
+  "neuroguessr_challenges_description": "Join open multiplayer challenges!",
+  "all_challenges": "All Challenges",
+  "public_challenges": "Public Challenges",
+  "private_challenges": "Private Challenges",
+  "no_public_challenges": "No public challenges available",
+  "no_private_challenges": "No private challenges available",
+  "error_loading_challenges": "Failed to load challenges",
+  "loading_challenges": "Loading challenges...",
+  "refresh": "Refresh"
 }

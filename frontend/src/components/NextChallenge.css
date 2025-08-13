@@ -12,6 +12,7 @@
 .challenge-info {
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
 .challenge-info h3 {

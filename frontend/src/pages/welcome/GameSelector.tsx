@@ -24,6 +24,11 @@ function GameSelector() {
               href="/welcome/multiplayer">
                 {t("multiplayer_button")}
           </a>
+          <a id="challenges-button" 
+              className="player-mode-button"
+              href="/welcome/challenges">
+                {t("challenges_button")}
+          </a>
         </div>
     </>
   )

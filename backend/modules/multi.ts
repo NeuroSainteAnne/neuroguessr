@@ -7,7 +7,7 @@ import configJson from '../config.json' with { type: "json" };
 const config: Config = configJson;
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
-import { MultiSession } from "interfaces/database.interfaces.ts";
+import { MultiSession, User } from "interfaces/database.interfaces.ts";
 import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
@@ -1495,6 +1495,106 @@ export const getNextChallenge = async (req: Request, res: Response) => {
     
   } catch (error) {
     logger.error("getNextChallenge error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export const getAllChallenges = async (req: Request, res: Response) => {
+  try {
+    const currentTime = new Date().toISOString();
+    
+    // Check if user is authenticated and admin
+    const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
+    const token: string | undefined = authHeader && authHeader.split(' ')[1];
+    let isAdmin = false;
+    let userId = null;
+    if(token){
+      jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
+          if (!err) {
+              isAdmin = (decoded as User).admin || false;
+              userId = (decoded as User).id || null;
+          }
+      });
+    }
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(token, config.jwt_secret) as any;
+        userId = decoded.id;
+        isAdmin = decoded.admin || false;
+      } catch (jwtError) {
+        // Token is invalid, continue as guest
+        logger.warn("Invalid token in getAllChallenges:", jwtError);
+      }
+    }
+    
+    // Build query based on user permissions
+    let query;
+    if (isAdmin) {
+      // Admin can see all challenges (public and private)
+      query = sql`
+        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, u.username AS creator_name
+        FROM multi_sessions ms
+        LEFT JOIN users u ON u.id = ms.creator_id
+        WHERE ms.is_challenge = TRUE 
+        AND ms.persistent_config IS NOT NULL
+        AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
+        ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
+      `;
+    } else {
+      // Non-admin users can only see public challenges
+      query = sql`
+        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, u.username AS creator_name
+        FROM multi_sessions ms
+        LEFT JOIN users u ON u.id = ms.creator_id
+        WHERE ms.is_challenge = TRUE 
+        AND ms.public = TRUE
+        AND ms.persistent_config IS NOT NULL
+        AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
+        ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
+      `;
+    }
+    
+    const result = await query;
+
+    const challenges = [];
+    
+    for (const session of result) {
+      const sessionCode = String(session.session_code).padStart(8, '0');
+      
+      try {
+        const persistentState = JSON.parse(session.persistent_config);
+        const startTime = persistentState.commands?.[0]?.startTime;
+        
+        const challenge = {
+          sessionCode,
+          startTime,
+          isPublic: session.public,
+          atlas: persistentState.parameters?.atlas,
+          totalDuration: persistentState.parameters?.totalDuration,
+          creator: session.creator_name || 'Unknown',
+          createdAt: session.created_at?.toISOString?.() || undefined
+        };
+        
+        challenges.push(challenge);
+      } catch (parseError) {
+        logger.error(`Error parsing persistent config for session ${session.session_code}:`, parseError);
+        // Skip this challenge if parsing fails
+        continue;
+      }
+    }
+    
+    res.status(200).json({ 
+      challenges,
+      userPermissions: {
+        isAdmin,
+        canSeePrivate: isAdmin
+      }
+    });
+    
+  } catch (error) {
+    logger.error("getAllChallenges error", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
