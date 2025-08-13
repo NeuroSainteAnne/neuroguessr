@@ -39,7 +39,7 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
 
 1. Install prerequisites
 
-- Install [Node.js](https://nodejs.org/en/download). Neuroguessr has been tested with node 22.11 and node 24.0
+- Install [Node.js](https://nodejs.org/en/download). NeuroGuessr has been tested with node 22.11 and node 24.0
 - Install [Postgresql](https://www.postgresql.org/download) and create a database. Don't worry, the tables will be created automatically at first launch
 
 2. Configure your server
