@@ -539,7 +539,7 @@ const MultiPlayer = ({
                 textAlign: 'center',
                 margin: '20px 0'
               }}>
-                {formatTime(countdownRemaining*1000)}
+                {formatTime({ms:countdownRemaining*1000})}
               </div>
               <p>{t("get_ready") || "Get ready!"}</p>
             </div>

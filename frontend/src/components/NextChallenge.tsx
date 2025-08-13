@@ -18,7 +18,7 @@ export function NextChallenge() {
     const diff = start.getTime() - now.getTime();
     
     if (diff <= 0) return t('starting_now');
-    return `${t('starts_in')} ${formatTime(diff)}`
+    return `${t('starts_in')} ${formatTime({ms:diff, showSeconds:false})}`
   };
 
   const formatDateTime = (dateTime: string) => {

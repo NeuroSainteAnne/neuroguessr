@@ -382,9 +382,9 @@ export function Page() {
         
         <div className="performance-metrics">
           <h3>{t('performance_metrics')}</h3>
-          <MetricRow label={t('avg_time_per_region')} value={formatTime(avgTimePerRegion)} />
-          <MetricRow label={t('avg_time_per_correct')} value={formatTime(avgTimePerCorrectRegion)} />
-          <MetricRow label={t('avg_session_duration')} value={formatTime(avgDuration)} />
+          <MetricRow label={t('avg_time_per_region')} value={formatTime({ms:avgTimePerRegion})} />
+          <MetricRow label={t('avg_time_per_correct')} value={formatTime({ms:avgTimePerCorrectRegion})} />
+          <MetricRow label={t('avg_session_duration')} value={formatTime({ms:avgDuration})} />
           <MetricRow label={t('blind_mode_games')} value={`${stats.blindModeGames || 0} (${(stats.blindModePercentage || 0).toFixed(1)}%)`} />
         </div>
         
@@ -440,7 +440,7 @@ export function Page() {
                 <StatItem label={t('games_played')} value={perMode.streak?.games || 0} />
                 <StatItem label={t('best_score')} value={perMode.streak?.bestScore || 0} />
                 <StatItem label={t('avg_score')} value={perMode.streak?.avgScore.toFixed(1) || 0} />
-                <StatItem label={t('avg_duration')} value={formatTime(perMode.streak?.avgDuration || null)} />
+                <StatItem label={t('avg_duration')} value={formatTime({ms:perMode.streak?.avgDuration || null})} />
               </div>
               
               <div className="mode-chart">
@@ -466,7 +466,7 @@ export function Page() {
                 <StatItem label={t('games_played')} value={perMode['time-attack']?.games || 0} />
                 <StatItem label={t('best_score')} value={perMode['time-attack']?.bestScore || 0} />
                 <StatItem label={t('avg_score')} value={perMode['time-attack']?.avgScore.toFixed(1) || 0} />
-                <StatItem label={t('avg_duration')} value={formatTime(perMode['time-attack']?.avgDuration || null)} />
+                <StatItem label={t('avg_duration')} value={formatTime({ms:perMode['time-attack']?.avgDuration || null})} />
               </div>
               
               <div className="mode-chart">
@@ -490,7 +490,7 @@ export function Page() {
                 <StatItem label={t('games_played')} value={perMode.multiplayer?.games || 0} />
                 <StatItem label={t('best_score')} value={perMode.multiplayer?.bestScore || 0} />
                 <StatItem label={t('avg_score')} value={perMode.multiplayer?.avgScore.toFixed(1) || 0} />
-                <StatItem label={t('avg_duration')} value={formatTime(perMode.multiplayer?.avgDuration || null)} />
+                <StatItem label={t('avg_duration')} value={formatTime({ms:perMode.multiplayer?.avgDuration || null})} />
               </div>
               
               <div className="mode-chart">
@@ -627,7 +627,7 @@ export function Page() {
                     <td>{session.score}</td>
                     <td>{session.correct}</td>
                     <td>{session.incorrect}</td>
-                    <td>{formatTime(session.duration)}</td>
+                    <td>{formatTime({ms:session.duration})}</td>
                   </tr>
                 ))
               ) : (                <tr>

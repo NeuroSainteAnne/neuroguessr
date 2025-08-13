@@ -1,6 +1,7 @@
 import { format, formatDistance, formatRelative, fromUnixTime, Locale } from 'date-fns';
 import { enUS, fr } from 'date-fns/locale';
 import { consoleLog } from './logging';
+import { mkdirSync } from 'node:fs';
 
 // Get current language for date formatting
 const getLocale = (): Locale => {
@@ -75,15 +76,16 @@ export const formatDate = (date: number | Date | string | null, formatStr = 'PPP
  * @param showMilliseconds Whether to show milliseconds for short durations
  * @returns Formatted time string
  */
-export const formatTime = (milliseconds: number | null, showMilliseconds = false): string => {
-  if (milliseconds === null || milliseconds === undefined) return '—';
+export const formatTime = ({ms, showMilliseconds = false, showSeconds = true} : 
+              {ms: number | null, showMilliseconds?: boolean, showSeconds?: boolean}): string => {
+  if (ms === null || ms === undefined) return '—';
   
   // Convert milliseconds to seconds
-  const totalSeconds = milliseconds / 1000;
+  const totalSeconds = ms / 1000;
   
   // Handle extremely short durations with milliseconds if requested
   if (showMilliseconds && totalSeconds < 1) {
-    return `${Math.round(milliseconds)}ms`;
+    return `${Math.round(ms)}ms`;
   }
   
   const hours = Math.floor(totalSeconds / 3600);
@@ -91,12 +93,22 @@ export const formatTime = (milliseconds: number | null, showMilliseconds = false
   const remainingSeconds = Math.floor(totalSeconds % 60);
   
   // Format based on duration length
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`;
+  if(showSeconds){
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    } else {
+      return `${remainingSeconds}s`;
+    }
   } else {
-    return `${remainingSeconds}s`;
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `< 1m`;
+    }
   }
 };
 
