@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import './NextChallenge.css';
+import { formatTime } from '../utils/formatters';
 
 export function NextChallenge() {
   const { 
@@ -17,15 +18,7 @@ export function NextChallenge() {
     const diff = start.getTime() - now.getTime();
     
     if (diff <= 0) return t('starting_now');
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) {
-      return t('starts_in_hours_minutes', { hours, minutes });
-    } else {
-      return t('starts_in_minutes', { minutes });
-    }
+    return `${t('starts_in')} ${formatTime(diff)}`
   };
 
   const formatDateTime = (dateTime: string) => {

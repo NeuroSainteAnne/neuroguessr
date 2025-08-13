@@ -15,6 +15,7 @@ import RegionHistory from '../../components/RegionHistory';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import { consoleLog } from '../../utils/logging';
 import { prefetchAtlasJSON, preloadAtlas } from '../../utils/nifti_cache';
+import { formatTime } from '../../utils/formatters';
 
 export function Page() {
     const { pageContext } = useApp();
@@ -538,7 +539,7 @@ const MultiPlayer = ({
                 textAlign: 'center',
                 margin: '20px 0'
               }}>
-                {countdownRemaining}
+                {formatTime(countdownRemaining*1000)}
               </div>
               <p>{t("get_ready") || "Get ready!"}</p>
             </div>
