@@ -99,7 +99,7 @@ const hasCountdownWithStartTime = (advancedSettingsJSON: string): boolean => {
 };
 
 const MultiplayerConfigScreen = () => {
-    const { t, authToken, userUsername, userIsAdmin, currentLanguage, copyToClipboard } = useApp();
+    const { t, authToken, userUsername, userIsAdmin, currentLanguage, copyToClipboard, refreshNextChallenge } = useApp();
     const { selectedAtlas, setSelectedAtlas } = useGameSelector();
     const { createSocket, getSocket } = useSocket();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -262,6 +262,7 @@ const MultiplayerConfigScreen = () => {
                     // Challenge saved successfully
                     setError(null);
                     setChallengeSavedSuccessfully(true);
+                    refreshNextChallenge();
                     consoleLog("verbose", "Challenge saved successfully");
                     // Optionally show success message or redirect
                 } else {

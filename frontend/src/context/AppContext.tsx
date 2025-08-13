@@ -403,6 +403,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
 
   const refreshNextChallenge = () => {
     setLastChallengeFetch(0); // Reset cache
+    setNextChallenge(null); // Clear existing challenge to force refresh
     fetchNextChallenge();
   };
    

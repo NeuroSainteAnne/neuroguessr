@@ -4,6 +4,7 @@ import { SingleChallenge } from '../../../components/NextChallenge';
 import './ChallengesPage.css';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
+import { consoleLog } from '../../../utils/logging';
 
 interface Challenge {
   sessionCode: string;
@@ -13,7 +14,7 @@ interface Challenge {
 }
 
 export function Page() {
-  const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions } = useApp();
+  const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,6 +83,11 @@ export function Page() {
     setError(errorMessage);
   };
 
+  const handleAfterDeletion = () => {
+    fetchChallenges();
+    refreshNextChallenge();
+  };
+
   const publicChallenges = challenges.filter(challenge => challenge.isPublic);
   const privateChallenges = challenges.filter(challenge => !challenge.isPublic);
 
@@ -129,7 +135,7 @@ export function Page() {
                       startTime={formatTimeUntilStart(challenge.startTime)}
                       scheduledTime={formatDateTime(challenge.startTime)}
                       allowDeletion={userIsAdmin}
-                      callbackAfterDeletion={fetchChallenges}
+                      callbackAfterDeletion={handleAfterDeletion}
                       callbackDeletionFailed={handleDeletionError}
                     />
                   ))}

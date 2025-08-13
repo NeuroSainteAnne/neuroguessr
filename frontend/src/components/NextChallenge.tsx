@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import './NextChallenge.css';
 import { formatTime } from '../utils/formatters';
+import { consoleLog } from '../utils/logging';
 
 export function NextChallenge() {
   const { 
@@ -74,6 +75,7 @@ export function SingleChallenge({
       }
 
       // Refresh the challenges list
+      consoleLog("verbose", `Challenge ${sessionCode} deleted`);
       if(callbackAfterDeletion) callbackAfterDeletion();
     } catch (err) {
       console.error('Error deleting challenge:', err);
