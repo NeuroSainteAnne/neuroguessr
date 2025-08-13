@@ -393,5 +393,17 @@
   "clinical_trial_occupation_medical_student": "Medical Student",
   "clinical_trial_occupation_neuroscientist": "Neuroscientist",
   "clinical_trial_occupation_researcher": "Researcher (Other Specialty)",
-  "clinical_trial_occupation_other": "Other"
+  "clinical_trial_occupation_other": "Other",
+
+  "*****NEXT CHALLENGE*****":"",
+  "next_challenge": "Next Challenge",
+  "starting_now": "Starting now!",
+  "starts_in_hours_minutes": "Starts in {{hours}}h {{minutes}}m",
+  "starts_in_minutes": "Starts in {{minutes}} minutes",
+  "by": "by",
+  "scheduled_for": "Scheduled for",
+  "minutes": "minutes",
+  "join_challenge": "Join Challenge",
+  "no_upcoming_challenges": "No upcoming challenges",
+  "error_loading_challenge": "Error loading challenge"
 }

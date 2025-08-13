@@ -54,6 +54,18 @@ type AppContextType = {
   askedAtlas: {atlas: string, lut?: ColorMap, mapping? : Record<number,number>, inverseMapping? : Record<number,number>, blindMode?: boolean} | undefined;
   askedRegion: number | null;
   
+  // Next Challenge data
+  nextChallenge: {
+    sessionCode: string;
+    startTime: string;
+    atlas?: string;
+    totalDuration?: number;
+    creator: string;
+    createdAt: string;
+  } | null;
+  nextChallengeLoading: boolean;
+  nextChallengeError: string | null;
+  
   // Niivue module
   nvimageModule: NVImageConstructor | null;
   preloadedBackgroundMNI: NVImage | null;
@@ -79,6 +91,7 @@ type AppContextType = {
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
   setIsMobileView: (isMobile: boolean) => void;
+  refreshNextChallenge: () => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
   copyToClipboard: (text: string) => Promise<boolean>;
   
@@ -138,6 +151,19 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([]);
   const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut?: ColorMap, mapping?: Record<number,number>, inverseMapping?: Record<number,number>, blindMode?:boolean}|undefined>(undefined);
   const [askedRegion, setAskedRegion] = useState<number | null>(null);
+
+  // Next Challenge data
+  const [nextChallenge, setNextChallenge] = useState<{
+    sessionCode: string;
+    startTime: string;
+    atlas?: string;
+    totalDuration?: number;
+    creator: string;
+    createdAt: string;
+  } | null>(null);
+  const [nextChallengeLoading, setNextChallengeLoading] = useState<boolean>(true);
+  const [nextChallengeError, setNextChallengeError] = useState<string | null>(null);
+  const [lastChallengeFetch, setLastChallengeFetch] = useState<number>(0);
 
   // Mobile view state
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
@@ -337,6 +363,44 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     setIsGuest(true);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('guestMode', 'true');
   };
+
+  // Next Challenge functions
+  const fetchNextChallenge = async () => {
+    // Avoid fetching too frequently (cache for 30 seconds)
+    const now = Date.now();
+    if (now - lastChallengeFetch < 30000 && nextChallenge) {
+      return;
+    }
+
+    try {
+      setNextChallengeLoading(true);
+      const response = await fetch('/api/multi/next-challenge');
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          setNextChallenge(null);
+          setNextChallengeError(null);
+          return;
+        }
+        throw new Error('Failed to fetch next challenge');
+      }
+      
+      const data = await response.json();
+      setNextChallenge(data.challenge);
+      setNextChallengeError(null);
+      setLastChallengeFetch(now);
+    } catch (err) {
+      console.error('Error fetching next challenge:', err);
+      setNextChallengeError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setNextChallengeLoading(false);
+    }
+  };
+
+  const refreshNextChallenge = () => {
+    setLastChallengeFetch(0); // Reset cache
+    fetchNextChallenge();
+  };
    
   // Viewer option handler
   const setViewerOption = (options: DisplayOptions) => {
@@ -349,6 +413,16 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setIsGuest(false);
       setIsLoggedIn(true);
     }
+  }, []);
+
+  // Fetch next challenge on mount and periodically
+  useEffect(() => {
+    fetchNextChallenge();
+    
+    // Refresh every minute to update countdown
+    const interval = setInterval(fetchNextChallenge, 60000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   // Automatic token refresh for logged-in users
@@ -501,6 +575,11 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       askedAtlas,
       askedRegion,
       
+      // Next Challenge data
+      nextChallenge,
+      nextChallengeLoading,
+      nextChallengeError,
+      
       // Niivue module
       nvimageModule,
       preloadedBackgroundMNI,
@@ -530,6 +609,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setShowHelpOverlay,
       setShowLegalOverlay,
       setIsMobileView,
+      refreshNextChallenge,
       copyToClipboard,
 
       // language functions

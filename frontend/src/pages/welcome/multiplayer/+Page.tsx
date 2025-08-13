@@ -3,6 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { MultiBox } from './MultiBox';
+import { NextChallenge } from '../../../components/NextChallenge';
 import Leaderboard from '../../../components/Leaderboard';
 
 export function Page() {
@@ -15,6 +16,7 @@ export function Page() {
     <>
       <title>NeuroGuessr</title>
       {atlasRegions.length > 0 && <SearchBar />}
+      <NextChallenge />
       <GameSelector />
       <MultiBox />
     </>

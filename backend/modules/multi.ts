@@ -1445,6 +1445,60 @@ export const getPublicLobbies = async (req: Request, res: Response) => {
   }
 };
 
+// Get next upcoming public challenge
+export const getNextChallenge = async (req: Request, res: Response) => {
+  try {
+    const currentTime = new Date().toISOString();
+    
+    const result = await sql`
+      SELECT ms.session_code, ms.created_at, ms.persistent_config, u.username AS creator_name
+      FROM multi_sessions ms
+      LEFT JOIN users u ON u.id = ms.creator_id
+      WHERE ms.is_challenge = TRUE 
+      AND ms.public = TRUE
+      AND ms.persistent_config IS NOT NULL
+      AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
+      ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
+      LIMIT 1
+    ` as Array<{ 
+      session_code: string, 
+      created_at: Date, 
+      persistent_config: string,
+      creator_name: string | null 
+    }>;
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'No upcoming challenges found' });
+    }
+
+    const session = result[0];
+    const sessionCode = String(session.session_code).padStart(8, '0');
+    
+    try {
+      const persistentState = JSON.parse(session.persistent_config);
+      const startTime = persistentState.commands?.[0]?.startTime;
+      
+      const challenge = {
+        sessionCode,
+        startTime,
+        atlas: persistentState.parameters?.atlas,
+        totalDuration: persistentState.parameters?.totalDuration,
+        creator: session.creator_name || 'Unknown',
+        createdAt: session.created_at?.toISOString?.() || undefined
+      };
+      
+      res.status(200).json({ challenge });
+    } catch (parseError) {
+      logger.error("Error parsing persistent config for next challenge:", parseError);
+      res.status(500).json({ error: 'Error parsing challenge data' });
+    }
+    
+  } catch (error) {
+    logger.error("getNextChallenge error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Get multiplayer session info for meta tag generation
 export const getMultiplayerSessionStartDate = async (req: Request, res: Response) => {
   try {

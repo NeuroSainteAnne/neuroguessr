@@ -1,0 +1,108 @@
+.next-challenge-widget {
+    margin: 20px auto;
+    padding: 10px;
+    max-width: 600px;
+    background: #575757cc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.challenge-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.challenge-info h3 {
+    margin: 0 0 0 0;
+    color: #e6e6e6;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.session-code {
+    font-family: monospace;
+    font-weight: bold;
+    color: #4698ef;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.creator {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.challenge-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.start-time {
+    color: #48ec6e;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.scheduled-time {
+    color: #bec7ce;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.atlas, .duration {
+    color: #495057;
+    font-size: 0.9em;
+}
+
+.join-challenge-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.join-challenge-btn:hover {
+    background-color: #0056b3;
+}
+
+.loading {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.error {
+    text-align: center;
+    color: #dc3545;
+    background-color: #f8d7da;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+}
+
+.no-challenge {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .next-challenge-widget {
+        margin: 15px;
+        padding: 15px;
+    }
+    
+    .challenge-header {
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+    }
+}

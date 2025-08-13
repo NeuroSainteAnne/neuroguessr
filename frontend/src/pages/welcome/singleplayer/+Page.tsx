@@ -6,6 +6,7 @@ import { GameSelectorProvider } from '../../../context/GameSelectorContext';
 import { SingleSelector } from './SingleSelector';
 import { Help } from '../../../components/Help';
 import Leaderboard from '../../../components/Leaderboard';
+import { NextChallenge } from '../../../components/NextChallenge';
 
 export function Page() {
    const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();
@@ -17,6 +18,7 @@ export function Page() {
     <>
       <title>NeuroGuessr</title>
       {atlasRegions.length > 0 && <SearchBar />}
+      <NextChallenge />
       <GameSelectorProvider>
         <GameSelector />
         <div id="single-player-options" className="single-player-options-container">

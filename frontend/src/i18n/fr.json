@@ -393,5 +393,17 @@
   "clinical_trial_occupation_medical_student": "Étudiant en médecine",
   "clinical_trial_occupation_neuroscientist": "Neuroscientifique",
   "clinical_trial_occupation_researcher": "Chercheur (hors neurosciences)",
-  "clinical_trial_occupation_other": "Autre"
+  "clinical_trial_occupation_other": "Autre",
+
+  "*****NEXT CHALLENGE*****":"",
+  "next_challenge": "Prochain Défi",
+  "starting_now": "Commence maintenant !",
+  "starts_in_hours_minutes": "Commence dans {{hours}}h {{minutes}}m",
+  "starts_in_minutes": "Commence dans {{minutes}} minutes",
+  "by": "par",
+  "scheduled_for": "Programmé pour",
+  "minutes": "minutes",
+  "join_challenge": "Rejoindre le Défi",
+  "no_upcoming_challenges": "Aucun défi à venir",
+  "error_loading_challenge": "Erreur lors du chargement du défi"
 }

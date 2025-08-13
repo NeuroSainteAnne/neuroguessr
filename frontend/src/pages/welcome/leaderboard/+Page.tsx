@@ -3,6 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import Leaderboard from '../../../components/Leaderboard';
+import { NextChallenge } from '../../../components/NextChallenge';
 
 export function Page() {
    const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();
@@ -14,6 +15,7 @@ export function Page() {
     <>
       <title>NeuroGuessr</title>
       {atlasRegions.length > 0 && <SearchBar />}
+      <NextChallenge />
       <GameSelector />
       <Leaderboard />
     </>
