@@ -17,7 +17,6 @@ import backendConfig from "../../../backend/config.json"
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
   let language = (pageContext as any).i18n?.language || 'en';
-  console.log(language)
   if ((pageContext as any).i18n) {
     i18n.changeLanguage(language)
   }
