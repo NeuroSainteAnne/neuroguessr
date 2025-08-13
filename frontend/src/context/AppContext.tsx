@@ -377,15 +377,19 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       const response = await fetch('/api/multi/next-challenge');
       
       if (!response.ok) {
-        if (response.status === 404) {
-          setNextChallenge(null);
-          setNextChallengeError(null);
-          return;
-        }
-        throw new Error('Failed to fetch next challenge');
+        throw new Error(`Failed to fetch next challenge: ${response.status}`);
       }
       
       const data = await response.json();
+      
+      // Handle the case where there are no challenges
+      if (!data.challenge) {
+        setNextChallenge(null);
+        setNextChallengeError(null);
+        setLastChallengeFetch(now);
+        return;
+      }
+      
       setNextChallenge(data.challenge);
       setNextChallengeError(null);
       setLastChallengeFetch(now);

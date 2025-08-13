@@ -409,7 +409,7 @@
   "error_loading_challenge": "Erreur lors du chargement du défi",
 
   "*****CHALLENGES*****":"",
-  "neuroguessr_challenges_title": "Défis NeuroGuessr",
+  "neuroguessr_challenges_title": "NeuroGuessr - Défis",
   "neuroguessr_challenges_description": "Participez à des défis ouverts multijoueurs !",
   "all_challenges": "Tous les défis",
   "public_challenges": "Défis publics",
@@ -418,5 +418,8 @@
   "no_private_challenges": "Aucun défi privé disponible",
   "error_loading_challenges": "Échec du chargement des défis",
   "loading_challenges": "Chargement des défis...",
-  "refresh": "Actualiser"
+  "refresh": "Actualiser",
+  "delete_challenge": "Supprimer le défi",
+  "confirm_delete_challenge": "Êtes-vous sûr de vouloir supprimer ce défi ?",
+  "error_deleting_challenge": "Échec de la suppression du défi"
 }

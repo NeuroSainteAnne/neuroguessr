@@ -25,7 +25,7 @@ function GameSelector() {
                 {t("multiplayer_button")}
           </a>
           <a id="challenges-button" 
-              className="player-mode-button"
+              className={(welcomeSubPage == "challenges"?"player-mode-button selected":"player-mode-button")}
               href="/welcome/challenges">
                 {t("challenges_button")}
           </a>

@@ -1,7 +1,7 @@
 .next-challenge-widget {
     margin: 20px auto;
     padding: 10px;
-    max-width: 600px;
+    max-width: 800px;
     background: #575757cc;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     display: flex;
@@ -93,6 +93,29 @@
     text-align: center;
     color: #6c757d;
     font-style: italic;
+}
+
+
+.delete-challenge-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.delete-challenge-btn:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.delete-challenge-btn:active {
+  transform: scale(0.95);
 }
 
 @media (max-width: 768px) {

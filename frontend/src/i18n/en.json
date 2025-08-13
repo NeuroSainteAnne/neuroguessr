@@ -408,7 +408,7 @@
   "error_loading_challenge": "Error loading challenge",
 
   "*****CHALLENGES*****":"",
-  "neuroguessr_challenges_title": "NeuroGuessr Challenges",
+  "neuroguessr_challenges_title": "NeuroGuessr - Challenges",
   "neuroguessr_challenges_description": "Join open multiplayer challenges!",
   "all_challenges": "All Challenges",
   "public_challenges": "Public Challenges",
@@ -417,5 +417,8 @@
   "no_private_challenges": "No private challenges available",
   "error_loading_challenges": "Failed to load challenges",
   "loading_challenges": "Loading challenges...",
-  "refresh": "Refresh"
+  "refresh": "Refresh",
+  "delete_challenge": "Delete Challenge",
+  "confirm_delete_challenge": "Are you sure you want to delete this challenge?",
+  "error_deleting_challenge": "Failed to delete challenge"
 }

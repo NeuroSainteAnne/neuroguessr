@@ -11,6 +11,7 @@
   margin-bottom: 30px;
   border-bottom: 2px solid #333;
   padding-bottom: 15px;
+  min-width: 400px;
 }
 
 .challenges-header h1 {
@@ -67,12 +68,6 @@
   padding-left: 12px;
 }
 
-.challenges-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
 .no-challenges {
   text-align: center;
   color: #ccc;
@@ -106,10 +101,6 @@
     flex-direction: column;
     gap: 15px;
     align-items: stretch;
-  }
-  
-  .challenges-grid {
-    grid-template-columns: 1fr;
   }
   
   .challenges-header h1 {

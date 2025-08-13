@@ -39,17 +39,48 @@ export function NextChallenge() {
   );
 }
 
-export function SingleChallenge({ isNext=false, sessionCode, startTime, scheduledTime }: { isNext?:boolean, sessionCode: string; startTime: string; scheduledTime: string; }) {
+export function SingleChallenge({ 
+  isNext, sessionCode, startTime, scheduledTime, 
+  allowDeletion, callbackAfterDeletion, callbackDeletionFailed,
+ }: { isNext?:boolean, sessionCode: string; startTime: string; scheduledTime: string; 
+    allowDeletion?: boolean; callbackAfterDeletion?: () => void; callbackDeletionFailed?: (err: string) => void; }) {
   const { 
-    t
+    t, authToken, userIsAdmin
   } = useApp();
-
+  
   const handleJoinChallenge = () => {
     if (sessionCode) {
       window.location.href = `/multiplayer/${sessionCode}`;
     }
   };
 
+  const handleDeleteChallenge = async (sessionCode: string) => {
+    if(!allowDeletion || !authToken || !userIsAdmin) return;
+    if (!window.confirm(t('confirm_delete_challenge') || 'Are you sure you want to delete this challenge?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/challenges/${sessionCode}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Refresh the challenges list
+      if(callbackAfterDeletion) callbackAfterDeletion();
+    } catch (err) {
+      console.error('Error deleting challenge:', err);
+      if(callbackDeletionFailed) callbackDeletionFailed(t('error_deleting_challenge'));
+    }
+  };
+  
   return (
     <div className="next-challenge-widget">
       <div className="challenge-info">
@@ -72,6 +103,13 @@ export function SingleChallenge({ isNext=false, sessionCode, startTime, schedule
       >
         {t('join_challenge')}
       </button>
+
+      {allowDeletion && userIsAdmin && <button 
+        className="delete-challenge-btn"
+        onClick={(e)=>handleDeleteChallenge(sessionCode)}
+      >
+        {t('delete_challenge')}
+      </button>}
     </div>
   );
 }

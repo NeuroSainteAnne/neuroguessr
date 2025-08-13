@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { SingleChallenge } from '../../../components/NextChallenge';
 import './ChallengesPage.css';
+import GameSelector from '../GameSelector';
+import SearchBar from '../../../components/SearchBar';
 
 interface Challenge {
   sessionCode: string;
@@ -11,7 +13,7 @@ interface Challenge {
 }
 
 export function Page() {
-  const { t, authToken, isLoggedIn, userIsAdmin } = useApp();
+  const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions } = useApp();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,15 +78,20 @@ export function Page() {
     return date.toLocaleString();
   };
 
+  const handleDeletionError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
+
   const publicChallenges = challenges.filter(challenge => challenge.isPublic);
   const privateChallenges = challenges.filter(challenge => !challenge.isPublic);
-  const isAdmin = userIsAdmin;
 
   const title = t('all_challenges') || 'All Challenges';
 
   return (
     <>
       <title>{title}</title>
+      {atlasRegions.length > 0 && <SearchBar />}
+      <GameSelector />
       <div className="challenges-page">
         <div className="challenges-header">
           <h1>{title}</h1>
@@ -114,13 +121,16 @@ export function Page() {
                   {t('no_public_challenges') || 'No public challenges available'}
                 </div>
               ) : (
-                <div className="challenges-grid">
+                <div>
                   {publicChallenges.map((challenge) => (
                     <SingleChallenge
                       key={challenge.sessionCode}
                       sessionCode={challenge.sessionCode}
                       startTime={formatTimeUntilStart(challenge.startTime)}
                       scheduledTime={formatDateTime(challenge.startTime)}
+                      allowDeletion={userIsAdmin}
+                      callbackAfterDeletion={fetchChallenges}
+                      callbackDeletionFailed={handleDeletionError}
                     />
                   ))}
                 </div>
@@ -128,7 +138,7 @@ export function Page() {
             </section>
 
             {/* Private Challenges (Admin only) */}
-            {isAdmin && (
+            {userIsAdmin && (
               <section className="challenges-section">
                 <h2>{t('private_challenges') || 'Private Challenges'}</h2>
                 {privateChallenges.length === 0 ? (
@@ -143,6 +153,9 @@ export function Page() {
                         sessionCode={challenge.sessionCode}
                         startTime={formatTimeUntilStart(challenge.startTime)}
                         scheduledTime={formatDateTime(challenge.startTime)}
+                        allowDeletion={userIsAdmin}
+                        callbackAfterDeletion={fetchChallenges}
+                        callbackDeletionFailed={handleDeletionError}
                       />
                     ))}
                   </div>

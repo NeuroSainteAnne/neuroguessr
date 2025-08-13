@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getNextChallenge, getAllChallenges, getMultiplayerSessionStartDate, restorePersistentChallengeSessions } from "./modules/multi.ts";
+import { createMultiplayerSession, initSocketHandlers, getPublicLobbies, getNextChallenge, getAllChallenges, deleteChallenge, getMultiplayerSessionStartDate, restorePersistentChallengeSessions } from "./modules/multi.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
@@ -95,6 +95,7 @@ app.get('/api/multi/next-challenge', (req, res, next) => {
 app.get('/api/challenges', (req, res, next) => {
     Promise.resolve(getAllChallenges(req, res)).catch(next);
 })
+app.delete('/api/challenges/:sessionCode', authenticateToken, deleteChallenge)
 
 // advanced_game.ts
 app.post('/api/advanced-game/save', authenticateToken, saveAdvancedSettings);

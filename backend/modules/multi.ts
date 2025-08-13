@@ -1468,7 +1468,7 @@ export const getNextChallenge = async (req: Request, res: Response) => {
     }>;
 
     if (result.length === 0) {
-      return res.status(404).json({ message: 'No upcoming challenges found' });
+      return res.status(200).json({ challenge: null, message: 'No upcoming challenges found' });
     }
 
     const session = result[0];
@@ -1595,6 +1595,49 @@ export const getAllChallenges = async (req: Request, res: Response) => {
     
   } catch (error) {
     logger.error("getAllChallenges error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+export const deleteChallenge = async (req: Request, res: Response) => {
+  try {
+    const { sessionCode } = req.params;
+    const userId: number = (req as AuthenticatedRequest).user.id;
+    const isAdmin: boolean = (req as AuthenticatedRequest).user.admin;
+    
+    if (!isAdmin) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+    
+    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+      res.status(400).json({ error: 'Invalid session code format' });
+      return;
+    }
+    
+    // Delete the challenge session from database
+    const result = await sql`
+      DELETE FROM multi_sessions 
+      WHERE session_code = ${sessionCode}
+      AND is_challenge = TRUE
+    `;
+    
+    if (result.count === 0) {
+      res.status(404).json({ error: 'Challenge not found' });
+      return;
+    }
+    
+    // Also remove from active games if it's running
+    if (games[sessionCode]) {
+      delete games[sessionCode];
+      logger.info(`Removed active challenge session ${sessionCode} from memory`);
+    }
+    
+    logger.info(`Admin ${userId} deleted challenge session ${sessionCode}`);
+    res.status(200).json({ message: 'Challenge deleted successfully' });
+    
+  } catch (error) {
+    logger.error("deleteChallenge error", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
