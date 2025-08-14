@@ -288,6 +288,9 @@ export function GameProvider({
         // Set layout to single view
         niivue.setSliceType(niivue.opts.sliceType);
 
+        // Set to radiological convention
+        niivue.opts.isRadiologicalConvention = true;
+
         // Restore position
         niivue.drawScene();
         setTimeout(() => updateScrollThumbFromNiivue(), 0);
