@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
-import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap } from '../types/types';
+import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap, Challenge } from '../types/types';
 import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
@@ -55,14 +55,7 @@ type AppContextType = {
   askedRegion: number | null;
   
   // Next Challenge data
-  nextChallenge: {
-    sessionCode: string;
-    startTime: string;
-    atlas?: string;
-    totalDuration?: number;
-    creator: string;
-    createdAt: string;
-  } | null;
+  nextChallenge: Challenge | null;
   nextChallengeLoading: boolean;
   nextChallengeError: string | null;
   
@@ -153,14 +146,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [askedRegion, setAskedRegion] = useState<number | null>(null);
 
   // Next Challenge data
-  const [nextChallenge, setNextChallenge] = useState<{
-    sessionCode: string;
-    startTime: string;
-    atlas?: string;
-    totalDuration?: number;
-    creator: string;
-    createdAt: string;
-  } | null>(null);
+  const [nextChallenge, setNextChallenge] = useState<Challenge | null>(null);
   const [nextChallengeLoading, setNextChallengeLoading] = useState<boolean>(true);
   const [nextChallengeError, setNextChallengeError] = useState<string | null>(null);
   const [lastChallengeFetch, setLastChallengeFetch] = useState<number>(0);

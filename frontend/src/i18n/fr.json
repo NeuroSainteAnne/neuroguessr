@@ -242,6 +242,7 @@
   "loading-atlas": "Chargement de l'atlas",
   "multiplayer_scheduled_description": "Rejoignez cette partie multijoueur de NeuroGuessr prévue pour commencer le {{time}}",
   "save-as-challenge": "Créer un défi",
+  "enter_challenge_name": "Entrez le nom du défi (optionnel)",
   "saving-in-progress": "Enregistrement...",
   "challenge_saved_successfully": "Défi enregistré avec succès !",
   "challenge_ready_message": "Votre défi a été programmé et commencera automatiquement le {{startTime}}. Les joueurs peuvent le rejoindre en utilisant le code ci-dessus.",

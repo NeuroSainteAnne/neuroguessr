@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { SingleChallenge } from '../../../components/NextChallenge';
+import { SingleChallenge } from '../../../components/SingleChallenge';
 import './ChallengesPage.css';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
-
-interface Challenge {
-  sessionCode: string;
-  startTime: string;
-  isPublic: boolean;
-  createdBy?: string;
-}
+import { Challenge } from '../../../types/types';
 
 export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
+  const [privateChallenges, setPrivateChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +34,9 @@ export function Page() {
 
       const data = await response.json();
       setChallenges(data.challenges || []);
+      console.log(data.challenges)
+      setPublicChallenges(data.challenges.filter((challenge: Challenge) => challenge.isPublic));
+      setPrivateChallenges(data.challenges.filter((challenge: Challenge) => !challenge.isPublic));
     } catch (err) {
       console.error('Error fetching challenges:', err);
       setError(t('error_loading_challenges') || 'Failed to load challenges');
@@ -88,9 +87,6 @@ export function Page() {
     refreshNextChallenge();
   };
 
-  const publicChallenges = challenges.filter(challenge => challenge.isPublic);
-  const privateChallenges = challenges.filter(challenge => !challenge.isPublic);
-
   const title = t('all_challenges') || 'All Challenges';
 
   return (
@@ -134,6 +130,7 @@ export function Page() {
                       sessionCode={challenge.sessionCode}
                       startTime={formatTimeUntilStart(challenge.startTime)}
                       scheduledTime={formatDateTime(challenge.startTime)}
+                      name={challenge.name || undefined}
                       allowDeletion={userIsAdmin}
                       callbackAfterDeletion={handleAfterDeletion}
                       callbackDeletionFailed={handleDeletionError}
@@ -159,6 +156,7 @@ export function Page() {
                         sessionCode={challenge.sessionCode}
                         startTime={formatTimeUntilStart(challenge.startTime)}
                         scheduledTime={formatDateTime(challenge.startTime)}
+                        name={challenge.name || undefined}
                         allowDeletion={userIsAdmin}
                         callbackAfterDeletion={fetchChallenges}
                         callbackDeletionFailed={handleDeletionError}

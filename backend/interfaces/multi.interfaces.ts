@@ -44,6 +44,7 @@ export interface MultiplayerGame {
   isCurrentlyBlind: boolean;
   creatorId?: number;
   isChallenge?: boolean;
+  name?: string;
 } 
 
 // Persistent game state for challenge mode (saved to database)
@@ -58,6 +59,7 @@ export interface PersistentGameState {
   lastActivity: number;
   creatorId?: number;
   isChallenge?: boolean;
+  name?: string;
 } 
 
 export interface AtlasLUT {

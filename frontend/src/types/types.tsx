@@ -72,6 +72,17 @@ export type PastRegion = {
   atlas: string;
 }
 
+export type Challenge = {
+  sessionCode: string;
+  startTime: string;
+  atlas?: string;
+  totalDuration?: number;
+  name?: string;
+  creator: string;
+  createdAt: string;
+  isPublic?: boolean;
+}
+
 export type ImageMetadata = {
   // unique if of image
   id: string

@@ -161,7 +161,8 @@ export const database_init = async () => {
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     public BOOLEAN NOT NULL DEFAULT FALSE,
                     is_challenge BOOLEAN NOT NULL DEFAULT FALSE,
-                    persistent_config TEXT DEFAULT NULL
+                    persistent_config TEXT DEFAULT NULL,
+                    name TEXT DEFAULT NULL
                 );
             `;
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`;
@@ -232,6 +233,11 @@ export const database_init = async () => {
             await sql`
                 ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS persistent_config TEXT DEFAULT NULL;
+            `;
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS name TEXT DEFAULT NULL;
             `;
         });
 

@@ -244,6 +244,7 @@
   "loading-atlas": "Loading atlas...",
   "multiplayer_scheduled_description": "Join this multiplayer NeuroGuessr game scheduled to start on {{time}}",
   "save-as-challenge": "Save as Challenge",
+  "enter_challenge_name": "Enter challenge name (leave empty for no name)",
   "saving-in-progress": "Saving...",
   "challenge_saved_successfully": "Challenge saved successfully!",
   "challenge_ready_message": "Your challenge has been scheduled and will start automatically on {{startTime}}. Players can join using the code above.",

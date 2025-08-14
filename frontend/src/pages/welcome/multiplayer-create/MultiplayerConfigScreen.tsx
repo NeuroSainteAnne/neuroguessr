@@ -360,11 +360,14 @@ const MultiplayerConfigScreen = () => {
         setSaveAsChallengeLoading(true);
         setError(null);
 
+        const name = prompt(t("enter_challenge_name"));
+
         try {
             socket.emit('save-as-challenge', {
                 sessionCode,
                 sessionToken,
-                userToken: authToken
+                userToken: authToken,
+                name: name || undefined
             });
         } catch (err) {
             setSaveAsChallengeLoading(false);
