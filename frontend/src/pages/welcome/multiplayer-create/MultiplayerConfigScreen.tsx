@@ -200,7 +200,7 @@ const MultiplayerConfigScreen = () => {
         if (sessionCode && sessionToken && userUsername && authToken) {
             // Get or create socket connection
             const socket = createSocket((newSocket: Socket) => {
-                consoleLog('normal', `Socket connected, joinong lobby ${sessionCode}`);
+                consoleLog('normal', `Socket connected, joining lobby ${sessionCode}`);
                 
                 // Join the lobby
                 newSocket.emit('join-lobby', {

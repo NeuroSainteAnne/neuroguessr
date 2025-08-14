@@ -104,6 +104,15 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null);
   const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null);
   
+  let initToken : string | any = null;
+  if(typeof localStorage !== 'undefined'){
+      initToken = localStorage?.getItem('authToken');
+  }
+  if(initToken && !isTokenValid(initToken)) {
+    initToken = null;
+  }
+  const initPayload = initToken ? jwtDecode<CustomTokenPayload>(initToken) : null;
+
   // Authentication state
   const isClientSide = typeof document !== 'undefined';
   const [isGuest, setIsGuest] = useState<boolean>(
@@ -111,22 +120,14 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     localStorage && 
     localStorage.getItem('guestMode') === "true" || false
   );
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    if (typeof localStorage !== 'undefined') {
-      const token = localStorage?.getItem('authToken');
-      return token ? isTokenValid(token) : false;
-    }
-    return false;
-  });
-  const [authToken, setAuthToken] = useState<string>(
-    typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : ""
-  );
-  const [userUsername, setUserUsername] = useState<string>("");
-  const [userFirstName, setUserFirstName] = useState<string>("");
-  const [userLastName, setUserLastName] = useState<string>("");
-  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(false);
-  const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean | null>(null);
-  
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(initToken ? true : false);
+  const [authToken, setAuthToken] = useState<string>(initToken || "");
+  const [userUsername, setUserUsername] = useState<string>(initPayload?.username || "");
+  const [userFirstName, setUserFirstName] = useState<string>(initPayload?.firstname || "");
+  const [userLastName, setUserLastName] = useState<string>(initPayload?.lastname || "");
+  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(initPayload?.admin || false);
+  const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean | null>(initPayload?.publishToLeaderboard || null);
+
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   

@@ -167,6 +167,7 @@ export function initSocketHandlers() {
     }) => {
       try {
         const info = socketInfo[socket.id];
+        console.log("GOT 1");
         if (!info) {
           socket.emit('error', { message: "Not authenticated" });
           return;
@@ -1157,18 +1158,21 @@ async function handleValidateGuess(data: {
   voxelProp: any,
   anonToken?: string,
   userToken?: string
-}) {
+}) : Promise<void> {
   try {
     const { sessionCode, userName, voxelProp, anonToken, userToken } = data;
     
+        console.log("GOT 2");
     // Authentication check
     if (!verifyUserAccess(sessionCode, userName, userToken, anonToken)) {
-      return { error: "Authentication failed" };
+      emitToUser(sessionCode, userName, "error", {message: "Authentication failed"})
+      return;
     }
 
     const gameRef = games[sessionCode];
     if (!gameRef || !gameRef.commands) {
-      return { error: "Game not available" };
+      emitToUser(sessionCode, userName, "error", {message: "Game not available"})
+      return;
     }
     updateGameActivity(sessionCode);
 
@@ -1258,7 +1262,6 @@ async function handleValidateGuess(data: {
       nearestCenter,
       nearestBoundary
     })
-    return { success: true };
   } catch (error) {
       logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
