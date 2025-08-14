@@ -56,6 +56,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
        const sessionData = await response.json();
        if (sessionData.startTime) {
           const startTime = new Date(sessionData.startTime);
+          const name = sessionData.name;
           const now = new Date();
           
           if (startTime > now) {
@@ -70,8 +71,9 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
             });
             
             const formattedTime = dateFormatter.format(startTime);
-            dynamicDescription = t('multiplayer_scheduled_description', {
+            dynamicDescription = t(name?'multiplayer_scheduled_description_withname':'multiplayer_scheduled_description', {
               time: formattedTime,
+              name
             });
           }
        }

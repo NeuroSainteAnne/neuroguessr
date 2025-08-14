@@ -1652,15 +1652,20 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
 
     // Extract startTime from countdown command if it exists
     let startTime = null;
+    let name = null;
     if (gameRef.parameters.commands) {
       const countdownCommand = gameRef.parameters.commands.find(cmd => cmd.action === 'countdown' && cmd.startTime);
       if (countdownCommand && countdownCommand.startTime) {
         startTime = countdownCommand.startTime;
       }
     }
-    
+    if (gameRef.name) {
+      name = gameRef.name;
+    }
+
     return res.status(200).json({
-      startTime
+      startTime,
+      name
     });
     
   } catch (error) {
