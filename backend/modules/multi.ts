@@ -239,7 +239,8 @@ export function initSocketHandlers() {
     socket.on('save-as-challenge', async (data: {
       sessionCode: string,
       sessionToken: string,
-      userToken: string
+      userToken: string,
+      name?: string
     }) => {
       try {
         const info = socketInfo[socket.id];
@@ -568,7 +569,8 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
     lastActivity: Date.now(),
     isCurrentlyBlind: false,
     isChallenge,
-    ...(creatorId !== undefined ? { creatorId } : {})
+    ...(creatorId !== undefined ? { creatorId } : {}),
+    name: undefined,
   }
 }
 
@@ -1451,7 +1453,7 @@ export const getNextChallenge = async (req: Request, res: Response) => {
     const currentTime = new Date().toISOString();
     
     const result = await sql`
-      SELECT ms.session_code, ms.created_at, ms.persistent_config, u.username AS creator_name
+      SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.name, u.username AS creator_name
       FROM multi_sessions ms
       LEFT JOIN users u ON u.id = ms.creator_id
       WHERE ms.is_challenge = TRUE 
@@ -1464,7 +1466,8 @@ export const getNextChallenge = async (req: Request, res: Response) => {
       session_code: string, 
       created_at: Date, 
       persistent_config: string,
-      creator_name: string | null 
+      name: string | null,
+      creator_name: string | null
     }>;
 
     if (result.length === 0) {
@@ -1483,6 +1486,7 @@ export const getNextChallenge = async (req: Request, res: Response) => {
         startTime,
         atlas: persistentState.parameters?.atlas,
         totalDuration: persistentState.parameters?.totalDuration,
+        name: session.name || undefined,
         creator: session.creator_name || 'Unknown',
         createdAt: session.created_at?.toISOString?.() || undefined
       };
@@ -1534,7 +1538,7 @@ export const getAllChallenges = async (req: Request, res: Response) => {
     if (isAdmin) {
       // Admin can see all challenges (public and private)
       query = sql`
-        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, u.username AS creator_name
+        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, ms.name, u.username AS creator_name
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_challenge = TRUE 
@@ -1545,7 +1549,7 @@ export const getAllChallenges = async (req: Request, res: Response) => {
     } else {
       // Non-admin users can only see public challenges
       query = sql`
-        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, u.username AS creator_name
+        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, ms.name, u.username AS creator_name
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_challenge = TRUE 
@@ -1573,6 +1577,7 @@ export const getAllChallenges = async (req: Request, res: Response) => {
           isPublic: session.public,
           atlas: persistentState.parameters?.atlas,
           totalDuration: persistentState.parameters?.totalDuration,
+          name: session.name || undefined,
           creator: session.creator_name || 'Unknown',
           createdAt: session.created_at?.toISOString?.() || undefined
         };
@@ -1677,7 +1682,7 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
 };
 
 // Save persistent configuration for challenge mode
-export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName}: {sessionCode: string, sessionToken: string, userToken: string, userName: string}) => {
+export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName, name}: {sessionCode: string, sessionToken: string, userToken: string, userName: string, name?:string}) => {
   try {
     if (!sessionCode || typeof sessionCode !== 'string' || sessionCode.length !== 8) {
       emitToUser(sessionCode, userName, "error", { message: "Invalid session code" });
@@ -1741,13 +1746,14 @@ export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToke
     gameRef.totalGuessNumber = gameRef.commands?.filter(command => command.action === "guess").length || 0;
     gameRef.duration = Date.now();
     gameRef.lastActivity = Date.now();
+    gameRef.name = name || undefined;
 
     // Extract and save the persistent game state
     const persistentState = extractPersistentState(gameRef);
     await sql`
       UPDATE multi_sessions 
       SET persistent_config = ${JSON.stringify(persistentState)},
-      is_challenge = TRUE
+      is_challenge = TRUE, name = ${gameRef.name || sql`NULL`}
       WHERE session_code = ${sessionCode}
     `;
     
@@ -1821,7 +1827,8 @@ function extractPersistentState(gameRef: MultiplayerGame): PersistentGameState {
     duration: gameRef.duration,
     lastActivity: gameRef.lastActivity,
     creatorId: gameRef.creatorId,
-    isChallenge: gameRef.isChallenge
+    isChallenge: gameRef.isChallenge,
+    name: gameRef.name
   };
 }
 
