@@ -69,6 +69,7 @@ export type PastRegion = {
     vox: number[];
   };
   regionCenter?: number[];
+  regionBoundary?: number[];
   atlas: string;
 }
 

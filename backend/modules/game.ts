@@ -12,6 +12,7 @@ import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import crypto from 'crypto';
 import { logger } from "./logging.ts";
+import { getDistance } from "./utils_compute.ts";
 const config: Config = configJson;
 
 const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -53,24 +54,6 @@ for (const atlas in atlasFiles) {
     }
     validRegions[atlas] = theseValidRegions;
     regionCenters[atlas] = atlasJson.centers
-}
-
-function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): {distance: number, center: number[]|undefined} {
-    const [xMm, yMm, zMm] = coordinates.mm;
-    let minDistance = Infinity;
-    let nearestCenter: number[]|undefined = undefined;
-    for (const center of centers) {
-        const dist = Math.sqrt(
-            Math.pow(center[0] - xMm, 2) +
-            Math.pow(center[1] - yMm, 2) +
-            Math.pow(center[2] - zMm, 2)
-        );
-        if (dist < minDistance) {
-            minDistance = dist;
-            nearestCenter = center;
-        }
-    }
-    return { distance: minDistance, center: nearestCenter };
 }
 
 export const startGameSession = async (req: StartGameSessionRequest, res: Response): Promise<void> => {
@@ -386,7 +369,8 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         let newConsecutiveErrors = session.consecutive_errors;
         let streakTooFar = false;
         let minDistance = Infinity; 
-        let nearestCenter : number[]|undefined = undefined; 
+        let nearestCenter : number[] | undefined = undefined; 
+        let nearestBoundary : number[] | undefined = undefined; 
         if (session.mode == "streak") {
             if (isCorrect) {
                 scoreIncrement = 1;
@@ -400,9 +384,10 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             } else {
                 newStreak = 0; // Reset streak on incorrect guess
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const {distance, center} = getDistance(regionCenters[session.atlas][regionId], coordinates);
+                    const {distance, center, boundary} = getDistance(regionCenters[session.atlas][regionId], coordinates, session.atlas, regionId);
                     minDistance = distance
                     nearestCenter = center
+                    nearestBoundary = boundary
                 }
                 // Check if the error is within the allowed distance
                 if (minDistance <= MAX_STREAK_DISTANCE) {
@@ -418,9 +403,10 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 scoreIncrement = MAX_POINTS_PER_REGION;
             } else {
                 if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const {distance, center} = getDistance(regionCenters[session.atlas][regionId], coordinates);
+                    const {distance, center, boundary} = getDistance(regionCenters[session.atlas][regionId], coordinates, session.atlas, regionId);
                     minDistance = distance
                     nearestCenter = center
+                    nearestBoundary = boundary
                     // Calculate score based on distance
                     if (minDistance <= MAX_PENALTY_DISTANCE) {
                         scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
@@ -521,7 +507,8 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             finalScore,
             performHighlight,
             distance: isCorrect ? 0 : minDistance,
-            nearestCenter
+            nearestCenter,
+            nearestBoundary
         });
     } catch (error: unknown) {
         logger.error(error);

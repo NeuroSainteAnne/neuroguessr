@@ -54,22 +54,104 @@ async function startOnlineSession(isLoggedIn: boolean, token: string, mode: stri
     }
 }
 
-function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): {distance: number, center: number[]|undefined} {
+function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}, atlasProxy?: any, targetRegionId?: number): {distance: number, center: number[]|undefined, boundary: number[]|undefined} {
     const [xMm, yMm, zMm] = coordinates.mm;
     let minDistance = Infinity;
     let nearestCenter: number[]|undefined = undefined;
+    let nearestBoundary: number[]|undefined = undefined;
+    
     for (const center of centers) {
-        const dist = Math.sqrt(
-            Math.pow(center[0] - xMm, 2) +
-            Math.pow(center[1] - yMm, 2) +
-            Math.pow(center[2] - zMm, 2)
-        );
-        if (dist < minDistance) {
-            minDistance = dist;
+        let distance: number;
+        let boundaryPoint: number[] | null = null;
+
+        if (atlasProxy && targetRegionId !== undefined) {
+            // Find the boundary point where the region begins along the line
+            boundaryPoint = findRegionBoundary(coordinates, center, atlasProxy, targetRegionId);
+            if (boundaryPoint) {
+                // Calculate distance to the boundary point instead of center
+                distance = Math.sqrt(
+                    Math.pow(boundaryPoint[0] - xMm, 2) +
+                    Math.pow(boundaryPoint[1] - yMm, 2) +
+                    Math.pow(boundaryPoint[2] - zMm, 2)
+                );
+            } else {
+                // Fallback to center distance if boundary not found
+                distance = Math.sqrt(
+                    Math.pow(center[0] - xMm, 2) +
+                    Math.pow(center[1] - yMm, 2) +
+                    Math.pow(center[2] - zMm, 2)
+                );
+            }
+        } else {
+            // Original distance calculation to center
+            distance = Math.sqrt(
+                Math.pow(center[0] - xMm, 2) +
+                Math.pow(center[1] - yMm, 2) +
+                Math.pow(center[2] - zMm, 2)
+            );
+        }
+        
+        if (distance < minDistance) {
+            minDistance = distance;
             nearestCenter = center;
+            nearestBoundary = boundaryPoint || undefined;
         }
     }
-    return { distance: minDistance, center: nearestCenter };
+    return { distance: minDistance, center: nearestCenter, boundary: nearestBoundary };
+}
+
+function findRegionBoundary(guessCoords: {mm: number[], vox: number[]}, centerMm: number[], atlasProxy: any, targetRegionId: number): number[] | null {
+    const [guessX, guessY, guessZ] = guessCoords.mm;
+    const [centerX, centerY, centerZ] = centerMm;
+    
+    // Calculate direction vector from guess to center
+    const dirX = centerX - guessX;
+    const dirY = centerY - guessY;
+    const dirZ = centerZ - guessZ;
+    
+    // Calculate total distance
+    const totalDistance = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+    
+    if (totalDistance === 0) return null; // Same point
+    
+    // Normalize direction vector
+    const normX = dirX / totalDistance;
+    const normY = dirY / totalDistance;
+    const normZ = dirZ / totalDistance;
+    
+    // Sample along the line at 0.5mm intervals (adjust resolution as needed)
+    const stepSize = 0.5; // mm
+    const numSteps = Math.ceil(totalDistance / stepSize);
+    
+    for (let i = 0; i <= numSteps; i++) {
+        const t = (i * stepSize) / totalDistance;
+        if (t > 1) break; // Don't go beyond the center
+        
+        // Calculate current point along the line
+        const currentMm = [
+            guessX + t * dirX,
+            guessY + t * dirY,
+            guessZ + t * dirZ
+        ];
+        
+        // Convert to voxel coordinates
+        const currentVox = atlasProxy.mm2vox(currentMm);
+        
+        // Check if this voxel belongs to the target region
+        const voxelValue = atlasProxy.getValue(
+            Math.round(currentVox[0]),
+            Math.round(currentVox[1]),
+            Math.round(currentVox[2])
+        );
+        
+        if (voxelValue === targetRegionId) {
+            // Found the boundary - return this point
+            return currentMm;
+        }
+    }
+    
+    // If no boundary found, return null (region might not be reachable along this line)
+    return null;
 }
 
 export function Page() {
@@ -540,6 +622,7 @@ function SinglePlayer({
             let performHighlight = false;
             let distance = Infinity;
             let nearestCenter: number[]|undefined = undefined;
+            let nearestBoundary: number[]|undefined = undefined;
             if (isLoggedIn) {
                 try {
                     const token = localStorage.getItem('authToken');
@@ -567,7 +650,9 @@ function SinglePlayer({
                     consecutiveErrors = result.consecutiveErrors;
                     quitReason = result.quitReason;
                     nearestCenter = result.nearestCenter;
+                    nearestBoundary = result.nearestBoundary;
                     consoleLog("verbose", "Nearest center:", nearestCenter);
+                    consoleLog("verbose", "Nearest boundary:", nearestBoundary);
                 } catch (error) {
                     consoleLog("normal", "Error occurred during region validation:", error);
                     return false;
@@ -585,9 +670,10 @@ function SinglePlayer({
                     } else {
                         currentConsecutiveErrorsRef.current += 1
                         if (atlasRef.current && atlasRef.current.centers) {
-                            const {distance:minDistance, center} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                            const {distance:minDistance, center, boundary} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current, atlasRef.current, currentTarget.current)
                             distance = minDistance;
                             nearestCenter = center;
+                            nearestBoundary = boundary;
                         }
                         if (distance > MAX_STREAK_DISTANCE) {
                             isEndgame = true;
@@ -603,7 +689,7 @@ function SinglePlayer({
             let previousScore = currentScoreRef.current;
             scoreIncrement = getUpdatedScore({
                 isEndgame, guessSuccess, scoreIncrement,
-                performHighlight, distance, nearestCenter, streak, consecutiveErrors, quitReason
+                performHighlight, distance, nearestCenter, nearestBoundary, streak, consecutiveErrors, quitReason
             }).scoreIncrement
 
             if (isEndgame) {
@@ -616,10 +702,10 @@ function SinglePlayer({
     }, [validateGuessCallbackRef, isGameRunning, gameMode]);
 
     const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, 
-        distance = Infinity, nearestCenter = undefined, 
+        distance = Infinity, nearestCenter = undefined, nearestBoundary = undefined,
         streak = 0, consecutiveErrors = 0, quitReason = "" }:
         { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean,
-            distance: number, nearestCenter: number[]|undefined,
+            distance: number, nearestCenter: number[]|undefined, nearestBoundary: number[]|undefined,
             streak: number, consecutiveErrors: number, quitReason: string }): { scoreIncrement: number } => {
         if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
             console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
@@ -737,9 +823,10 @@ function SinglePlayer({
                 if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
                     if (atlasRef.current.centers) {
                         // Calculate Euclidean distance between centers
-                        const {distance:minDistance, center} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current)
+                        const {distance:minDistance, center, boundary} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current, atlasRef.current, currentTarget.current)
                         distance = minDistance;
                         nearestCenter = center;
+                        nearestBoundary = boundary;
                         // Calculate score based on distance
                         if (distance <= MAX_PENALTY_DISTANCE) {
                             scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
@@ -794,7 +881,8 @@ function SinglePlayer({
                     mm: [...selectedVoxelSave.mm],
                     vox: [...selectedVoxelSave.vox]
                 } : undefined,
-                regionCenter: nearestCenter ? nearestCenter : ((atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined)
+                regionCenter: nearestCenter ? nearestCenter : ((atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined),
+                regionBoundary: nearestBoundary ? nearestBoundary : undefined
             }]);
         }
 

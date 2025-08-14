@@ -311,7 +311,8 @@ const MultiPlayer = ({
               mm: [...selectedVoxelProp.current.mm],
               vox: [...selectedVoxelProp.current.vox]
             } : undefined,
-            regionCenter: data.nearestCenter ? data.nearestCenter : (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined
+            regionCenter: data.nearestCenter ? data.nearestCenter : (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined,
+            regionBoundary: data.nearestBoundary ? data.nearestBoundary : undefined
           }]);
         }
         if (data.isCorrect) {

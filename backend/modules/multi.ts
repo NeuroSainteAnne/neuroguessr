@@ -14,6 +14,7 @@ import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
 import Joi from "joi";
 import { logger } from "./logging.ts";
+import { getDistance } from "./utils_compute.ts";
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -67,24 +68,6 @@ export type ColorMap = {
   labels: string[];
   centers?: number[][][];
 };
-
-function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}): {distance: number, center: number[]|undefined} {
-    const [xMm, yMm, zMm] = coordinates.mm;
-    let minDistance = Infinity;
-    let nearestCenter: number[]|undefined = undefined;
-    for (const center of centers) {
-        const dist = Math.sqrt(
-            Math.pow(center[0] - xMm, 2) +
-            Math.pow(center[1] - yMm, 2) +
-            Math.pow(center[2] - zMm, 2)
-        );
-        if (dist < minDistance) {
-            minDistance = dist;
-            nearestCenter = center;
-        }
-    }
-    return { distance: minDistance, center: nearestCenter };
-}
 
 // Initialize Socket.io handling
 export function initSocketHandlers() {
@@ -1216,16 +1199,20 @@ async function handleValidateGuess(data: {
     const command = gameRef.commands[gameRef.currentCommandIndex];
     const now = Date.now();
     const elapsed = (now - (gameRef.stepStartTime || 0));
-
+    
     let minDistance: number = Infinity;
-    let nearestCenter: number[]|undefined = undefined;
+    let nearestCenter: number[] | undefined = undefined;
+    let nearestBoundary: number[] | undefined = undefined;
     if (regionCenters[gameRef.currentAtlas] && regionCenters[gameRef.currentAtlas][gameRef.currentRegionId]) {
-      const { distance, center } = getDistance(
+      const { distance, center, boundary } = getDistance(
         regionCenters[gameRef.currentAtlas][gameRef.currentRegionId],
-        voxelProp
+        voxelProp,
+        gameRef.currentAtlas,
+        gameRef.currentRegionId
       );
       minDistance = distance;
       nearestCenter = center;
+      nearestBoundary = boundary;
     }
 
     if (isCorrect) {
@@ -1268,7 +1255,8 @@ async function handleValidateGuess(data: {
       scoreIncrement,
       totalScore: gameRef.individualScores[userName],
       distance: minDistance,
-      nearestCenter
+      nearestCenter,
+      nearestBoundary
     })
     return { success: true };
   } catch (error) {
