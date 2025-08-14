@@ -111,7 +111,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     localStorage && 
     localStorage.getItem('guestMode') === "true" || false
   );
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      const token = localStorage?.getItem('authToken');
+      return token ? isTokenValid(token) : false;
+    }
+    return false;
+  });
   const [authToken, setAuthToken] = useState<string>(
     typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : ""
   );

@@ -496,7 +496,7 @@ const MultiPlayer = ({
 
 
   const renderWaitingContent = ({error}: {error: string|null}) => {
-    if ((isLoggedIn || config.activateAnonymousMode) && !isConnected && !askedSessionToken) {
+    if ((isLoggedIn && !askedSessionCode) || (!isLoggedIn && config.activateAnonymousMode && !isConnected && !askedSessionToken)) {
       return (<div className="waiting-content">
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
@@ -542,7 +542,16 @@ const MultiPlayer = ({
               }}>
                 {formatTime({ms:countdownRemaining*1000})}
               </div>
-              <p>{t("get_ready") || "Get ready!"}</p>
+              <div>
+                <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
+                <ul>
+                    {lobbyUsers.map((user, index) => (
+                      <li key={`waiting-user-${index}`}>
+                        {user}
+                      </li>
+                    ))}
+                </ul>
+              </div>
             </div>
           ) : (
             <>
@@ -551,11 +560,11 @@ const MultiPlayer = ({
                 <div>
                   <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
                   <ul style={{ listStyle: 'none', padding: 0 }}>
-                    {lobbyUsers.map((user, index) => (
-                      <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
-                        {user}
-                      </li>
-                    ))}
+                      {lobbyUsers.map((user, index) => (
+                        <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
+                          {user}
+                        </li>
+                      ))}
                   </ul>
                 </div>
                 {parameters && <div>
