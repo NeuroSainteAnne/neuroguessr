@@ -306,8 +306,6 @@ async function joinLobby(
       return { error: "Username already exists" };
     }
     
-    finalUserName = userName;
-    
     if (!anonToken) {
       // Generate new token for first-time anonymous users
       newAnonToken = crypto.randomBytes(32).toString("hex");
