@@ -12,9 +12,7 @@ import "./MultiplayerConfigScreen.css"
 import Joi from "joi";
 import atlasFiles, { atlasCategories } from '../../../utils/atlas_files';
 import { fetchJSON } from '../../../utils/helper_nii';
-import { add, set } from 'date-fns';
 import { consoleLog } from '../../../utils/logging';
-import { get } from 'http';
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -100,11 +98,10 @@ const hasCountdownWithStartTime = (advancedSettingsJSON: string): boolean => {
 
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, userIsAdmin, currentLanguage, copyToClipboard, refreshNextChallenge } = useApp();
-    const { selectedAtlas, setSelectedAtlas } = useGameSelector();
+    const { selectedAtlas } = useGameSelector();
     const { createSocket, getSocket } = useSocket();
     const [sessionCode, setSessionCode] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
-    const [sessionId, setSessionId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
@@ -139,7 +136,6 @@ const MultiplayerConfigScreen = () => {
     const [listRegions, setListRegions] = useState<string[]|null>(null)
     const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
     const [advancedPresets, setAdvancedPresets] = useState<{ id: number; name: string; settings: string }[]>([]);
-    const [forcePresetReload, setForcePresetReload] = useState<number>(0);
     const [expandedAtlases, setExpandedAtlases] = useState<{ [key: number]: boolean }>({});
     const [atlasRegionNames, setAtlasRegionNames] = useState<{ [atlasKey: string]: string[] }>({});
     const [totalDuration, setTotalDuration] = useState<number>(0);
@@ -186,7 +182,6 @@ const MultiplayerConfigScreen = () => {
             const result = await response.json();
             consoleLog("verbose", `Session created successfully: ${result.sessionCode}, ID: ${result.sessionId}`);
             setSessionCode(result.sessionCode);
-            setSessionId(result.sessionId);
             setSessionToken(result.sessionToken);
         } catch (err) {
             consoleLog("verbose", `Session creation network error: ${err}`);
@@ -270,7 +265,7 @@ const MultiplayerConfigScreen = () => {
                 }
             });
             
-            socket.on('challenge-prepared', (data: any) => {
+            socket.on('challenge-prepared', () => {
                 consoleLog("verbose", "Challenge has been prepared and will start at the scheduled time");
                 // Optionally show preparation message
             });
@@ -291,6 +286,7 @@ const MultiplayerConfigScreen = () => {
                 socket.off('challenge-prepared');
             };
         }
+        return undefined;
     }, [sessionCode, sessionToken, userUsername, authToken, createSocket]);
 
     const updateParameters = async (newParameters : Partial<MultiplayerParametersType>) => {
@@ -309,7 +305,7 @@ const MultiplayerConfigScreen = () => {
             const generatedCommands = [
                 countdownCommand,
                 ...(parametersRef.current.atlas ? [{ action: "load-atlas", atlas: parametersRef.current.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION }] : []),
-                ...(parametersRef.current.atlas ? Array.from({ length: parametersRef.current.regionsNumber }, (_, i) => ({
+                ...(parametersRef.current.atlas ? Array.from({ length: parametersRef.current.regionsNumber }, () => ({
                     action: "guess",
                     duration: durationPerRegion,
                 })) : []),
@@ -573,10 +569,9 @@ const MultiplayerConfigScreen = () => {
                 return;
             }
 
-            const saveResult = await saveResponse.json();
+            await saveResponse.json();
             setAdvancedSettingsError(null);
             setIsSavedAdvanced(true);
-            setForcePresetReload(prev => prev + 1); // Trigger a reload of presets
         } catch (err) {
             console.error("Error saving advanced settings:", err);
             setAdvancedSettingsError(t("unexpected_error") || "An unexpected error occurred.");
@@ -779,7 +774,7 @@ const MultiplayerConfigScreen = () => {
                 {atlasCategories.map((category) => (
                     <optgroup label={t(category)} key={`category_${category}`}>
                         {Object.entries(atlasFiles)
-                            .filter(([key, atlas]) => atlas.atlas_category === category)
+                            .filter(([_key, atlas]) => atlas.atlas_category === category)
                             .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
                             .map(([key, atlas]) => (
                             <option value={key} key={`atlas__${category}_${key}`}>
@@ -1048,12 +1043,6 @@ const MultiplayerConfigScreen = () => {
         updateJSONFromGroupedData(groupedByAtlas);
     };
 
-    const addRegion = (atlasIndex: number) => {
-        const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-        groupedByAtlas[atlasIndex].regions.push({ regionId: 0, duration: DEFAULT_DURATION_PER_REGION });
-        updateJSONFromGroupedData(groupedByAtlas);
-    };
-
     const removeRegion = (atlasIndex: number, regionIndex: number) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
         groupedByAtlas[atlasIndex].regions.splice(regionIndex, 1);
@@ -1136,7 +1125,7 @@ const MultiplayerConfigScreen = () => {
                 onChange={(e) => {
                     const selectedPreset = advancedPresets.find(preset => preset.id === Number(e.target.value));
                     if (selectedPreset) {
-                        const newSettings = updateCountdownDuration(DEFAULT_COUNTDOWN_TIME, selectedPreset.settings);
+                        updateCountdownDuration(DEFAULT_COUNTDOWN_TIME, selectedPreset.settings);
                         setIsValidatedJSON(true); // Reset validation state
                     }
                 }}
@@ -1384,7 +1373,7 @@ const MultiplayerConfigScreen = () => {
                                 data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
                                 data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
                                 data-umami-event-start-multi-lobbysize={lobbyUsers.length}
-                                onClick={(e)=>{
+                                onClick={()=>{
                                     if(!loading && (selectedAtlas || (showAdvancedSettings && isValidatedJSON)) && lobbyUsers.length > 1){
                                         // Additional validation for countdown start time before starting game
                                         if (showAdvancedSettings) {

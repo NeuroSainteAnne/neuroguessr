@@ -1,17 +1,12 @@
-import React, { use } from 'react';
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type TouchEvent } from 'react';
+import React from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTokenValid, refreshToken } from '../../utils/helper_login';
-import { AtlasImageProxy, defineNiiOptions, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
+import { defineNiiOptions } from '../../utils/helper_nii';
 import { useApp } from '../../context/AppContext';
-import { ColorMap, ImageMetadata, PastRegion } from '../../types/types';
-import atlasFiles from '../../utils/atlas_files';
-import { Help } from '../../components/Help';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { navigate } from 'vike/client/router';
 import { consoleLog } from '../../utils/logging';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
-import RegionHistory from '../../components/RegionHistory';
 import SearchBar from '../../components/SearchBar';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import CacheMonitor from '../../components/CacheMonitor';
@@ -114,11 +109,6 @@ function findRegionBoundary(guessCoords: {mm: number[], vox: number[]}, centerMm
     
     if (totalDistance === 0) return null; // Same point
     
-    // Normalize direction vector
-    const normX = dirX / totalDistance;
-    const normY = dirY / totalDistance;
-    const normZ = dirZ / totalDistance;
-    
     // Sample along the line at 0.5mm intervals (adjust resolution as needed)
     const stepSize = 0.5; // mm
     const numSteps = Math.ceil(totalDistance / stepSize);
@@ -166,8 +156,8 @@ export function Page() {
     const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
     const resetGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Reset game callback not initialized") });
     const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
-    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => { consoleLog("verbose", "Generic key press callback not initialized") });
-    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { consoleLog("verbose", "Canvas interaction callback not initialized") });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>(() => { consoleLog("verbose", "Generic key press callback not initialized") });
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>(() => { consoleLog("verbose", "Canvas interaction callback not initialized") });
     return (
         <GameProvider gameMode={gameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
@@ -193,14 +183,13 @@ function SinglePlayer({
     genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
     canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
 }) {
-    const { t, currentLanguage, askedAtlas, askedRegion,
-        preloadedBackgroundMNI, viewerOptions,
+    const { t, askedAtlas, viewerOptions,
         isLoggedIn, authToken, userPublishToLeaderboard,
-        isMobileView, setIsMobileView,
+        isMobileView,
         setHeaderText, setHeaderTextMode, setHeaderScore,
         setHeaderStreak, setHeaderErrors, setHeaderTime,
         setShowHelpOverlay, showNotification,
-        setAskedAtlas, setAskedRegion, pageContext } = useApp();
+        pageContext } = useApp();
     // Time Attack specific constants
     const TOTAL_REGIONS_TIME_ATTACK = 18;
     const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
@@ -227,8 +216,6 @@ function SinglePlayer({
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const currentStreakRef = useRef<number>(0);
     const currentConsecutiveErrorsRef = useRef<number>(0);
-    const [finalStreak, setFinalStreak] = useState<number>(0);
-    const [currentTime, setCurrentTime] = useState<string>("00:00");
     const [currentAttempts, setCurrentAttempts] = useState<number>(0);
     const currentAttemptsRef = useRef<number>(0);
     const usedRegions = useRef<number[]>([]);
@@ -246,7 +233,7 @@ function SinglePlayer({
     const {
         setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
         guessButtonRef, atlasRef, isGameRunning, highlightedRegion, highlightWrapper, setHighlightedRegion, unHighlight,
-        niivue, niivueRef, canvasRef, isLoading,
+        niivue, canvasRef, isLoading,
     } = useGame();
 
     useEffect(() => {
@@ -427,7 +414,7 @@ function SinglePlayer({
             if (isLoggedIn) {
                 manualClotureGameSession().then((finalScore) => {
                     endTimeAttack(finalScore);
-                }).catch((error) => {
+                }).catch(() => {
                     endTimeAttack(currentScoreRef.current);
                 });
             } else {
@@ -447,8 +434,6 @@ function SinglePlayer({
     function endTimeAttack(givenFinalScore: number) {
         if (timerInterval.current) clearInterval(timerInterval.current);
         const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = (elapsed % 60).toString().padStart(2, '0');
 
         setFinalScore(givenFinalScore);
         setFinalElapsed(elapsed);
@@ -482,7 +467,7 @@ function SinglePlayer({
                     const result = await response.json();
                     console.error("Failed to get next region:", result.message || "Unknown error");
                     consoleLog("verbose", `Server request for next region failed: ${response.status} - ${result.message}`);
-                    return false;
+                    return;
                 }
                 const result = await response.json();
                 if (result.regionId >= 0) {
@@ -490,11 +475,11 @@ function SinglePlayer({
                     consoleLog("verbose", `Server provided region ID: ${regionId}`);
                 } else {
                     console.warn("No valid region ID received from server.");
-                    return false;
+                    return;
                 }
             } catch (error) {
                 console.error("Error occured during next region fetching:", error);
-                return false;
+                return;
             }
         } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
             let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
@@ -521,7 +506,6 @@ function SinglePlayer({
                 endTimeAttack(finalScore);
                 return;
             } else if (gameMode === 'streak') {
-                setFinalStreak(currentStreakRef.current); // Store the final streak before resetting
                 setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
                 setShowStreakOverlay(true);
                 return;
@@ -655,7 +639,7 @@ function SinglePlayer({
                     consoleLog("verbose", "Nearest boundary:", nearestBoundary);
                 } catch (error) {
                     consoleLog("normal", "Error occurred during region validation:", error);
-                    return false;
+                    return;
                 }
             } else {
                 clickedRegion = selectedVoxelProp.current.idx;
@@ -725,9 +709,9 @@ function SinglePlayer({
             if (gameMode === 'streak') {
                 if (isLoggedIn) {
                     // Online mode - use server values
-                    setCurrentStreak((cs) => streak);
+                    setCurrentStreak(() => streak);
                     setCurrentScore((cs) => cs + scoreIncrement);
-                    setCurrentErrors((cs) => consecutiveErrors);
+                    setCurrentErrors(() => consecutiveErrors);
                 } else {
                     const newStreak = currentStreakRef.current + 1;
                     setCurrentStreak(newStreak);
@@ -892,7 +876,6 @@ function SinglePlayer({
     function performEndGame({ finalScore }: { finalScore: number }) {
         if (gameMode === 'streak') {
             // Apply blind mode multiplier consistently to the final streak score
-            setFinalStreak(currentStreakRef.current);
             setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
             setShowStreakOverlay(true);
             setHeaderTextMode("failure"); // Indicate streak ended visually

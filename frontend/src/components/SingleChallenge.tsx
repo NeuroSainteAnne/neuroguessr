@@ -1,4 +1,3 @@
-import React from 'react';
 import { useApp } from '../context/AppContext';
 import { consoleLog } from '../utils/logging';
 import './SingleChallenge.css';
@@ -72,7 +71,7 @@ export function SingleChallenge({
 
       {allowDeletion && userIsAdmin && <button
         className="delete-challenge-btn"
-        onClick={(e) => handleDeleteChallenge(sessionCode)}
+        onClick={() => handleDeleteChallenge(sessionCode)}
       >
         {t('delete_challenge')}
       </button>}

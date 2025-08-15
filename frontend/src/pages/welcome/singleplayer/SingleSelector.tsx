@@ -71,7 +71,7 @@ export function SingleSelector() {
                     
                 </div>
                 <button id="play-button"
-                    onClick={(e)=>{ 
+                    onClick={()=>{ 
                         if(selectedAtlas && selectedMode){ 
                             navigate(`/singleplayer/${selectedMode}/${selectedAtlas}${blindMode ? "?blind=true" : ""}`);
                         }

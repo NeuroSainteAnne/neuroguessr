@@ -11,12 +11,6 @@ interface LeaderboardEntry {
   blind_mode: boolean;
 }
 
-interface AtlasOption {
-  value: string;
-  label: string;
-  count?: number; // Optional count for sorting/display
-}
-
 interface LeaderboardProps {
   initialMode?: string;
   initialAtlas?: string;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useApp } from '../context/AppContext';
 import { formatTime } from '../utils/formatters';
 import { SingleChallenge } from './SingleChallenge';
@@ -8,8 +7,7 @@ export function NextChallenge() {
     t, 
     nextChallenge, 
     nextChallengeLoading, 
-    nextChallengeError,
-    refreshNextChallenge 
+    nextChallengeError 
   } = useApp();
 
   const formatTimeUntilStart = (startTime: string) => {

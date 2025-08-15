@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import "./PublishToLeaderboardBox.css"
 
 export const PublishToLeaderboardBox = () => {
   const { t, updateToken } = useApp();
-  const [published, setPublished] = useState<boolean | null>(null);
   const [publishErrorText, setPublishErrorText] = useState<string>("");
   const handleClick = async (val: boolean) => {
-    setPublished(val);
     try {
       // Send the data to the server
       const response = await fetch('/api/config-user', {

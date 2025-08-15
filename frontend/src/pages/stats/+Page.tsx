@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, Tab } from '../../components/Tabs';
 import { LineChart, BarChart, PieChart } from '../../components/Charts';
 import { StatCard, MetricRow, FavoriteItem, StatItem, GameIcon, TrophyIcon, CheckIcon, TargetIcon, getModeIcon, getAtlasIcon } from '../../components/StatsComponents';
@@ -6,7 +6,6 @@ import { formatTime, formatDate } from '../../utils/formatters';
 import './Stats.css';
 import { useApp } from '../../context/AppContext';
 import atlasFiles from '../../utils/atlas_files';
-import { copyFileSync } from 'fs';
 
 enum GameMode {
   STREAK = 'streak',
@@ -78,7 +77,6 @@ type DateRangeOption = {
 export function Page() {
   const { t, showNotification, authToken, isLoggedIn } = useApp();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);  const [historyModeFilter, setHistoryModeFilter] = useState<'' | GameMode>('');
   const [historyBlindModeFilter, setHistoryBlindModeFilter] = useState<boolean | null>(null);
   const [selectedDateRange, setSelectedDateRange] = useState<string>('30days');
@@ -317,8 +315,6 @@ export function Page() {
     return <div className="stats-please-connect" dangerouslySetInnerHTML={{__html:t('stats_unavailable_login')}}></div>;
   } else if (loading) {
     return <div className="stats-loading">{t('loading_stats')}</div>;
-  } else if (error) {
-    return <div className="stats-error">{error}</div>;
   } else if (!stats) {
     return <div className="stats-empty">{t('no_stats_available')}</div>;
   }

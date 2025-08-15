@@ -30,6 +30,7 @@ const Altcha = forwardRef<{ value: string | null }, AltchaProps>(({ onStateChang
       current.addEventListener('statechange', handleStateChange)
       return () => current.removeEventListener('statechange', handleStateChange)
     }
+    return undefined;
   }, [onStateChange])
 
   if (typeof window === 'undefined') {

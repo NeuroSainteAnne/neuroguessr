@@ -1,7 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { useGameSelector } from "../../context/GameSelectorContext";
 import atlasFiles, { atlasCategories } from "../../utils/atlas_files";
-import { loadNIfTIFromCache, prefetchAtlasJSON } from "../../utils/nifti_cache";
+import { prefetchAtlasJSON } from "../../utils/nifti_cache";
 import './GameSelector.css';
 
 export const GameSelectorAtlas = () => {
@@ -35,7 +35,7 @@ export const GameSelectorAtlas = () => {
       </div>
       <div className="atlas-choices-display">
         {Object.entries(atlasFiles)
-          .filter(([key, b]) => b.atlas_category == selectedCategory)
+          .filter(([_key, b]) => b.atlas_category == selectedCategory)
           .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
           .map(([key, atlas]) => (
             <button key={atlas.name}

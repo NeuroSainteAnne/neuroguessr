@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { SingleChallenge } from '../../../components/SingleChallenge';
 import './ChallengesPage.css';
@@ -9,7 +9,6 @@ import { Challenge } from '../../../types/types';
 
 export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
   const [privateChallenges, setPrivateChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -34,7 +33,6 @@ export function Page() {
 
       const data = await response.json();
       consoleLog("verbose", "Fetched challenges");
-      setChallenges(data.challenges || []);
       setPublicChallenges(data.challenges.filter((challenge: Challenge) => challenge.isPublic));
       setPrivateChallenges(data.challenges.filter((challenge: Challenge) => !challenge.isPublic));
     } catch (err) {

@@ -1,4 +1,3 @@
-import { LabelAnchorPoint } from "@niivue/niivue";
 import { useApp } from "../context/AppContext";
 import { PastRegion } from "../types/types";
 import "./RegionHistory.css"
@@ -19,7 +18,7 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
           removeOpenMeshes();
           highlightPastRegion(region.regionId, region.clickedPosition?false:true);
           if(region.clickedPosition){
-              jumpToPosition(region.clickedPosition, region.atlas, region.regionCenter, region.regionBoundary);
+              jumpToPosition(region.clickedPosition, region.regionCenter, region.regionBoundary);
           }
         }
         if (region.atlas != currentlyLoadedAtlas.current){
@@ -29,7 +28,7 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
           highlightNow();
         }
     }
-    const jumpToPosition = async (position: {mm: number[], vox: number[]}, atlas: string, askedCenter?: number[], askedBoundary?: number[]) => {
+    const jumpToPosition = async (position: {mm: number[], vox: number[]}, askedCenter?: number[], askedBoundary?: number[]) => {
       if (!niivue) return;
         niivue.scene.crosshairPos = niivue.mm2frac(new Float32Array(position.mm));
         niivue.createOnLocationChange();

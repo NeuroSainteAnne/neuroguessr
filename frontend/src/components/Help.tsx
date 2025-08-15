@@ -19,7 +19,6 @@ export function Help() {
     // Define page type variables based on URL pathname
     const isWelcome = parts[1] === 'welcome';
     const isSinglePlayerGame = parts[1] === 'singleplayer';
-    const isMultiplayerGame = parts[1] === 'multiplayer-game';
     
     // Extract game mode from URL when on a game page
     const gameMode = isSinglePlayerGame && parts.length > 2 ? parts[3] || 'practice' : '';

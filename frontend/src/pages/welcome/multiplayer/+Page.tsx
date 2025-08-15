@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { MultiBox } from './MultiBox';
 import { NextChallenge } from '../../../components/NextChallenge';
-import Leaderboard from '../../../components/Leaderboard';
 
 export function Page() {
    const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();

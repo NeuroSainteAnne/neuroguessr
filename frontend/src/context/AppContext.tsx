@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
 import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap, Challenge } from '../types/types';
@@ -114,7 +114,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const initPayload = initToken ? jwtDecode<CustomTokenPayload>(initToken) : null;
 
   // Authentication state
-  const isClientSide = typeof document !== 'undefined';
   const [isGuest, setIsGuest] = useState<boolean>(
     typeof localStorage !== 'undefined' && 
     localStorage && 

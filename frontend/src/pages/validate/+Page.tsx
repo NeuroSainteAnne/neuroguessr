@@ -5,7 +5,6 @@ import { navigate } from 'vike/client/router'
 
 function ValidateEmailScreen() {
     const { t, pageContext, updateToken } = useApp();
-    const [isValidatedEmail, setIsValidatedEmail] = useState<boolean>(false);
     const [validatedErrorText, setValidatedErrorText] = useState<string>("");
     const [validatedSuccessText, setValidatedSuccessText] = useState<string>("");
     const {userId, token} = pageContext.routeParams;

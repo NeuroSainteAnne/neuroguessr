@@ -1,4 +1,3 @@
-import { PageContext } from "vike/types";
 import { useApp } from "../context/AppContext";
 import "./Footer.css";
 
@@ -41,7 +40,7 @@ const Footer = () => {
             >
                <img src="/interface/logo-upc-64.png" alt="Université Paris Cité"  className='lower-logo-upc'/>
             </a>
-            <button className='lower-legal-link' data-umami-event="open legal" onClick={(e) => { setShowLegalOverlay(true); }} >
+            <button className='lower-legal-link' data-umami-event="open legal" onClick={() => { setShowLegalOverlay(true); }} >
                <span role="img" aria-label="legal" className='lower-legal-logo'>⚖️</span>
                <span className='lower-legal-text'>{t("legal_mentions_title")}</span>
             </button>

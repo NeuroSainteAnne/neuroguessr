@@ -1,31 +1,24 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
 import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
 import { useSocket } from '../../context/SocketContext';
-import { ColorMap, MultiplayerParametersType, PastRegion } from '../../types/types';
+import {  MultiplayerParametersType } from '../../types/types';
 import config from "../../../config.json"
-import atlasFiles from '../../utils/atlas_files';
-import { AtlasImageProxy, fetchJSON, initNiivue, loadAtlasNii } from '../../utils/helper_nii';
-import { refreshToken } from '../../utils/helper_login';
-import { Niivue, NVImage, DRAG_MODE } from '@niivue/niivue';
 import { Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
-import RegionHistory from '../../components/RegionHistory';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import { consoleLog } from '../../utils/logging';
 import { prefetchAtlasJSON, preloadAtlas } from '../../utils/nifti_cache';
 import { formatTime } from '../../utils/formatters';
 
 export function Page() {
-    const { pageContext } = useApp();
-    const { routeParams } = pageContext;
     const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
     const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
     const resetGameCallbackRef = useRef<(() => void)>(() => {});
     const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
-    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>((e) => {});
-    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>((e) => { });
+    const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>(() => {});
+    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>(() => { });
     return (
         <GameProvider gameMode="multiplayer" blindMode={false} 
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
@@ -38,8 +31,8 @@ export function Page() {
 }
 
 const MultiPlayer = ({
-    cleanGameCallbackRef, startGameCallbackRef, resetGameCallbackRef,
-    validateGuessCallbackRef, genericKeyPressCallbackRef, canvasInteractionRef
+    cleanGameCallbackRef, startGameCallbackRef,
+    validateGuessCallbackRef, 
 }: {
     cleanGameCallbackRef: React.RefObject<() => void>,
     startGameCallbackRef: React.RefObject<() => void>,
@@ -49,15 +42,15 @@ const MultiPlayer = ({
     canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
 }) => {
   const { 
-      t, authToken, isLoggedIn, userUsername, viewerOptions, 
-      preloadedBackgroundMNI, currentLanguage, pageContext,
+      t, authToken, isLoggedIn, userUsername, 
+      pageContext,
       userPublishToLeaderboard,
-      setHeaderText, setHeaderTextMode, setHeaderTime, updateToken,
-      showNotification, askedAtlas, setAskedAtlas
+      setHeaderText, setHeaderTextMode, setHeaderTime,
+      showNotification, setAskedAtlas
    } = useApp();
   const { 
     guessButtonRef, currentTarget, setPastRegions,
-    atlasRef, hasEnded, setHasEnded, hasEndedRef,
+    atlasRef, setHasEnded, hasEndedRef,
     selectedVoxelProp, isGameRunning, setIsGameRunning,
     isConnected, setIsConnected
    } = useGame()
@@ -70,7 +63,6 @@ const MultiPlayer = ({
   const socketRef = useRef<Socket | null>(null);
   const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
-  const [stepCountdown, setStepCountdown] = useState<number | null>(null);
   const countdownInterval = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const stepEndTime = useRef<number | null>(null);
   const [currentAttempts, setCurrentAttempts] = useState<number>(0);
@@ -81,7 +73,6 @@ const MultiPlayer = ({
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
-  const [countdownDuration, setCountdownDuration] = useState<number | null>(null);
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
 
   const handleConnect = () => {
@@ -187,7 +178,6 @@ const MultiPlayer = ({
       if (data.command.action === 'countdown') {
         // Handle countdown command
         const duration = data.command.duration || 5; // Default to 5 seconds
-        setCountdownDuration(duration);
         setCountdownRemaining(duration);
         
         // Start countdown timer
@@ -202,7 +192,6 @@ const MultiPlayer = ({
                 clearInterval(countdownInterval.current);
                 countdownInterval.current = null;
               }
-              setCountdownDuration(null);
               return null;
             }
             return prev - 1;
@@ -334,7 +323,6 @@ const MultiPlayer = ({
       clearInterval(countdownInterval.current);
       countdownInterval.current = null;
     }
-    setCountdownDuration(null);
     setCountdownRemaining(null);
     
     // Clean up event listeners but don't disconnect socket (managed by SocketProvider)
@@ -395,10 +383,8 @@ const MultiPlayer = ({
     if (countdownInterval.current) clearInterval(countdownInterval.current);
     const end = Date.now() + duration * 1000;
     stepEndTime.current = end;
-    setStepCountdown(duration);
     countdownInterval.current = setInterval(() => {
       const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-      setStepCountdown(remaining);
       const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
       const seconds = (remaining % 60).toString().padStart(2, '0');
       setHeaderTime(`${instruction} ${minutes}:${seconds}`);
@@ -455,10 +441,6 @@ const MultiPlayer = ({
     tryLaunchGame()
   }, [askedSessionToken, isConnected])
 
-  const checkToken = async () => {
-    updateToken(await refreshToken())
-  }
-
   useEffect(() => {
     return () => {
       cleanupSocket();
@@ -468,7 +450,6 @@ const MultiPlayer = ({
       setHeaderTime("")
     };
   }, [])
-
 
   useEffect(() => {
       const validateGuess = async () => {

@@ -1,4 +1,4 @@
-import { niftiCache, loadJSONFromCache } from './nifti_cache';
+import { niftiCache } from './nifti_cache';
 import atlasFiles from './atlas_files';
 import { consoleLog } from './logging';
 

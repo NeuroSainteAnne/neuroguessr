@@ -1,7 +1,5 @@
 import { format, formatDistance, formatRelative, fromUnixTime, Locale } from 'date-fns';
 import { enUS, fr } from 'date-fns/locale';
-import { consoleLog } from './logging';
-import { mkdirSync } from 'node:fs';
 
 // Get current language for date formatting
 const getLocale = (): Locale => {

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
-import { useGameSelector } from "../../../context/GameSelectorContext";
 import "./MultiBox.css";
 import { Socket, io } from 'socket.io-client';
 

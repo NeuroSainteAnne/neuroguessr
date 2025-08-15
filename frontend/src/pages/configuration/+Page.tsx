@@ -3,7 +3,6 @@ import "./UserConfig.css";
 import "../register/RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
 import ClinicalTrialBox, { ClinicalTrialProps } from '../../components/ClinicalTrialBox';
-import { set } from 'date-fns';
 
 function UserConfig() {
     const { t, updateToken, isLoggedIn } = useApp();

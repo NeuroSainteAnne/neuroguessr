@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { useCallback, useRef, useState } from 'react';
-import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { useRef, useState } from 'react';
 import config from '../../../config.json';
 import { useApp } from '../../context/AppContext';
 import './LoginScreen.css';
@@ -18,15 +17,10 @@ function LoginScreen() {
     const [loginSuccessText, setLoginSuccessText] = useState<string>("");
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
-    const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true);
-  const [captchaLoad, setCaptchaLoad] = useState(false);
-  const activateCaptcha = config.recaptcha.activate || false;
-  const [captchaToken, setCaptchaToken] = useState<string>("");
-  const [sentRequest, setSentRequest] = useState<boolean>(false);
+    const [captchaLoad, setCaptchaLoad] = useState(false);
+    const activateCaptcha = config.recaptcha.activate || false;
+    const [captchaToken, setCaptchaToken] = useState<string>("");
 
-    const onCaptchaVerify = useCallback((token: string) => {
-      setCaptchaToken(token);
-    }, []);
 
     useEffect(() => {
       setCaptchaLoad(true)
@@ -110,7 +104,6 @@ function LoginScreen() {
 
     const handleRecovery = async () => {
         const email = recoveryEmailInput.current?.value.trim();
-        const recoveryMessage = document.getElementById('recovery-message');
         
         consoleLog("verbose", `Password recovery attempt for email: ${email?.substring(0, 3)}***`);
 
@@ -127,7 +120,6 @@ function LoginScreen() {
           return;
         } 
 
-        setShowRecoveryButton(false)
         consoleLog("verbose", "Sending password recovery request");
         
         try {
@@ -241,7 +233,7 @@ function LoginScreen() {
                         {t("registration_link")}
                     </a></div>
                     <div>
-                      <a id="forgot_password_link" onClick={()=>{setShowRecoveryButton(true); setRecoveryModalDisplay(true)}}>
+                      <a id="forgot_password_link" onClick={()=>{setRecoveryModalDisplay(true)}}>
                         {t("forgot_password_link")}</a>
                     </div>
                 </div>
@@ -264,8 +256,8 @@ function LoginScreen() {
                             id="send-recovery-email"
                             data-umami-event="send recovery email" 
                             onClick={()=>handleRecovery()}
-                            disabled={activateCaptcha && (!captchaToken || sentRequest)}
-                            className={activateCaptcha && (!captchaToken || sentRequest) ? "button-disabled form-button" : "form-button"}
+                            disabled={activateCaptcha && !captchaToken}
+                            className={activateCaptcha && !captchaToken ? "button-disabled form-button" : "form-button"}
                           >
                             {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("send_recovery_email")}
                           </button>

@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { LoadingScreen } from '../../components/LoadingScreen';
 
 function LandingPage() {
-    const { t, activateGuestMode, isLoggedIn } = useApp();
+    const { t, isLoggedIn } = useApp();
     
     // Add redirect effect for logged-in users
     useEffect(() => {

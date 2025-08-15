@@ -8,7 +8,7 @@ interface CacheMonitorProps {
 }
 
 export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, onClose }) => {
-  const { getCacheStats, clearCache, t } = useApp();
+  const { getCacheStats, clearCache } = useApp();
   const [stats, setStats] = useState<ReturnType<typeof getCacheStats> | null>(null);
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
 
@@ -31,6 +31,7 @@ export const CacheMonitor: React.FC<CacheMonitorProps> = ({ isVisible = false, o
         clearInterval(refreshInterval);
         setRefreshInterval(null);
       }
+      return undefined;
     }
   }, [isVisible, getCacheStats]);
 

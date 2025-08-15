@@ -819,7 +819,7 @@ export class NIfTICacheManager {
       const store = transaction.objectStore(this.niftiStoreName);
       const request = store.get(url);
 
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => {
         request.onsuccess = () => {
           const result = request.result as IndexedDBCacheEntry | undefined;
           if (result) {
@@ -886,49 +886,6 @@ export class NIfTICacheManager {
   }
 
   /**
-   * Add NIfTI data to IndexedDB
-   */
-  private async addToIndexedDB(url: string, nvImage: NVImage): Promise<void> {
-    if (!this.db) return;
-
-    try {
-      // Convert NVImage to ArrayBuffer
-      const arrayBuffer = await this.convertNVImageToArrayBuffer(nvImage);
-      if (!arrayBuffer) return;
-
-      // Check storage quota and clean up if needed
-      await this.cleanupIndexedDBIfNeeded();
-
-      const entry: IndexedDBCacheEntry = {
-        url,
-        arrayBuffer,
-        timestamp: Date.now(),
-        accessCount: 1,
-        lastAccessed: Date.now(),
-        size: arrayBuffer.byteLength,
-      };
-
-      const transaction = this.db.transaction([this.niftiStoreName], 'readwrite');
-      const store = transaction.objectStore(this.niftiStoreName);
-      
-      return new Promise((resolve, reject) => {
-        const request = store.put(entry);
-        request.onsuccess = () => {
-          this.stats.indexedDBEntryCount++;
-          consoleLog('verbose', `💾 Stored ${url} in IndexedDB (${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB)`);
-          resolve();
-        };
-        request.onerror = () => {
-          console.warn(`Failed to store ${url} in IndexedDB:`, request.error);
-          reject(request.error);
-        };
-      });
-    } catch (error) {
-      console.warn(`Failed to add ${url} to IndexedDB:`, error);
-    }
-  }
-
-  /**
    * Update IndexedDB entry statistics
    */
   private async updateIndexedDBEntry(entry: IndexedDBCacheEntry): Promise<void> {
@@ -967,27 +924,6 @@ export class NIfTICacheManager {
       });
     } catch (error) {
       console.warn(`Failed to remove ${url} from IndexedDB:`, error);
-    }
-  }
-
-  /**
-   * Convert NVImage to ArrayBuffer for storage
-   */
-  private async convertNVImageToArrayBuffer(nvImage: NVImage): Promise<ArrayBuffer | null> {
-    try {
-      // Access the image data from NVImage
-      if (nvImage.img && nvImage.img.buffer) {
-        const buffer = nvImage.img.buffer;
-        if (buffer instanceof ArrayBuffer) {
-          return buffer.slice(); // Create a copy of the ArrayBuffer
-        }
-      }
-      
-      console.warn('NVImage has no valid image data to store');
-      return null;
-    } catch (error) {
-      console.warn('Failed to convert NVImage to ArrayBuffer:', error);
-      return null;
     }
   }
 

@@ -1,11 +1,9 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { GameSelectorProvider } from '../../../context/GameSelectorContext';
 import { SingleSelector } from './SingleSelector';
-import { Help } from '../../../components/Help';
-import Leaderboard from '../../../components/Leaderboard';
 import { NextChallenge } from '../../../components/NextChallenge';
 
 export function Page() {

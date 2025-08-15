@@ -2,13 +2,12 @@ import { useApp } from '../context/AppContext';
 import "./Header.css";
 import LoginDropdownMenu from './LoginDropdownMenu';
 import OptionsDropdown from './OptionsDropdown';
-import SearchBar from './SearchBar';
 
 function Header() {
-    const {currentLanguage, atlasRegions, t, handleChangeLanguage, 
-    isLoggedIn, userFirstName, userLastName, isMobileView,
+    const {currentLanguage, t, handleChangeLanguage, 
+    isLoggedIn, isMobileView,
     headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
-    viewerOptions, pageContext } = useApp();
+    pageContext } = useApp();
 
     // Get the current path from pageContext
     const currentPath = pageContext?.urlPathname || '';

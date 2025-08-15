@@ -6,7 +6,7 @@ export function Notification() {
 
   return (
     <div className="notification-container">
-      {notifications.map((notification, index) => (
+      {notifications.map((notification, _index) => (
         <div
           key={notification.id}
           className={`notification ${notification.isSuccess ? "success" : "error"} ${notification.removing ? "removing" : ""}`}

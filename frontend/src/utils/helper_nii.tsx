@@ -1,8 +1,6 @@
 import React from 'react';
-import { ColorMap, DisplayOptions, ImageMetadata } from '../types/types';
+import { ColorMap, DisplayOptions } from '../types/types';
 import type { Niivue, NVImage } from '@niivue/niivue';
-import { usePageContext } from 'vike-react/usePageContext';
-import { useApp } from '../context/AppContext';
 import { loadJSONFromCache } from './nifti_cache';
 import { consoleLog } from './logging';
 
@@ -424,5 +422,6 @@ export class AtlasImageProxy {
             }
             return { mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx }
         }
+        return undefined;
     }
 }
