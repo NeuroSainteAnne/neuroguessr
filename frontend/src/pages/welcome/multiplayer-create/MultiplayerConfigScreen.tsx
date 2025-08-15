@@ -737,7 +737,6 @@ const MultiplayerConfigScreen = () => {
                         regionId: 0
                     }
                     if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
-                    let updatedJSON = undefined;
                     if(atlasIndex === -1){
                         setAdvancedSettingsJSON(
                             JSON.stringify([...parsedJSON, newRegionLine], null, 2)
@@ -991,9 +990,9 @@ const MultiplayerConfigScreen = () => {
         }
     };
 
-    const updateCountdownDuration = (index: number, duration: number) => {
+    const updateCountdownDuration = (duration: number, sourceJSON?: string) => {
         try {
-            const parsedJSON = JSON.parse(advancedSettingsJSON);
+            const parsedJSON = sourceJSON ? JSON.parse(sourceJSON) : JSON.parse(advancedSettingsJSON);
             const countdownIndex = parsedJSON.findIndex((command: any) => command.action === "countdown");
             
             if (countdownIndex !== -1 && countdownIndex !== 0) {
@@ -1137,7 +1136,7 @@ const MultiplayerConfigScreen = () => {
                 onChange={(e) => {
                     const selectedPreset = advancedPresets.find(preset => preset.id === Number(e.target.value));
                     if (selectedPreset) {
-                        setAdvancedSettingsJSON(selectedPreset.settings);
+                        const newSettings = updateCountdownDuration(DEFAULT_COUNTDOWN_TIME, selectedPreset.settings);
                         setIsValidatedJSON(true); // Reset validation state
                     }
                 }}
@@ -1272,7 +1271,7 @@ const MultiplayerConfigScreen = () => {
                                                 const newMode = e.target.value as "duration" | "startTime";
                                                 setCountdownMode(newMode);
                                                 if (newMode === "duration") {
-                                                    updateCountdownDuration(0, getCountdownDuration() || DEFAULT_COUNTDOWN_TIME);
+                                                    updateCountdownDuration(getCountdownDuration() || DEFAULT_COUNTDOWN_TIME);
                                                 } else {
                                                     const defaultTime = new Date();
                                                     defaultTime.setMinutes(defaultTime.getMinutes() + 5);
@@ -1293,7 +1292,7 @@ const MultiplayerConfigScreen = () => {
                                             min={5}
                                             max={30}
                                             value={getCountdownDuration()}
-                                            onChange={(e) => updateCountdownDuration(0, Number(e.target.value))}
+                                            onChange={(e) => updateCountdownDuration(Number(e.target.value))}
                                             onClick={(e) => { e.stopPropagation(); }}
                                             placeholder={t("seconds") || "seconds"}
                                         />
