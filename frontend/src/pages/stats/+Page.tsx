@@ -340,7 +340,7 @@ export function Page() {
   ];
 
   const getAtlasName = (atlas: string): string => {
-    return atlasFiles[atlas].name || t('unknown_atlas');
+    return atlasFiles[atlas]?.name || t('unknown_atlas');
   }
   return (
     <div className="stats-page">

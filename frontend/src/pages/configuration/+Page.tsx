@@ -115,19 +115,19 @@ function UserConfig() {
 
         // Prepare the data to send
         let formData : Record<string,string|boolean|null|number> = {
-            firstname: firstname.trim(),
-            lastname: lastname.trim(),
-            clinical_trial_gender: clinicalTrialData.clinicalTrialGender,
-            clinical_trial_age: clinicalTrialData.clinicalTrialAge,
-            clinical_trial_country: clinicalTrialData.clinicalTrialCountry,
-            clinical_trial_occupation: clinicalTrialData.clinicalTrialOccupation,
-            clinical_trial_consent: clinicalTrialData.clinicalTrialConsent
+            'firstname': firstname.trim(),
+            'lastname': lastname.trim(),
+            'clinical_trial_gender': clinicalTrialData.clinicalTrialGender,
+            'clinical_trial_age': clinicalTrialData.clinicalTrialAge,
+            'clinical_trial_country': clinicalTrialData.clinicalTrialCountry,
+            'clinical_trial_occupation': clinicalTrialData.clinicalTrialOccupation,
+            'clinical_trial_consent': clinicalTrialData.clinicalTrialConsent
         };
         if (publishToLeaderboard !== null) {
-            formData.publishToLeaderboard = publishToLeaderboard;
+            formData['publishToLeaderboard'] = publishToLeaderboard;
         }
         if (password) {
-            formData.password = password.trim();
+            formData['password'] = password.trim();
         }
 
         try {

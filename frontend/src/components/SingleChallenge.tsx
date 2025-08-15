@@ -5,7 +5,7 @@ import './SingleChallenge.css';
 export function SingleChallenge({
   isNext, sessionCode, startTime, name, scheduledTime, allowDeletion, callbackAfterDeletion, callbackDeletionFailed,
 }: {
-  isNext?: boolean; sessionCode: string; startTime: string; name?: string; scheduledTime: string;
+  isNext?: boolean; sessionCode: string; startTime: string; name?: string | undefined; scheduledTime: string;
   allowDeletion?: boolean; callbackAfterDeletion?: () => void; callbackDeletionFailed?: (err: string) => void;
 }) {
   const {

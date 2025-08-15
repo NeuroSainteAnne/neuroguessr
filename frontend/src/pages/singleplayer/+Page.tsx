@@ -54,15 +54,21 @@ function getDistance(centers: number[][], coordinates: {mm: number[], vox: numbe
     let minDistance = Infinity;
     let nearestCenter: number[]|undefined = undefined;
     let nearestBoundary: number[]|undefined = undefined;
-    
+    if(xMm === undefined || yMm === undefined || zMm === undefined){
+        return { distance: Infinity, center: undefined, boundary: undefined };
+    }
+
     for (const center of centers) {
         let distance: number;
         let boundaryPoint: number[] | null = null;
+        if(center[0] === undefined || center[1] === undefined || center[2] === undefined){
+            continue;
+        }
 
         if (atlasProxy && targetRegionId !== undefined) {
             // Find the boundary point where the region begins along the line
             boundaryPoint = findRegionBoundary(coordinates, center, atlasProxy, targetRegionId);
-            if (boundaryPoint) {
+            if (boundaryPoint && boundaryPoint[0] && boundaryPoint[1] && boundaryPoint[2]) {
                 // Calculate distance to the boundary point instead of center
                 distance = Math.sqrt(
                     Math.pow(boundaryPoint[0] - xMm, 2) +
@@ -98,7 +104,12 @@ function getDistance(centers: number[][], coordinates: {mm: number[], vox: numbe
 function findRegionBoundary(guessCoords: {mm: number[], vox: number[]}, centerMm: number[], atlasProxy: any, targetRegionId: number): number[] | null {
     const [guessX, guessY, guessZ] = guessCoords.mm;
     const [centerX, centerY, centerZ] = centerMm;
-    
+    if(centerX === undefined || centerY === undefined || centerZ === undefined ||
+        guessX === undefined || guessY === undefined || guessZ === undefined
+    ) {
+        return null;
+    }
+
     // Calculate direction vector from guess to center
     const dirX = centerX - guessX;
     const dirY = centerY - guessY;
@@ -147,10 +158,13 @@ function findRegionBoundary(guessCoords: {mm: number[], vox: number[]}, centerMm
 export function Page() {
     const { pageContext } = useApp();
     const { routeParams } = pageContext;
-    const gameMode = routeParams?.mode;
-    const blindMode = routeParams?.blind === "true" || false;
-    const routedAtlas = routeParams?.atlas
-    const routedRegion = parseInt(routeParams?.region) || undefined
+    const gameMode = routeParams?.['mode'];
+    if(gameMode === undefined){
+        return null;
+    }
+    const blindMode = routeParams?.['blind'] === "true" || false;
+    const routedAtlas = routeParams?.['atlas']
+    const routedRegion = routeParams?.['region'] ? parseInt(routeParams?.['region']) : undefined;
     const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
     const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
     const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
@@ -205,8 +219,8 @@ function SinglePlayer({
     const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
     const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
     const { routeParams } = pageContext;
-    const gameMode = routeParams?.mode;
-    const blindMode = routeParams?.blind === "true" || false;
+    const gameMode = routeParams?.['mode'];
+    const blindMode = routeParams?.['blind'] === "true" || false;
     const [currentScore, setCurrentScore] = useState<number>(0);
     const currentScoreRef = useRef<number>(0);
     const [finalScore, setFinalScore] = useState<number>(0);
@@ -274,7 +288,7 @@ function SinglePlayer({
 
     useEffect(() => {
         const resetGameState = () => {
-            currentTarget.current = null;
+            currentTarget.current = undefined;
             selectedVoxelProp.current = null;
             currentConsecutiveErrorsRef.current = 0;
             setCurrentAttempts(0); // Reset attempts for practice mode
@@ -451,7 +465,7 @@ function SinglePlayer({
 
     const selectNewTarget = async () => {
         consoleLog("verbose", `Selecting new target for ${gameMode} mode`);
-        let regionId = -1;
+        let regionId : number | undefined = undefined;
         if (isLoggedIn) { // network region fetching
             consoleLog("verbose", "Fetching next region from server");
             try {
@@ -489,7 +503,7 @@ function SinglePlayer({
             }
             if (availableRegions.length !== 0) {
                 regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-                if ((gameMode === 'time-attack' || gameMode === 'streak')) {
+                if (regionId !== undefined && (gameMode === 'time-attack' || gameMode === 'streak')) {
                     usedRegions.current.push(regionId);
                 }
             }
@@ -516,7 +530,7 @@ function SinglePlayer({
             }
         }
         currentTarget.current = regionId
-        if (atlasRef.current) {
+        if (atlasRef.current && currentTarget.current) {
             showNotification('new_target', true, { region: atlasRef.current.labels[currentTarget.current] }, 1500);
         }
 
@@ -559,7 +573,10 @@ function SinglePlayer({
                     setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
-                    if (atlasRef.current) showNotification(atlasRef.current.labels[clickedRegionLocation.idx], true, {}, 1500);
+                    const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx]
+                    if (currentLabel){
+                        showNotification(currentLabel, true, {}, 1500);
+                    } 
                     if (tooltip) {
                         setTooltip({ ...tooltip, visible: false });
                     }
@@ -654,10 +671,13 @@ function SinglePlayer({
                     } else {
                         currentConsecutiveErrorsRef.current += 1
                         if (atlasRef.current && atlasRef.current.centers) {
-                            const {distance:minDistance, center, boundary} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current, atlasRef.current, currentTarget.current)
-                            distance = minDistance;
-                            nearestCenter = center;
-                            nearestBoundary = boundary;
+                            const currentCenters = atlasRef.current.centers[currentTarget.current];
+                            if(currentCenters){
+                                const {distance:minDistance, center, boundary} = getDistance(currentCenters, selectedVoxelProp.current, atlasRef.current, currentTarget.current)
+                                distance = minDistance;
+                                nearestCenter = center;
+                                nearestBoundary = boundary;
+                            }
                         }
                         if (distance > MAX_STREAK_DISTANCE) {
                             isEndgame = true;
@@ -807,10 +827,13 @@ function SinglePlayer({
                 if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
                     if (atlasRef.current.centers) {
                         // Calculate Euclidean distance between centers
-                        const {distance:minDistance, center, boundary} = getDistance(atlasRef.current.centers[currentTarget.current], selectedVoxelProp.current, atlasRef.current, currentTarget.current)
-                        distance = minDistance;
-                        nearestCenter = center;
-                        nearestBoundary = boundary;
+                        const currentCenters = atlasRef.current.centers[currentTarget.current]
+                        if(currentCenters){
+                            const {distance:minDistance, center, boundary} = getDistance(currentCenters, selectedVoxelProp.current, atlasRef.current, currentTarget.current)
+                            distance = minDistance;
+                            nearestCenter = center;
+                            nearestBoundary = boundary;
+                        }
                         // Calculate score based on distance
                         if (distance <= MAX_PENALTY_DISTANCE) {
                             scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
@@ -865,7 +888,7 @@ function SinglePlayer({
                     mm: [...selectedVoxelSave.mm],
                     vox: [...selectedVoxelSave.vox]
                 } : undefined,
-                regionCenter: nearestCenter ? nearestCenter : ((atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined),
+                regionCenter: nearestCenter ?? (atlasRef.current?.centers && currentTarget.current != null ? atlasRef.current.centers[currentTarget.current]?.[0] : undefined),
                 regionBoundary: nearestBoundary ? nearestBoundary : undefined
             }]);
         }
@@ -912,14 +935,16 @@ function SinglePlayer({
             setHeaderText(highlightedRegion
                 ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
                 : t('click_to_identify'));
-        } else if (currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
+        } else if (currentTarget.current !== undefined && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
             // Use 'find' translation key directly
             const prefix = t('find') || 'Find: ';
             // For time attack, display the current question number
             if (gameMode === 'time-attack') {
                 setHeaderText(`${currentAttempts}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
             } else {
-                setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
+                if(currentTarget.current !== undefined){
+                    setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
+                }
             }
         } else {
             setHeaderText(''); // No region : cleanup

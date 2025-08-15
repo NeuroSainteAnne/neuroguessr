@@ -37,12 +37,12 @@ const validateExternalGameCommands = (commands: ExternalGameCommands[]): Joi.Val
   if (!commands.length) throw "No command given"
   
   // Check if first command is countdown
-  if (commands[0].action !== "countdown") {
+  if (commands[0]?.action !== "countdown") {
     throw "First command must be a countdown action"
   }
   
   // Check if countdown startTime is in the future
-  if (commands[0].startTime) {
+  if (commands[0]?.startTime) {
     const startTime = new Date(commands[0].startTime);
     const now = new Date();
     if (startTime <= now) {
@@ -463,9 +463,11 @@ const MultiplayerConfigScreen = () => {
     useEffect(()=>{
         if(!advancedLastAtlas) return
         const selectedAtlasFiles = atlasFiles[advancedLastAtlas];
-        fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json).then((jsonData: ColorMap) => {
-            setListRegions(jsonData.labels)
-        });
+        if(selectedAtlasFiles) {
+            fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json).then((jsonData: ColorMap) => {
+                setListRegions(jsonData.labels)
+            });
+        }
     }, [advancedLastAtlas])
 
     useEffect(()=>{
@@ -738,7 +740,9 @@ const MultiplayerConfigScreen = () => {
                         );
                     } else {
                         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-                        groupedByAtlas[atlasIndex].regions.push({regionId: newRegionLine.regionId, duration: newRegionLine.duration});
+                        if(groupedByAtlas[atlasIndex]) {
+                            groupedByAtlas[atlasIndex].regions.push({regionId: newRegionLine.regionId, duration: newRegionLine.duration});
+                        }
                         updateJSONFromGroupedData(groupedByAtlas);
                     }
                 } catch (err) {
@@ -961,7 +965,9 @@ const MultiplayerConfigScreen = () => {
 
     const updateAtlasDuration = (atlasIndex: number, duration: number) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-        groupedByAtlas[atlasIndex].duration = duration;
+        if(groupedByAtlas[atlasIndex]) {
+            groupedByAtlas[atlasIndex].duration = duration;
+        }
         updateJSONFromGroupedData(groupedByAtlas);
     };
 
@@ -1033,19 +1039,25 @@ const MultiplayerConfigScreen = () => {
 
     const updateAtlasBlindMode = (atlasIndex: number, blindMode: boolean) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-        groupedByAtlas[atlasIndex].blindMode = blindMode;
+        if(groupedByAtlas[atlasIndex]) {
+            groupedByAtlas[atlasIndex].blindMode = blindMode;
+        }
         updateJSONFromGroupedData(groupedByAtlas);
     };
 
     const updateRegionDuration = (atlasIndex: number, regionIndex: number, duration: number) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-        groupedByAtlas[atlasIndex].regions[regionIndex].duration = duration;
+        if(groupedByAtlas[atlasIndex] && groupedByAtlas[atlasIndex].regions[regionIndex]) {
+            groupedByAtlas[atlasIndex].regions[regionIndex].duration = duration;
+        }
         updateJSONFromGroupedData(groupedByAtlas);
     };
 
     const removeRegion = (atlasIndex: number, regionIndex: number) => {
         const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-        groupedByAtlas[atlasIndex].regions.splice(regionIndex, 1);
+        if(groupedByAtlas[atlasIndex]) {
+            groupedByAtlas[atlasIndex].regions.splice(regionIndex, 1);
+        }
         updateJSONFromGroupedData(groupedByAtlas);
     };
 

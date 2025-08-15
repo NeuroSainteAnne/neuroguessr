@@ -148,10 +148,10 @@ export function GameProvider({
     const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
     const guessButtonRef = useRef<HTMLButtonElement>(null);
     const selectedVoxelProp = useRef<{ mm: number[], vox: number[], idx: number | undefined } | null>(null);
-    const currentTarget = useRef<number | null>(null);
+    const currentTarget = useRef<number | undefined>(undefined);
 
     // dragging states
-    const lastTouchEvent = useRef<React.Touch | null>(null);
+    const lastTouchEvent = useRef<React.Touch | undefined>(undefined);
     const [isDragging, setIsDragging] = useState<boolean>(false);
     const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
     const [lastSlicePosition, setLastSlicePosition] = useState<number>(0);
@@ -204,11 +204,13 @@ export function GameProvider({
             if (niivueInstance) {
                 // Remove all volumes
                 while (niivueInstance.volumes.length > 0) {
-                    niivueInstance.removeVolume(niivueInstance.volumes[0]);
+                    if(niivueInstance.volumes[0]) niivueInstance.removeVolume(niivueInstance.volumes[0]);
+                    else break;
                 }
                 // Remove all meshes
                 while (niivueInstance.meshes.length > 0) {
-                    niivueInstance.removeMesh(niivueInstance.meshes[0]);
+                    if(niivueInstance.meshes[0]) niivueInstance.removeMesh(niivueInstance.meshes[0]);
+                    else break
                 }
                 // Destroy WebGL context if needed
                 try {
@@ -231,7 +233,7 @@ export function GameProvider({
             }
             atlasRef.current = null;
             selectedVoxelProp.current = null;
-            currentTarget.current = null;
+            currentTarget.current = undefined;
             setNiivue(null);
             niivueRef.current = null
             setIsLoading(true);
@@ -351,7 +353,9 @@ export function GameProvider({
                 consoleLog("verbose", "Loading region...", askedRegion);
                 setHighlightedRegion(askedRegion)
                 highlightWrapper(askedRegion, true, gameMode === 'navigation');
-                if (atlasRef.current) showNotification(atlasRef.current.labels[askedRegion], true, {}, 1500);
+                if (atlasRef.current && atlasRef.current.labels[askedRegion]){
+                    showNotification(atlasRef.current.labels[askedRegion], true, {}, 1500);
+                }
             }
         };
 
@@ -371,6 +375,7 @@ export function GameProvider({
         try {
             if (!askedAtlas) return
             const selectedAtlasFiles = atlasFiles[askedAtlas?.atlas];
+            if (!selectedAtlasFiles) return
             const jsonData: ColorMap = await fetchJSON("/atlas/descr" + "/" + currentLanguage + "/" + selectedAtlasFiles.json);
             if (niivue && niivue.volumes.length > 1 && jsonData && !atlasRef.current) {
                 let cmap_en: ColorMap | null = null;
@@ -502,7 +507,8 @@ export function GameProvider({
                 }
 
                 setCurrentAxis(axisToModify); // Add this state variable
-                setLastSlicePosition(niivue.scene.crosshairPos[axisToModify]);
+                const slicePos = niivue.scene.crosshairPos[axisToModify];
+                if (slicePos !== undefined) setLastSlicePosition(slicePos);
                 setIsDragging(true);
                 setDragStart({ x: e.clientX, y: e.clientY });
             }
@@ -553,7 +559,8 @@ export function GameProvider({
     };
 
     const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isGameRunning || !canvasRef.current || !niivue || gameMode !== 'navigation' || highlightedRegion !== null) {
+        if (!isGameRunning || !canvasRef.current || !niivue || 
+                gameMode !== 'navigation' || highlightedRegion !== null || !niivue.volumes[1]) {
             if (tooltip && setTooltip) setTooltip({ ...tooltip, visible: false });
             return;
         }
@@ -592,12 +599,12 @@ export function GameProvider({
 
         // Get initial position
         const clientY = 'touches' in e
-            ? e.touches[0].clientY
+            ? (e.touches[0] ? e.touches[0].clientY : undefined)
             : e.clientY;
-        lastScrollPosition.current = clientY;
-
-        // Update the scroll thumb position
-        updateScrollThumb(clientY);
+        if(clientY !== undefined){
+            lastScrollPosition.current = clientY;
+            updateScrollThumb(clientY);
+        }
     };
 
     // Handle scroll move
@@ -605,11 +612,11 @@ export function GameProvider({
         if (!isScrolling.current || !niivue || !scrollBarRef.current) return;
 
         const clientY = 'touches' in e
-            ? e.touches[0].clientY
+            ? (e.touches[0] ? e.touches[0].clientY : undefined)
             : e.clientY;
-
-        updateScrollThumb(clientY);
-
+        if(clientY !== undefined){
+            updateScrollThumb(clientY);
+        }
         // Prevent default to avoid page scrolling
         e.preventDefault();
     };
@@ -704,7 +711,7 @@ export function GameProvider({
             handleCanvasInteraction(syntheticEvent);
             // Clear the saved touch event
         }
-        lastTouchEvent.current = null;
+        lastTouchEvent.current = undefined;
     };
     const handleCanvasInteraction = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
         if (!niivue || !niivue.gl || !niivue.volumes[1] || !canvasRef.current || !atlasRef.current) return;
@@ -802,9 +809,9 @@ type GameContextType = {
         vox: number[];
         idx: number | undefined;
     } | null>;
-    currentTarget: RefObject<number | null>;
+    currentTarget: RefObject<number | undefined>;
 
-    lastTouchEvent: React.RefObject<React.Touch | null>;
+    lastTouchEvent: React.RefObject<React.Touch | undefined>;
     isDragging: boolean;
     setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
     dragStart: { x: number; y: number } | null;

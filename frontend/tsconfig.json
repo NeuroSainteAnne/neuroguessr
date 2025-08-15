@@ -7,6 +7,12 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true,
+    "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
+
     "module": "ES2020",
     "target": "ES2020",
     // Doesn't apply to server/, see ts-node config down below and server/tsconfig.json

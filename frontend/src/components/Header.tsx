@@ -14,7 +14,7 @@ function Header() {
     const parts = currentPath.split('/');
     const isSingleplayer = parts[1] === 'singleplayer'
     const isMultiplayer = parts[1] === 'multiplayer';
-    const isAuthPage = ['login', 'register', 'validate', 'resetpwd'].includes(parts[1]);
+    const isAuthPage = parts[1] ? ['login', 'register', 'validate', 'resetpwd'].includes(parts[1]) : false;
 
     return (
         <>

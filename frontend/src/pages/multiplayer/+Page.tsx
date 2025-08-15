@@ -229,20 +229,25 @@ const MultiPlayer = ({
       } else if (data.command.action === 'guess') {
         if (currentTarget.current !== null && !hasAnswered.current) {
           const curTar = currentTarget.current;    
-          setPastRegions(prev => [...prev, {
-            regionId: curTar,
-            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
-            atlas: atlasRef.current?.atlas || "",
-            isCorrect: false,
-            score: 0,
-            distance: -1, // Special value to indicate no guess was made
-          }]);
+          if(curTar !== undefined) {
+            setPastRegions(prev => [...prev, {
+              regionId: curTar,
+              regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+              atlas: atlasRef.current?.atlas || "",
+              isCorrect: false,
+              score: 0,
+              distance: -1, // Special value to indicate no guess was made
+            }]);
+          }
         }
         hasAnswered.current = false;
         isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
         setHeaderTextMode("")
-        if(atlasRef.current && atlasRef.current.labels && currentTarget.current) showNotification(atlasRef.current.labels[currentTarget.current], true)
+        if(atlasRef.current && atlasRef.current.labels && currentTarget.current){
+          const regionName = atlasRef.current.labels[currentTarget.current];
+          if(regionName !== undefined) showNotification(regionName, true)
+        }
         startStepCountdown(t("remaining-time"), data.command.duration);
         if (guessButtonRef.current) {
           guessButtonRef.current.disabled = true;
@@ -271,14 +276,16 @@ const MultiPlayer = ({
     socket.on('game-end', (data: any) => {
       if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {
         const curTar = currentTarget.current;
-        setPastRegions(prev => [...prev, {
-          regionId: curTar,
-          regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
-          atlas: atlasRef.current?.atlas || "",
-          isCorrect: false,
-          score: 0,
-          distance: -1, // Special value to indicate no guess was made
-        }]);
+        if(curTar !== undefined) {
+          setPastRegions(prev => [...prev, {
+            regionId: curTar,
+            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
+            atlas: atlasRef.current?.atlas || "",
+            isCorrect: false,
+            score: 0,
+            distance: -1, // Special value to indicate no guess was made
+          }]);
+        }
       }
       setHasEnded(true)
       hasEndedRef.current = true
@@ -300,7 +307,11 @@ const MultiPlayer = ({
               mm: [...selectedVoxelProp.current.mm],
               vox: [...selectedVoxelProp.current.vox]
             } : undefined,
-            regionCenter: data.nearestCenter ? data.nearestCenter : (atlasRef.current && atlasRef.current.centers) ? atlasRef.current.centers?.[currentTarget.current!][0] : undefined,
+            regionCenter: data.nearestCenter 
+              ? data.nearestCenter 
+              : (atlasRef.current && atlasRef.current.centers && currentTarget.current !== undefined)
+                ? atlasRef.current.centers?.[currentTarget.current]?.[0]
+                : undefined,
             regionBoundary: data.nearestBoundary ? data.nearestBoundary : undefined
           }]);
         }
@@ -397,7 +408,10 @@ const MultiPlayer = ({
 
   const updateGameDisplay = () => {
     const socket = getSocket();
-    if (isGameRunning && socket && socket.connected && currentTarget.current !== null && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
+    if (isGameRunning && socket && socket.connected && 
+        currentTarget.current !== null && atlasRef.current && 
+        atlasRef.current.labels && currentTarget.current !== undefined && 
+        atlasRef.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
       setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
     } else {

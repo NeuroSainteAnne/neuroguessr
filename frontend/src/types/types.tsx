@@ -22,14 +22,14 @@ export interface ExternalGameCommands {
 }
 
 export interface MultiplayerParametersType {
-    atlas?: string
+    atlas?: string | undefined;
     regionsNumber: number;
     durationPerRegion: number;
     gameoverOnError: boolean;
     blindMode: boolean;
-    commands?: ExternalGameCommands[];
-    totalDuration?: number;
-    public?: boolean;
+    commands?: ExternalGameCommands[] | undefined;
+    totalDuration?: number | undefined;
+    public?: boolean | undefined;
 }
 
 export type ColorMap = {
@@ -67,9 +67,9 @@ export type PastRegion = {
   clickedPosition?: {
     mm: number[];
     vox: number[];
-  };
-  regionCenter?: number[];
-  regionBoundary?: number[];
+  } | undefined;
+  regionCenter?: number[] | undefined;
+  regionBoundary?: number[] | undefined;
   atlas: string;
 }
 

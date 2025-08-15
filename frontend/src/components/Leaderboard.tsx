@@ -179,7 +179,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
     } else if(atlas === "") {
       return t('all_atlases');
     } else {
-        return atlas ? atlasFiles?.[atlas]?.name : ""
+        return atlas ? atlasFiles?.[atlas]?.name ?? "" : ""
     }
   };
 

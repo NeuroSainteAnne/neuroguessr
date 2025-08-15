@@ -99,14 +99,16 @@ function shuffleArray<T>(arr: T[]): T[] {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+        const tmp = a[i] as T;
+        a[i] = a[j] as T;
+        a[j] = tmp;
     }
     return a;
 }
 
 export class AtlasImageProxy {
     public labels: string[];
-    public centers?: number[][][];
+    public centers?: number[][][] | undefined;
     private data: Float32Array;
     private remappedData?: Float32Array;
     private dims: [number, number, number];
@@ -126,9 +128,9 @@ export class AtlasImageProxy {
     private cmap_en: ColorMap|null;
 
     constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en, atlas} :
-        {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][],
-        proposedLut?: ColorMap, proposedMapping?: Record<number, number>, 
-        proposedInverseMapping?: Record<number, number>, blindMode: boolean, 
+        {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][] | undefined,
+        proposedLut?: ColorMap | undefined, proposedMapping?: Record<number, number> | undefined, 
+        proposedInverseMapping?: Record<number, number> | undefined, blindMode: boolean, 
         viewerOptions: DisplayOptions, cmap_en: ColorMap|null, atlas: string}) {
         this.niivue = niivue;
         this.origVolume = nvImage;
@@ -174,14 +176,17 @@ export class AtlasImageProxy {
                 for (let i = 0; i < this.validRegions.length; i++) {
                     const oldId = this.validRegions[i];
                     const newId = shuffled[i];
-                    this.mapping[oldId] = newId;
-                    this.inverseMapping[newId] = oldId;
+                    if(oldId !== undefined && newId !== undefined){
+                        this.mapping[oldId] = newId;
+                        this.inverseMapping[newId] = oldId;
+                    }
                 }
             }
 
             const remapBuf = new Float32Array(this.data)
             for (let i = 0; i < this.data.length; i++) {
-                remapBuf[i] = this.mapping[this.data[i]] || 0
+                const dat = this.data[i]
+                if(dat !== undefined) remapBuf[i] = this.mapping[dat] || 0
             }
             this.remappedData = remapBuf;
 
@@ -193,7 +198,7 @@ export class AtlasImageProxy {
     private buildRegionIndices() {
         for (let i = 0; i < this.data.length; i++) {
             const value = this.data[i];
-            if (value > 0) { // Skip background (0)
+            if (value !== undefined && value > 0) { // Skip background (0)
                 if (!this.regionIndices.has(value)) {
                     this.regionIndices.set(value, []);
                 }
@@ -261,7 +266,8 @@ export class AtlasImageProxy {
         }
         if (this.niivue.meshes.length > 0) {
             for (let i = 0; i < this.niivue.meshes.length; i++) {
-                this.niivue.removeMesh(this.niivue.meshes[i]);
+                const thisMesh = this.niivue.meshes[i]
+                if(thisMesh !== undefined) this.niivue.removeMesh(thisMesh);
             }
         }
         this.niivue.updateGLVolume();
@@ -282,7 +288,7 @@ export class AtlasImageProxy {
         } else {
             this.niivue.scene.crosshairPos = [0.5,0.5,0.5]
         }
-        if (this.cmap_en?.autocenter?.zoom && this.cmap_en?.autocenter?.center && this.niivue.volumes[0].matRAS) {
+        if (this.cmap_en?.autocenter?.zoom && this.cmap_en?.autocenter?.center && this.niivue.volumes[0]?.matRAS) {
             const zoomFactor = this.cmap_en.autocenter.zoom;
             const center = this.cmap_en.autocenter.center;
             const centermm = this.niivue.vox2mm(center, this.niivue.volumes[0].matRAS)
@@ -307,7 +313,8 @@ export class AtlasImageProxy {
         let tractUrl = '';
         let tractLabel = '';
         if(this.cmap_en && allowFibers){
-            tractLabel = this.cmap_en.labels[highlightedRegion].replace(/\s+/g, '_');
+            const enLabel = this.cmap_en.labels[highlightedRegion]
+            if(enLabel != undefined) tractLabel = enLabel.replace(/\s+/g, '_');
             tractUrl = `/atlas/TOM_trackings/${tractLabel}.tck`;
             consoleLog("verbose", `Checking tractography availability: ${tractUrl}`);
             try {
@@ -333,8 +340,11 @@ export class AtlasImageProxy {
                     }
                 ]);
                 if (this.niivue.meshes.length > 0) {
-                    this.niivue.meshes[0].colormap = 'blue';
-                    this.niivue.meshes[0].fiberColor = 'Local';
+                    const thisMesh = this.niivue.meshes[0];
+                    if(thisMesh) {
+                        thisMesh.colormap = 'blue';
+                        thisMesh.fiberColor = 'Local';
+                    }
                 }
                 tractographyLoaded = true;
                 this.niivue.setClipPlane([-0.1, 270, 0]);
@@ -345,7 +355,8 @@ export class AtlasImageProxy {
         } else {
             if (this.niivue.meshes.length > 0) {
                 for (let i = 0; i < this.niivue.meshes.length; i++) {
-                    this.niivue.removeMesh(this.niivue.meshes[i]);
+                    const thisMesh = this.niivue.meshes[i];
+                    if(thisMesh) this.niivue.removeMesh(thisMesh);
                 }
             }
             this.niivue.setClipPlane([2, 270, 0]);
@@ -391,8 +402,8 @@ export class AtlasImageProxy {
         }
 
         if (moveToCenter && this.centers && this.centers[highlightedRegion]) {
-            const center = this.centers[highlightedRegion];
-            this.niivue.scene.crosshairPos = this.niivue.mm2frac(new Float32Array(center[0]));
+            const center = this.centers[highlightedRegion][0];
+            if(center != undefined) this.niivue.scene.crosshairPos = this.niivue.mm2frac(new Float32Array(center));
             this.niivue.createOnLocationChange();
         }
         this.niivue.updateGLVolume();
@@ -403,6 +414,7 @@ export class AtlasImageProxy {
         const isTouch = e.type === 'touchstart' || e.type === 'touchend';
         const touch = isTouch ? (e as React.TouchEvent<HTMLCanvasElement>).touches[0] : (e as React.MouseEvent<HTMLCanvasElement>);
         const rect = canvasObj.getBoundingClientRect();
+        if(touch === undefined) return;
         const x = touch.clientX - rect.left;
         const y = touch.clientY - rect.top;
 
@@ -412,15 +424,18 @@ export class AtlasImageProxy {
             if (!pos) return; // If position is not valid, exit early
             const frac = this.niivue.canvasPos2frac([pos.x * (this.niivue.uiData?.dpr ?? 1), pos.y * (this.niivue.uiData?.dpr ?? 1)]);
             const mm = this.niivue.frac2mm(frac);
-            const vox = this.niivue.volumes[1].mm2vox(Array.from(mm));
-            let idx = undefined;
-            if (frac[0] >= 0) {
-                const tmpidx = Math.round(this.getValue(vox[0], vox[1], vox[2]));
-                if (isFinite(tmpidx) && tmpidx > 0 && tmpidx in (this.labels)) { 
-                    idx = tmpidx;
+            const thisVol = this.niivue.volumes[1]
+            if(thisVol){
+                const vox = thisVol.mm2vox(Array.from(mm));
+                let idx = undefined;
+                if (frac[0] >= 0) {
+                    const tmpidx = Math.round(this.getValue(vox[0], vox[1], vox[2]));
+                    if (isFinite(tmpidx) && tmpidx > 0 && tmpidx in (this.labels)) { 
+                        idx = tmpidx;
+                    }
                 }
-            }
-            return { mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx }
+                return { mm: Array.from(mm) as number[], vox: Array.from(vox) as number[], idx }
+            } 
         }
         return undefined;
     }
