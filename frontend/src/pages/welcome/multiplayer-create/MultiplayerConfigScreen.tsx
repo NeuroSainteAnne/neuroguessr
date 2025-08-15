@@ -586,8 +586,8 @@ const MultiplayerConfigScreen = () => {
     const parseJSONByAtlas = (json: string) => {
         try {
             const parsedJSON = JSON.parse(json);
-            const groupedByAtlas: { atlas: string; duration: number; blindMode: boolean; regions: { regionId: number; duration: number }[] }[] = [];
-            let currentAtlas: { atlas: string; duration: number; blindMode: boolean; regions: { regionId: number; duration: number }[] } | null = null;
+            const groupedByAtlas: { atlas: string; duration: number; blindMode: boolean; regions: { regionId?: number; duration: number }[] }[] = [];
+            let currentAtlas: { atlas: string; duration: number; blindMode: boolean; regions: { regionId?: number; duration: number }[] } | null = null;
 
             parsedJSON.forEach((action: any) => {
                 if (action.action === "load-atlas") {
@@ -706,7 +706,7 @@ const MultiplayerConfigScreen = () => {
                                 </div>
                             ))}
                             <div className='region-picker-ui'>
-                                {renderRegionPicker(atlas.atlas)}
+                                {renderRegionPicker(atlas.atlas, atlasIndex)}
                             </div>
                         </div>
                     )}
@@ -715,14 +715,14 @@ const MultiplayerConfigScreen = () => {
         });
     };
 
-    const renderRegionPicker = (atlasKey: string) => {
+    const renderRegionPicker = (atlasKey: string, atlasIndex: number) => {
         const regionNames = atlasRegionNames[atlasKey] || []; // Get preloaded region names
         return (<>
-            <label htmlFor="region-picker">
+            <label htmlFor={`region-picker_${atlasIndex}`}>
                 {t("add_new_region") || "Add New Region"}
             </label>
             <select
-            id="region-picker"
+            id={`region-picker_${atlasIndex}`}
             className="region-picker"
             value="" // Always reset to the blank option after a change
             onChange={(e) => {
@@ -731,16 +731,22 @@ const MultiplayerConfigScreen = () => {
                 // Update the JSON with the new region
                 try {
                     const parsedJSON = JSON.parse(advancedSettingsJSON);
-                    const newRegionLine : {action: string, duration: number, regionId?: number} = { 
+                    const newRegionLine : {action: string, duration: number, regionId: number} = { 
                         action: "guess", 
-                        duration: advancedDurationPerRegion || DEFAULT_DURATION_PER_REGION 
+                        duration: advancedDurationPerRegion || DEFAULT_DURATION_PER_REGION,
+                        regionId: 0
                     }
                     if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
-                    const updatedJSON = [
-                        ...parsedJSON,
-                        newRegionLine,
-                    ];
-                    setAdvancedSettingsJSON(JSON.stringify(updatedJSON, null, 2));
+                    let updatedJSON = undefined;
+                    if(atlasIndex === -1){
+                        setAdvancedSettingsJSON(
+                            JSON.stringify([...parsedJSON, newRegionLine], null, 2)
+                        );
+                    } else {
+                        const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
+                        groupedByAtlas[atlasIndex].regions.push({regionId: newRegionLine.regionId, duration: newRegionLine.duration});
+                        updateJSONFromGroupedData(groupedByAtlas);
+                    }
                 } catch (err) {
                     setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
                 }
@@ -1357,7 +1363,7 @@ const MultiplayerConfigScreen = () => {
                                             />
                                     </div>}
                                     {advancedLastAtlas && <div>
-                                        {renderRegionPicker(advancedLastAtlas || "")}
+                                        {renderRegionPicker(advancedLastAtlas || "", -1)}
                                     </div>}
                                 </div>
                             </div>
