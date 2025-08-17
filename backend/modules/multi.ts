@@ -1525,6 +1525,9 @@ function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence
   const next = new Date(current);
   
   switch (recurrence.type) {
+    case "hour":
+      next.setHours(current.getHours() + recurrence.interval);
+      break;
     case "day":
       next.setDate(current.getDate() + recurrence.interval);
       break;
@@ -2134,7 +2137,7 @@ export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToke
     }
 
     if(recurrent){
-      if(recurrent.type != "day" && recurrent.type != "week" && recurrent.type != "month" && recurrent.type != "year"){
+      if(recurrent.type != "hour" && recurrent.type != "day" && recurrent.type != "week" && recurrent.type != "month" && recurrent.type != "year"){
         emitToUser(sessionCode, userName, "error", { message: "Invalid recurrence type" });
         return;
       } else if(!(recurrent.interval > 0)){
@@ -2340,6 +2343,9 @@ export async function restorePersistentChallengeSessions() {
             // Keep advancing until we find a future time
             while (nextStartTime.getTime() <= now.getTime()) {
               switch (recurrence.type) {
+                case "hour":
+                  nextStartTime.setHours(nextStartTime.getHours() + recurrence.interval);
+                  break;
                 case "day":
                   nextStartTime.setDate(nextStartTime.getDate() + recurrence.interval);
                   break;

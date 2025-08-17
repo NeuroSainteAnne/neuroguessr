@@ -142,7 +142,7 @@ const MultiplayerConfigScreen = () => {
     const [countdownMode, setCountdownMode] = useState<"duration" | "startTime">("duration");
     const [countdownStartTime, setCountdownStartTime] = useState<string>("");
     const [enableRecurrence, setEnableRecurrence] = useState<boolean>(false);
-    const [recurrenceType, setRecurrenceType] = useState<"day" | "week" | "month" | "year">("week");
+    const [recurrenceType, setRecurrenceType] = useState<"hour" | "day" | "week" | "month" | "year">("week");
     const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
     
     // Admin change session code states
@@ -1646,9 +1646,10 @@ const MultiplayerConfigScreen = () => {
                                                 />
                                                 <select
                                                     value={recurrenceType}
-                                                    onChange={(e) => setRecurrenceType(e.target.value as "day" | "week" | "month" | "year")}
+                                                    onChange={(e) => setRecurrenceType(e.target.value as "hour" | "day" | "week" | "month" | "year")}
                                                     style={{ padding: '4px' }}
                                                 >
+                                                    <option value="hour">{t("hours") || "hour(s)"}</option>
                                                     <option value="day">{t("days") || "day(s)"}</option>
                                                     <option value="week">{t("weeks") || "week(s)"}</option>
                                                     <option value="month">{t("months") || "month(s)"}</option>

@@ -49,7 +49,7 @@ export interface MultiplayerGame {
 }
 
 export type Recurrence = {
-  type: "day" | "week" | "month" | "year";
+  type: "hour" | "day" | "week" | "month" | "year";
   interval: number;
 }
 
