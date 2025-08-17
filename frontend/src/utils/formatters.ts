@@ -86,13 +86,16 @@ export const formatTime = ({ms, showMilliseconds = false, showSeconds = true} :
     return `${Math.round(ms)}ms`;
   }
   
+  const days = Math.floor(totalSeconds / 3600 / 24);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const remainingSeconds = Math.floor(totalSeconds % 60);
   
   // Format based on duration length
   if(showSeconds){
-    if (hours > 0) {
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (hours > 0) {
       return `${hours}h ${minutes}m ${remainingSeconds}s`;
     } else if (minutes > 0) {
       return `${minutes}m ${remainingSeconds}s`;
@@ -100,7 +103,9 @@ export const formatTime = ({ms, showMilliseconds = false, showSeconds = true} :
       return `${remainingSeconds}s`;
     }
   } else {
-    if (hours > 0) {
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
       return `${hours}h ${minutes}m`;
     } else if (minutes > 0) {
       return `${minutes}m`;

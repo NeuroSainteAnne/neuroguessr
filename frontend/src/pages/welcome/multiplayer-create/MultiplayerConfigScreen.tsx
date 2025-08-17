@@ -141,6 +141,9 @@ const MultiplayerConfigScreen = () => {
     const [totalDuration, setTotalDuration] = useState<number>(0);
     const [countdownMode, setCountdownMode] = useState<"duration" | "startTime">("duration");
     const [countdownStartTime, setCountdownStartTime] = useState<string>("");
+    const [enableRecurrence, setEnableRecurrence] = useState<boolean>(false);
+    const [recurrenceType, setRecurrenceType] = useState<"day" | "week" | "month" | "year">("week");
+    const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
 
     const createSession = async () => {
         setLoading(true);
@@ -358,12 +361,22 @@ const MultiplayerConfigScreen = () => {
 
         const name = prompt(t("enter_challenge_name"));
 
+        // Prepare recurrence data if enabled
+        let recurrence = undefined;
+        if (enableRecurrence) {
+            recurrence = {
+                type: recurrenceType,
+                interval: recurrenceInterval
+            };
+        }
+
         try {
             socket.emit('save-as-challenge', {
                 sessionCode,
                 sessionToken,
                 userToken: authToken,
-                name: name || undefined
+                name: name || undefined,
+                recurrent: recurrence
             });
         } catch (err) {
             setSaveAsChallengeLoading(false);
@@ -1401,7 +1414,7 @@ const MultiplayerConfigScreen = () => {
                             >
                                 {t("start_game_button")}
                             </button>
-                            
+
                             {/* Save as Challenge button - only show if user is admin, advanced mode with countdown startTime */}
                             {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
                                 <button
@@ -1412,6 +1425,56 @@ const MultiplayerConfigScreen = () => {
                                 >
                                     {saveAsChallengeLoading ? t("saving-in-progress") : t("save-as-challenge")}
                                 </button>
+                            )}
+
+                            {/* Recurrence settings - only show for admin with advanced settings and countdown startTime */}
+                            {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
+                                <div style={{ marginTop: '15px', padding: '15px', border: '2px solid #ff6b35', borderRadius: '8px', backgroundColor: '#fff5f2' }}>
+                                    <h4 style={{ margin: '0 0 10px 0', color: '#ff6b35' }}>
+                                        {t("recurrence_settings") || "Recurrence Settings"}
+                                    </h4>
+                                    
+                                    <div style={{ marginBottom: '10px' }}>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={enableRecurrence}
+                                                onChange={(e) => setEnableRecurrence(e.target.checked)}
+                                                style={{ marginRight: 8 }}
+                                            />
+                                            {t("enable_recurrence") || "Enable automatic recurrence"}
+                                        </label>
+                                    </div>
+                                    
+                                    {enableRecurrence && (
+                                        <div style={{ marginLeft: '20px' }}>
+                                            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <label>{t("repeat_every") || "Repeat every"}:</label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    max={10}
+                                                    value={recurrenceInterval}
+                                                    onChange={(e) => setRecurrenceInterval(Number(e.target.value))}
+                                                    style={{ width: '60px', padding: '4px' }}
+                                                />
+                                                <select
+                                                    value={recurrenceType}
+                                                    onChange={(e) => setRecurrenceType(e.target.value as "day" | "week" | "month" | "year")}
+                                                    style={{ padding: '4px' }}
+                                                >
+                                                    <option value="day">{t("days") || "day(s)"}</option>
+                                                    <option value="week">{t("weeks") || "week(s)"}</option>
+                                                    <option value="month">{t("months") || "month(s)"}</option>
+                                                    <option value="year">{t("years") || "year(s)"}</option>
+                                                </select>
+                                            </div>
+                                            <div style={{ fontSize: '0.9em', color: '#666', fontStyle: 'italic' }}>
+                                                {t("recurrence_description") || "The challenge will automatically restart with the same configuration at the specified interval."}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>

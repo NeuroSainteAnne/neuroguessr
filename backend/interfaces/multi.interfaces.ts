@@ -17,6 +17,7 @@ export interface MultiplayerParametersType {
   commands?: ExternalGameCommands[];
   totalDuration?: number;
   isChallenge?: boolean;
+  recurrence?: Recurrence;
 }
 
 export interface MultiplayerGame {
@@ -45,7 +46,12 @@ export interface MultiplayerGame {
   creatorId?: number;
   isChallenge?: boolean;
   name?: string;
-} 
+}
+
+export type Recurrence = {
+  type: "day" | "week" | "month" | "year";
+  interval: number;
+}
 
 // Persistent game state for challenge mode (saved to database)
 export interface PersistentGameState {

@@ -6,6 +6,7 @@ import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
 import { Challenge } from '../../../types/types';
+import { formatTime } from '../../../utils/formatters';
 
 export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
@@ -57,18 +58,8 @@ export function Page() {
     const start = new Date(startTime);
     const diff = start.getTime() - now.getTime();
     
-    if (diff <= 0) return t('starting_now') || 'Starting now';
-    
-    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-    const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-    
-    const parts: string[] = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    
-    return `${t('starts_in') || 'Starts in'} ${parts.join(' ')}`;
+    if (diff <= 0) return t('already_started');
+    return `${t('starts_in')} ${formatTime({ms:diff, showSeconds:false})}`
   };
 
   const formatDateTime = (dateTime: string) => {

@@ -8,7 +8,7 @@ const config: Config = configJson;
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
 import { MultiSession, User } from "interfaces/database.interfaces.ts";
-import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState } from "interfaces/multi.interfaces.ts";
+import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState, Recurrence } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
@@ -224,7 +224,8 @@ export function initSocketHandlers() {
       sessionCode: string,
       sessionToken: string,
       userToken: string,
-      name?: string
+      name?: string,
+      recurrent?: Recurrence
     }) => {
       try {
         const info = socketInfo[socket.id];
@@ -452,7 +453,7 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id; 
     const sessionCode = await getUniqueCode();
-    const sessionToken = jwt.sign({ userId, sessionCode, type: "multiplayer-creator" }, config.jwt_secret, { expiresIn: "1h" });
+    const sessionToken = generateSessionToken(sessionCode, userId);
     const result = await sql`
         INSERT INTO multi_sessions (session_code, session_token, creator_id, created_at)
         VALUES (${sessionCode}, ${sessionToken}, ${userId}, NOW())
@@ -1266,6 +1267,137 @@ async function handleValidateGuess(data: {
   }
 }
 
+// Helper function to calculate the next start time based on recurrence settings
+function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence): string {
+  const current = new Date(currentStartTime);
+  const next = new Date(current);
+  
+  switch (recurrence.type) {
+    case "day":
+      next.setDate(current.getDate() + recurrence.interval);
+      break;
+    case "week":
+      next.setDate(current.getDate() + (7 * recurrence.interval));
+      break;
+    case "month":
+      next.setMonth(current.getMonth() + recurrence.interval);
+      break;
+    case "year":
+      next.setFullYear(current.getFullYear() + recurrence.interval);
+      break;
+  }
+  
+  return next.toISOString();
+}
+
+// Helper function to generate session token
+function generateSessionToken(sessionCode: string, creatorId?: number): string {
+  return jwt.sign({ 
+    sessionCode, 
+    creatorId, 
+    type: "multiplayer-creator" 
+  }, config.jwt_secret, { expiresIn: "1h" });
+}
+
+async function handleGameRecurrence(gameBackup: MultiplayerGame): Promise<void> {
+  try {
+    if (!gameBackup.parameters.recurrence || !gameBackup.commands || gameBackup.commands.length === 0) {
+      return;
+    }
+
+    // Find the countdown command with startTime
+    const countdownCommand = gameBackup.commands.find(cmd => cmd.action === "countdown" && cmd.startTime);
+    if (!countdownCommand || !countdownCommand.startTime) {
+      logger.error(`No countdown command with startTime found for recurring session ${gameBackup.sessionCode}`);
+      return;
+    }
+
+    // Calculate next start time
+    const nextStartTime = calculateNextStartTime(countdownCommand.startTime, gameBackup.parameters.recurrence);
+    
+    // Update the countdown command with the new start time
+    const updatedCommands = gameBackup.commands.map(cmd => {
+      if (cmd.action === "countdown" && cmd.startTime) {
+        return { ...cmd, startTime: nextStartTime };
+      }
+      return cmd;
+    });
+
+    // Update the existing session in the database with the new start time
+    const persistentState = extractPersistentState({
+      ...gameBackup,
+      commands: updatedCommands,
+      parameters: {
+        ...gameBackup.parameters,
+        commands: updatedCommands
+      }
+    });
+
+    await sql`
+      UPDATE multi_sessions 
+      SET created_at = NOW(), 
+          persistent_config = ${JSON.stringify(persistentState)}
+      WHERE session_code = ${gameBackup.sessionCode}
+    `;
+
+    // Recreate the game in memory with updated commands
+    games[gameBackup.sessionCode] = {
+      ...gameBackup,
+      commands: updatedCommands,
+      parameters: {
+        ...gameBackup.parameters,
+        commands: updatedCommands
+      }
+    };
+
+    // Start the countdown for the next occurrence
+    sendNextCommand(games[gameBackup.sessionCode]);
+    
+    logger.info(`Challenge ${gameBackup.sessionCode} has been rescheduled for next occurrence at ${nextStartTime}`);
+    
+    // Notify watchers that lobbies list may have changed
+    emitPublicLobbiesUpdate();  
+  } catch (error) {
+    logger.error(`Error handling recurrence for session ${gameBackup.sessionCode}:`, error);
+  }
+}
+
+// Helper function to backup game state for recurrence
+function backupGameForRecurrence(gameRef: MultiplayerGame): MultiplayerGame | null {
+  if (!gameRef.isChallenge || !gameRef.parameters.recurrence || !gameRef.commands || gameRef.commands.length === 0) {
+    return null;
+  }
+  
+  // Create a deep copy of the relevant game state
+  return {
+    sessionCode: gameRef.sessionCode,
+    hasStarted: false, // Reset for next occurrence
+    hasFinishedCountdown: false,
+    hasEnded: false,
+    parameters: { ...gameRef.parameters }, // Keep all parameters including recurrence
+    commands: gameRef.commands ? [...gameRef.commands] : undefined, // Copy commands array
+    currentCommandIndex: 0,
+    currentAtlas: '',
+    currentRegionId: -1,
+    duration: 0,
+    stepStartTime: undefined,
+    commandTimeout: undefined,
+    totalGuessNumber: gameRef.totalGuessNumber,
+    hasAnswered: {},
+    individualScores: {},
+    individualAttempts: {},
+    individualSuccesses: {},
+    individualDurations: {},
+    individualCorrectDurations: {},
+    anonymousUsernames: [],
+    lastActivity: Date.now(),
+    isCurrentlyBlind: false,
+    creatorId: gameRef.creatorId,
+    isChallenge: gameRef.isChallenge,
+    name: gameRef.name
+  };
+}
+
 async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
   try {
     if (gameRef.hasEnded) return;
@@ -1275,6 +1407,9 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     const allScores = Object.values(gameRef.individualScores);
     const maxScore = Math.max(...allScores);
 
+    // 1. Backup the game state for potential recurrence
+    const gameBackup = backupGameForRecurrence(gameRef);
+
     // Save data for authenticated users
     const savePromises = [];
     for (const username in gameRef.individualScores || {}) {
@@ -1282,6 +1417,7 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
       const playerKey = `${gameRef.sessionCode}:${username}`;
       const player = playerInfo[playerKey];
+      if(!player) continue; 
       let userId = player.userId
       if(!userId) continue; // If no userId, do not store anything for this user
       const mode = 'multiplayer';
@@ -1325,21 +1461,30 @@ async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     // Wait for all saves to complete before proceeding
     await Promise.allSettled(savePromises);
     
-    // Delete the session from the database
+    // 2. Perform complete game cleanup (skip database deletion if we have recurrence)
     const sessionCode = gameRef.sessionCode;
-    await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
-      .catch(e => {
-        logger.error(`Error deleting session ${sessionCode}:`, e);
-      });
+    console.log(gameBackup, gameRef.isChallenge, gameRef.parameters.recurrence)
+    const hasRecurrence = !!(gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence);
     
-    // Use the common cleanup function
-    cleanupGame(gameRef.sessionCode);
+    if (!hasRecurrence) {
+      // Delete the session from database only if no recurrence
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+        .catch(e => {
+          logger.error(`Error deleting session ${sessionCode}:`, e);
+        });
+    }
+    
+    // Use the common cleanup function (skip DB deletion if we have recurrence)
+    cleanupGame(gameRef.sessionCode, hasRecurrence);
     
     // broadcast a final message to all clients
     broadcastToSession(sessionCode, 'game-closed', {});
 
-    // Cleanup: close all SSE connections for this session
-    cleanupGame(sessionCode);
+    // 3. Handle recurrence if this was a challenge with recurrence settings
+    if (gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence) {
+      await handleGameRecurrence(gameBackup);
+    }
+
   } catch (error) {
     logger.error("Error cloturing game:", error);
     if (gameRef && gameRef.sessionCode) {
@@ -1380,9 +1525,10 @@ function setupInactiveGameCheck() {
 setupInactiveGameCheck();
 
 // Create a dedicated cleanup function
-function cleanupGame(sessionCode: string) {
+function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean = false) {
   logger.info("Cleaning up session", {
-    sessionCode
+    sessionCode,
+    skipDatabaseDeletion
   })
   const io = getIO();
   // Clean up SSE clients
@@ -1417,12 +1563,14 @@ function cleanupGame(sessionCode: string) {
   
   delete games[sessionCode];
   
-  // Delete from database if it exists
-  sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
-    logger.error(`Error deleting session ${sessionCode}:`, e);
-  });
-  // Notify watchers that lobbies list may have changed
-  emitPublicLobbiesUpdate();
+  // Delete from database if it exists (unless we're keeping it for recurrence)
+  if (!skipDatabaseDeletion) {
+    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
+      logger.error(`Error deleting session ${sessionCode}:`, e);
+    });
+    // Notify watchers that lobbies list may have changed
+    emitPublicLobbiesUpdate();  
+  }
 }
 
 // Public lobbies list handler
@@ -1532,7 +1680,6 @@ export const getAllChallenges = async (req: Request, res: Response) => {
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_challenge = TRUE 
         AND ms.persistent_config IS NOT NULL
-        AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
         ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
       `;
     } else {
@@ -1544,7 +1691,6 @@ export const getAllChallenges = async (req: Request, res: Response) => {
         WHERE ms.is_challenge = TRUE 
         AND ms.public = TRUE
         AND ms.persistent_config IS NOT NULL
-        AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
         ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
       `;
     }
@@ -1567,6 +1713,7 @@ export const getAllChallenges = async (req: Request, res: Response) => {
           atlas: persistentState.parameters?.atlas,
           totalDuration: persistentState.parameters?.totalDuration,
           name: session.name || undefined,
+          recurrence: session.recurrence || undefined,
           creator: session.creator_name || 'Unknown',
           createdAt: session.created_at?.toISOString?.() || undefined
         };
@@ -1676,7 +1823,7 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
 };
 
 // Save persistent configuration for challenge mode
-export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName, name}: {sessionCode: string, sessionToken: string, userToken: string, userName: string, name?:string}) => {
+export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName, name, recurrent}: {sessionCode: string, sessionToken: string, userToken: string, userName: string, name?:string, recurrent?: Recurrence}) => {
   try {
     if (!sessionCode || typeof sessionCode !== 'string' || sessionCode.length !== 8) {
       emitToUser(sessionCode, userName, "error", { message: "Invalid session code" });
@@ -1733,6 +1880,16 @@ export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToke
       emitToUser(sessionCode, userName, "error", { message: "Invalid session token" });
       return;
     }
+
+    if(recurrent){
+      if(recurrent.type != "day" && recurrent.type != "week" && recurrent.type != "month" && recurrent.type != "year"){
+        emitToUser(sessionCode, userName, "error", { message: "Invalid recurrence type" });
+        return;
+      } else if(!(recurrent.interval > 0)){
+        emitToUser(sessionCode, userName, "error", { message: "Invalid recurrence interval" });
+        return;
+      }
+    }
     
     // Activate challenge mode and update game state
     gameRef.isChallenge = true;
@@ -1741,6 +1898,7 @@ export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToke
     gameRef.duration = Date.now();
     gameRef.lastActivity = Date.now();
     gameRef.name = name || undefined;
+    gameRef.parameters.recurrence = recurrent || undefined;
 
     // Extract and save the persistent game state
     const persistentState = extractPersistentState(gameRef);
@@ -1855,9 +2013,6 @@ function restoreFromPersistentState(persistentState: PersistentGameState, existi
 // Function to restore all persistent challenge sessions on server startup
 export async function restorePersistentChallengeSessions() {
   try {
-    // First clean up expired sessions from database
-    await cleanupExpiredChallengeSessions();
-
     logger.info("Restoring persistent challenge sessions...");
     
     const persistentSessions = await sql`
@@ -1873,24 +2028,15 @@ export async function restorePersistentChallengeSessions() {
     
     let restoredCount = 0;
     let skippedCount = 0;
+    let rescheduledCount = 0;
+    let deletedCount = 0;
+    const now = new Date();
     
     for (const session of persistentSessions) {
       const sessionCode = String(session.session_code).padStart(8, '0');
       
       try {
         const persistentState: PersistentGameState = JSON.parse(session.persistent_config);
-        
-        // Check if the session has ended or if the start time has passed significantly
-        const now = Date.now();
-        const lastActivity = persistentState.lastActivity || 0;
-        const timeSinceLastActivity = now - lastActivity;
-        
-        // Skip sessions that have been inactive for more than 2 hours
-        if (timeSinceLastActivity > 2 * 60 * 60 * 1000) {
-          logger.info(`Skipping expired challenge session ${sessionCode} (inactive for ${Math.round(timeSinceLastActivity / 60000)} minutes)`);
-          skippedCount++;
-          continue;
-        }
         
         // Skip sessions that have already ended
         if (persistentState.hasEnded) {
@@ -1899,8 +2045,19 @@ export async function restorePersistentChallengeSessions() {
           continue;
         }
         
-        // Restore the game state
-        const baseGameState: MultiplayerGame = {
+        // Check if this challenge has a countdown with startTime
+        const countdownCommand = persistentState.commands?.find(cmd => cmd.action === "countdown" && cmd.startTime);
+        if (!countdownCommand || !countdownCommand.startTime) {
+          logger.info(`Skipping challenge session ${sessionCode} - no countdown with startTime`);
+          skippedCount++;
+          continue;
+        }
+        
+        const startTime = new Date(countdownCommand.startTime);
+        const hasRecurrence = !!(persistentState.parameters?.recurrence);
+        
+        // Restore the updated game state
+        let baseGameState: MultiplayerGame = {
           ...persistentState,
           currentCommandIndex: 0,
           currentAtlas: "",
@@ -1916,48 +2073,80 @@ export async function restorePersistentChallengeSessions() {
           individualCorrectDurations: {},
           anonymousUsernames: [],
           isCurrentlyBlind: false,
-          lastActivity: now // Update activity time
+          lastActivity: Date.now()
         };
         
+        // If the start time has passed
+        if (startTime.getTime() <= now.getTime()) {
+          if (hasRecurrence) {
+            // For recurring challenges, calculate the next occurrence
+            logger.info(`Rescheduling recurring challenge session ${sessionCode} - start time has passed`);
+            
+            let nextStartTime = new Date(startTime);
+            const recurrence = persistentState.parameters!.recurrence!;
+            
+            // Keep advancing until we find a future time
+            while (nextStartTime.getTime() <= now.getTime()) {
+              switch (recurrence.type) {
+                case "day":
+                  nextStartTime.setDate(nextStartTime.getDate() + recurrence.interval);
+                  break;
+                case "week":
+                  nextStartTime.setDate(nextStartTime.getDate() + (7 * recurrence.interval));
+                  break;
+                case "month":
+                  nextStartTime.setMonth(nextStartTime.getMonth() + recurrence.interval);
+                  break;
+                case "year":
+                  nextStartTime.setFullYear(nextStartTime.getFullYear() + recurrence.interval);
+                  break;
+              }
+            }
+            
+            // Update the commands with the new start time
+            const updatedCommands = persistentState.commands?.map(cmd => {
+              if (cmd.action === "countdown" && cmd.startTime) {
+                return { ...cmd, startTime: nextStartTime.toISOString() };
+              }
+              return cmd;
+            });
+
+            baseGameState.commands = updatedCommands;
+            baseGameState.parameters.commands = updatedCommands;
+            
+            // Update database
+            await sql`
+              UPDATE multi_sessions 
+              SET persistent_config = ${JSON.stringify(baseGameState)},
+                  created_at = NOW()
+              WHERE session_code = ${sessionCode}
+            `;
+
+            rescheduledCount++;
+            logger.info(`Rescheduled recurring challenge session ${sessionCode} to ${nextStartTime.toISOString()}`);
+          } else {
+            // For non-recurring challenges that have passed, delete them
+            logger.info(`Deleting expired non-recurring challenge session ${sessionCode}`);
+            await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`;
+            deletedCount++;
+            continue; // Skip further processing for deleted sessions
+          }
+        }
+
+        // Restore the game state in memory and start it
         games[sessionCode] = baseGameState;
-        
-        // Resume countdown
-        sendNextCommand(games[sessionCode])
-        
+        sendNextCommand(games[sessionCode]);
         restoredCount++;
-        logger.info(`Restored challenge session ${sessionCode}`);
-        
+        logger.info(`Restored challenge session ${sessionCode} - scheduled for ${startTime.toISOString()}`);
       } catch (parseError) {
         logger.error(`Error parsing persistent config for session ${sessionCode}:`, parseError);
         skippedCount++;
       }
     }
     
-    logger.info(`Challenge session restoration complete: ${restoredCount} restored, ${skippedCount} skipped`);
+    logger.info(`Challenge session restoration complete: ${restoredCount} restored, ${rescheduledCount} rescheduled, ${deletedCount} deleted, ${skippedCount} skipped`);
     
   } catch (error) {
     logger.error("Error restoring persistent challenge sessions:", error);
-  }
-}
-
-// Function to clean up expired challenge sessions from the database
-async function cleanupExpiredChallengeSessions() {
-  try {
-    const currentTime = new Date().toISOString();
-    
-    const result = await sql`
-      DELETE FROM multi_sessions 
-      WHERE is_challenge = TRUE 
-      AND persistent_config IS NOT NULL
-      AND (persistent_config::jsonb->'commands'->0->>'startTime') < ${currentTime}
-    `;
-    
-    const deletedCount = result.count || 0;
-    if (deletedCount > 0) {
-      logger.info(`Cleaned up ${deletedCount} expired challenge sessions from database`);
-    }
-    
-  } catch (error) {
-    logger.error("Error cleaning up expired challenge sessions:", error);
   }
 }
