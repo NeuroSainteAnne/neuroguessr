@@ -149,6 +149,14 @@ const MultiplayerConfigScreen = () => {
     const [showChangeCodeInput, setShowChangeCodeInput] = useState<boolean>(false);
     const [newCodeInput, setNewCodeInput] = useState<string>("");
     const [changeCodeLoading, setChangeCodeLoading] = useState<boolean>(false);
+    
+    // Session cleanup state
+    const shouldKeepSessionRef = useRef<boolean>(false);
+    
+    // Refs to store current session values for cleanup
+    const sessionCodeRef = useRef<string | null>(null);
+    const sessionTokenRef = useRef<string | null>(null);
+    const authTokenRef = useRef<string | null>(null);
 
     const createSession = async () => {
         setLoading(true);
@@ -198,6 +206,44 @@ const MultiplayerConfigScreen = () => {
             setLoading(false);
         }
     };
+
+    const destroySession = async () => {
+        const currentSessionCode = sessionCodeRef.current;
+        const currentSessionToken = sessionTokenRef.current;
+        const currentAuthToken = authTokenRef.current;
+        
+        console.log(currentSessionCode, currentSessionToken, currentAuthToken)
+        if (!currentSessionCode || !currentSessionToken || !currentAuthToken) return;
+        
+        try {
+            console.log("got there")
+            if (socketRef.current && socketRef.current.connected) {
+                // Emit a destroy session event
+                socketRef.current.emit('destroy-session', {
+                    sessionCode: currentSessionCode,
+                    sessionToken: currentSessionToken,
+                    userToken: currentAuthToken
+                });
+            }
+            
+            // Also try to destroy via HTTP API as fallback
+            await fetch('/api/multi/destroy-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentAuthToken}`
+                },
+                body: JSON.stringify({ 
+                    sessionCode: currentSessionCode, 
+                    sessionToken: currentSessionToken 
+                })
+            });
+            
+            consoleLog("verbose", `Session ${currentSessionCode} destroyed on component unmount`);
+        } catch (err) {
+            consoleLog("verbose", `Failed to destroy session on unmount: ${err}`);
+        }
+    }
 
     const changeSessionCode = async () => {
         if (!authToken || !userIsAdmin) {
@@ -400,8 +446,7 @@ const MultiplayerConfigScreen = () => {
             return;
         }
 
-        const socket = getSocket();
-        if (!socket || !socket.connected) {
+        if (!socketRef.current || !socketRef.current.connected) {
             setError("Not connected to server");
             return;
         }
@@ -426,13 +471,16 @@ const MultiplayerConfigScreen = () => {
         }
 
         try {
-            socket.emit('save-as-challenge', {
+            socketRef.current.emit('save-as-challenge', {
                 sessionCode,
                 sessionToken,
                 userToken: authToken,
                 name: name || undefined,
                 recurrent: recurrence
             });
+            
+            // Set flag to keep session alive when navigating to lobby
+            shouldKeepSessionRef.current = true;
         } catch (err) {
             setSaveAsChallengeLoading(false);
             setError('Failed to save challenge');
@@ -546,11 +594,28 @@ const MultiplayerConfigScreen = () => {
         }
     }, [selectedAtlas])
 
+    // Keep refs updated with current state values
+    useEffect(() => {
+        sessionCodeRef.current = sessionCode;
+    }, [sessionCode]);
+
+    useEffect(() => {
+        sessionTokenRef.current = sessionToken;
+    }, [sessionToken]);
+
+    useEffect(() => {
+        authTokenRef.current = authToken;
+    }, [authToken]);
+
     useEffect(() => {
         createSession()
-        // Don't disconnect socket on unmount - let it persist for navigation
+        
+        // Cleanup function to destroy session when component unmounts
         return () => {
-            // Socket cleanup is now handled by the SocketProvider
+            // Only destroy the session if we're not explicitly keeping it
+            if (!shouldKeepSessionRef.current) {
+                destroySession();
+            }
         }
     }, [])
 
@@ -1523,6 +1588,12 @@ const MultiplayerConfigScreen = () => {
                                                 return;
                                             }
                                         }
+                                        // Set flag to keep session alive when navigating to lobby
+                                        shouldKeepSessionRef.current = true;
+                                        navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
+                                    } else {
+                                        // Set flag to keep session alive when navigating to lobby
+                                        shouldKeepSessionRef.current = true;
                                         navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
                                     } 
                                 }}

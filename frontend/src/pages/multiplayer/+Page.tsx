@@ -332,6 +332,12 @@ const MultiPlayer = ({
       }
     });
     
+    socket.on('session-destroyed', (data: any) => {
+      consoleLog("verbose", `Session destroyed: ${data.reason}`);
+      setError(`Session ended: ${data.reason}`);
+      cleanupSocket();
+    });
+    
     // Clean up event listeners on unmount, but don't disconnect the socket
     return () => {
       cleanupSocketEventListeners();
@@ -371,6 +377,7 @@ const MultiPlayer = ({
       socketRef.current.off('game-end');
       socketRef.current.off('guess-result');
       socketRef.current.off('session-code-changed');
+      socketRef.current.off('session-destroyed');
     }
   };
 

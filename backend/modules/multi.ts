@@ -378,6 +378,70 @@ export function initSocketHandlers() {
       }
     });
 
+    // Handle destroy session (creator leaving config screen)
+    socket.on('destroy-session', async (data: {
+      sessionCode: string,
+      sessionToken: string,
+      userToken: string
+    }) => {
+      try {
+        const { sessionCode, sessionToken, userToken } = data;
+        
+        // Verify authentication
+        if (!userToken) {
+          socket.emit('error', { message: "Authentication token required" });
+          return;
+        }
+
+        try {
+          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+          if (!jwtPayload) {
+            socket.emit('error', { message: "Invalid authentication token" });
+            return;
+          }
+          
+          // Verify session exists and user has access
+          const currentSession = await sql`
+            SELECT id, creator_id 
+            FROM multi_sessions 
+            WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
+          ` as { id: number; creator_id: number }[];
+          
+          if (currentSession.length === 0) {
+            socket.emit('error', { message: "Session not found or invalid token" });
+            return;
+          }
+          
+          // Check if user is the creator or admin
+          const isCreator = jwtPayload.id === currentSession[0].creator_id;
+          const isAdmin = jwtPayload.admin === true;
+          
+          if (!isCreator && !isAdmin) {
+            socket.emit('error', { message: "Only the session creator or admin can destroy the session" });
+            return;
+          }
+          
+          // Notify all players in the lobby that the session is being destroyed
+          broadcastToSession(sessionCode, 'session-destroyed', {
+            reason: 'Creator left the configuration screen'
+          });
+          
+          // Clean up the session
+          cleanupGame(sessionCode, false); // false = don't skip database deletion
+          
+          logger.info(`Session ${sessionCode} destroyed by user ${jwtPayload.id} (creator: ${isCreator}, admin: ${isAdmin})`);
+          
+        } catch (jwtError) {
+          socket.emit('error', { message: "Invalid authentication token" });
+          return;
+        }
+        
+      } catch (error) {
+        logger.error("Destroy session error:", error);
+        socket.emit('error', { message: "Error destroying session" });
+      }
+    });
+
     // Subscribe to public lobbies updates
     socket.on('connect-public', async () => {
       try {
@@ -612,6 +676,51 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
   } catch (error) {
         logger.error("Error creating multiplayer session:", error);
         res.status(500).send({ message: "Internal Server Error" });
+  }
+};
+
+export const destroyMultiplayerSession = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const { sessionCode, sessionToken } = req.body;
+    
+    if (!sessionCode || !sessionToken) {
+      res.status(400).send({ message: "Session code and token are required" });
+      return;
+    }
+    
+    // Verify session exists and user has access
+    const sessionResult = await sql`
+      SELECT id, creator_id 
+      FROM multi_sessions 
+      WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
+    ` as { id: number; creator_id: number }[];
+    
+    if (sessionResult.length === 0) {
+      res.status(404).send({ message: "Session not found or invalid token" });
+      return;
+    }
+    
+    // Check if user is the creator (admins can also destroy via socket)
+    if (userId !== sessionResult[0].creator_id) {
+      res.status(403).send({ message: "Only the session creator can destroy the session" });
+      return;
+    }
+    
+    // Notify all players in the lobby that the session is being destroyed
+    broadcastToSession(sessionCode, 'session-destroyed', {
+      reason: 'Session ended by creator'
+    });
+    
+    // Clean up the session
+    cleanupGame(sessionCode, false); // false = don't skip database deletion
+    
+    logger.info(`Session ${sessionCode} destroyed via HTTP API by user ${userId}`);
+    
+    res.status(200).send({ message: "Session destroyed successfully" });
+  } catch (error) {
+    logger.error("Error destroying multiplayer session:", error);
+    res.status(500).send({ message: "Internal Server Error" });
   }
 };
 
