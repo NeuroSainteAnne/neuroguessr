@@ -431,5 +431,11 @@
   "refresh": "Refresh",
   "delete_challenge": "Delete Challenge",
   "confirm_delete_challenge": "Are you sure you want to delete this challenge?",
-  "error_deleting_challenge": "Failed to delete challenge"
+  "error_deleting_challenge": "Failed to delete challenge",
+  "admin_change_session_code": "Admin: Change Session Code",
+  "change_session_code": "Change Session Code",
+  "change_code_description": "You can change the current session code to any 8-digit number.",
+  "enter_new_code": "e.g., 12345678",
+  "changing": "Changing...",
+  "change": "Change"
 }

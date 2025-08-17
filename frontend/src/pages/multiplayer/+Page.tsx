@@ -320,7 +320,17 @@ const MultiPlayer = ({
         } else {
           setHeaderTextMode("failure");
         }
-    })
+    });
+    
+    socket.on('session-code-changed', (data: any) => {
+      consoleLog("verbose", `Session code changed from ${data.oldCode} to ${data.newCode}`);
+      setInputCode(data.newCode);
+      // Update the URL in browser history if needed
+      if (window.history && window.history.replaceState) {
+        const newUrl = `/multiplayer/${data.newCode}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+    });
     
     // Clean up event listeners on unmount, but don't disconnect the socket
     return () => {
@@ -360,6 +370,7 @@ const MultiPlayer = ({
       socketRef.current.off('all-scores-update');
       socketRef.current.off('game-end');
       socketRef.current.off('guess-result');
+      socketRef.current.off('session-code-changed');
     }
   };
 

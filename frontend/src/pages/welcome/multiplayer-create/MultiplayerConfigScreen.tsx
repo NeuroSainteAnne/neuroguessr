@@ -144,6 +144,11 @@ const MultiplayerConfigScreen = () => {
     const [enableRecurrence, setEnableRecurrence] = useState<boolean>(false);
     const [recurrenceType, setRecurrenceType] = useState<"day" | "week" | "month" | "year">("week");
     const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
+    
+    // Admin change session code states
+    const [showChangeCodeInput, setShowChangeCodeInput] = useState<boolean>(false);
+    const [newCodeInput, setNewCodeInput] = useState<string>("");
+    const [changeCodeLoading, setChangeCodeLoading] = useState<boolean>(false);
 
     const createSession = async () => {
         setLoading(true);
@@ -194,6 +199,44 @@ const MultiplayerConfigScreen = () => {
         }
     };
 
+    const changeSessionCode = async () => {
+        if (!authToken || !userIsAdmin) {
+            setError('Admin privileges required');
+            return;
+        }
+        
+        if (!sessionCode || !sessionToken) {
+            setError('No active session to change');
+            return;
+        }
+
+        if(!socketRef.current || !socketRef.current.connected){
+            setError('Not connected to server');
+            return;
+        }
+        
+        if (!newCodeInput || newCodeInput.length !== 8 || !/^\d{8}$/.test(newCodeInput)) {
+            setError('Please enter a valid 8-digit code');
+            return;
+        }
+        setChangeCodeLoading(true);
+        setError(null);
+        
+        try {
+            socketRef.current.emit('change-session-code', {
+                currentSessionCode: sessionCode,
+                newSessionCode: newCodeInput,
+                sessionToken: sessionToken,
+                userToken: authToken
+            });
+            
+        } catch (err) {
+            setChangeCodeLoading(false);
+            setError('Network error');
+            consoleLog("verbose", `Session code change network error: ${err}`);
+        }
+    };
+
     useEffect(() => {
         if (sessionCode && sessionToken && userUsername && authToken) {
             // Get or create socket connection
@@ -218,10 +261,12 @@ const MultiplayerConfigScreen = () => {
             socket.on('error', (data: any) => {
                 setError(data.message);
                 setSaveAsChallengeLoading(false);
+                setChangeCodeLoading(false);
             });
             socket.on('fatal-error', (data: any) => {
                 setError(data.message);
                 setSaveAsChallengeLoading(false);
+                setChangeCodeLoading(false);
             });
             socket.on('lobby-users', (data: any) => {
                 consoleLog("verbose", `Received lobby users update: ${data.users?.length} users`);
@@ -273,6 +318,15 @@ const MultiplayerConfigScreen = () => {
                 // Optionally show preparation message
             });
             
+            socket.on('session-code-changed', (data: any) => {
+                consoleLog("verbose", `Session code changed from ${data.oldCode} to ${data.newCode}`);
+                setSessionCode(data.newCode);
+                setChangeCodeLoading(false);
+                setShowChangeCodeInput(false);
+                setNewCodeInput("");
+                setError(null);
+            });
+            
             // Don't disconnect on unmount - let the socket persist for navigation
             return () => {
                 // Clean up event listeners but keep the socket connected
@@ -287,6 +341,7 @@ const MultiplayerConfigScreen = () => {
                 socket.off('parameters-has-updated');
                 socket.off('save-as-challenge');
                 socket.off('challenge-prepared');
+                socket.off('session-code-changed');
             };
         }
         return undefined;
@@ -972,6 +1027,62 @@ const MultiplayerConfigScreen = () => {
                         {customDescription || (t("challenge_ready_message", {startTime: getReadableStartTime()}))}
                     </p>
                 )}
+                {userIsAdmin && (
+                    <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
+                        <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
+                        <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
+                            {t("change_code_description")}
+                        </p>
+                        {!showChangeCodeInput ? (
+                            <button 
+                                onClick={() => setShowChangeCodeInput(true)}
+                                style={{ 
+                                    backgroundColor: '#21669f', 
+                                    color: 'white', 
+                                    padding: '8px 16px', 
+                                    border: 'none', 
+                                    borderRadius: 4, 
+                                    cursor: 'pointer' 
+                                }}
+                            >
+                                {t("change_session_code")}
+                            </button>
+                        ) : (
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    placeholder={t("enter_new_code")}
+                                    value={newCodeInput}
+                                    onChange={(e) => setNewCodeInput(e.target.value)}
+                                    maxLength={8}
+                                    style={{ 
+                                        padding: '8px 12px', 
+                                        border: '1px solid #ccc', 
+                                        borderRadius: 4, 
+                                        fontSize: 16,
+                                        fontFamily: 'monospace',
+                                        letterSpacing: 2
+                                    }}
+                                />
+                                <button 
+                                    onClick={changeSessionCode}
+                                    disabled={changeCodeLoading}
+                                    style={{ 
+                                        backgroundColor: '#28a745', 
+                                        color: 'white', 
+                                        padding: '8px 16px', 
+                                        border: 'none', 
+                                        borderRadius: 4, 
+                                        cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
+                                        opacity: changeCodeLoading ? 0.6 : 1
+                                    }}
+                                >
+                                    {changeCodeLoading ? t("changing") : t("change")}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }
@@ -1168,7 +1279,11 @@ const MultiplayerConfigScreen = () => {
     return (
         <div className="page-container">
             <title>NeuroGuessr - Create multiplayer game</title>
-            {!sessionCode && <div>'Creating multiplayer session...'</div>}
+            {!sessionCode && (
+                <div>
+                    <div>Creating multiplayer session...</div>
+                </div>
+            )}
             {sessionCode && !challengeSavedSuccessfully && (
                 <div style={{ marginTop: 24 }}>
                     <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>

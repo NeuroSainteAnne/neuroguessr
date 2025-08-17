@@ -167,7 +167,6 @@ export function initSocketHandlers() {
     }) => {
       try {
         const info = socketInfo[socket.id];
-        console.log("GOT 1");
         if (!info) {
           socket.emit('error', { message: "Not authenticated" });
           return;
@@ -239,6 +238,145 @@ export function initSocketHandlers() {
         socket.emit('error', { message: "Error saving challenge" });
       }
     })
+
+    // Handle admin change session code
+    socket.on('change-session-code', async (data: {
+      currentSessionCode: string,
+      newSessionCode: string,
+      sessionToken: string,
+      userToken: string
+    }) => {
+      try {
+        const { currentSessionCode, newSessionCode, sessionToken, userToken } = data;
+        
+        // Verify admin privileges
+        if (!userToken) {
+          socket.emit('error', { message: "Authentication token required" });
+          return;
+        }
+
+        try {
+          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+          if (!jwtPayload || !jwtPayload.admin) {
+            socket.emit('error', { message: "Admin privileges required" });
+            return;
+          }
+          
+          // Validate new session code format (8 digits)
+          if (!newSessionCode || newSessionCode.length !== 8 || !/^\d{8}$/.test(newSessionCode)) {
+            socket.emit('error', { message: "Invalid session code format. Must be 8 digits." });
+            return;
+          }
+          
+          // Check if new session code is already in use
+          const existingSession = await sql`
+            SELECT COUNT(*) as count 
+            FROM multi_sessions 
+            WHERE session_code = ${newSessionCode}
+          `;
+          
+          if (existingSession[0]?.count > 0) {
+            socket.emit('error', { message: "Session code already in use" });
+            return;
+          }
+          
+          // Verify current session exists and user has access
+          const currentSession = await sql`
+            SELECT id, creator_id 
+            FROM multi_sessions 
+            WHERE session_code = ${currentSessionCode} AND session_token = ${sessionToken}
+          ` as { id: number; creator_id: number }[];
+          
+          if (currentSession.length === 0) {
+            socket.emit('error', { message: "Current session not found or invalid token" });
+            return;
+          }
+          
+          // Update the session code in database
+          await sql`
+            UPDATE multi_sessions 
+            SET session_code = ${newSessionCode}
+            WHERE session_code = ${currentSessionCode} AND session_token = ${sessionToken}
+          `;
+          
+          // Get IO instance to access all sockets
+          const io = getIO();
+          
+          // First, notify all clients in the current room about the upcoming change
+          broadcastToSession(currentSessionCode, 'session-code-changed', {
+            oldCode: currentSessionCode,
+            newCode: newSessionCode
+          });
+          
+          // Find all socketClient keys for this session and move sockets to new room
+          const affectedPlayerKeys: string[] = [];
+          Object.keys(socketClients).forEach(playerKey => {
+            if (playerKey.startsWith(`${currentSessionCode}:`)) {
+              affectedPlayerKeys.push(playerKey);
+              
+              // Move all sockets for this player to the new room
+              socketClients[playerKey].forEach(socketId => {
+                const clientSocket = io.sockets.sockets.get(socketId);
+                if (clientSocket) {
+                  clientSocket.leave(`game:${currentSessionCode}`);
+                  clientSocket.join(`game:${newSessionCode}`);
+                }
+              });
+            }
+          });
+          
+          // Update in-memory data structures
+          if (games[currentSessionCode]) {
+            games[newSessionCode] = games[currentSessionCode];
+            games[newSessionCode].sessionCode = newSessionCode;
+            delete games[currentSessionCode];
+          }
+          
+          // Update socketClients mapping (change keys from oldCode:userName to newCode:userName)
+          affectedPlayerKeys.forEach(oldPlayerKey => {
+            const userName = oldPlayerKey.split(':')[1]; // Extract userName from "sessionCode:userName"
+            const newPlayerKey = `${newSessionCode}:${userName}`;
+            socketClients[newPlayerKey] = socketClients[oldPlayerKey];
+            delete socketClients[oldPlayerKey];
+          });
+          
+          // Update socket info for all connected clients
+          Object.keys(socketInfo).forEach(socketId => {
+            if (socketInfo[socketId].sessionCode === currentSessionCode) {
+              socketInfo[socketId].sessionCode = newSessionCode;
+            }
+          });
+          
+          // Update playerInfo mapping (change keys from oldCode:userName to newCode:userName)
+          Object.keys(playerInfo).forEach(playerKey => {
+            if (playerKey.startsWith(`${currentSessionCode}:`)) {
+              const userName = playerKey.split(':')[1];
+              const newPlayerKey = `${newSessionCode}:${userName}`;
+              playerInfo[newPlayerKey] = { ...playerInfo[playerKey], sessionCode: newSessionCode };
+              delete playerInfo[playerKey];
+            }
+          });
+          
+          // Send updated lobby users list to the new room
+          const userList = Object.values(playerInfo)
+            .filter(info => info.sessionCode === newSessionCode)
+            .map(info => info.userName)
+            .filter(Boolean);
+            
+          broadcastToSession(newSessionCode, 'lobby-users', { users: userList });
+          
+          logger.info(`Admin ${jwtPayload.id} changed session code from ${currentSessionCode} to ${newSessionCode}`);
+          
+        } catch (jwtError) {
+          socket.emit('error', { message: "Invalid authentication token" });
+          return;
+        }
+        
+      } catch (error) {
+        logger.error("Change session code error:", error);
+        socket.emit('error', { message: "Error changing session code" });
+      }
+    });
 
     // Subscribe to public lobbies updates
     socket.on('connect-public', async () => {
@@ -420,6 +558,15 @@ function updateGameActivity(sessionCode: string) {
   }
 }
 
+// Helper to check if a session code is reserved (0000, 1111, 2222, etc.)
+function isReservedSessionCode(code: string): boolean {
+    if (code.length !== 8) return false;
+    
+    // Check if all digits are the same (0000, 1111, 2222, etc.)
+    const firstDigit = code[0];
+    return code.split('').every(digit => digit === firstDigit);
+}
+
 // Helper to generate a unique 8-digit code
 function generateCode(): string {
     return Math.floor(10000000 + Math.random() * 90000000).toString();
@@ -430,6 +577,12 @@ async function getUniqueCode(): Promise<string> {
     let exists: boolean = true;
     do {
         code = generateCode();
+        
+        // Skip reserved codes 
+        if (isReservedSessionCode(code)) {
+            continue;
+        }
+        
         const result = await sql`
             SELECT COUNT(*) as count 
             FROM multi_sessions 
@@ -438,15 +591,6 @@ async function getUniqueCode(): Promise<string> {
         exists = result[0]?.count > 0;
     } while (exists);
     return code;
-}
-
-function generateRandomInts(quantity: number, max: number) {
-  const arr = []
-  while (arr.length < quantity) {
-    var candidateInt = Math.floor(Math.random() * max) + 1
-    if (arr.indexOf(candidateInt) === -1) arr.push(candidateInt)
-  }
-  return (arr)
 }
 
 export const createMultiplayerSession = async (req: Request, res: Response) => {
@@ -1161,7 +1305,6 @@ async function handleValidateGuess(data: {
   try {
     const { sessionCode, userName, voxelProp, anonToken, userToken } = data;
     
-        console.log("GOT 2");
     // Authentication check
     if (!verifyUserAccess(sessionCode, userName, userToken, anonToken)) {
       emitToUser(sessionCode, userName, "error", {message: "Authentication failed"})

@@ -432,5 +432,11 @@
   "refresh": "Actualiser",
   "delete_challenge": "Supprimer le défi",
   "confirm_delete_challenge": "Êtes-vous sûr de vouloir supprimer ce défi ?",
-  "error_deleting_challenge": "Échec de la suppression du défi"
+  "error_deleting_challenge": "Échec de la suppression du défi",
+  "admin_change_session_code": "Admin : Changer le code de session",
+  "change_session_code": "Changer le code de session",
+  "change_code_description": "Vous pouvez changer le code de session actuel pour n'importe quel nombre à 8 chiffres.",
+  "enter_new_code": "ex : 12345678",
+  "changing": "Changement...",
+  "change": "Changer"
 }
