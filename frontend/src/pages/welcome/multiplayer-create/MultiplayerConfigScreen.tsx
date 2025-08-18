@@ -212,11 +212,9 @@ const MultiplayerConfigScreen = () => {
         const currentSessionToken = sessionTokenRef.current;
         const currentAuthToken = authTokenRef.current;
         
-        console.log(currentSessionCode, currentSessionToken, currentAuthToken)
         if (!currentSessionCode || !currentSessionToken || !currentAuthToken) return;
         
         try {
-            console.log("got there")
             if (socketRef.current && socketRef.current.connected) {
                 // Emit a destroy session event
                 socketRef.current.emit('destroy-session', {
