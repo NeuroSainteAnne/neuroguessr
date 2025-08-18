@@ -108,6 +108,7 @@
   "jhu_info": "JHU <span class='atlas-description'>Faisceaux de matière blanche (JHU)</span>",
   "territories_info" :"Territoires <span class='atlas-description'>Territoires des artères cérébrales</span>",
   "xtract_info": "Matière Blanche <span class='atlas-description'><Faisceaux de matière blanche (FSL)</span>",
+  "bsa_info" : "Brainvisa Sulci Atlas <span class='atlas-description'>Atlas des sillons</span>",
   "select_language": "Sélectionner la Langue",
   "help_title": "Aide et Informations",
   "help_presentation_title": "À Propos de NeuroGuessr",

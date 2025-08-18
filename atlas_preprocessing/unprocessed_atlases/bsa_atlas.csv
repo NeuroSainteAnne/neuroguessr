@@ -1,0 +1,147 @@
+i,x,y,z,r,g,b,brainvisa_acronym,label
+0,-36.0,14.0,-18.0,0.00,0.59,1.00,F.C.L.a._left,Left anterior lateral fissure
+1,36.0,16.0,-15.0,0.00,0.59,1.00,F.C.L.a._right,Right anterior lateral fissure
+2,-57.0,-24.0,13.0,0.00,0.00,1.00,F.C.L.p._left,Left posterior lateral fissure
+3,59.0,-20.0,16.0,0.00,0.00,1.00,F.C.L.p._right,Right posterior lateral fissure
+4,-46.0,26.0,3.0,0.39,1.00,1.00,F.C.L.r.ant._left,Left anterior ramus of the lateral fissure
+5,48.0,27.0,2.0,0.39,1.00,1.00,F.C.L.r.ant._right,Right anterior ramus of the lateral fissure
+6,-51.0,20.0,11.0,0.61,0.39,0.61,F.C.L.r.asc._left,Left ascending ramus of the lateral fissure
+7,53.0,19.0,10.0,0.61,0.39,0.61,F.C.L.r.asc._right,Right ascending ramus of the lateral fissure
+8,-55.0,13.0,18.0,0.59,0.59,1.00,F.C.L.r.diag._left,Left diagonal ramus of the lateral fissure
+9,58.0,15.0,18.0,0.59,0.59,1.00,F.C.L.r.diag._right,Right diagonal ramus of the lateral fissure
+10,-64.0,-25.0,28.0,0.00,0.75,1.00,F.C.L.r.retroC.tr._left,Left retro central transverse ramus of the lateral fissure
+11,65.0,-23.0,33.0,0.00,0.75,1.00,F.C.L.r.retroC.tr._right,Right retro central transverse ramus of the lateral fissure
+12,-52.0,-3.0,11.0,0.39,0.00,1.00,F.C.L.r.sc.ant._left,Left anterior sub-central ramus of the lateral fissure
+13,52.0,-4.0,13.0,0.39,0.00,1.00,F.C.L.r.sc.ant._right,Right anterior sub-central ramus of the lateral fissure
+14,-54.0,-18.0,17.0,0.39,0.00,0.61,F.C.L.r.sc.post._left,Left posterior sub-central ramus of the lateral fissure
+15,55.0,-17.0,19.0,0.39,0.00,0.61,F.C.L.r.sc.post._right,Right posterior sub-central ramus of the lateral fissure
+16,-6.0,22.0,33.0,0.00,0.00,1.00,F.C.M.ant._left,Left calloso-marginal anterior fissure
+17,7.0,25.0,31.0,0.00,0.00,1.00,F.C.M.ant._right,Right calloso-marginal anterior fissure
+18,-7.0,-36.0,51.0,1.00,0.88,0.00,F.C.M.post._left,Left calloso-marginal posterior fissure
+19,9.0,-34.0,51.0,1.00,0.88,0.00,F.C.M.post._right,Right calloso-marginal posterior fissure
+20,-10.0,-76.0,0.0,0.78,0.59,0.39,F.Cal.ant.-Sc.Cal._left,Left calcarine fissure
+21,13.0,-72.0,3.0,0.78,0.59,0.39,F.Cal.ant.-Sc.Cal._right,Right calcarine fissure
+22,-26.0,-53.0,-16.0,0.00,0.71,0.90,F.Coll._left,Left collateral fissure
+23,28.0,-52.0,-14.0,0.00,0.71,0.90,F.Coll._right,Right collateral fissure
+24,-51.0,-38.0,48.0,0.78,1.00,0.00,F.I.P.Po.C.inf._left,Left superior postcentral intraparietal superior sulcus
+25,50.0,-37.0,52.0,0.78,1.00,0.00,F.I.P.Po.C.inf._right,Right superior postcentral intraparietal superior sulcus
+26,-32.0,-75.0,39.0,0.00,1.00,0.00,F.I.P._left,Left intraparietal sulcus
+27,36.0,-72.0,42.0,0.00,1.00,0.00,F.I.P._right,Right intraparietal sulcus
+28,-58.0,-57.0,39.0,0.78,0.00,0.39,F.I.P.r.int.1_left,Left primary intermediate ramus of the intraparietal sulcus
+29,64.0,-47.0,35.0,0.78,0.00,0.39,F.I.P.r.int.1_right,Right primary intermediate ramus of the intraparietal sulcus
+30,-44.0,-80.0,33.0,0.78,0.39,0.00,F.I.P.r.int.2_left,Left secondary intermediate ramus of the intraparietal sulcus
+31,53.0,-71.0,35.0,0.78,0.39,0.00,F.I.P.r.int.2_right,Right secondary intermediate ramus of the intraparietal sulcus
+32,-9.0,-78.0,22.0,0.00,0.00,1.00,F.P.O._left,Left parieto-occipital fissure
+33,13.0,-75.0,23.0,0.00,0.00,1.00,F.P.O._right,Right parieto-occipital fissure
+34,-41.0,1.0,4.0,0.69,0.96,0.00,INSULA_left,Left insula
+35,44.0,1.0,5.0,0.69,0.96,0.00,INSULA_right,Right insula
+36,-28.0,-96.0,-3.0,0.00,0.00,0.39,OCCIPITAL_left,Left lobe occipital
+37,35.0,-92.0,0.0,0.00,0.00,0.39,OCCIPITAL_right,Right lobe occipital
+38,-4.0,-37.0,64.0,0.00,1.00,1.00,S.C.LPC._left,Left paracentral lobule central sulcus
+39,5.0,-37.0,62.0,0.00,1.00,1.00,S.C.LPC._right,Right paracentral lobule central sulcus
+40,-42.0,-27.0,54.0,1.00,0.00,0.00,S.C._left,Left central sulcus
+41,43.0,-25.0,56.0,1.00,0.00,0.00,S.C._right,Right central sulcus
+42,-63.0,-3.0,21.0,1.00,0.74,0.14,S.C.sylvian._left,Left central sylvian sulcus
+43,65.0,-2.0,21.0,1.00,0.74,0.14,S.C.sylvian._right,Right central sylvian sulcus
+44,-2.0,-21.0,26.0,0.39,0.39,1.00,S.Call._left,Left subcallosal sulcus
+45,4.0,-13.0,27.0,0.39,0.39,1.00,S.Call._right,Right subcallosal sulcus
+46,-4.0,-95.0,14.0,1.00,0.00,0.00,S.Cu._left,Left cuneal sulcus
+47,10.0,-95.0,15.0,1.00,0.00,0.00,S.Cu._right,Right cuneal sulcus
+48,-48.0,26.0,28.0,1.00,0.00,1.00,S.F.inf._left,Left inferior frontal sulcus
+49,50.0,26.0,29.0,1.00,0.00,1.00,S.F.inf._right,Right inferior frontal sulcus
+50,-48.0,41.0,11.0,0.55,0.00,1.00,S.F.inf.ant._left,Left anterior inferior frontal sulcus
+51,50.0,42.0,12.0,0.55,0.00,1.00,S.F.inf.ant._right,Right anterior inferior frontal sulcus
+52,-5.0,35.0,28.0,0.39,0.98,0.00,S.F.int._left,Left internal frontal sulcus
+53,7.0,34.0,30.0,0.39,0.98,0.00,S.F.int._right,Right internal frontal sulcus
+54,-35.0,40.0,33.0,0.00,0.78,1.00,S.F.inter._left,Left intermediate frontal sulcus
+55,37.0,43.0,31.0,0.00,0.78,1.00,S.F.inter._right,Right intermediate frontal sulcus
+56,-23.0,61.0,6.0,1.00,0.00,0.69,S.F.marginal._left,Left marginal frontal sulcus
+57,25.0,63.0,4.0,1.00,0.00,0.69,S.F.marginal._right,Right marginal frontal sulcus
+58,-16.0,19.0,64.0,0.78,0.00,0.78,S.F.median._left,Left median frontal sulcus
+59,16.0,19.0,64.0,0.78,0.00,0.78,S.F.median._right,Right median frontal sulcus
+60,-43.0,51.0,8.0,1.00,0.00,0.00,S.F.orbitaire._left,Left orbital frontal sulcus
+61,45.0,53.0,7.0,1.00,0.00,0.00,S.F.orbitaire._right,Right orbital frontal sulcus
+62,-16.0,63.0,26.0,1.00,1.00,0.00,S.F.polaire.tr._left,Left polar frontal sulcus
+63,18.0,62.0,27.0,1.00,1.00,0.00,S.F.polaire.tr._right,Right polar frontal sulcus
+64,-27.0,19.0,54.0,0.00,1.00,0.00,S.F.sup._left,Left superior frontal sulcus
+65,29.0,21.0,55.0,0.00,1.00,0.00,S.F.sup._right,Right superior frontal sulcus
+66,-62.0,-43.0,39.0,1.00,0.73,0.00,S.GSM._left,Left sulcus of the supra-marginal gyrus
+67,-14.0,-65.0,-8.0,1.00,0.16,0.75,S.Li.ant._left,Left anterior intralingual sulcus
+68,16.0,-64.0,-6.0,1.00,0.16,0.75,S.Li.ant._right,Right anterior intralingual sulcus
+69,-8.0,-82.0,-13.0,1.00,0.55,0.75,S.Li.post._left,Left posterior intra-lingual sulcus
+70,11.0,-80.0,-10.0,1.00,0.55,0.75,S.Li.post._right,Right posterior intra-lingual sulcus
+71,-44.0,-24.0,-28.0,1.00,0.00,0.00,S.O.T.lat.ant._left,Left anterior occipito-temporal lateral sulcus
+72,45.0,-21.0,-29.0,1.00,0.00,0.00,S.O.T.lat.ant._right,Right anterior occipito-temporal lateral sulcus
+73,-38.0,-60.0,-23.0,1.00,1.00,1.00,S.O.T.lat.int._left,Left internal occipito-temporal lateral sulcus
+74,38.0,-61.0,-20.0,1.00,1.00,1.00,S.O.T.lat.int._right,Right internal occipito-temporal lateral sulcus
+75,-52.0,-51.0,-22.0,0.39,1.00,0.39,S.O.T.lat.med._left,Left median occipito-temporal lateral sulcus
+76,55.0,-44.0,-22.0,0.39,1.00,0.39,S.O.T.lat.med._right,Right median occipito-temporal lateral sulcus
+77,-45.0,-71.0,-17.0,1.00,0.61,0.00,S.O.T.lat.post._left,Left posterior occipito-temporal lateral sulcus
+78,47.0,-67.0,-17.0,1.00,0.61,0.00,S.O.T.lat.post._right,Right posterior occipito-temporal lateral sulcus
+79,-7.0,-102.0,-12.0,0.55,1.00,0.00,S.O.p._left,Left occipito-polar sulcus
+80,14.0,-101.0,-8.0,0.55,1.00,0.00,S.O.p._right,Right occipito-polar sulcus
+81,-10.0,28.0,-16.0,1.00,1.00,0.00,S.Olf._left,Left olfactory sulcus
+82,11.0,29.0,-15.0,1.00,1.00,0.00,S.Olf._right,Right olfactory sulcus
+83,-29.0,39.0,-8.0,0.39,1.00,0.39,S.Or._left,Left orbital sulcus
+84,32.0,38.0,-7.0,0.39,1.00,0.39,S.Or._right,Right orbital sulcus
+85,-7.0,-69.0,47.0,1.00,0.00,1.00,S.Pa.int._left,Left internal parietal sulcus
+86,8.0,-65.0,48.0,1.00,0.00,1.00,S.Pa.int._right,Right internal parietal sulcus
+87,-17.0,-65.0,63.0,0.00,0.52,1.00,S.Pa.sup._left,Left superior parietal sulcus
+88,20.0,-66.0,63.0,0.00,0.52,1.00,S.Pa.sup._right,Right superior parietal sulcus
+89,-10.0,-78.0,35.0,0.39,1.00,1.00,S.Pa.t._left,Left transverse parietal sulcus
+90,15.0,-80.0,38.0,0.39,1.00,1.00,S.Pa.t._right,Right transverse parietal sulcus
+91,-54.0,5.0,29.0,0.63,1.00,0.00,S.Pe.C.inf._left,Left inferior precentral sulcus
+92,56.0,7.0,29.0,0.63,1.00,0.00,S.Pe.C.inf._right,Right inferior precentral sulcus
+93,-47.0,3.0,44.0,1.00,1.00,0.35,S.Pe.C.inter._left,Left intermediate precentral sulcus
+94,49.0,7.0,45.0,1.00,1.00,0.35,S.Pe.C.inter._right,Right intermediate precentral sulcus
+95,-30.0,-17.0,66.0,1.00,1.00,0.00,S.Pe.C.marginal._left,Left marginal precentral sulcus
+96,30.0,-15.0,67.0,1.00,1.00,0.00,S.Pe.C.marginal._right,Right marginal precentral sulcus
+97,-20.0,-24.0,72.0,0.63,0.63,0.00,S.Pe.C.median._left,Left median precentral sulcus
+98,20.0,-22.0,73.0,0.63,0.63,0.00,S.Pe.C.median._right,Right median precentral sulcus
+99,-41.0,-10.0,57.0,1.00,0.63,0.00,S.Pe.C.sup._left,Left superior precentral sulcus
+100,43.0,-7.0,57.0,1.00,0.63,0.00,S.Pe.C.sup._right,Right superior precentral sulcus
+101,-29.0,-52.0,65.0,0.47,0.00,0.47,S.Po.C.sup._left,Left superior postcentral sulcus
+102,30.0,-50.0,66.0,0.47,0.00,0.47,S.Po.C.sup._right,Right superior postcentral sulcus
+103,-4.0,47.0,-3.0,1.00,0.44,0.00,S.R.inf._left,Left inferior rostral sulcus
+104,5.0,46.0,-5.0,1.00,0.44,0.00,S.R.inf._right,Right inferior rostral sulcus
+105,-29.0,-5.0,-35.0,1.00,1.00,0.00,S.Rh._left,Left rhinal sulcus
+106,30.0,-4.0,-34.0,1.00,1.00,0.00,S.Rh._right,Right rhinal sulcus
+107,-62.0,-27.0,-21.0,1.00,0.00,0.67,S.T.i.ant._left,Left anterior inferior temporal sulcus
+108,65.0,-26.0,-20.0,1.00,0.00,0.67,S.T.i.ant._right,Right anterior inferior temporal sulcus
+109,-53.0,-69.0,-3.0,0.39,0.00,1.00,S.T.i.post._left,Left posterior inferior temporal sulcus
+110,57.0,-66.0,-1.0,0.39,0.00,1.00,S.T.i.post._right,Right posterior inferior temporal sulcus
+111,-45.0,9.0,-32.0,1.00,1.00,1.00,S.T.pol._left,Left polar temporal sulcus
+112,45.0,10.0,-32.0,1.00,1.00,1.00,S.T.pol._right,Right polar temporal sulcus
+113,-61.0,-31.0,0.0,1.00,0.39,0.39,S.T.s._left,Left superior temporal sulcus
+114,63.0,-25.0,0.0,1.00,0.39,0.39,S.T.s._right,Right superior temporal sulcus
+115,-54.0,-65.0,26.0,0.67,1.00,0.51,S.T.s.ter.asc.ant._left,Left anterior terminal ascending branch of the superior temporal sulcus
+116,59.0,-54.0,28.0,0.67,1.00,0.51,S.T.s.ter.asc.ant._right,Right anterior terminal ascending branch of the superior temporal sulcus
+117,-50.0,-73.0,15.0,0.00,0.71,1.00,S.T.s.ter.asc.post._left,Left posterior terminal ascending branch of the superior temporal sulcus
+118,55.0,-67.0,18.0,0.00,0.71,1.00,S.T.s.ter.asc.post._right,Right posterior terminal ascending branch of the superior temporal sulcus
+119,-6.0,-24.0,66.0,1.00,0.60,0.39,S.p.C._left,Left paracentral sulcus
+120,7.0,-29.0,65.0,1.00,0.60,0.39,S.p.C._right,Right paracentral sulcus
+121,-5.0,-58.0,31.0,0.59,1.00,0.00,S.s.P._left,Left sub-parietal sulcus
+122,6.0,-54.0,34.0,0.59,1.00,0.00,S.s.P._right,Right sub-parietal sulcus
+123,-10.0,-19.0,6.0,0,0,0,thalamus._left,Left Thalamus
+124,-12.0,8.0,10.0,0,0,0,caudate._left,Left Caudate
+125,-24.0,0.0,0.0,0,0,0,putamen._left,Left Putamen
+126,-19.0,-5.0,-1.0,0,0,0,pallidum._left,Left Pallidum
+127,-24.0,-22.0,-14.0,0,0,0,hippocampus._left,Left Hippocampus
+128,-23.0,-4.0,-18.0,0,0,0,amygdala._left,Left Amygdala
+129,-9.0,11.0,-6.0,0,0,0,accumbens._left,Left Accumbens
+130,11.0,-18.0,6.0,0,0,0,thalamus._right,Right Thalamus
+131,13.0,9.0,10.0,0,0,0,caudate._right,Right Caudate
+132,25.0,1.0,0.0,0,0,0,putamen._right,Right Putamen
+133,19.0,-4.0,-1.0,0,0,0,pallidum._right,Right Pallidum
+134,26.0,-21.0,-13.0,0,0,0,hippocampus._right,Right Hippocampus
+135,23.0,-3.0,-18.0,0,0,0,amygdala._right,Right Amygdala
+136,9.0,12.0,-6.0,0,0,0,accumbens._right,Right Accumbens
+137,-17.0,-14.0,1.0,0,0,0,ventricle._left,Left ventricle
+138,18.0,-13.0,1.0,0,0,0,ventricle._right,Right ventricle
+139,-26.0,-17.0,18.0,0,0,0,cerebral_white Matter._left,Left Cerebral White Matter
+140,-31.0,-18.0,16.0,0,0,0,cerebral_cortex._left,Left Cerebral Cortex
+141,-12.0,-14.0,14.0,0,0,0,lateral_ventrical._left,Left Lateral Ventrical
+142,0.0,-30.0,-34.0,0,0,0,brain_stem,Brain-Stem
+143,28.0,-16.0,18.0,0,0,0,cerebral_white_matter._right,Right Cerebral White Matter
+144,31.0,-16.0,16.0,0,0,0,cerebral_cortex._right,Right Cerebral Cortex
+145,13.0,-13.0,14.0,0,0,0,lateral_ventrical._right,Right Lateral Ventricle

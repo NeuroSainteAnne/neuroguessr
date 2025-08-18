@@ -72,12 +72,18 @@ atlas_files = {
         "nii": "JHU_web.nii.gz",
         "json": "JHU_labels.json",
         "bilateral": False
-    },"""
+    },
     "territories": {
         "nii": "ArterialAtlas_stride_round.nii.gz",
         "json": "artery_territories.json",
         "bilateral": False
+    },"""
+    "BSA": {
+        "nii": "bsa_atlas.nii.gz",
+        "json": "bsa_atlas.json",
+        "bilateral": False
     }
+
 }
 
 NIFTI_DIR = "./processed_atlases"  

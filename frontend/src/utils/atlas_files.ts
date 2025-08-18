@@ -105,6 +105,13 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         json: 'artery_territories.json',
         name: 'Territories',
         difficulty: 2
+    },
+    'bsa': {
+        atlas_category: 'cortical_regions',
+        nii: 'bsa_atlas.nii.gz',
+        json: 'bsa_atlas.json',
+        name: 'BSA Atlas',
+        difficulty: 2
     }
 };
 

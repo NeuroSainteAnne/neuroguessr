@@ -108,6 +108,7 @@
   "jhu_info": "JHU <span class='atlas-description'>JHU's White matter tracts</span>",
   "territories_info" :"Territories <span class='atlas-description'>Cerebral Arteries Territories</span>",
   "xtract_info": "White Matter <span class='atlas-description'>FSL's White matter tracts</span>",
+  "bsa_info" : "Brainvisa Sulci Atlas <span class='atlas-description'>Sulci Atlas</span>",
   "select_language": "Select Language",
   "help_title": "Help & Information",
   "help_presentation_title": "About NeuroGuessr",
