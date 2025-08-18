@@ -50,6 +50,7 @@ const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the regio
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
+const DELAY_FOR_CHALLENGES_IN_PUBLIC = 5 * 60 * 1000; // 5 minutes
 
 // In-memory maps
 const socketClients: Record<string, string[]> = {}; // sessionCode:userName -> socketIds[]
@@ -2123,7 +2124,21 @@ async function buildPublicLobbies() {
   const lobbies = rows.map(r => {
     const codeStr = String(r.session_code).padStart(8, '0');
     const gameRef = games[codeStr];
-    if (!gameRef || gameRef.hasStarted) return undefined;
+    if (!gameRef || (gameRef.hasStarted && gameRef.hasFinishedCountdown)) return undefined;
+    
+    // Hide challenges whose startTime is more than 5 minutes in the future
+    if (gameRef.isChallenge && gameRef.commands && gameRef.commands.length > 0) {
+      const countdownCommand = gameRef.commands.find(cmd => cmd.action === "countdown" && cmd.startTime);
+      if (countdownCommand && countdownCommand.startTime) {
+        const startTime = new Date(countdownCommand.startTime);
+        const now = new Date();
+        const timeDiff = startTime.getTime() - now.getTime();
+        if (timeDiff > DELAY_FOR_CHALLENGES_IN_PUBLIC) {
+          return undefined;
+        }
+      }
+    }
+    
     const users = Object.values(playerInfo).filter(p => p.sessionCode === codeStr).length;
     const totalDuration = gameRef.parameters?.totalDuration ?? (gameRef.commands ? gameRef.commands.reduce((acc, c) => acc + (c.duration || 0), 0) : undefined);
     return {
