@@ -11,6 +11,7 @@ export interface LoginRequestBody {
 
 export interface AuthenticatedRequest extends Request {
     user: User;
+    userToken: string;
 }
 
 /* REGISTER interfaces */

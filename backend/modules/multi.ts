@@ -386,56 +386,11 @@ export function initSocketHandlers() {
     }) => {
       try {
         const { sessionCode, sessionToken, userToken } = data;
-        
-        // Verify authentication
-        if (!userToken) {
-          socket.emit('error', { message: "Authentication token required" });
+        const result = await handleDestroySession({sessionCode, sessionToken, userToken});
+        if(result.status != 200){
+          socket.emit('error', { message: result.message });
           return;
         }
-
-        try {
-          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
-          if (!jwtPayload) {
-            socket.emit('error', { message: "Invalid authentication token" });
-            return;
-          }
-          
-          // Verify session exists and user has access
-          const currentSession = await sql`
-            SELECT id, creator_id 
-            FROM multi_sessions 
-            WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
-          ` as { id: number; creator_id: number }[];
-          
-          if (currentSession.length === 0) {
-            socket.emit('error', { message: "Session not found or invalid token" });
-            return;
-          }
-          
-          // Check if user is the creator or admin
-          const isCreator = jwtPayload.id === currentSession[0].creator_id;
-          const isAdmin = jwtPayload.admin === true;
-          
-          if (!isCreator && !isAdmin) {
-            socket.emit('error', { message: "Only the session creator or admin can destroy the session" });
-            return;
-          }
-          
-          // Notify all players in the lobby that the session is being destroyed
-          broadcastToSession(sessionCode, 'session-destroyed', {
-            reason: 'Creator left the configuration screen'
-          });
-          
-          // Clean up the session
-          cleanupGame(sessionCode, false); // false = don't skip database deletion
-          
-          logger.info(`Session ${sessionCode} destroyed by user ${jwtPayload.id} (creator: ${isCreator}, admin: ${isAdmin})`);
-          
-        } catch (jwtError) {
-          socket.emit('error', { message: "Invalid authentication token" });
-          return;
-        }
-        
       } catch (error) {
         logger.error("Destroy session error:", error);
         socket.emit('error', { message: "Error destroying session" });
@@ -681,43 +636,15 @@ export const createMultiplayerSession = async (req: Request, res: Response) => {
 
 export const destroyMultiplayerSession = async (req: Request, res: Response) => {
   try {
-    const userId = (req as AuthenticatedRequest).user.id;
+    const userToken = (req as AuthenticatedRequest).userToken;
     const { sessionCode, sessionToken } = req.body;
-    
-    if (!sessionCode || !sessionToken) {
-      res.status(400).send({ message: "Session code and token are required" });
-      return;
+
+    const result = await handleDestroySession({ sessionCode, sessionToken, userToken });
+    if(result.status == 200){
+      res.status(200).send({ message: "Session destroyed successfully" });
+    } else {
+      res.status(result.status).send({ message: result.message });
     }
-    
-    // Verify session exists and user has access
-    const sessionResult = await sql`
-      SELECT id, creator_id 
-      FROM multi_sessions 
-      WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
-    ` as { id: number; creator_id: number }[];
-    
-    if (sessionResult.length === 0) {
-      res.status(404).send({ message: "Session not found or invalid token" });
-      return;
-    }
-    
-    // Check if user is the creator (admins can also destroy via socket)
-    if (userId !== sessionResult[0].creator_id) {
-      res.status(403).send({ message: "Only the session creator can destroy the session" });
-      return;
-    }
-    
-    // Notify all players in the lobby that the session is being destroyed
-    broadcastToSession(sessionCode, 'session-destroyed', {
-      reason: 'Session ended by creator'
-    });
-    
-    // Clean up the session
-    cleanupGame(sessionCode, false); // false = don't skip database deletion
-    
-    logger.info(`Session ${sessionCode} destroyed via HTTP API by user ${userId}`);
-    
-    res.status(200).send({ message: "Session destroyed successfully" });
   } catch (error) {
     logger.error("Error destroying multiplayer session:", error);
     res.status(500).send({ message: "Internal Server Error" });
@@ -1520,7 +1447,7 @@ async function handleValidateGuess(data: {
 }
 
 // Helper function to calculate the next start time based on recurrence settings
-function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence): string {
+function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence): Date {
   const current = new Date(currentStartTime);
   const next = new Date(current);
   
@@ -1542,7 +1469,7 @@ function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence
       break;
   }
   
-  return next.toISOString();
+  return next;
 }
 
 // Helper function to generate session token
@@ -1568,7 +1495,7 @@ async function handleGameRecurrence(gameBackup: MultiplayerGame): Promise<void> 
     }
 
     // Calculate next start time
-    const nextStartTime = calculateNextStartTime(countdownCommand.startTime, gameBackup.parameters.recurrence);
+    const nextStartTime = calculateNextStartTime(countdownCommand.startTime, gameBackup.parameters.recurrence).toISOString();
     
     // Update the countdown command with the new start time
     const updatedCommands = gameBackup.commands.map(cmd => {
@@ -2342,23 +2269,7 @@ export async function restorePersistentChallengeSessions() {
             
             // Keep advancing until we find a future time
             while (nextStartTime.getTime() <= now.getTime()) {
-              switch (recurrence.type) {
-                case "hour":
-                  nextStartTime.setHours(nextStartTime.getHours() + recurrence.interval);
-                  break;
-                case "day":
-                  nextStartTime.setDate(nextStartTime.getDate() + recurrence.interval);
-                  break;
-                case "week":
-                  nextStartTime.setDate(nextStartTime.getDate() + (7 * recurrence.interval));
-                  break;
-                case "month":
-                  nextStartTime.setMonth(nextStartTime.getMonth() + recurrence.interval);
-                  break;
-                case "year":
-                  nextStartTime.setFullYear(nextStartTime.getFullYear() + recurrence.interval);
-                  break;
-              }
+              nextStartTime = calculateNextStartTime(nextStartTime.toISOString(), recurrence);
             }
             
             // Update the commands with the new start time
@@ -2406,5 +2317,61 @@ export async function restorePersistentChallengeSessions() {
     
   } catch (error) {
     logger.error("Error restoring persistent challenge sessions:", error);
+  }
+}
+
+const handleDestroySession = async (data: {
+      sessionCode: string,
+      sessionToken: string,
+      userToken: string
+    }) => {
+  try {
+    const { sessionCode, sessionToken, userToken } = data;
+
+    // Verify authentication
+    if (!userToken) {
+      return { status: 400, message: "Authentication token required" };
+    }
+    if (!sessionCode || !sessionToken) {
+      return { status: 400, message: "Session code and token are required" };
+    }
+    
+    const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+    if (!jwtPayload) {
+      return { status: 403, message: "Invalid authentication token" };
+    }
+    
+    // Verify session exists and user has access
+    const currentSession = await sql`
+      SELECT id, creator_id 
+      FROM multi_sessions 
+      WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
+    ` as { id: number; creator_id: number }[];
+    
+    if (currentSession.length === 0) {
+      return { status: 404, message: "Session not found or invalid token" };
+    }
+    
+    // Check if user is the creator or admin
+    const isCreator = jwtPayload.id === currentSession[0].creator_id;
+    const isAdmin = jwtPayload.admin === true;
+    
+    if (!isCreator && !isAdmin) {
+      return { status: 403, message: "Only the session creator or admin can destroy the session" };
+    }
+    
+    // Notify all players in the lobby that the session is being destroyed
+    broadcastToSession(sessionCode, 'session-destroyed', {
+      reason: 'Creator left the configuration screen'
+    });
+    
+    // Clean up the session
+    cleanupGame(sessionCode, false); // false = don't skip database deletion
+    
+    logger.info(`Session ${sessionCode} destroyed by user ${jwtPayload.id} (creator: ${isCreator}, admin: ${isAdmin})`);
+    return { status: 200, message: "Session destroyed successfully" };
+  } catch (error) {
+    logger.error("Destroy session error:", error);
+    return { status: 500, message: "Error destroying session" };
   }
 }

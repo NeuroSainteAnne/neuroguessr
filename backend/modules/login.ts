@@ -207,6 +207,7 @@ export const authenticateToken = (
 
             // Attach the user information to the request object
             (req as AuthenticatedRequest).user = decoded as User;
+            (req as AuthenticatedRequest).userToken = token;
             next(); // Proceed to the next middleware or route handler
         });
     } catch (error) {
