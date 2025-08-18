@@ -4,17 +4,20 @@ import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
-const config: Config = configJson;
+export const config: Config = configJson;
 import { imageMetadata, imageRef, regionCenters, validRegions } from "./game.ts";
 import { NVImage } from "@niivue/niivue";
-import { MultiSession, User } from "interfaces/database.interfaces.ts";
-import { ExternalGameCommands, GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState, Recurrence } from "interfaces/multi.interfaces.ts";
+import { MultiSession } from "interfaces/database.interfaces.ts";
+import { GameCommands, MultiplayerGame, MultiplayerParametersType, PlayerInfo, PersistentGameState, Recurrence } from "interfaces/multi.interfaces.ts";
 import crypto from "crypto";
 import { getIO } from "./socket.io.ts";
 import { Socket } from "socket.io";
 import Joi from "joi";
 import { logger } from "./logging.ts";
 import { getDistance } from "./utils_compute.ts";
+import { handleSaveAsChallenge } from "./multi_challenge.ts";
+import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
+import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
 
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
@@ -35,28 +38,28 @@ const externalGameCommandsSchema = Joi.array().items(
   }).required()
 );
 
-const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult => {
+export const validateExternalGameCommands = (commands: unknown): Joi.ValidationResult => {
   return externalGameCommandsSchema.validate(commands, { abortEarly: false });
 };
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
-const DEFAULT_LOAD_ATLAS_DURATION = 5; // seconds to load atlas
-const DEFAULT_COUNTDOWN_TIME = 5; // 5 seconds countdown before game start
+export const DEFAULT_LOAD_ATLAS_DURATION = 5; // seconds to load atlas
+export const DEFAULT_COUNTDOWN_TIME = 5; // 5 seconds countdown before game start
 const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
 const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
-const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+export const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
-const DELAY_FOR_CHALLENGES_IN_PUBLIC = 5 * 60 * 1000; // 5 minutes
+export const DELAY_FOR_CHALLENGES_IN_PUBLIC = 5 * 60 * 1000; // 5 minutes
 
 // In-memory maps
-const socketClients: Record<string, string[]> = {}; // sessionCode:userName -> socketIds[]
-const games: Record<string, MultiplayerGame> = {};
-const playerInfo: Record<string, PlayerInfo> = {};
-const socketInfo: Record<string, {sessionCode: string, userName: string}> = {};
+export const socketClients: Record<string, string[]> = {}; // sessionCode:userName -> socketIds[]
+export const games: Record<string, MultiplayerGame> = {};
+export const playerInfo: Record<string, PlayerInfo> = {};
+export const socketInfo: Record<string, {sessionCode: string, userName: string}> = {};
 
 export type ColorMap = {
   R: number[];
@@ -572,7 +575,7 @@ function updatePlayerInfo(sessionCode: string, userName: string, info: Partial<P
   Object.assign(playerInfo[key], info);
 }
 
-function updateGameActivity(sessionCode: string) {
+export function updateGameActivity(sessionCode: string) {
   if (games[sessionCode]) {
     games[sessionCode].lastActivity = Date.now();
   }
@@ -852,7 +855,7 @@ function handleDisconnect(socketId: string) {
 }
 
 // Helper to emit to all sockets for a specific user
-function emitToUser(sessionCode: string, userName: string, event: string, data: any) {
+export function emitToUser(sessionCode: string, userName: string, event: string, data: any) {
   const playerKey = `${sessionCode}:${userName}`;
   const socketIds = socketClients[playerKey] || [];
   
@@ -865,7 +868,7 @@ function emitToUser(sessionCode: string, userName: string, event: string, data: 
 }
 
 // Helper to broadcast to all users in a session
-function broadcastToSession(sessionCode: string, event: string, data: any) {
+export function broadcastToSession(sessionCode: string, event: string, data: any) {
   getIO().to(`game:${sessionCode}`).emit(event, data);
 }
 
@@ -911,7 +914,7 @@ function getAtlasesToPreload(commands: GameCommands[]): string[] {
   return Array.from(atlases);
 }
 
-function getRandomLut(atlasName: string) : {lut: ColorMap|undefined, mapping: Record<number,number>|undefined, inverseMapping: Record<number,number>|undefined} {
+export function getRandomLut(atlasName: string) : {lut: ColorMap|undefined, mapping: Record<number,number>|undefined, inverseMapping: Record<number,number>|undefined} {
     const atlasNumberRegions = validRegions[atlasName].length
     let lut : ColorMap | undefined = undefined;
     let mapping : Record<number,number> | undefined = undefined;
@@ -987,112 +990,6 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
   }
 }
 
-function cleanupExternalCommands(externalCommands: ExternalGameCommands[], isChallenge: boolean = false): GameCommands[]|undefined {
-  try {
-    const { error } = validateExternalGameCommands(externalCommands);
-    if (error) throw error;
-    const commands : GameCommands[] = [];
-    let currentAtlas = undefined;
-    let regionPool: number[] = [];
-    let index = 0;
-    
-    for (const command of externalCommands) {
-      if (command.action === "countdown") {
-        if(index === 0) {
-          let countdownCommand: any = {
-            action: "countdown"
-          };
-          
-          // Handle startTime vs duration
-          if (command.startTime) {
-            const startTime = new Date(command.startTime);
-            if (isNaN(startTime.getTime())) {
-              throw `Invalid startTime format. Must be a valid ISO date string.`;
-            }
-            
-            // Validate that startTime is in the future
-            const now = new Date();
-            if (startTime.getTime() <= now.getTime()) {
-              throw `Countdown start time must be in the future. Provided: ${command.startTime}`;
-            }
-            
-            countdownCommand.startTime = command.startTime;
-            // Duration will be computed at game launch
-          } else {
-            countdownCommand.duration = command.duration || DEFAULT_COUNTDOWN_TIME;
-          }
-          
-          commands.push(countdownCommand);
-        } else {
-          throw `Countdown command must be the first command.`;
-        }
-        index++;
-        continue;
-      } else {
-        if(index === 0) {
-          commands.push({
-            action: "countdown",
-            duration: DEFAULT_COUNTDOWN_TIME,
-          });
-        }
-      }
-      
-      if (command.action === "load-atlas") {
-        currentAtlas = command.atlas || Object.keys(validRegions)[Math.floor(Math.random() * Object.keys(validRegions).length)];
-        if (!validRegions[currentAtlas || ""]) {
-          throw `Atlas "${currentAtlas}" does not exist.`
-        }
-        const {lut, mapping, inverseMapping} = getRandomLut(currentAtlas)
-        commands.push({
-          action: "load-atlas",
-          atlas: currentAtlas,
-          lut,
-          mapping,
-          inverseMapping,
-          duration: command.duration || DEFAULT_LOAD_ATLAS_DURATION,
-          blindMode: command.blindMode || false,
-        });
-        regionPool = [...validRegions[currentAtlas]];
-      } else if (command.action === "guess") {
-        if (!currentAtlas || !validRegions[currentAtlas || ""]) {
-          throw `Atlas "${currentAtlas}" does not exist.`
-        }
-        // If pool is empty, refill with all regions (to allow repeats only after all have been used)
-        if (regionPool.length === 0) {
-          regionPool = [...validRegions[currentAtlas]];
-        }
-        let idx = -1;
-        let regionId = -1;
-        if(command.regionId) {
-          regionId = command.regionId;
-          if(regionPool.includes(regionId)) {
-            idx = regionPool.indexOf(regionId);
-            regionPool.splice(idx, 1); // Remove from pool
-          }
-        } else {
-          idx = Math.floor(Math.random() * regionPool.length);
-          regionId = regionPool[idx];
-          regionPool.splice(idx, 1); // Remove from pool
-        }
-        if (!validRegions[currentAtlas].includes(regionId)) {
-          throw `Region "${regionId}" does not exist in atlas "${currentAtlas}".`;
-        }
-        commands.push({
-          action: "guess",
-          regionId: regionId,
-          duration: command.duration,
-        });
-      } else {
-        throw `Unknown action "${command.action}" in external commands.`;
-      }
-      index++;
-    }
-    return commands;
-  } catch (error) {
-      throw error;
-  }
-}
-
 async function handleLaunchGame(data: {
   sessionCode: string,
   sessionToken: string,
@@ -1154,7 +1051,7 @@ async function handleLaunchGame(data: {
   }
 }
 
-async function sendNextCommand(gameRef: MultiplayerGame) {
+export async function sendNextCommand(gameRef: MultiplayerGame) {
   try {
     if (!gameRef.commands) return;
 
@@ -1447,32 +1344,6 @@ async function handleValidateGuess(data: {
   }
 }
 
-// Helper function to calculate the next start time based on recurrence settings
-function calculateNextStartTime(currentStartTime: string, recurrence: Recurrence): Date {
-  const current = new Date(currentStartTime);
-  const next = new Date(current);
-  
-  switch (recurrence.type) {
-    case "hour":
-      next.setHours(current.getHours() + recurrence.interval);
-      break;
-    case "day":
-      next.setDate(current.getDate() + recurrence.interval);
-      break;
-    case "week":
-      next.setDate(current.getDate() + (7 * recurrence.interval));
-      break;
-    case "month":
-      next.setMonth(current.getMonth() + recurrence.interval);
-      break;
-    case "year":
-      next.setFullYear(current.getFullYear() + recurrence.interval);
-      break;
-  }
-  
-  return next;
-}
-
 // Helper function to generate session token
 function generateSessionToken(sessionCode: string, creatorId?: number): string {
   return jwt.sign({ 
@@ -1481,490 +1352,6 @@ function generateSessionToken(sessionCode: string, creatorId?: number): string {
     type: "multiplayer-creator" 
   }, config.jwt_secret, { expiresIn: "1h" });
 }
-
-async function handleGameRecurrence(gameBackup: MultiplayerGame): Promise<void> {
-  try {
-    if (!gameBackup.parameters.recurrence || !gameBackup.commands || gameBackup.commands.length === 0) {
-      return;
-    }
-
-    // Find the countdown command with startTime
-    const countdownCommand = gameBackup.commands.find(cmd => cmd.action === "countdown" && cmd.startTime);
-    if (!countdownCommand || !countdownCommand.startTime) {
-      logger.error(`No countdown command with startTime found for recurring session ${gameBackup.sessionCode}`);
-      return;
-    }
-
-    // Calculate next start time
-    const nextStartTime = calculateNextStartTime(countdownCommand.startTime, gameBackup.parameters.recurrence).toISOString();
-    
-    // Update the countdown command with the new start time
-    const updatedCommands = gameBackup.commands.map(cmd => {
-      if (cmd.action === "countdown" && cmd.startTime) {
-        return { ...cmd, startTime: nextStartTime };
-      }
-      return cmd;
-    });
-
-    // Update the existing session in the database with the new start time
-    const persistentState = extractPersistentState({
-      ...gameBackup,
-      commands: updatedCommands,
-      parameters: {
-        ...gameBackup.parameters,
-        commands: updatedCommands
-      }
-    });
-
-    await sql`
-      UPDATE multi_sessions 
-      SET created_at = NOW(), 
-          persistent_config = ${JSON.stringify(persistentState)}
-      WHERE session_code = ${gameBackup.sessionCode}
-    `;
-
-    // Recreate the game in memory with updated commands
-    games[gameBackup.sessionCode] = {
-      ...gameBackup,
-      commands: updatedCommands,
-      parameters: {
-        ...gameBackup.parameters,
-        commands: updatedCommands
-      }
-    };
-
-    // Start the countdown for the next occurrence
-    sendNextCommand(games[gameBackup.sessionCode]);
-    
-    logger.info(`Challenge ${gameBackup.sessionCode} has been rescheduled for next occurrence at ${nextStartTime}`);
-    
-    // Notify watchers that lobbies list may have changed
-    emitPublicLobbiesUpdate();  
-  } catch (error) {
-    logger.error(`Error handling recurrence for session ${gameBackup.sessionCode}:`, error);
-  }
-}
-
-// Helper function to backup game state for recurrence
-function backupGameForRecurrence(gameRef: MultiplayerGame): MultiplayerGame | null {
-  if (!gameRef.isChallenge || !gameRef.parameters.recurrence || !gameRef.commands || gameRef.commands.length === 0) {
-    return null;
-  }
-  
-  // Create a deep copy of the relevant game state
-  return {
-    sessionCode: gameRef.sessionCode,
-    hasStarted: false, // Reset for next occurrence
-    hasFinishedCountdown: false,
-    hasEnded: false,
-    parameters: { ...gameRef.parameters }, // Keep all parameters including recurrence
-    commands: gameRef.commands ? [...gameRef.commands] : undefined, // Copy commands array
-    currentCommandIndex: 0,
-    currentAtlas: '',
-    currentRegionId: -1,
-    duration: 0,
-    stepStartTime: undefined,
-    commandTimeout: undefined,
-    totalGuessNumber: gameRef.totalGuessNumber,
-    hasAnswered: {},
-    individualScores: {},
-    individualAttempts: {},
-    individualSuccesses: {},
-    individualDurations: {},
-    individualCorrectDurations: {},
-    anonymousUsernames: [],
-    lastActivity: Date.now(),
-    isCurrentlyBlind: false,
-    creatorId: gameRef.creatorId,
-    isChallenge: gameRef.isChallenge,
-    name: gameRef.name
-  };
-}
-
-async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
-  try {
-    if (gameRef.hasEnded) return;
-    gameRef.hasEnded = true;
-
-    const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
-    const allScores = Object.values(gameRef.individualScores);
-    const maxScore = Math.max(...allScores);
-
-    // 1. Backup the game state for potential recurrence
-    const gameBackup = backupGameForRecurrence(gameRef);
-
-    // Save data for authenticated users
-    const savePromises = [];
-    for (const username in gameRef.individualScores || {}) {
-      // Skip anonymous users
-      if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
-      const playerKey = `${gameRef.sessionCode}:${username}`;
-      const player = playerInfo[playerKey];
-      if(!player) continue; 
-      let userId = player.userId
-      if(!userId) continue; // If no userId, do not store anything for this user
-      const mode = 'multiplayer';
-      const atlas = gameRef.currentAtlas;
-      const blindMode = gameRef.isCurrentlyBlind || false;
-      const score = gameRef.individualScores[username] || 0;
-      const attempts = gameRef.individualAttempts[username] || 0;
-      const correct = gameRef.individualSuccesses[username] || 0;
-      const incorrect = attempts - correct;
-      const durations = gameRef.individualDurations[username] || [];
-      const correctDurations = gameRef.individualCorrectDurations[username] || [];
-      const minTimePerRegion = durations.length > 0 ? Math.min(...durations) : null;
-      const maxTimePerRegion = durations.length > 0 ? Math.max(...durations) : null;
-      const avgTimePerRegion = durations.length > 0 ? Math.round(durations.reduce((a,b)=>a+b,0)/durations.length) : null;
-      const minTimePerCorrectRegion = correctDurations.length > 0 ? Math.min(...correctDurations) : null;
-      const maxTimePerCorrectRegion = correctDurations.length > 0 ? Math.max(...correctDurations) : null;
-      const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a,b)=>a+b,0)/correctDurations.length) : null;
-      const quitReason = 'end';
-      const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
-
-      // The rest of your database code...
-      savePromises.push(
-        sql`
-          INSERT INTO finished_sessions (
-            user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
-            min_time_per_region, max_time_per_region, avg_time_per_region,
-            min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
-            quit_reason, multiplayer_games_won, duration, created_at
-          ) VALUES (
-            ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
-            ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
-            ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
-            ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()
-          )
-        `.catch(e => {
-          logger.error(`Error saving stats for ${username}:`, e);
-        })
-      );
-    }
-
-    // Wait for all saves to complete before proceeding
-    await Promise.allSettled(savePromises);
-    
-    // 2. Perform complete game cleanup (skip database deletion if we have recurrence)
-    const sessionCode = gameRef.sessionCode;
-    console.log(gameBackup, gameRef.isChallenge, gameRef.parameters.recurrence)
-    const hasRecurrence = !!(gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence);
-    
-    if (!hasRecurrence) {
-      // Delete the session from database only if no recurrence
-      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
-        .catch(e => {
-          logger.error(`Error deleting session ${sessionCode}:`, e);
-        });
-    }
-    
-    // Use the common cleanup function (skip DB deletion if we have recurrence)
-    cleanupGame(gameRef.sessionCode, hasRecurrence);
-    
-    // broadcast a final message to all clients
-    broadcastToSession(sessionCode, 'game-closed', {});
-
-    // 3. Handle recurrence if this was a challenge with recurrence settings
-    if (gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence) {
-      await handleGameRecurrence(gameBackup);
-    }
-
-  } catch (error) {
-    logger.error("Error cloturing game:", error);
-    if (gameRef && gameRef.sessionCode) {
-      cleanupGame(gameRef.sessionCode);
-    }
-  }
-}
-
-// Add this function to check for inactive games
-function setupInactiveGameCheck() {
-  setInterval(() => {
-    const now = Date.now();
-    Object.keys(games).forEach(sessionCode => {
-      const game = games[sessionCode];
-      
-      // Skip games that are active
-      if (game.hasStarted && !game.hasEnded) return;
-      
-      // Check if the game has been inactive
-      const lastActivity = game.lastActivity || game.duration || 0;
-      if (now - lastActivity > INACTIVE_GAME_TIMEOUT_MS) {
-        logger.info(`Cleaning up inactive game: ${sessionCode}`);
-        
-        // For games that haven't started, just clean up
-        if (!game.hasStarted) {
-          cleanupGame(sessionCode);
-        } 
-        // For started games that haven't ended properly, close them
-        else if (!game.hasEnded) {
-          clotureMultiplayerGame(game);
-        }
-      }
-    });
-  }, 5 * 60 * 1000); // Check every 5 minutes
-}
-
-// Add this to your initialization code
-setupInactiveGameCheck();
-
-// Create a dedicated cleanup function
-function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean = false) {
-  logger.info("Cleaning up session", {
-    sessionCode,
-    skipDatabaseDeletion
-  })
-  const io = getIO();
-  // Clean up SSE clients
-  const socketIdsToDisconnect: string[] = [];
-  Object.keys(socketClients)
-    .filter(key => key.startsWith(sessionCode + ":"))
-    .forEach(key => {
-      socketIdsToDisconnect.push(...socketClients[key]);
-      delete socketClients[key];
-    });
-
-  // Clean up player info
-  Object.keys(playerInfo)
-    .filter(key => key.startsWith(sessionCode + ":"))
-    .forEach(key => {
-      delete playerInfo[key];
-    });
-  
-  // Clean up socket info for affected sockets
-  socketIdsToDisconnect.forEach(socketId => {
-    delete socketInfo[socketId];
-  });
-  
-  // Force all sockets to leave the room
-  io.in(`game:${sessionCode}`).socketsLeave(`game:${sessionCode}`);
-
-  // Remove game entry
-  const game = games[sessionCode];
-  if (game && game.commandTimeout) {
-    clearTimeout(game.commandTimeout);
-  }
-  
-  delete games[sessionCode];
-  
-  // Delete from database if it exists (unless we're keeping it for recurrence)
-  if (!skipDatabaseDeletion) {
-    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
-      logger.error(`Error deleting session ${sessionCode}:`, e);
-    });
-    // Notify watchers that lobbies list may have changed
-    emitPublicLobbiesUpdate();  
-  }
-}
-
-// Public lobbies list handler
-export const getPublicLobbies = async (req: Request, res: Response) => {
-    try {
-    const lobbies = await buildPublicLobbies();
-    res.status(200).json({ lobbies });
-  } catch (e) {
-    logger.error("getPublicLobbies error", e);
-    res.status(500).json({ lobbies: [] });
-  }
-};
-
-// Get next upcoming public challenge
-export const getNextChallenge = async (req: Request, res: Response) => {
-  try {
-    const currentTime = new Date().toISOString();
-    
-    const result = await sql`
-      SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.name, u.username AS creator_name
-      FROM multi_sessions ms
-      LEFT JOIN users u ON u.id = ms.creator_id
-      WHERE ms.is_challenge = TRUE 
-      AND ms.public = TRUE
-      AND ms.persistent_config IS NOT NULL
-      AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
-      ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
-      LIMIT 1
-    ` as Array<{ 
-      session_code: string, 
-      created_at: Date, 
-      persistent_config: string,
-      name: string | null,
-      creator_name: string | null
-    }>;
-
-    if (result.length === 0) {
-      return res.status(200).json({ challenge: null, message: 'No upcoming challenges found' });
-    }
-
-    const session = result[0];
-    const sessionCode = String(session.session_code).padStart(8, '0');
-    
-    try {
-      const persistentState = JSON.parse(session.persistent_config);
-      const startTime = persistentState.commands?.[0]?.startTime;
-      
-      const challenge = {
-        sessionCode,
-        startTime,
-        atlas: persistentState.parameters?.atlas,
-        totalDuration: persistentState.parameters?.totalDuration,
-        name: session.name || undefined,
-        creator: session.creator_name || 'Unknown',
-        createdAt: session.created_at?.toISOString?.() || undefined
-      };
-      
-      res.status(200).json({ challenge });
-    } catch (parseError) {
-      logger.error("Error parsing persistent config for next challenge:", parseError);
-      res.status(500).json({ error: 'Error parsing challenge data' });
-    }
-    
-  } catch (error) {
-    logger.error("getNextChallenge error", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-export const getAllChallenges = async (req: Request, res: Response) => {
-  try {
-    const currentTime = new Date().toISOString();
-    
-    // Check if user is authenticated and admin
-    const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
-    const token: string | undefined = authHeader && authHeader.split(' ')[1];
-    let isAdmin = false;
-    let userId = null;
-    if(token){
-      jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
-          if (!err) {
-              isAdmin = (decoded as User).admin || false;
-              userId = (decoded as User).id || null;
-          }
-      });
-    }
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      try {
-        const decoded = jwt.verify(token, config.jwt_secret) as any;
-        userId = decoded.id;
-        isAdmin = decoded.admin || false;
-      } catch (jwtError) {
-        // Token is invalid, continue as guest
-        logger.warn("Invalid token in getAllChallenges:", jwtError);
-      }
-    }
-    
-    // Build query based on user permissions
-    let query;
-    if (isAdmin) {
-      // Admin can see all challenges (public and private)
-      query = sql`
-        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, ms.name, u.username AS creator_name
-        FROM multi_sessions ms
-        LEFT JOIN users u ON u.id = ms.creator_id
-        WHERE ms.is_challenge = TRUE 
-        AND ms.persistent_config IS NOT NULL
-        ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
-      `;
-    } else {
-      // Non-admin users can only see public challenges
-      query = sql`
-        SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.public, ms.name, u.username AS creator_name
-        FROM multi_sessions ms
-        LEFT JOIN users u ON u.id = ms.creator_id
-        WHERE ms.is_challenge = TRUE 
-        AND ms.public = TRUE
-        AND ms.persistent_config IS NOT NULL
-        ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
-      `;
-    }
-    
-    const result = await query;
-
-    const challenges = [];
-    
-    for (const session of result) {
-      const sessionCode = String(session.session_code).padStart(8, '0');
-      
-      try {
-        const persistentState = JSON.parse(session.persistent_config);
-        const startTime = persistentState.commands?.[0]?.startTime;
-        
-        const challenge = {
-          sessionCode,
-          startTime,
-          isPublic: session.public,
-          atlas: persistentState.parameters?.atlas,
-          totalDuration: persistentState.parameters?.totalDuration,
-          name: session.name || undefined,
-          recurrence: session.recurrence || undefined,
-          creator: session.creator_name || 'Unknown',
-          createdAt: session.created_at?.toISOString?.() || undefined
-        };
-        
-        challenges.push(challenge);
-      } catch (parseError) {
-        logger.error(`Error parsing persistent config for session ${session.session_code}:`, parseError);
-        // Skip this challenge if parsing fails
-        continue;
-      }
-    }
-    
-    res.status(200).json({ 
-      challenges,
-      userPermissions: {
-        isAdmin,
-        canSeePrivate: isAdmin
-      }
-    });
-    
-  } catch (error) {
-    logger.error("getAllChallenges error", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
-
-export const deleteChallenge = async (req: Request, res: Response) => {
-  try {
-    const { sessionCode } = req.params;
-    const userId: number = (req as AuthenticatedRequest).user.id;
-    const isAdmin: boolean = (req as AuthenticatedRequest).user.admin;
-    
-    if (!isAdmin) {
-      res.status(403).json({ error: 'Admin access required' });
-      return;
-    }
-    
-    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
-      res.status(400).json({ error: 'Invalid session code format' });
-      return;
-    }
-    
-    // Delete the challenge session from database
-    const result = await sql`
-      DELETE FROM multi_sessions 
-      WHERE session_code = ${sessionCode}
-      AND is_challenge = TRUE
-    `;
-    
-    if (result.count === 0) {
-      res.status(404).json({ error: 'Challenge not found' });
-      return;
-    }
-    
-    // Also remove from active games if it's running
-    if (games[sessionCode]) {
-      delete games[sessionCode];
-      logger.info(`Removed active challenge session ${sessionCode} from memory`);
-    }
-    
-    logger.info(`Admin ${userId} deleted challenge session ${sessionCode}`);
-    res.status(200).json({ message: 'Challenge deleted successfully' });
-    
-  } catch (error) {
-    logger.error("deleteChallenge error", error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
 
 // Get multiplayer session info for meta tag generation
 export const getMultiplayerSessionStartDate = async (req: Request, res: Response) => {
@@ -2005,388 +1392,4 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
   }
 };
 
-// Save persistent configuration for challenge mode
-export const handleSaveAsChallenge = async ({sessionCode, sessionToken, userToken, userName, name, recurrent}: {sessionCode: string, sessionToken: string, userToken: string, userName: string, name?:string, recurrent?: Recurrence}) => {
-  try {
-    if (!sessionCode || typeof sessionCode !== 'string' || sessionCode.length !== 8) {
-      emitToUser(sessionCode, userName, "error", { message: "Invalid session code" });
-      return;
-    }
-    
-    // Validate that this is a challenge session
-    const gameRef = games[sessionCode];
-    if (!gameRef) {
-      emitToUser(sessionCode, userName, "error", { message: "Game does not exist" });
-      return;
-    }
-
-    gameRef.commands = gameRef.parameters.commands
-
-    if (!gameRef.commands || gameRef.commands.length === 0) {
-      emitToUser(sessionCode, userName, "error", { message: "Game with custom commands is required" });
-      return;
-    }
-
-    if (!gameRef.commands[0] || gameRef.commands[0].action !== "countdown" || !gameRef.commands[0].startTime) {
-      emitToUser(sessionCode, userName, "error", { message: "Programmed Start Time is required" });
-      return;
-    }
-
-    if (gameRef.hasStarted) {
-      emitToUser(sessionCode, userName, "error", { message: "Game has already started" });
-      return;
-    }
-
-    // Verify user is admin
-    if (!userToken) {
-      emitToUser(sessionCode, userName, "error", { message: "Authentication token required" });
-      return;
-    }
-
-    try {
-      const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
-      if (!jwtPayload || !jwtPayload.admin) {
-        emitToUser(sessionCode, userName, "error", { message: "Admin privileges required for challenge mode" });
-        return;
-      }
-    } catch (err) {
-      emitToUser(sessionCode, userName, "error", { message: "Invalid authentication token" });
-      return;
-    }
-
-    // Validate session token
-    const sessionResult = await sql`
-      SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
-    ` as { session_token: string }[];
-    
-    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
-      emitToUser(sessionCode, userName, "error", { message: "Invalid session token" });
-      return;
-    }
-
-    if(recurrent){
-      if(recurrent.type != "hour" && recurrent.type != "day" && recurrent.type != "week" && recurrent.type != "month" && recurrent.type != "year"){
-        emitToUser(sessionCode, userName, "error", { message: "Invalid recurrence type" });
-        return;
-      } else if(!(recurrent.interval > 0)){
-        emitToUser(sessionCode, userName, "error", { message: "Invalid recurrence interval" });
-        return;
-      }
-    }
-    
-    // Activate challenge mode and update game state
-    gameRef.isChallenge = true;
-    gameRef.hasStarted = true;
-    gameRef.totalGuessNumber = gameRef.commands?.filter(command => command.action === "guess").length || 0;
-    gameRef.duration = Date.now();
-    gameRef.lastActivity = Date.now();
-    gameRef.name = name || undefined;
-    gameRef.parameters.recurrence = recurrent || undefined;
-
-    // Extract and save the persistent game state
-    const persistentState = extractPersistentState(gameRef);
-    await sql`
-      UPDATE multi_sessions 
-      SET persistent_config = ${JSON.stringify(persistentState)},
-      is_challenge = TRUE, name = ${gameRef.name || sql`NULL`}
-      WHERE session_code = ${sessionCode}
-    `;
-    
-    logger.info(`Challenge configuration saved for session ${sessionCode}`);
-    updateGameActivity(sessionCode);
-    
-    // Broadcast game preparation to all users
-    broadcastToSession(sessionCode, 'challenge-prepared', {
-      message: 'Challenge has been prepared and will start at the scheduled time'
-    });
-    
-    // Start the first command (countdown with startTime)
-    sendNextCommand(gameRef);
-    
-    emitToUser(sessionCode, userName, "save-as-challenge", { message: "success" });    
-  } catch (error) {
-    logger.error("saveChallengeConfig error", error);
-    emitToUser(sessionCode, userName, "error", { message: "Internal server error" });
-  }
-};
-
-// Helper to build current public lobbies list (shared by HTTP and sockets)
-async function buildPublicLobbies() {
-  const rows = await sql`
-      SELECT ms.session_code, ms.created_at, u.username AS creator_name
-      FROM multi_sessions ms
-      LEFT JOIN users u ON u.id = ms.creator_id
-      WHERE ms.public = TRUE
-      ORDER BY ms.created_at DESC
-      LIMIT 50
-    ` as Array<{ session_code: number, created_at: Date, creator_name: string | null }>;
-
-  const lobbies = rows.map(r => {
-    const codeStr = String(r.session_code).padStart(8, '0');
-    const gameRef = games[codeStr];
-    if (!gameRef || (gameRef.hasStarted && gameRef.hasFinishedCountdown)) return undefined;
-    
-    // Hide challenges whose startTime is more than 5 minutes in the future
-    if (gameRef.isChallenge && gameRef.commands && gameRef.commands.length > 0) {
-      const countdownCommand = gameRef.commands.find(cmd => cmd.action === "countdown" && cmd.startTime);
-      if (countdownCommand && countdownCommand.startTime) {
-        const startTime = new Date(countdownCommand.startTime);
-        const now = new Date();
-        const timeDiff = startTime.getTime() - now.getTime();
-        if (timeDiff > DELAY_FOR_CHALLENGES_IN_PUBLIC) {
-          return undefined;
-        }
-      }
-    }
-    
-    const users = Object.values(playerInfo).filter(p => p.sessionCode === codeStr).length;
-    const totalDuration = gameRef.parameters?.totalDuration ?? (gameRef.commands ? gameRef.commands.reduce((acc, c) => acc + (c.duration || 0), 0) : undefined);
-    return {
-      sessionCode: codeStr,
-      atlas: gameRef.parameters?.atlas,
-      totalDuration,
-      users,
-      createdAt: r.created_at?.toISOString?.() || undefined,
-      blindMode: !!gameRef.parameters?.blindMode,
-      creator: r.creator_name || '—'
-    };
-  }).filter((x): x is NonNullable<typeof x> => x !== undefined);
-  return lobbies;
-}
-
-async function emitPublicLobbiesUpdate() {
-  try {
-    const io = getIO();
-    const lobbies = await buildPublicLobbies();
-    io.to('public-lobbies').emit('public-lobbies-update', { lobbies });
-  } catch (e) {
-    // no-op
-  }
-}
-
-// Helper function to extract persistent state from gameRef
-function extractPersistentState(gameRef: MultiplayerGame): PersistentGameState {
-  return {
-    sessionCode: gameRef.sessionCode,
-    hasStarted: gameRef.hasStarted,
-    hasFinishedCountdown: gameRef.hasFinishedCountdown,
-    hasEnded: gameRef.hasEnded,
-    parameters: gameRef.parameters,
-    commands: gameRef.commands,
-    duration: gameRef.duration,
-    lastActivity: gameRef.lastActivity,
-    creatorId: gameRef.creatorId,
-    isChallenge: gameRef.isChallenge,
-    name: gameRef.name
-  };
-}
-
-// Helper function to restore game state from persistent state
-function restoreFromPersistentState(persistentState: PersistentGameState, existingGameRef?: MultiplayerGame): MultiplayerGame {
-  const baseState = existingGameRef || {
-    currentCommandIndex: 0,
-    currentAtlas: "",
-    currentRegionId: -1,
-    stepStartTime: undefined,
-    commandTimeout: undefined,
-    totalGuessNumber: 0,
-    hasAnswered: {},
-    individualScores: {},
-    individualAttempts: {},
-    individualSuccesses: {},
-    individualDurations: {},
-    individualCorrectDurations: {},
-    anonymousUsernames: [],
-    isCurrentlyBlind: false
-  };
-
-  return {
-    ...baseState,
-    ...persistentState,
-    totalGuessNumber: persistentState.commands?.filter(cmd => cmd.action === "guess").length || 0
-  };
-}
-
-// Function to restore all persistent challenge sessions on server startup
-export async function restorePersistentChallengeSessions() {
-  try {
-    logger.info("Restoring persistent challenge sessions...");
-    
-    const persistentSessions = await sql`
-      SELECT session_code, persistent_config, creator_id, is_challenge 
-      FROM multi_sessions 
-      WHERE is_challenge = TRUE AND persistent_config IS NOT NULL
-    ` as Array<{ 
-      session_code: string, 
-      persistent_config: string, 
-      creator_id: number, 
-      is_challenge: boolean 
-    }>;
-    
-    let restoredCount = 0;
-    let skippedCount = 0;
-    let rescheduledCount = 0;
-    let deletedCount = 0;
-    const now = new Date();
-    
-    for (const session of persistentSessions) {
-      const sessionCode = String(session.session_code).padStart(8, '0');
-      
-      try {
-        const persistentState: PersistentGameState = JSON.parse(session.persistent_config);
-        
-        // Skip sessions that have already ended
-        if (persistentState.hasEnded) {
-          logger.info(`Skipping ended challenge session ${sessionCode}`);
-          skippedCount++;
-          continue;
-        }
-        
-        // Check if this challenge has a countdown with startTime
-        const countdownCommand = persistentState.commands?.find(cmd => cmd.action === "countdown" && cmd.startTime);
-        if (!countdownCommand || !countdownCommand.startTime) {
-          logger.info(`Skipping challenge session ${sessionCode} - no countdown with startTime`);
-          skippedCount++;
-          continue;
-        }
-        
-        const startTime = new Date(countdownCommand.startTime);
-        const hasRecurrence = !!(persistentState.parameters?.recurrence);
-        
-        // Restore the updated game state
-        let baseGameState: MultiplayerGame = {
-          ...persistentState,
-          currentCommandIndex: 0,
-          currentAtlas: "",
-          currentRegionId: -1,
-          stepStartTime: undefined,
-          commandTimeout: undefined,
-          totalGuessNumber: persistentState.commands?.filter(cmd => cmd.action === "guess").length || 0,
-          hasAnswered: {},
-          individualScores: {},
-          individualAttempts: {},
-          individualSuccesses: {},
-          individualDurations: {},
-          individualCorrectDurations: {},
-          anonymousUsernames: [],
-          isCurrentlyBlind: false,
-          lastActivity: Date.now()
-        };
-        
-        // If the start time has passed
-        if (startTime.getTime() <= now.getTime()) {
-          if (hasRecurrence) {
-            // For recurring challenges, calculate the next occurrence
-            logger.info(`Rescheduling recurring challenge session ${sessionCode} - start time has passed`);
-            
-            let nextStartTime = new Date(startTime);
-            const recurrence = persistentState.parameters!.recurrence!;
-            
-            // Keep advancing until we find a future time
-            while (nextStartTime.getTime() <= now.getTime()) {
-              nextStartTime = calculateNextStartTime(nextStartTime.toISOString(), recurrence);
-            }
-            
-            // Update the commands with the new start time
-            const updatedCommands = persistentState.commands?.map(cmd => {
-              if (cmd.action === "countdown" && cmd.startTime) {
-                return { ...cmd, startTime: nextStartTime.toISOString() };
-              }
-              return cmd;
-            });
-
-            baseGameState.commands = updatedCommands;
-            baseGameState.parameters.commands = updatedCommands;
-            
-            // Update database
-            await sql`
-              UPDATE multi_sessions 
-              SET persistent_config = ${JSON.stringify(baseGameState)},
-                  created_at = NOW()
-              WHERE session_code = ${sessionCode}
-            `;
-
-            rescheduledCount++;
-            logger.info(`Rescheduled recurring challenge session ${sessionCode} to ${nextStartTime.toISOString()}`);
-          } else {
-            // For non-recurring challenges that have passed, delete them
-            logger.info(`Deleting expired non-recurring challenge session ${sessionCode}`);
-            await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`;
-            deletedCount++;
-            continue; // Skip further processing for deleted sessions
-          }
-        }
-
-        // Restore the game state in memory and start it
-        games[sessionCode] = baseGameState;
-        sendNextCommand(games[sessionCode]);
-        restoredCount++;
-        logger.info(`Restored challenge session ${sessionCode} - scheduled for ${startTime.toISOString()}`);
-      } catch (parseError) {
-        logger.error(`Error parsing persistent config for session ${sessionCode}:`, parseError);
-        skippedCount++;
-      }
-    }
-    
-    logger.info(`Challenge session restoration complete: ${restoredCount} restored, ${rescheduledCount} rescheduled, ${deletedCount} deleted, ${skippedCount} skipped`);
-    
-  } catch (error) {
-    logger.error("Error restoring persistent challenge sessions:", error);
-  }
-}
-
-const handleDestroySession = async (data: {
-      sessionCode: string,
-      sessionToken: string,
-      userToken: string
-    }) => {
-  try {
-    const { sessionCode, sessionToken, userToken } = data;
-
-    // Verify authentication
-    if (!userToken) {
-      return { status: 400, message: "Authentication token required" };
-    }
-    if (!sessionCode || !sessionToken) {
-      return { status: 400, message: "Session code and token are required" };
-    }
-    
-    const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
-    if (!jwtPayload) {
-      return { status: 403, message: "Invalid authentication token" };
-    }
-    
-    // Verify session exists and user has access
-    const currentSession = await sql`
-      SELECT id, creator_id 
-      FROM multi_sessions 
-      WHERE session_code = ${sessionCode} AND session_token = ${sessionToken}
-    ` as { id: number; creator_id: number }[];
-    
-    if (currentSession.length === 0) {
-      return { status: 404, message: "Session not found or invalid token" };
-    }
-    
-    // Check if user is the creator or admin
-    const isCreator = jwtPayload.id === currentSession[0].creator_id;
-    const isAdmin = jwtPayload.admin === true;
-    
-    if (!isCreator && !isAdmin) {
-      return { status: 403, message: "Only the session creator or admin can destroy the session" };
-    }
-    
-    // Notify all players in the lobby that the session is being destroyed
-    broadcastToSession(sessionCode, 'session-destroyed', {
-      reason: 'Creator left the configuration screen'
-    });
-    
-    // Clean up the session
-    cleanupGame(sessionCode, false); // false = don't skip database deletion
-    
-    logger.info(`Session ${sessionCode} destroyed by user ${jwtPayload.id} (creator: ${isCreator}, admin: ${isAdmin})`);
-    return { status: 200, message: "Session destroyed successfully" };
-  } catch (error) {
-    logger.error("Destroy session error:", error);
-    return { status: 500, message: "Error destroying session" };
-  }
-}
+setupInactiveGameCheck();
