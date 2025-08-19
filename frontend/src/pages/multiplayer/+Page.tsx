@@ -608,6 +608,26 @@ const MultiPlayer = ({
       
       <BrainViewer alternateContent={renderWaitingContent({error})} />
       
+      {isGameRunning && (
+        <div className="multiplayer-score-display">
+          <div>
+            {t("score")}: {playerScores[isLoggedIn ? userUsername : anonUsername] ?? 0}
+          </div>
+          <div className="position">
+            {(() => {
+              const currentUser = isLoggedIn ? userUsername : anonUsername;
+              const sortedUsers = [...lobbyUsers].sort((a, b) => {
+                const scoreA = playerScores[a] ?? 0;
+                const scoreB = playerScores[b] ?? 0;
+                return scoreB - scoreA;
+              });
+              const position = sortedUsers.indexOf(currentUser) + 1;
+              return `#${position}/${lobbyUsers.length}`;
+            })()}
+          </div>
+        </div>
+      )}
+      
       {!isLoggedIn && !config.activateAnonymousMode && 
           <div className="multiplayer-please-login" 
             dangerouslySetInnerHTML={{__html:t("multi_unavailable_login")
