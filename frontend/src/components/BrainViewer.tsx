@@ -38,7 +38,7 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                             onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
                     </div>
                     {/* Show alternate content when canvas is hidden in multiplayer mode */}
-                    {gameMode === "multiplayer" && alternateContent && (
+                    {gameMode === "multiplayer" && alternateContent && !hasEnded && (
                         <div className="alternate-content-container">
                             {alternateContent}
                         </div>
