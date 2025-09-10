@@ -610,20 +610,53 @@ const MultiPlayer = ({
       
       {isGameRunning && (
         <div className="multiplayer-score-display">
-          <div>
-            {t("score")}: {playerScores[isLoggedIn ? userUsername : anonUsername] ?? 0}
+          <div className="current-user-score">
+            <div>
+              {t("score")}: {playerScores[isLoggedIn ? userUsername : anonUsername] ?? 0}
+            </div>
+            <div className="position">
+              {(() => {
+                const currentUser = isLoggedIn ? userUsername : anonUsername;
+                const sortedUsers = [...lobbyUsers].sort((a, b) => {
+                  const scoreA = playerScores[a] ?? 0;
+                  const scoreB = playerScores[b] ?? 0;
+                  return scoreB - scoreA;
+                });
+                const position = sortedUsers.indexOf(currentUser) + 1;
+                return `#${position}/${lobbyUsers.length}`;
+              })()}
+            </div>
           </div>
-          <div className="position">
-            {(() => {
-              const currentUser = isLoggedIn ? userUsername : anonUsername;
-              const sortedUsers = [...lobbyUsers].sort((a, b) => {
-                const scoreA = playerScores[a] ?? 0;
-                const scoreB = playerScores[b] ?? 0;
-                return scoreB - scoreA;
-              });
-              const position = sortedUsers.indexOf(currentUser) + 1;
-              return `#${position}/${lobbyUsers.length}`;
-            })()}
+          
+          <div className="score-divider"></div>
+          
+          <div className="all-scores">
+            <div className="score-list">
+              {(() => {
+                const currentUser = isLoggedIn ? userUsername : anonUsername;
+                const sortedUsers = [...lobbyUsers].sort((a, b) => {
+                  const scoreA = playerScores[a] ?? 0;
+                  const scoreB = playerScores[b] ?? 0;
+                  return scoreB - scoreA;
+                });
+                
+                return sortedUsers.map((user, index) => {
+                  const score = playerScores[user] ?? 0;
+                  const isCurrentUser = user === currentUser;
+                  
+                  return (
+                    <div 
+                      key={user} 
+                      className={`score-item ${isCurrentUser ? 'current-user' : ''}`}
+                    >
+                      <span className="position">#{index + 1}</span>
+                      <span className="username">{user}</span>
+                      <span className="score">{score}</span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
         </div>
       )}
