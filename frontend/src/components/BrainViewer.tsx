@@ -555,6 +555,8 @@ export function GameProvider({
 
             // Re-enable context menu
             e.currentTarget.oncontextmenu = null;
+        } else {
+            handleCanvasInteraction(e);
         }
     };
 
