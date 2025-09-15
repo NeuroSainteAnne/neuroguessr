@@ -19,8 +19,7 @@ export const sql = postgres(
         prepare: false,             // Better for dynamic queries
         transform: {
             column: {
-                from: postgres.fromCamel,
-                to: postgres.toCamel
+                from: postgres.fromCamel
             }
         },
         types: {
