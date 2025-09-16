@@ -471,6 +471,37 @@ export function initSocketHandlers() {
       }
     });
 
+    // Handle explicit leave-lobby (when user navigates away from multiplayer page)
+    socket.on('leave-lobby', async (data: {
+      sessionCode: string,
+      userName: string,
+      anonToken?: string,
+      userToken?: string
+    }) => {
+      try {
+        const { sessionCode, userName } = data;
+        const playerKey = `${sessionCode}:${userName}`;
+        
+        logger.info(`User ${userName} explicitly leaving lobby ${sessionCode}`);
+        
+        // First, remove socket from the game room to stop receiving updates
+        socket.leave(`game:${sessionCode}`);
+        
+        // Remove this specific socket from the user's socket list
+        if (socketClients[playerKey]) {
+          socketClients[playerKey] = socketClients[playerKey].filter(id => id !== socket.id);
+          
+          // If this was the last socket for this user, clean up completely
+          if (socketClients[playerKey].length === 0) {
+            // Use the same cleanup logic as disconnect but for explicit leave
+            await handleExplicitUserLeave(sessionCode, userName, playerKey);
+          }
+        }
+      } catch (error) {
+        logger.error("Leave lobby error:", error);
+      }
+    });
+
     // Subscribe to public lobbies updates
     socket.on('connect-public', async () => {
       try {
@@ -916,6 +947,12 @@ function handleDisconnect(socketId: string) {
   const playerKey = `${sessionCode}:${userName}`;
   const gameRef = games[sessionCode];
 
+  // Get the socket instance and leave the game room
+  const socket = getIO().sockets.sockets.get(socketId);
+  if (socket) {
+    socket.leave(`game:${sessionCode}`);
+  }
+
   // Use atomic update for user disconnect to prevent race conditions
   atomicGameUpdate(playerKey, async () => {
     // Remove from socketClients
@@ -973,6 +1010,55 @@ function handleDisconnect(socketId: string) {
   
   // Clean up socketInfo
   delete socketInfo[socketId];
+}
+
+// Handle explicit user leave (when navigating away from multiplayer page)
+async function handleExplicitUserLeave(sessionCode: string, userName: string, playerKey: string) {
+  const gameRef = games[sessionCode];
+  
+  await atomicGameUpdate(playerKey, async () => {
+    delete socketClients[playerKey];
+    
+    const player = playerInfo[playerKey];
+    if (!player) return { shouldBroadcastLeave: false };
+    
+    // Handle creator leaving before game starts
+    if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
+      return { shouldDestroyGame: true, player };
+    }
+    
+    // Clean up player info
+    delete playerInfo[playerKey];
+    
+    return { shouldBroadcastLeave: true, player };
+  }).then(async (result) => {
+    if (!result) return;
+    
+    // Handle game destruction if creator left
+    if (result.shouldDestroyGame) {
+      getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
+      cleanupGame(sessionCode);
+      emitPublicLobbiesUpdate();
+      return;
+    }
+    
+    // Handle normal user leave
+    if (result.shouldBroadcastLeave && result.player) {
+      // Update anonymous usernames list if needed
+      if (result.player.isAnonymous && gameRef) {
+        await atomicGameUpdate(`${sessionCode}:anon`, async () => {
+          gameRef.anonymousUsernames = gameRef.anonymousUsernames.filter(name => name !== userName);
+          return { success: true };
+        });
+      }
+      
+      // Broadcast player left
+      getIO().to(`game:${sessionCode}`).emit('player-left', { userName });
+      emitPublicLobbiesUpdate();
+    }
+  }).catch((error) => {
+    logger.error(`Error handling explicit leave for ${playerKey}:`, error);
+  });
 }
 
 // Helper to emit to all sockets for a specific user

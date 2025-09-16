@@ -57,6 +57,7 @@ const MultiPlayer = ({
   const { createSocket, getSocket } = useSocket();
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
+  const inputCodeRef = useRef(inputCode);
   const [error, setError] = useState<string | null>(null);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
@@ -92,6 +93,7 @@ const MultiPlayer = ({
   const anonUsernameInputRef = useRef<HTMLInputElement>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
+  const anonUsernameRef = useRef(anonUsername);
 
   const cleanHeader = () => {
     setHeaderText("");  
@@ -108,6 +110,13 @@ const MultiPlayer = ({
           cleanGameCallbackRef.current = cleanGame; // Set the callback in the ref
       }
   }, [cleanGameCallbackRef]);
+
+  useEffect(()=>{
+    inputCodeRef.current = inputCode;
+  }, [inputCode])
+  useEffect(()=>{
+    anonUsernameRef.current = anonUsername;
+  }, [anonUsername])
 
   const joinLobby = (inputCode: string) => {
     if (isConnected) return;
@@ -352,6 +361,21 @@ const MultiPlayer = ({
     }
     setCountdownRemaining(null);
     
+    const socket = socketRef.current || getSocket();
+    if (socket && socket.connected && inputCodeRef.current) {
+      try {
+        socket.emit('leave-lobby', {
+          sessionCode: inputCodeRef.current,
+          userName: isLoggedIn ? userUsername : anonUsernameRef.current,
+          ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
+          ...(isLoggedIn ? { userToken: authToken } : {})
+        });
+        consoleLog("verbose", `Sent leave-lobby event for ${isLoggedIn ? userUsername : anonUsername}`);
+      } catch (error) {
+        consoleLog("verbose", "Error sending leave-lobby event:", error);
+      }
+    }
+    
     // Clean up event listeners but don't disconnect socket (managed by SocketProvider)
     if (socketRef.current) {
       cleanupSocketEventListeners();
@@ -360,25 +384,37 @@ const MultiPlayer = ({
   };
 
   const cleanupSocketEventListeners = () => {
-    if (socketRef.current) {
-      socketRef.current.off('connect');
-      socketRef.current.off('connect_error');
-      socketRef.current.off('error');
-      socketRef.current.off('fatal-error');
-      socketRef.current.off('anon-token');
-      socketRef.current.off('lobby-users');
-      socketRef.current.off('player-joined');
-      socketRef.current.off('player-left');
-      socketRef.current.off('parameters-updated');
-      socketRef.current.off('game-start');
-      socketRef.current.off('game-command');
-      socketRef.current.off('score-update');
-      socketRef.current.off('all-scores-update');
-      socketRef.current.off('game-end');
-      socketRef.current.off('guess-result');
-      socketRef.current.off('session-code-changed');
-      socketRef.current.off('session-destroyed');
-    }
+    // Clean up from both socketRef and getSocket to be thorough
+    const socketsToClean = [socketRef.current, getSocket()].filter(Boolean);
+    
+    socketsToClean.forEach(socket => {
+      if (socket) {
+        try {
+          // Remove all multiplayer-specific event listeners
+          socket.off('connect_error');
+          socket.off('error');
+          socket.off('fatal-error');
+          socket.off('anon-token');
+          socket.off('lobby-users');
+          socket.off('player-joined');
+          socket.off('player-left');
+          socket.off('parameters-updated');
+          socket.off('game-start');
+          socket.off('game-command');
+          socket.off('score-update');
+          socket.off('all-scores-update');
+          socket.off('game-end');
+          socket.off('guess-result');
+          socket.off('session-code-changed');
+          socket.off('session-destroyed');
+          socket.off('game-launched');
+          
+          consoleLog("verbose", "Cleaned up multiplayer socket event listeners");
+        } catch (error) {
+          consoleLog("verbose", "Error cleaning up socket listeners:", error);
+        }
+      }
+    });
   };
 
   const tryLaunchGame = async () => {
