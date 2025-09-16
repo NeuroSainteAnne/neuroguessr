@@ -21,12 +21,20 @@ export const useSocket = () => {
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<Socket | null>(null);
+  const connectionLock = useRef(false);
 
   const createSocket = (socketEmission : (newSocket: Socket) => void): Socket => {
+    if (connectionLock.current) {
+      // Return existing socket or wait
+      return socketRef.current!;
+    }
+    connectionLock.current = true;
+
     // If we already have a connected socket, return it
     if (socketRef.current && socketRef.current.connected) {
       consoleLog('verbose', 'Reusing existing socket connection');
       socketEmission(socketRef.current);
+      connectionLock.current = false;
       return socketRef.current;
     }
 
@@ -62,6 +70,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       consoleLog('verbose', `Global socket connection error: ${error.message}`);
     });
 
+    connectionLock.current = false;
     return socket;
   };
 

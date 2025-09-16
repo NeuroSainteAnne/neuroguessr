@@ -483,25 +483,35 @@ const MultiPlayer = ({
     };
   }, [])
 
-  useEffect(() => {
-      const validateGuess = async () => {
-        const socket = getSocket();
-        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !socket || !socket.connected || isGuessCooldownRef.current) {
-          console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
-          return;
-        }
-        setHeaderTextMode("");
-        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+  // Frontend - queue guess submissions
+  const guessQueue = useRef<boolean>(false);
 
-        hasAnswered.current = true;
-        socket.emit('validate-guess', {
-          sessionCode: inputCode,
-          userName: isLoggedIn ? userUsername : anonUsername,
-          voxelProp: selectedVoxelProp.current,
-          ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
-          ...(isLoggedIn ? { userToken: authToken } : {})
-        });
+  const validateGuess = async () => {
+    if (guessQueue.current) return;
+    guessQueue.current = true;
+    try {
+      const socket = getSocket();
+      if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !socket || !socket.connected || isGuessCooldownRef.current) {
+        console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
+        return;
       }
+      setHeaderTextMode("");
+      if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+
+      hasAnswered.current = true;
+      socket.emit('validate-guess', {
+        sessionCode: inputCode,
+        userName: isLoggedIn ? userUsername : anonUsername,
+        voxelProp: selectedVoxelProp.current,
+        ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
+        ...(isLoggedIn ? { userToken: authToken } : {})
+      });
+    } finally {
+      guessQueue.current = false;
+    }
+  }
+
+  useEffect(() => {
       if (validateGuessCallbackRef) {
           validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
       }

@@ -19,6 +19,76 @@ import { handleSaveAsChallenge } from "./multi_challenge.ts";
 import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
 
+// Atomic game update locks to prevent race conditions
+const gameStateLocks = new Map<string, boolean>();
+
+/**
+ * Executes a game state update atomically to prevent race conditions
+ * @param sessionCode - The session code to lock
+ * @param updateFn - The function to execute atomically
+ * @param timeoutMs - Optional timeout in milliseconds (default: 5000)
+ * @returns Promise<T> - The result of the update function
+ */
+async function atomicGameUpdate<T>(
+  sessionCode: string, 
+  updateFn: () => Promise<T> | T,
+  timeoutMs: number = 5000
+): Promise<T | null> {
+  const lockKey = `game:${sessionCode}`;
+  
+  // Check if already locked
+  if (gameStateLocks.get(lockKey)) {
+    logger.warn(`Game ${sessionCode}: Operation blocked due to concurrent access`);
+    return null;
+  }
+  
+  // Acquire lock
+  gameStateLocks.set(lockKey, true);
+  
+  try {
+    // Set timeout to prevent deadlocks
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Atomic update timeout for game ${sessionCode}`)), timeoutMs);
+    });
+    
+    const updatePromise = Promise.resolve(updateFn());
+    
+    // Race between update and timeout
+    const result = await Promise.race([updatePromise, timeoutPromise]);
+    return result;
+  } catch (error) {
+    logger.error(`Atomic update failed for game ${sessionCode}:`, error);
+    throw error;
+  } finally {
+    // Always release lock
+    gameStateLocks.delete(lockKey);
+  }
+}
+
+/**
+ * Checks if a game session is currently locked
+ * @param sessionCode - The session code to check
+ * @returns boolean - True if locked, false otherwise
+ */
+function isGameLocked(sessionCode: string): boolean {
+  return gameStateLocks.has(`game:${sessionCode}`);
+}
+
+/**
+ * Forces release of a game lock (use with caution)
+ * @param sessionCode - The session code to unlock
+ */
+export function forceUnlockGame(sessionCode: string): void {
+  const lockKey = `game:${sessionCode}`;
+  if (gameStateLocks.has(lockKey)) {
+    gameStateLocks.delete(lockKey);
+    logger.warn(`Forced unlock for game ${sessionCode}`);
+  }
+}
+
+// Export atomic update functions for use in other modules
+export { atomicGameUpdate, isGameLocked };
+
 const externalGameCommandsSchema = Joi.array().items(
   Joi.object({
     action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
@@ -520,40 +590,67 @@ async function joinLobby(
     }
   }
 
-  // Prevent new users from joining if countdown has finished (allow rejoining users)
+  // Check game state before user-specific operations (no lock needed for read-only check)
   if (gameRef.hasFinishedCountdown && !rejoiningMode) {
     return { error: "Game has already started, cannot join lobby" };
   }
 
+  // Update anonymous usernames
   if (isAnonymous && !rejoiningMode) {
-    // Only add to anonymous usernames if not already present
-    if (!gameRef.anonymousUsernames.includes(finalUserName)) {
-      gameRef.anonymousUsernames.push(finalUserName);
+    const anonUpdateResult = await atomicGameUpdate(playerKey, async () => {
+      // Only add to anonymous usernames if not already present
+      if (!gameRef.anonymousUsernames.includes(finalUserName)) {
+        gameRef.anonymousUsernames.push(finalUserName);
+      }
+      return { success: true };
+    });
+    
+    if (!anonUpdateResult) {
+      logger.warn(`Failed to update anonymous usernames for ${finalUserName} in ${sessionCode}`);
+      return { error: `Failed to update anonymous usernames for ${finalUserName} in ${sessionCode}` };
     }
   }
 
-  // Add socket to room
-  socket.join(`game:${sessionCode}`);
-  
-  // Register socket client
-  if (!socketClients[playerKey]) {
-    socketClients[playerKey] = [];
-  }
-  // Only add socket if it's not already in the array to prevent duplicates
-  if (!socketClients[playerKey].includes(socket.id)) {
-    socketClients[playerKey].push(socket.id);
-  }
+  // Use per-user atomic update to prevent the same user from joining multiple times
+  const userJoinResult = await atomicGameUpdate(playerKey, async () => {
+    // Double-check user isn't already being processed for joining
+    if (!rejoiningMode && playerInfo[playerKey]) {
+      throw new Error("User already in lobby or being processed");
+    }
 
-  // Update player info
-  updatePlayerInfo(sessionCode, finalUserName, {
-    isAnonymous,
-    userName: finalUserName,
-    sessionCode,
-    anonToken: newAnonToken || anonToken,
-    userId: userId
+    // Add socket to room
+    socket.join(`game:${sessionCode}`);
+    
+    // Register socket client
+    if (!socketClients[playerKey]) {
+      socketClients[playerKey] = [];
+    }
+    // Only add socket if it's not already in the array to prevent duplicates
+    if (!socketClients[playerKey].includes(socket.id)) {
+      socketClients[playerKey].push(socket.id);
+    }
+
+    // Update player info
+    updatePlayerInfo(sessionCode, finalUserName, {
+      isAnonymous,
+      userName: finalUserName,
+      sessionCode,
+      anonToken: newAnonToken || anonToken,
+      userId: userId
+    });
+
+    return { success: true };
   });
 
-  // Initialize user in lobby
+  if (!userJoinResult) {
+    return { error: "Failed to join lobby due to concurrent access for this user" };
+  }
+
+  if (userJoinResult instanceof Error) {
+    return { error: userJoinResult.message };
+  }
+
+  // Initialize user in lobby (outside atomic section as it's mostly read operations)
   initUserInLobby(socket, finalUserName, gameRef, sessionCode, rejoiningMode);
 
   // Notify watchers of public lobbies (in case this lobby is public)
@@ -819,36 +916,60 @@ function handleDisconnect(socketId: string) {
   const playerKey = `${sessionCode}:${userName}`;
   const gameRef = games[sessionCode];
 
-  // Remove from socketClients
-  if (socketClients[playerKey]) {
-    socketClients[playerKey] = socketClients[playerKey].filter(id => id !== socketId);
-    
-    // If this was the last socket for this user
-    if (socketClients[playerKey].length === 0) {
-      delete socketClients[playerKey];
+  // Use atomic update for user disconnect to prevent race conditions
+  atomicGameUpdate(playerKey, async () => {
+    // Remove from socketClients
+    if (socketClients[playerKey]) {
+      socketClients[playerKey] = socketClients[playerKey].filter(id => id !== socketId);
       
-      const player = playerInfo[playerKey];
-      if (player && player.isAnonymous && gameRef) {
-        gameRef.anonymousUsernames = gameRef.anonymousUsernames.filter(name => name !== userName);
+      // If this was the last socket for this user
+      if (socketClients[playerKey].length === 0) {
+        delete socketClients[playerKey];
+        
+        const player = playerInfo[playerKey];
+        
+        // Handle creator disconnection (game-level action)
+        if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId) {
+          // This is a critical game-level action, so we'll handle it outside the user-level atomic update
+          return { shouldDestroyGame: true, player };
+        }
+        
+        // Clean up player info
+        delete playerInfo[playerKey];
+        
+        return { shouldBroadcastLeave: true, player };
       }
-      // If creator disconnects before game starts, destroy game and broadcast cancellation
-      if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
-        // Check if the disconnecting user matches the creator (when known in memory)
-        // We don't have the userId on disconnect for anon users; this logic triggers for creator (non-anon) sessions
-        getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
-        cleanupGame(sessionCode);
-        emitPublicLobbiesUpdate();
-        // After cleanup, stop further processing
-        delete socketInfo[socketId];
-        return;
+    }
+    return { shouldBroadcastLeave: false };
+  }).then(async (result) => {
+    if (!result) return;
+    
+    // Handle game destruction if creator left
+    if (result.shouldDestroyGame) {
+      getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
+      cleanupGame(sessionCode);
+      emitPublicLobbiesUpdate();
+      delete socketInfo[socketId];
+      return;
+    }
+    
+    // Handle normal user leave
+    if (result.shouldBroadcastLeave && result.player) {
+      // Update anonymous usernames list if needed
+      if (result.player.isAnonymous && gameRef) {
+        await atomicGameUpdate(`${sessionCode}:anon`, async () => {
+          gameRef.anonymousUsernames = gameRef.anonymousUsernames.filter(name => name !== userName);
+          return { success: true };
+        });
       }
+      
       // Broadcast player left
       getIO().to(`game:${sessionCode}`).emit('player-left', { userName });
-      // Clean up player info
-      delete playerInfo[playerKey];
       emitPublicLobbiesUpdate();
     }
-  }
+  }).catch((error) => {
+    logger.error(`Error handling disconnect for ${playerKey}:`, error);
+  });
   
   // Clean up socketInfo
   delete socketInfo[socketId];
@@ -1029,15 +1150,35 @@ async function handleLaunchGame(data: {
     }
 
     logger.info("Starting game", sessionCode)
-    if(gameRef.parameters.commands){
-      gameRef.commands = gameRef.parameters.commands;
-      gameRef.totalGuessNumber = gameRef.commands.filter(command => command.action === "guess").length;
-    } else {
-      gameRef.commands = generateGameCommands(gameRef.parameters) || []
-      gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
+    
+    // Atomic game start to prevent race conditions
+    const startResult = await atomicGameUpdate(sessionCode, async () => {
+      // Double-check game hasn't already started
+      if (gameRef.hasStarted) {
+        throw new Error("Game has already started");
+      }
+      
+      if(gameRef.parameters.commands){
+        gameRef.commands = gameRef.parameters.commands;
+        gameRef.totalGuessNumber = gameRef.commands.filter(command => command.action === "guess").length;
+      } else {
+        gameRef.commands = generateGameCommands(gameRef.parameters) || []
+        gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
+      }
+      
+      gameRef.hasStarted = true;
+      gameRef.duration = Date.now();
+      
+      return { success: true };
+    });
+
+    if (!startResult) {
+      return { error: "Failed to start game due to concurrent access" };
     }
-    gameRef.hasStarted = true;
-    gameRef.duration = Date.now();
+
+    if (startResult instanceof Error) {
+      return { error: startResult.message };
+    }
 
     // broadcast gamestart to all users and start
     broadcastToSession(sessionCode, 'game-start', {});
@@ -1104,12 +1245,21 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
       }
     }
 
-    // Schedule next command
+    // Schedule next command with atomic command index increment
     if (gameRef.currentCommandIndex < gameRef.commands.length) {
       const nextDuration = (effectiveDuration || command.duration || 0) * 1000; // convert to ms
-      gameRef.commandTimeout = setTimeout(() => { 
-        gameRef.currentCommandIndex += 1; 
-        sendNextCommand(gameRef)
+      gameRef.commandTimeout = setTimeout(async () => { 
+        // Atomic command progression to prevent race conditions
+        const progressResult = await atomicGameUpdate(gameRef.sessionCode, async () => {
+          gameRef.currentCommandIndex += 1;
+          return gameRef.currentCommandIndex;
+        });
+        
+        if (progressResult !== null) {
+          sendNextCommand(gameRef);
+        } else {
+          logger.warn(`Failed to progress command for game ${gameRef.sessionCode} due to concurrent access`);
+        }
       }, nextDuration);
     }
   } catch (error) {
@@ -1252,18 +1402,39 @@ async function handleValidateGuess(data: {
     }
     updateGameActivity(sessionCode);
 
-
+    // Initialize hasAnswered structure if needed
     if(!gameRef.hasAnswered) gameRef.hasAnswered = {}
-    if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands.length).fill(false);
-    if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
-      emitToUser(sessionCode, userName, "error", {message: "Answer already given"})
-      return;
-    }
-    if(gameRef.commands[gameRef.currentCommandIndex].action != "guess"){
-      emitToUser(sessionCode, userName, "error", {message: "Guess delay timed out"})
+    if(!gameRef.hasAnswered[userName]) gameRef.hasAnswered[userName] = Array(gameRef.commands?.length || 0).fill(false);
+    
+    // Use per-user atomic check to prevent duplicate submissions from same user
+    const userLockKey = `${sessionCode}:${userName}`;
+    const userGuessResult = await atomicGameUpdate(userLockKey, async () => {
+      // Check if this specific user has already answered this question
+      if(gameRef.hasAnswered[userName][gameRef.currentCommandIndex]){
+        throw new Error("Answer already given");
+      }
+      
+      // Check if we're still in a guess phase
+      if(!gameRef.commands || gameRef.commands[gameRef.currentCommandIndex].action != "guess"){
+        throw new Error("Guess delay timed out");
+      }
+
+      // Mark this user as having answered (prevents duplicate from same user)
+      gameRef.hasAnswered[userName][gameRef.currentCommandIndex] = true;
+      return { success: true };
+    });
+
+    if (!userGuessResult) {
+      emitToUser(sessionCode, userName, "error", {message: "Failed to process guess due to concurrent access"});
       return;
     }
 
+    if (userGuessResult instanceof Error) {
+      emitToUser(sessionCode, userName, "error", {message: userGuessResult.message});
+      return;
+    }
+
+    // Validate coordinates (this can be done outside atomic section)
     const [x, y, z] = voxelProp.vox;
     const atlasImage: NVImage = imageRef[gameRef.currentAtlas];
     const atlasMetadata = imageMetadata[gameRef.currentAtlas];
@@ -1271,8 +1442,6 @@ async function handleValidateGuess(data: {
       emitToUser(sessionCode, userName, "error", {message: "Coordinates out of bound"})
       return;
     }
-
-    gameRef.hasAnswered[userName][gameRef.currentCommandIndex] = true; // mark that the user has answered
     const voxelValue: number = atlasImage.getValue(x, y, z);
     const isCorrect: boolean = voxelValue === gameRef.currentRegionId;
     let scoreIncrement = 0
@@ -1318,22 +1487,38 @@ async function handleValidateGuess(data: {
     if(gameRef.isCurrentlyBlind) {
       scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER);
     }
-    gameRef.individualScores[userName] += scoreIncrement
-    gameRef.individualAttempts[userName] += 1;
-    if(isCorrect) gameRef.individualSuccesses[userName] += 1;
-    gameRef.individualDurations[userName].push(elapsed);
-    if(isCorrect) gameRef.individualCorrectDurations[userName].push(elapsed);
     
-    // Broadcast score update to all users via SSE
+    // Atomic update for score modifications to prevent race conditions
+    const scoreUpdateResult = await atomicGameUpdate(`${sessionCode}:scores`, async () => {
+      // Initialize score tracking for user if needed
+      if (!gameRef.individualScores[userName]) gameRef.individualScores[userName] = 0;
+      if (!gameRef.individualAttempts[userName]) gameRef.individualAttempts[userName] = 0;
+      if (!gameRef.individualSuccesses[userName]) gameRef.individualSuccesses[userName] = 0;
+      if (!gameRef.individualDurations[userName]) gameRef.individualDurations[userName] = [];
+      if (!gameRef.individualCorrectDurations[userName]) gameRef.individualCorrectDurations[userName] = [];
+      
+      // Update scores atomically
+      gameRef.individualScores[userName] += scoreIncrement;
+      gameRef.individualAttempts[userName] += 1;
+      if(isCorrect) gameRef.individualSuccesses[userName] += 1;
+      gameRef.individualDurations[userName].push(elapsed);
+      if(isCorrect) gameRef.individualCorrectDurations[userName].push(elapsed);
+      
+      return gameRef.individualScores[userName];
+    });
+
+    const finalScore = scoreUpdateResult || gameRef.individualScores[userName] || 0;
+    
+    // Broadcast score update to all users
     broadcastToSession(sessionCode, 'score-update', {
       user: userName,
-      score: gameRef.individualScores[userName]
+      score: finalScore
     });
     
     emitToUser(sessionCode, userName, "guess-result", {
       isCorrect,
       scoreIncrement,
-      totalScore: gameRef.individualScores[userName],
+      totalScore: finalScore,
       distance: minDistance,
       nearestCenter,
       nearestBoundary
