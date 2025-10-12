@@ -1,6 +1,6 @@
 import { useApp } from '../context/AppContext';
 import { formatTime } from '../utils/formatters';
-import { SingleChallenge } from './SingleChallenge';
+import { SingleRTChallenge } from './SingleRTChallenge';
 
 export function NextChallenge() {
   const { 
@@ -29,7 +29,7 @@ export function NextChallenge() {
   }
 
   return (
-    <SingleChallenge 
+    <SingleRTChallenge 
       isNext={true}
       sessionCode={nextChallenge.sessionCode}
       startTime={formatTimeUntilStart(nextChallenge.startTime)}

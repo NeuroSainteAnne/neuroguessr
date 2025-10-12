@@ -83,7 +83,7 @@ export function calculateNextStartTime(currentStartTime: string, recurrence: Rec
     // Start the countdown for the next occurrence
     sendNextCommand(games[gameBackup.sessionCode]);
 
-    logger.info(`Challenge ${gameBackup.sessionCode} has been rescheduled for next occurrence at ${nextStartTime}`);
+    logger.info(`Realtime challenge ${gameBackup.sessionCode} has been rescheduled for next occurrence at ${nextStartTime}`);
 
     // Notify watchers that lobbies list may have changed
     emitPublicLobbiesUpdate();

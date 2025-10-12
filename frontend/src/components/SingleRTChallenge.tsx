@@ -1,8 +1,8 @@
 import { useApp } from '../context/AppContext';
 import { consoleLog } from '../utils/logging';
-import './SingleChallenge.css';
+import './SingleRTChallenge.css';
 
-export function SingleChallenge({
+export function SingleRTChallenge({
   isNext, sessionCode, startTime, name, scheduledTime, allowDeletion, callbackAfterDeletion, callbackDeletionFailed,
 }: {
   isNext?: boolean; sessionCode: string; startTime: string; name?: string | undefined; scheduledTime: string;
@@ -12,20 +12,20 @@ export function SingleChallenge({
     t, authToken, userIsAdmin
   } = useApp();
 
-  const handleJoinChallenge = () => {
+  const handleJoinRTChallenge = () => {
     if (sessionCode) {
       window.location.href = `/multiplayer/${sessionCode}`;
     }
   };
 
-  const handleDeleteChallenge = async (sessionCode: string) => {
+  const handleDeleteRTChallenge = async (sessionCode: string) => {
     if (!allowDeletion || !authToken || !userIsAdmin) return;
     if (!window.confirm(t('confirm_delete_challenge') || 'Are you sure you want to delete this challenge?')) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/challenges/${sessionCode}`, {
+      const response = await fetch(`/api/realtime-challenges/${sessionCode}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -38,10 +38,10 @@ export function SingleChallenge({
       }
 
       // Refresh the challenges list
-      consoleLog("verbose", `Challenge ${sessionCode} deleted`);
+      consoleLog("verbose", `Realtime challenge ${sessionCode} deleted`);
       if (callbackAfterDeletion) callbackAfterDeletion();
     } catch (err) {
-      console.error('Error deleting challenge:', err);
+      console.error('Error deleting realtime challenge:', err);
       if (callbackDeletionFailed) callbackDeletionFailed(t('error_deleting_challenge'));
     }
   };
@@ -64,14 +64,14 @@ export function SingleChallenge({
 
       <button
         className="join-challenge-btn"
-        onClick={handleJoinChallenge}
+        onClick={handleJoinRTChallenge}
       >
         {t('join_challenge')}
       </button>
 
       {allowDeletion && userIsAdmin && <button
         className="delete-challenge-btn"
-        onClick={() => handleDeleteChallenge(sessionCode)}
+        onClick={() => handleDeleteRTChallenge(sessionCode)}
       >
         {t('delete_challenge')}
       </button>}

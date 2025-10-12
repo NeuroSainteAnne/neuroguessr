@@ -343,22 +343,22 @@ const MultiplayerConfigScreen = () => {
                 }
             });
             
-            socket.on('save-as-challenge', (data: any) => {
+            socket.on('save-as-realtime-challenge', (data: any) => {
                 setSaveAsChallengeLoading(false);
                 if (data && data.message === "success") {
                     // Challenge saved successfully
                     setError(null);
                     setChallengeSavedSuccessfully(true);
                     refreshNextChallenge();
-                    consoleLog("verbose", "Challenge saved successfully");
+                    consoleLog("verbose", "Real-time challenge saved successfully");
                     // Optionally show success message or redirect
                 } else {
-                    setError("Failed to save challenge");
+                    setError("Failed to save real-time challenge");
                 }
             });
             
-            socket.on('challenge-prepared', () => {
-                consoleLog("verbose", "Challenge has been prepared and will start at the scheduled time");
+            socket.on('realtime-challenge-prepared', () => {
+                consoleLog("verbose", "Real-time challenge has been prepared and will start at the scheduled time");
                 // Optionally show preparation message
             });
             
@@ -383,8 +383,8 @@ const MultiplayerConfigScreen = () => {
                 socket.off('player-left');
                 socket.off('parameters-updated');
                 socket.off('parameters-has-updated');
-                socket.off('save-as-challenge');
-                socket.off('challenge-prepared');
+                socket.off('save-as-realtime-challenge');
+                socket.off('realtime-challenge-prepared');
                 socket.off('session-code-changed');
             };
         }
@@ -469,7 +469,7 @@ const MultiplayerConfigScreen = () => {
         }
 
         try {
-            socketRef.current.emit('save-as-challenge', {
+            socketRef.current.emit('save-as-realtime-challenge', {
                 sessionCode,
                 sessionToken,
                 userToken: authToken,
@@ -1607,7 +1607,7 @@ const MultiplayerConfigScreen = () => {
                                     disabled={saveAsChallengeLoading}
                                     onClick={handleSaveAsChallenge}
                                 >
-                                    {saveAsChallengeLoading ? t("saving-in-progress") : t("save-as-challenge")}
+                                    {saveAsChallengeLoading ? t("saving-in-progress") : t("save-as-realtime-challenge")}
                                 </button>
                             )}
 

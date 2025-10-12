@@ -20,7 +20,7 @@ export function Page() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/challenges', {
+      const response = await fetch('/api/realtime-challenges', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

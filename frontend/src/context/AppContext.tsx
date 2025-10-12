@@ -366,7 +366,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
 
     try {
       setNextChallengeLoading(true);
-      const response = await fetch('/api/multi/next-challenge');
+      const response = await fetch('/api/multi/next-realtime-challenge');
       
       if (!response.ok) {
         throw new Error(`Failed to fetch next challenge: ${response.status}`);

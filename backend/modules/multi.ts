@@ -15,7 +15,7 @@ import { Socket } from "socket.io";
 import Joi from "joi";
 import { logger } from "./logging.ts";
 import { getDistance } from "./utils_compute.ts";
-import { handleSaveAsChallenge } from "./multi_challenge.ts";
+import { handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
 import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
 
@@ -292,8 +292,8 @@ export function initSocketHandlers() {
       }
     });
 
-    // Handle save as challenge
-    socket.on('save-as-challenge', async (data: {
+    // Handle save as realtime challenge
+    socket.on('save-as-realtime-challenge', async (data: {
       sessionCode: string,
       sessionToken: string,
       userToken: string,
@@ -306,10 +306,10 @@ export function initSocketHandlers() {
           socket.emit('error', { message: "Not authenticated" });
           return;
         }
-        const result = await handleSaveAsChallenge({...data, userName: info.userName});
+        const result = await handleSaveAsRealtimeChallenge({...data, userName: info.userName});
       } catch (error) {
-        logger.error("Save as challenge error:", error);
-        socket.emit('error', { message: "Error saving challenge" });
+        logger.error("Save as realtime challenge error:", error);
+        socket.emit('error', { message: "Error saving realtime challenge" });
       }
     })
 

@@ -18,8 +18,8 @@ import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, 
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate } from "./modules/multi.ts";
-import { restorePersistentChallengeSessions } from "modules/multi_challenge.ts";
-import { getNextChallenge, getAllChallenges, deleteChallenge } from "modules/multi_challenge.ts";
+import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
+import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
 import { getPublicLobbies } from "modules/multi_public.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
@@ -93,13 +93,13 @@ app.post('/api/cloture-game-session', authenticateToken,
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
 app.post('/api/multi/destroy-session', authenticateToken, destroyMultiplayerSession)
 app.get('/api/multi/public-lobbies', getPublicLobbies)
-app.get('/api/multi/next-challenge', (req, res, next) => {
-    Promise.resolve(getNextChallenge(req, res)).catch(next);
+app.get('/api/multi/next-realtime-challenge', (req, res, next) => {
+    Promise.resolve(getNextRealtimeChallenge(req, res)).catch(next);
 })
-app.get('/api/challenges', (req, res, next) => {
-    Promise.resolve(getAllChallenges(req, res)).catch(next);
+app.get('/api/realtime-challenges', (req, res, next) => {
+    Promise.resolve(getAllRealtimeChallenges(req, res)).catch(next);
 })
-app.delete('/api/challenges/:sessionCode', authenticateToken, deleteChallenge)
+app.delete('/api/realtime-challenges/:sessionCode', authenticateToken, deleteRealtimeChallenge)
 
 // advanced_game.ts
 app.post('/api/advanced-game/save', authenticateToken, saveAdvancedSettings);
@@ -340,7 +340,7 @@ initSocketIO(server);
 initSocketHandlers()
 
 // Restore persistent challenge sessions on server startup
-restorePersistentChallengeSessions();
+restorePersistentRealTimeChallengeSessions();
 
 process.on('SIGINT', async () => {
   await sql.end();
