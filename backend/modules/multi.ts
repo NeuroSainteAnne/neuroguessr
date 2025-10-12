@@ -452,6 +452,317 @@ export function initSocketHandlers() {
       }
     });
 
+    // Handle create classic challenge (admin only)
+    socket.on('create-classic-challenge', async (data: {
+      sessionCode: string;
+      sessionToken: string;
+      name: string;
+      start_date: Date;
+      end_date: Date;
+      userToken: string;
+    }) => {
+      try {
+        const { sessionCode, sessionToken, name, start_date, end_date, userToken } = data;
+
+        // Verify admin privileges
+        if (!userToken) {
+          socket.emit('error', { message: "Authentication token required" });
+          return;
+        }
+
+        try {
+          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+          if (!jwtPayload || !jwtPayload.admin) {
+            socket.emit('error', { message: "Admin privileges required" });
+            return;
+          }
+
+          // Validate that this is a valid session
+          const sessionResult = await sql`
+            SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+          ` as { session_token: string; }[];
+
+          if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
+            socket.emit('error', { message: "Invalid session token" });
+            return;
+          }
+
+          // Get the game reference
+          const gameRef = games[sessionCode];
+          if (!gameRef) {
+            socket.emit('error', { message: "Game session not found" });
+            return;
+          }
+
+          // Convert the existing session to a classic challenge
+          gameRef.isClassicChallenge = true;
+          gameRef.startDate = new Date(start_date);
+          gameRef.endDate = new Date(end_date);
+          gameRef.name = name;
+
+          // Update the database record
+          await sql`
+            UPDATE multi_sessions 
+            SET is_classic_challenge = TRUE,
+                start_date = ${start_date},
+                end_date = ${end_date},
+                name = ${name}
+            WHERE session_code = ${sessionCode}
+          `;
+
+          logger.info(`Session ${sessionCode} converted to classic challenge "${name}" by user ${jwtPayload.id}`);
+          socket.emit('classic-challenge-created', { 
+            challenge: {
+              sessionCode,
+              name,
+              challenge_name: name,
+              start_date,
+              end_date
+            }
+          });
+
+        } catch (jwtError) {
+          socket.emit('error', { message: "Invalid authentication token" });
+          return;
+        }
+
+      } catch (error) {
+        logger.error("Create classic challenge error:", error);
+        socket.emit('error', { message: "Error creating classic challenge" });
+      }
+    });
+
+    // Handle get active classic challenges
+    socket.on('get-active-classic-challenges', async () => {
+      try {
+        const result = await sql`
+          SELECT
+            ms.*,
+            u.username as creator_username,
+            u.firstname as creator_firstname,
+            u.lastname as creator_lastname
+          FROM multi_sessions ms
+          JOIN users u ON ms.creator_id = u.id
+          WHERE ms.is_classic_challenge = true
+          AND ms.start_date <= NOW()
+          AND ms.end_date >= NOW()
+          ORDER BY ms.start_date ASC
+        `;
+
+        socket.emit('active-classic-challenges', { challenges: result });
+
+      } catch (error) {
+        logger.error("Get active classic challenges error:", error);
+        socket.emit('error', { message: "Error getting active classic challenges" });
+      }
+    });
+
+    // Handle get all classic challenges (admin only)
+    socket.on('get-all-classic-challenges', async (data: { userToken: string }) => {
+      try {
+        const { userToken } = data;
+
+        // Verify admin privileges
+        if (!userToken) {
+          socket.emit('error', { message: "Authentication token required" });
+          return;
+        }
+
+        try {
+          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+          if (!jwtPayload || !jwtPayload.admin) {
+            socket.emit('error', { message: "Admin privileges required" });
+            return;
+          }
+
+          const result = await sql`
+            SELECT
+              ms.*,
+              u.username as creator_username,
+              u.firstname as creator_firstname,
+              u.lastname as creator_lastname
+            FROM multi_sessions ms
+            JOIN users u ON ms.creator_id = u.id
+            WHERE ms.is_classic_challenge = true
+            ORDER BY ms.created_at DESC
+          `;
+
+          socket.emit('all-classic-challenges', { challenges: result });
+
+        } catch (jwtError) {
+          socket.emit('error', { message: "Invalid authentication token" });
+          return;
+        }
+
+      } catch (error) {
+        logger.error("Get all classic challenges error:", error);
+        socket.emit('error', { message: "Error getting all classic challenges" });
+      }
+    });
+
+    // Handle get classic challenge by ID
+    socket.on('get-classic-challenge', async (data: { challengeId: number }) => {
+      try {
+        const { challengeId } = data;
+
+        const result = await sql`
+          SELECT
+            ms.*,
+            u.username as creator_username,
+            u.firstname as creator_firstname,
+            u.lastname as creator_lastname
+          FROM multi_sessions ms
+          JOIN users u ON ms.creator_id = u.id
+          WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+        `;
+
+        if (result.length === 0) {
+          socket.emit('error', { message: "Challenge not found" });
+          return;
+        }
+
+        socket.emit('classic-challenge-details', { challenge: result[0] });
+
+      } catch (error) {
+        logger.error("Get classic challenge error:", error);
+        socket.emit('error', { message: "Error getting classic challenge" });
+      }
+    });
+
+    // Handle check if user can join classic challenge
+    socket.on('can-join-classic-challenge', async (data: {
+      challengeId: number;
+      userToken?: string;
+      anonToken?: string;
+    }) => {
+      try {
+        const { challengeId, userToken, anonToken } = data;
+
+        // Get user ID from token if authenticated
+        let userId: number | undefined = undefined;
+        if (userToken) {
+          try {
+            const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+            userId = jwtPayload.id;
+          } catch (jwtError) {
+            socket.emit('error', { message: "Invalid authentication token" });
+            return;
+          }
+        }
+
+        const challenge = await sql`
+          SELECT * FROM multi_sessions
+          WHERE id = ${challengeId} AND is_classic_challenge = true
+        `;
+
+        if (challenge.length === 0) {
+          socket.emit('can-join-result', { canJoin: false, reason: 'Challenge not found' });
+          return;
+        }
+
+        const challengeData = challenge[0];
+        const now = new Date();
+
+        if (now < new Date(challengeData.start_date)) {
+          socket.emit('can-join-result', { canJoin: false, reason: 'Challenge has not started yet' });
+          return;
+        }
+
+        if (now > new Date(challengeData.end_date)) {
+          socket.emit('can-join-result', { canJoin: false, reason: 'Challenge has ended' });
+          return;
+        }
+
+        socket.emit('can-join-result', { canJoin: true, sessionCode: challengeData.session_code });
+
+      } catch (error) {
+        logger.error("Can join classic challenge error:", error);
+        socket.emit('error', { message: "Error checking challenge participation" });
+      }
+    });
+
+    // Handle deactivate classic challenge (admin only)
+    socket.on('deactivate-classic-challenge', async (data: {
+      challengeId: number;
+      userToken: string;
+    }) => {
+      try {
+        const { challengeId, userToken } = data;
+
+        // Verify admin privileges
+        if (!userToken) {
+          socket.emit('error', { message: "Authentication token required" });
+          return;
+        }
+
+        try {
+          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+          if (!jwtPayload || !jwtPayload.admin) {
+            socket.emit('error', { message: "Admin privileges required" });
+            return;
+          }
+
+          // For classic challenges, we can "deactivate" by setting end_date to now
+          const result = await sql`
+            UPDATE multi_sessions
+            SET end_date = NOW()
+            WHERE id = ${challengeId} AND is_classic_challenge = true
+          `;
+
+          const success = result.count > 0;
+          if (success) {
+            logger.info(`Classic challenge ${challengeId} deactivated`);
+            socket.emit('classic-challenge-deactivated', { success: true });
+          } else {
+            socket.emit('error', { message: 'Challenge not found' });
+          }
+
+        } catch (jwtError) {
+          socket.emit('error', { message: "Invalid authentication token" });
+          return;
+        }
+
+      } catch (error) {
+        logger.error("Deactivate classic challenge error:", error);
+        socket.emit('error', { message: "Error deactivating classic challenge" });
+      }
+    });
+
+    // Handle get classic challenge leaderboard
+    socket.on('get-classic-challenge-leaderboard', async (data: {
+      challengeId: number;
+      limit?: number;
+    }) => {
+      try {
+        const { challengeId, limit = 50 } = data;
+
+        const result = await sql`
+          SELECT
+            fs.score,
+            fs.duration,
+            fs.correct,
+            fs.incorrect,
+            fs.attempts,
+            u.username,
+            u.firstname,
+            u.lastname,
+            fs.created_at as completion_date,
+            fs.classic_challenge_name as challenge_name
+          FROM finished_sessions fs
+          JOIN users u ON fs.user_id = u.id
+          WHERE fs.classic_challenge_session_id = ${challengeId}
+          ORDER BY fs.score DESC, fs.duration ASC
+          LIMIT ${limit}
+        `;
+
+        socket.emit('classic-challenge-leaderboard', { leaderboard: result });
+
+      } catch (error) {
+        logger.error("Get classic challenge leaderboard error:", error);
+        socket.emit('error', { message: "Error getting classic challenge leaderboard" });
+      }
+    });
+
     // Handle destroy session (creator leaving config screen)
     socket.on('destroy-session', async (data: {
       sessionCode: string,
@@ -787,10 +1098,16 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
   // Fetch session data from database to check if it's a challenge
   let isChallenge = false;
   let persistentConfig: string | null = null;
+  let isClassicChallenge = false;
+  let challengeName: string | null = null;
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+  let name: string | null = null;
   
   try {
     const sessionResult = await sql`
-      SELECT is_challenge, persistent_config FROM multi_sessions 
+      SELECT is_challenge, persistent_config, is_classic_challenge, challenge_name, start_date, end_date, name 
+      FROM multi_sessions 
       WHERE session_code = ${sessionCode} 
       LIMIT 1
     `;
@@ -798,6 +1115,11 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
     if (sessionResult.length > 0) {
       isChallenge = sessionResult[0].is_challenge || false;
       persistentConfig = sessionResult[0].persistent_config || null;
+      isClassicChallenge = sessionResult[0].is_classic_challenge || false;
+      challengeName = sessionResult[0].challenge_name || null;
+      startDate = sessionResult[0].start_date ? new Date(sessionResult[0].start_date) : null;
+      endDate = sessionResult[0].end_date ? new Date(sessionResult[0].end_date) : null;
+      name = sessionResult[0].name || null;
     }
   } catch (error) {
     logger.error("Error fetching session data for createEmptySession:", error);
@@ -864,8 +1186,11 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
     lastActivity: Date.now(),
     isCurrentlyBlind: false,
     isChallenge,
+    isClassicChallenge,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    name: name || undefined,
     ...(creatorId !== undefined ? { creatorId } : {}),
-    name: undefined,
   }
 }
 

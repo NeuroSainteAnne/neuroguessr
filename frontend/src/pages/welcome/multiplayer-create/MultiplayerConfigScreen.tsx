@@ -132,6 +132,7 @@ const MultiplayerConfigScreen = () => {
     const [isValidatedJSON, setIsValidatedJSON] = useState(false);
     const [saveAsChallengeLoading, setSaveAsChallengeLoading] = useState(false);
     const [challengeSavedSuccessfully, setChallengeSavedSuccessfully] = useState(false);
+    const [lastCreatedChallengeType, setLastCreatedChallengeType] = useState<'realtime' | 'classic' | null>(null);
     const [isSavedAdvanced, setIsSavedAdvanced] = useState(false);
     const [listRegions, setListRegions] = useState<string[]|null>(null)
     const [advancedDurationPerRegion, setAdvancedDurationPerRegion] = useState<number>(DEFAULT_DURATION_PER_REGION);
@@ -144,6 +145,20 @@ const MultiplayerConfigScreen = () => {
     const [enableRecurrence, setEnableRecurrence] = useState<boolean>(false);
     const [recurrenceType, setRecurrenceType] = useState<"hour" | "day" | "week" | "month" | "year">("week");
     const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
+    
+    // Classic Challenge Creation Modal states
+    const [showClassicChallengeModal, setShowClassicChallengeModal] = useState<boolean>(false);
+    const [classicChallengeName, setClassicChallengeName] = useState<string>("");
+    const [classicChallengeDescription, setClassicChallengeDescription] = useState<string>("");
+    const [classicChallengeStartDate, setClassicChallengeStartDate] = useState<string>("");
+    const [classicChallengeEndDate, setClassicChallengeEndDate] = useState<string>("");
+    const [creatingClassicChallenge, setCreatingClassicChallenge] = useState<boolean>(false);
+    const [classicChallengeError, setClassicChallengeError] = useState<string | null>(null);
+    const [lastCreatedClassicChallenge, setLastCreatedClassicChallenge] = useState<{
+        name: string;
+        startDate: string;
+        endDate: string;
+    } | null>(null);
     
     // Admin change session code states
     const [showChangeCodeInput, setShowChangeCodeInput] = useState<boolean>(false);
@@ -349,6 +364,7 @@ const MultiplayerConfigScreen = () => {
                     // Challenge saved successfully
                     setError(null);
                     setChallengeSavedSuccessfully(true);
+                    setLastCreatedChallengeType('realtime');
                     refreshNextChallenge();
                     consoleLog("verbose", "Real-time challenge saved successfully");
                     // Optionally show success message or redirect
@@ -483,6 +499,88 @@ const MultiplayerConfigScreen = () => {
             setSaveAsChallengeLoading(false);
             setError('Failed to save challenge');
             consoleLog("verbose", `Failed to save challenge: ${err}`);
+        }
+    }
+
+    const handleCreateClassicChallenge = async () => {
+        if (!userIsAdmin) {
+            setClassicChallengeError('Admin privileges required');
+            return;
+        }
+
+        if (!classicChallengeName.trim()) {
+            setClassicChallengeError('Challenge name is required');
+            return;
+        }
+
+        if (!classicChallengeStartDate || !classicChallengeEndDate) {
+            setClassicChallengeError('Start date and end date are required');
+            return;
+        }
+
+        const startDate = new Date(classicChallengeStartDate);
+        const endDate = new Date(classicChallengeEndDate);
+        const now = new Date();
+
+        if (startDate <= now) {
+            setClassicChallengeError('Start date must be in the future');
+            return;
+        }
+
+        if (endDate <= startDate) {
+            setClassicChallengeError('End date must be after start date');
+            return;
+        }
+
+        if (!selectedAtlas && !showAdvancedSettings) {
+            setClassicChallengeError('Please select an atlas or configure advanced settings');
+            return;
+        }
+
+        setCreatingClassicChallenge(true);
+        setClassicChallengeError(null);
+
+        try {
+            const challengeData = {
+                sessionCode: sessionCode,
+                sessionToken: sessionToken,
+                name: classicChallengeName.trim(),
+                start_date: startDate.toISOString(),
+                end_date: endDate.toISOString(),
+                userToken: authToken
+            };
+
+            if (!socketRef.current || !socketRef.current.connected) {
+                setClassicChallengeError('Not connected to server');
+                return;
+            }
+
+            // Use socket event instead of REST API
+            socketRef.current.emit('create-classic-challenge', challengeData);
+
+            // Store challenge details for success modal
+            setLastCreatedClassicChallenge({
+                name: classicChallengeName.trim(),
+                startDate: classicChallengeStartDate,
+                endDate: classicChallengeEndDate
+            });
+
+            // Reset modal and show success
+            setShowClassicChallengeModal(false);
+            setClassicChallengeName("");
+            setClassicChallengeDescription("");
+            setClassicChallengeStartDate("");
+            setClassicChallengeEndDate("");
+            
+            // Show success message
+            setChallengeSavedSuccessfully(true);
+            setLastCreatedChallengeType('classic');
+
+        } catch (err) {
+            consoleLog("verbose", `Failed to create classic challenge: ${err}`);
+            setClassicChallengeError(err instanceof Error ? err.message : 'Failed to create classic challenge');
+        } finally {
+            setCreatingClassicChallenge(false);
         }
     }
 
@@ -1090,62 +1188,6 @@ const MultiplayerConfigScreen = () => {
                         {customDescription || (t("challenge_ready_message", {startTime: getReadableStartTime()}))}
                     </p>
                 )}
-                {userIsAdmin && (
-                    <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
-                        <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
-                        <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
-                            {t("change_code_description")}
-                        </p>
-                        {!showChangeCodeInput ? (
-                            <button 
-                                onClick={() => setShowChangeCodeInput(true)}
-                                style={{ 
-                                    backgroundColor: '#21669f', 
-                                    color: 'white', 
-                                    padding: '8px 16px', 
-                                    border: 'none', 
-                                    borderRadius: 4, 
-                                    cursor: 'pointer' 
-                                }}
-                            >
-                                {t("change_session_code")}
-                            </button>
-                        ) : (
-                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                <input
-                                    type="text"
-                                    placeholder={t("enter_new_code")}
-                                    value={newCodeInput}
-                                    onChange={(e) => setNewCodeInput(e.target.value)}
-                                    maxLength={8}
-                                    style={{ 
-                                        padding: '8px 12px', 
-                                        border: '1px solid #ccc', 
-                                        borderRadius: 4, 
-                                        fontSize: 16,
-                                        fontFamily: 'monospace',
-                                        letterSpacing: 2
-                                    }}
-                                />
-                                <button 
-                                    onClick={changeSessionCode}
-                                    disabled={changeCodeLoading}
-                                    style={{ 
-                                        backgroundColor: '#28a745', 
-                                        color: 'white', 
-                                        padding: '8px 16px', 
-                                        border: 'none', 
-                                        borderRadius: 4, 
-                                        cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
-                                        opacity: changeCodeLoading ? 0.6 : 1
-                                    }}
-                                >
-                                    {changeCodeLoading ? t("changing") : t("change")}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         );
     }
@@ -1337,6 +1379,35 @@ const MultiplayerConfigScreen = () => {
                 ))}
             </select>
         );
+    };
+
+    // Helper to get default start/end dates for classic challenge
+    const getDefaultClassicChallengeDates = () => {
+        const now = new Date();
+        // Add 5 minutes, round seconds to 0
+        const start = new Date(now.getTime() + 5 * 60 * 1000);
+        start.setSeconds(0, 0);
+        // End date: 1 day after start
+        const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+        end.setSeconds(0, 0);
+        // Format for datetime-local input
+        const toLocal = (d: Date) => {
+            const tzOffset = d.getTimezoneOffset() * 60000;
+            const localISO = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+            return localISO;
+        };
+        return {
+            start: toLocal(start),
+            end: toLocal(end)
+        };
+    };
+
+    // When opening the modal, set default dates
+    const handleOpenClassicChallengeModal = () => {
+        const { start, end } = getDefaultClassicChallengeDates();
+        setClassicChallengeStartDate(start);
+        setClassicChallengeEndDate(end);
+        setShowClassicChallengeModal(true);
     };
 
     return (
@@ -1611,6 +1682,17 @@ const MultiplayerConfigScreen = () => {
                                 </button>
                             )}
 
+                            {/* Create Classic Challenge button - only show if user is admin */}
+                            {userIsAdmin && (
+                                <button
+                                    className={((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON))?"play-button disabled":"play-button enabled"}
+                                    style={{ marginTop: '10px', backgroundColor: !((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON)) ? '#28a745' : undefined }}
+                                    onClick={handleOpenClassicChallengeModal}
+                                >
+                                    {t("create_classic_challenge") || "Create Classic Challenge"}
+                                </button>
+                            )}
+
                             {/* Recurrence settings - only show for admin with advanced settings and countdown startTime */}
                             {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
                                 <div style={{ marginTop: '15px', padding: '15px', border: '2px solid #ff6b35', borderRadius: '8px', backgroundColor: '#fff5f2' }}>
@@ -1678,7 +1760,10 @@ const MultiplayerConfigScreen = () => {
                         fontSize: '24px',
                         fontWeight: 'bold'
                     }}>
-                        ✅ {t("challenge_saved_successfully")}
+                        ✅ {lastCreatedChallengeType === 'classic' 
+                            ? (t("classic_challenge_created_successfully") || "Classic Challenge Created Successfully!")
+                            : (t("challenge_saved_successfully") || "Challenge Saved Successfully!")
+                        }
                     </div>
                     
                     <div style={{ 
@@ -1687,8 +1772,248 @@ const MultiplayerConfigScreen = () => {
                         borderRadius: '10px',
                         color: '#333'
                     }}>
-                        {renderQRCodeContainer({ qrCodeColor: "#333", textColor: "#333", showDescription: true })}
+                        {renderQRCodeContainer({ qrCodeColor: "#333", textColor: "#333", showDescription: lastCreatedChallengeType === 'realtime' })}
+                        {lastCreatedChallengeType === 'classic'&& (
+                            <div>
+                                <div style={{ 
+                                    backgroundColor: '#e8f5e8', 
+                                    padding: '15px', 
+                                    borderRadius: '8px',
+                                    marginBottom: '15px',
+                                    border: '1px solid #28a745'
+                                }}>
+                                    <strong>{t("challenge_details") || "Challenge Details:"}</strong>
+                                    <br />
+                                    <span style={{ color: '#666' }}>
+                                        {t("name") || "Name"}: {lastCreatedClassicChallenge?.name || 'N/A'}
+                                        <br />
+                                        {t("start_date") || "Start"}: {lastCreatedClassicChallenge?.startDate ? new Date(lastCreatedClassicChallenge.startDate).toLocaleString() : 'N/A'}
+                                        <br />
+                                        {t("end_date") || "End"}: {lastCreatedClassicChallenge?.endDate ? new Date(lastCreatedClassicChallenge.endDate).toLocaleString() : 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                        {userIsAdmin && (
+                            <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
+                                <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
+                                <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
+                                    {t("change_code_description")}
+                                </p>
+                                {!showChangeCodeInput ? (
+                                    <button 
+                                        onClick={() => setShowChangeCodeInput(true)}
+                                        style={{ 
+                                            backgroundColor: '#21669f', 
+                                            color: 'white', 
+                                            padding: '8px 16px', 
+                                            border: 'none', 
+                                            borderRadius: 4, 
+                                            cursor: 'pointer' 
+                                        }}
+                                    >
+                                        {t("change_session_code")}
+                                    </button>
+                                ) : (
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                        <input
+                                            type="text"
+                                            placeholder={t("enter_new_code")}
+                                            value={newCodeInput}
+                                            onChange={(e) => setNewCodeInput(e.target.value)}
+                                            maxLength={8}
+                                            style={{ 
+                                                padding: '8px 12px', 
+                                                border: '1px solid #ccc', 
+                                                borderRadius: 4, 
+                                                fontSize: 16,
+                                                fontFamily: 'monospace',
+                                                letterSpacing: 2
+                                            }}
+                                        />
+                                        <button 
+                                            onClick={changeSessionCode}
+                                            disabled={changeCodeLoading}
+                                            style={{ 
+                                                backgroundColor: '#28a745', 
+                                                color: 'white', 
+                                                padding: '8px 16px', 
+                                                border: 'none', 
+                                                borderRadius: 4, 
+                                                cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
+                                                opacity: changeCodeLoading ? 0.6 : 1
+                                            }}
+                                        >
+                                            {changeCodeLoading ? t("changing") : t("change")}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
+            {/* Classic Challenge Creation Modal */}
+            {showClassicChallengeModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'black',
+                        padding: '30px',
+                        borderRadius: '10px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        maxHeight: '80vh',
+                        overflow: 'auto'
+                    }}>
+                        <h2 style={{ marginTop: 0, color: '#21669f' }}>
+                            {t("create_classic_challenge") || "Create Classic Challenge"}
+                        </h2>
+                        
+                        {classicChallengeError && (
+                            <div style={{
+                                color: 'red',
+                                backgroundColor: '#ffebee',
+                                border: '1px solid #f44336',
+                                borderRadius: '4px',
+                                padding: '10px',
+                                marginBottom: '20px',
+                                fontSize: '14px'
+                            }}>
+                                {classicChallengeError}
+                            </div>
+                        )}
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                {t("challenge_name") || "Challenge Name"} *
+                            </label>
+                            <input
+                                type="text"
+                                value={classicChallengeName}
+                                onChange={(e) => setClassicChallengeName(e.target.value)}
+                                placeholder={t("enter_challenge_name") || "Enter challenge name"}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '16px'
+                                }}
+                                disabled={creatingClassicChallenge}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                {t("description") || "Description"}
+                            </label>
+                            <textarea
+                                value={classicChallengeDescription}
+                                onChange={(e) => setClassicChallengeDescription(e.target.value)}
+                                placeholder={t("enter_challenge_description") || "Enter challenge description (optional)"}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '16px',
+                                    minHeight: '80px',
+                                    resize: 'vertical'
+                                }}
+                                disabled={creatingClassicChallenge}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                {t("start_date") || "Start Date"} *
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={classicChallengeStartDate}
+                                onChange={(e) => setClassicChallengeStartDate(e.target.value)}
+                                min={new Date().toISOString().slice(0, 19)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '16px'
+                                }}
+                                disabled={creatingClassicChallenge}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '30px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                {t("end_date") || "End Date"} *
+                            </label>
+                            <input
+                                type="datetime-local"
+                                value={classicChallengeEndDate}
+                                onChange={(e) => setClassicChallengeEndDate(e.target.value)}
+                                min={classicChallengeStartDate || new Date().toISOString().slice(0, 19)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '16px'
+                                }}
+                                disabled={creatingClassicChallenge}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowClassicChallengeModal(false);
+                                    setClassicChallengeName("");
+                                    setClassicChallengeDescription("");
+                                    setClassicChallengeStartDate("");
+                                    setClassicChallengeEndDate("");
+                                    setClassicChallengeError(null);
+                                }}
+                                disabled={creatingClassicChallenge}
+                                style={{
+                                    padding: '10px 20px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#f5f5f5',
+                                    cursor: creatingClassicChallenge ? 'not-allowed' : 'pointer',
+                                    opacity: creatingClassicChallenge ? 0.6 : 1
+                                }}
+                            >
+                                {t("cancel") || "Cancel"}
+                            </button>
+                            <button
+                                onClick={handleCreateClassicChallenge}
+                                disabled={creatingClassicChallenge}
+                                style={{
+                                    padding: '10px 20px',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    backgroundColor: creatingClassicChallenge ? '#ccc' : '#21669f',
+                                    color: 'white',
+                                    cursor: creatingClassicChallenge ? 'not-allowed' : 'pointer',
+                                    opacity: creatingClassicChallenge ? 0.6 : 1
+                                }}
+                            >
+                                {creatingClassicChallenge ? (t("creating") || "Creating...") : (t("create_challenge") || "Create Challenge")}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -71,6 +71,7 @@ export interface FinishedSession {
     multiplayer_games_won?: number;
     duration: number; // In milliseconds
     created_at: number; // Unix ms timestamp
+    classic_challenge_id?: number | null;
 }
 
 export interface FinishedSessionCamelCase {
@@ -93,6 +94,7 @@ export interface FinishedSessionCamelCase {
     multiplayerGamesWon?: number;
     duration: number; // In milliseconds
     createdAt: number; // Unix ms timestamp
+    classicChallengeId?: number | null;
 }
 
 export interface MultiSession {
@@ -104,6 +106,8 @@ export interface MultiSession {
   public?: boolean;
   is_challenge?: boolean;
   persistent_config?: string | null;
+  name?: string | null;
+  classic_challenge_id?: number | null;
 }
 
 export interface AdvancedGameSettings {

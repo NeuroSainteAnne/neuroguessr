@@ -120,6 +120,7 @@ export const database_init = async () => {
             await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`;
 
+
             await sql`
                 CREATE TABLE IF NOT EXISTS finished_sessions (
                     id SERIAL PRIMARY KEY,
@@ -140,7 +141,11 @@ export const database_init = async () => {
                     quit_reason TEXT,
                     multiplayer_games_won INTEGER DEFAULT 0,
                     duration INTEGER NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    name TEXT DEFAULT NULL,
+                    classic_challenge_id INTEGER REFERENCES multi_sessions(id),
+                    classic_challenge_start_date TIMESTAMP WITH TIME ZONE,
+                    classic_challenge_end_date TIMESTAMP WITH TIME ZONE
                 );
             `;
             await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`;
@@ -160,16 +165,34 @@ export const database_init = async () => {
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     public BOOLEAN NOT NULL DEFAULT FALSE,
                     is_challenge BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE,
                     persistent_config TEXT DEFAULT NULL,
-                    name TEXT DEFAULT NULL
+                    name TEXT DEFAULT NULL,
+                    start_date TIMESTAMP WITH TIME ZONE,
+                    end_date TIMESTAMP WITH TIME ZONE
                 );
             `;
-            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`;
-            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_token ON multi_sessions(session_token);`
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE;
+            `;
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS end_date TIMESTAMP WITH TIME ZONE;
+            `;
 
             await sql`
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS classic_challenge_id INTEGER REFERENCES multi_sessions(id);
             `;
 
             await sql`
@@ -231,12 +254,33 @@ export const database_init = async () => {
             
             await sql`
                 ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_classic_challenge ON multi_sessions(is_classic_challenge);`;
+
+            await sql`
+                ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS persistent_config TEXT DEFAULT NULL;
             `;
 
             await sql`
                 ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS name TEXT DEFAULT NULL;
+            `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS name TEXT DEFAULT NULL;
+            `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS classic_challenge_start_date TIMESTAMP WITH TIME ZONE;
+            `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS classic_challenge_end_date TIMESTAMP WITH TIME ZONE;
             `;
         });
 
@@ -296,6 +340,7 @@ export const cleanOldGameSessions = async () => {
             DELETE FROM multi_sessions
             WHERE created_at <= NOW() - INTERVAL '1 hour'
             AND is_challenge = FALSE
+            AND is_classic_challenge = FALSE
         `;
         if (resultMultiSessions.count !== 0) {
             logger.info(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);

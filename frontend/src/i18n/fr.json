@@ -245,7 +245,7 @@
   "multiplayer_scheduled_description": "Rejoignez cette partie multijoueur de NeuroGuessr prévue pour commencer le {{time}}",
   "multiplayer_scheduled_description_withname": "Rejoignez cette partie multijoueur de NeuroGuessr '{{name}}' prévue pour commencer le {{time}}",
   "save-as-realtime-challenge": "Créer un défi en temps réel",
-  "enter_challenge_name": "Entrez le nom du défi (optionnel)",
+  "enter_challenge_name": "Entrez le nom du défi",
   "saving-in-progress": "Enregistrement...",
   "challenge_saved_successfully": "Défi en temps réel enregistré avec succès !",
   "challenge_ready_message": "Votre défi en temps réel a été programmé et commencera automatiquement le {{startTime}}. Les joueurs peuvent le rejoindre en utilisant le code ci-dessus.",

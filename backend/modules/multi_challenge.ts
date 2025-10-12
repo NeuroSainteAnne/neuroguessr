@@ -325,7 +325,11 @@ export function extractPersistentState(gameRef: MultiplayerGame): PersistentGame
     lastActivity: gameRef.lastActivity,
     creatorId: gameRef.creatorId,
     isChallenge: gameRef.isChallenge,
-    name: gameRef.name
+    name: gameRef.name,
+    // Classic challenge fields
+    isClassicChallenge: gameRef.isClassicChallenge,
+    startDate: gameRef.startDate,
+    endDate: gameRef.endDate
   };
 }
 // Function to restore all persistent realtime challenge sessions on server startup

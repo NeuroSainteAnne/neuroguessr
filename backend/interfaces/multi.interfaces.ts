@@ -46,6 +46,10 @@ export interface MultiplayerGame {
   creatorId?: number;
   isChallenge?: boolean;
   name?: string;
+  // Classic challenge fields
+  isClassicChallenge?: boolean;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 export type Recurrence = {
@@ -66,6 +70,11 @@ export interface PersistentGameState {
   creatorId?: number;
   isChallenge?: boolean;
   name?: string;
+  // Classic challenge fields
+  isClassicChallenge?: boolean;
+  challengeName?: string;
+  startDate?: Date;
+  endDate?: Date;
 } 
 
 export interface AtlasLUT {

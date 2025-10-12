@@ -94,6 +94,9 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
       const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a, b) => a + b, 0) / correctDurations.length) : null;
       const quitReason = 'end';
       const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
+      const name = gameRef.name || null;
+      const classicChallengeStartDate = gameRef.startDate || null;
+      const classicChallengeEndDate = gameRef.endDate || null;
 
       // The rest of your database code...
       savePromises.push(
@@ -102,12 +105,14 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
             user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
             min_time_per_region, max_time_per_region, avg_time_per_region,
             min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
-            quit_reason, multiplayer_games_won, duration, created_at
+            quit_reason, multiplayer_games_won, duration, created_at,
+            name, classic_challenge_start_date, classic_challenge_end_date
           ) VALUES (
             ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
             ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
             ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
-            ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW()
+            ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
+            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}
           )
         `.catch(e => {
           logger.error(`Error saving stats for ${username}:`, e);
