@@ -58,6 +58,8 @@ const MultiPlayer = ({
   const { askedSessionCode, askedSessionToken } = pageContext.routeParams;
   const [inputCode, setInputCode] = useState<string>("");
   const inputCodeRef = useRef(inputCode);
+  const implicitCodeRef = useRef(0);
+  const implicitTokenRef = useRef("");
   const [error, setError] = useState<string | null>(null);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
@@ -75,6 +77,7 @@ const MultiPlayer = ({
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
+  const [isClassicChallenge, setIsClassicChallenge] = useState<boolean>(false);
 
   const handleConnect = () => {
     setError(null);
@@ -118,7 +121,7 @@ const MultiPlayer = ({
     anonUsernameRef.current = anonUsername;
   }, [anonUsername])
 
-  const joinLobby = (inputCode: string) => {
+  const joinLobby = async (inputCode: string) => {
     if (isConnected) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
     
@@ -131,7 +134,7 @@ const MultiPlayer = ({
       consoleLog('verbose', 'Socket connected in multiplayer lobby');
       consoleLog('verbose', `Joining lobby ${inputCode} as ${isLoggedIn ? userUsername : anonUsername}`);
     
-      // Join the lobby
+      // Always emit join-lobby - server will detect if it's a classic challenge
       newSocket.emit('join-lobby', {
         sessionCode: inputCode,
         userName: isLoggedIn ? userUsername : anonUsername,
@@ -158,13 +161,20 @@ const MultiPlayer = ({
     socket.on('anon-token', (data: any) => {
       anonTokenRef.current = data.anonToken;
     });
-    socket.on('lobby-users', (data: any) => {
-      setLobbyUsers(data.users);
+    socket.on('joined-classic-challenge', (data: any) => {
+      consoleLog('verbose', 'Successfully joined classic challenge');
+      setIsClassicChallenge(true);
+      setLobbyUsers([isLoggedIn ? userUsername : anonUsername]); // Single user for classic challenges
       setIsConnected(true);
-      if(!isLoggedIn){
-        setIsAnonymous(true)
-      }
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+      // Store the user-specific session code for classic challenges
+      if (data.userSessionCode) {
+        implicitCodeRef.current = data.userSessionCode;
+      }
+      if(data.userSessionToken) {
+        implicitTokenRef.current = data.userSessionToken
+      }
+      // For classic challenges, start the game immediately since it's single-player
       tryLaunchGame()
     });
     socket.on('player-joined', (data: any) => {
@@ -419,19 +429,33 @@ const MultiPlayer = ({
 
   const tryLaunchGame = async () => {
     const socket = getSocket();
-    if (socket && socket.connected && isConnected && askedSessionCode && askedSessionToken && isLoggedIn) {
-      socket.emit('launch-game', {
-        sessionCode: askedSessionCode,
-        sessionToken: askedSessionToken,
-        userToken: authToken
-      });
-      socket.once('game-launched', (data: any) => {
-        if (data.success) {
-          consoleLog('verbose', 'Game launched successfully');
-        } else {
-          setError(data.message || t('error_launching_game'));
+    if (socket && socket.connected && isConnected) {
+      const sessionCode = isClassicChallenge ? implicitCodeRef.current : askedSessionCode;
+      if (sessionCode) {
+        if (isClassicChallenge) {
+          // For classic challenges, emit launch-game without session token
+          socket.emit('launch-game', {
+            sessionCode: sessionCode,
+            sessionToken: implicitTokenRef.current,
+            userToken: isLoggedIn ? authToken : undefined
+          });
+        } else if (askedSessionToken && isLoggedIn) {
+          // For regular multiplayer, require session token
+          socket.emit('launch-game', {
+            sessionCode: sessionCode,
+            sessionToken: askedSessionToken,
+            userToken: authToken
+          });
         }
-      });
+        
+        socket.once('game-launched', (data: any) => {
+          if (data.success) {
+            consoleLog('verbose', 'Game launched successfully');
+          } else {
+            setError(data.message || t('error_launching_game'));
+          }
+        });
+      }
     }
   }
 
@@ -536,7 +560,7 @@ const MultiPlayer = ({
 
       hasAnswered.current = true;
       socket.emit('validate-guess', {
-        sessionCode: inputCode,
+        sessionCode: isClassicChallenge ? implicitCodeRef.current : inputCode,
         userName: isLoggedIn ? userUsername : anonUsername,
         voxelProp: selectedVoxelProp.current,
         ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),

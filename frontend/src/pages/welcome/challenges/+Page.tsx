@@ -11,13 +11,14 @@ import { navigate } from 'vike/client/router';
 
 interface ClassicChallenge {
   id: number;
-  name: string;
-  description?: string;
+  sessionCode: string;
+  name?: string;
+  startDate: string;
+  endDate: string;
+  creator: string;
   atlas: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  created_at: string;
+  totalDuration: number;
+  createdAt: string;
 }
 
 export function Page() {
@@ -52,7 +53,7 @@ export function Page() {
       setPrivateChallenges(rtData.challenges.filter((challenge: Challenge) => !challenge.isPublic));
 
       // Fetch classic challenges
-      const ccResponse = await fetch('/api/classic-challenges/active', {
+      const ccResponse = await fetch('/api/classic-challenges', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -123,30 +124,15 @@ export function Page() {
     refreshNextChallenge();
   };
 
-  const handleJoinClassicChallenge = async (challengeId: number) => {
-    if (!authToken) {
+  const handleJoinClassicChallenge = async (sessionCode: string) => {
+    if (!isLoggedIn || !authToken) {
       setError('Please log in to join challenges');
       return;
     }
 
     try {
-      // Check if user can join this challenge
-      const response = await fetch(`/api/classic-challenges/${challengeId}/can-join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        setError(result.message || 'Cannot join this challenge');
-        return;
-      }
-
-      // Start the game with this classic challenge
-      navigate(`/singleplayer?classicChallengeId=${challengeId}`);
+      // Navigate to multiplayer page with the classic challenge session code
+      navigate(`/multiplayer/${sessionCode}`);
     } catch (err) {
       console.error('Error joining classic challenge:', err);
       setError('Failed to join challenge');
@@ -210,30 +196,33 @@ export function Page() {
                   {classicChallenges.map((challenge) => (
                     <div key={challenge.id} className="classic-challenge-card">
                       <div className="challenge-card-header">
-                        <h3>{challenge.name}</h3>
+                        <h3>{challenge.name || 'Unnamed Challenge'}</h3>
                         <div className="challenge-status">
-                          {formatChallengeStatus(challenge.start_date, challenge.end_date)}
+                          {formatChallengeStatus(challenge.startDate, challenge.endDate)}
                         </div>
                       </div>
-                      {challenge.description && (
-                        <p className="challenge-description">{challenge.description}</p>
-                      )}
                       <div className="challenge-details">
                         <div className="detail-item">
                           <strong>Atlas:</strong> {challenge.atlas}
                         </div>
                         <div className="detail-item">
-                          <strong>Period:</strong> {new Date(challenge.start_date).toLocaleDateString()} - {new Date(challenge.end_date).toLocaleDateString()}
+                          <strong>Duration:</strong> {formatTime({ms: challenge.totalDuration * 1000, showSeconds: false})}
+                        </div>
+                        <div className="detail-item">
+                          <strong>Period:</strong> {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}
+                        </div>
+                        <div className="detail-item">
+                          <strong>Created by:</strong> {challenge.creator}
                         </div>
                       </div>
                       <div className="challenge-actions">
                         <button
                           className="join-challenge-btn"
-                          onClick={() => handleJoinClassicChallenge(challenge.id)}
-                          disabled={!challenge.is_active || new Date() < new Date(challenge.start_date) || new Date() > new Date(challenge.end_date)}
+                          onClick={() => handleJoinClassicChallenge(challenge.sessionCode)}
+                          disabled={new Date() < new Date(challenge.startDate) || new Date() > new Date(challenge.endDate)}
                         >
-                          {new Date() < new Date(challenge.start_date) ? 'Not Started' : 
-                           new Date() > new Date(challenge.end_date) ? 'Ended' : 
+                          {new Date() < new Date(challenge.startDate) ? 'Not Started' : 
+                           new Date() > new Date(challenge.endDate) ? 'Ended' : 
                            'Join Challenge'}
                         </button>
                       </div>

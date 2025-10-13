@@ -19,7 +19,7 @@ import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate } from "./modules/multi.ts";
 import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
-import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
+import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge, getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge } from "modules/multi_challenge.ts";
 import { getPublicLobbies } from "modules/multi_public.ts";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { renderPage } from 'vike/server';
@@ -100,6 +100,15 @@ app.get('/api/realtime-challenges', (req, res, next) => {
     Promise.resolve(getAllRealtimeChallenges(req, res)).catch(next);
 })
 app.delete('/api/realtime-challenges/:sessionCode', authenticateToken, deleteRealtimeChallenge)
+app.get('/api/classic-challenges', authenticateToken, (req, res, next) => {
+    Promise.resolve(getActiveClassicChallenges(req, res)).catch(next);
+})
+app.get('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
+    Promise.resolve(getClassicChallenge(req, res)).catch(next);
+})
+app.post('/api/multi/can-join-classic-challenge', authenticateToken, (req, res, next) => {
+    Promise.resolve(canJoinClassicChallenge(req, res)).catch(next);
+})
 
 // advanced_game.ts
 app.post('/api/advanced-game/save', authenticateToken, saveAdvancedSettings);

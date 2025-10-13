@@ -143,7 +143,7 @@ export const database_init = async () => {
                     duration INTEGER NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     name TEXT DEFAULT NULL,
-                    classic_challenge_id INTEGER REFERENCES multi_sessions(id),
+                    classic_challenge_id INTEGER,
                     classic_challenge_start_date TIMESTAMP WITH TIME ZONE,
                     classic_challenge_end_date TIMESTAMP WITH TIME ZONE
                 );
@@ -192,7 +192,7 @@ export const database_init = async () => {
 
             await sql`
                 ALTER TABLE finished_sessions 
-                ADD COLUMN IF NOT EXISTS classic_challenge_id INTEGER REFERENCES multi_sessions(id);
+                ADD COLUMN IF NOT EXISTS classic_challenge_id INTEGER;
             `;
 
             await sql`

@@ -108,6 +108,9 @@ export interface MultiSession {
   persistent_config?: string | null;
   name?: string | null;
   classic_challenge_id?: number | null;
+  is_classic_challenge?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface AdvancedGameSettings {

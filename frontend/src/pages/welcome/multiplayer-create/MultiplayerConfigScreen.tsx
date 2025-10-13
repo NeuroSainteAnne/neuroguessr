@@ -564,6 +564,9 @@ const MultiplayerConfigScreen = () => {
                 startDate: classicChallengeStartDate,
                 endDate: classicChallengeEndDate
             });
+            
+            // do not destroy challenge
+            shouldKeepSessionRef.current = true;
 
             // Reset modal and show success
             setShowClassicChallengeModal(false);

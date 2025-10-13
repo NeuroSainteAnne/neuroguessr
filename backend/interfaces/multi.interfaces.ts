@@ -50,6 +50,8 @@ export interface MultiplayerGame {
   isClassicChallenge?: boolean;
   startDate?: Date;
   endDate?: Date;
+  classicChallengeId?: number;
+  originalSessionCode: string; // For classic challenges, stores the original session code
 }
 
 export type Recurrence = {
@@ -60,6 +62,7 @@ export type Recurrence = {
 // Persistent game state for challenge mode (saved to database)
 export interface PersistentGameState {
   sessionCode: string;
+  originalSessionCode: string;
   hasStarted: boolean;
   hasFinishedCountdown: boolean;
   hasEnded: boolean;

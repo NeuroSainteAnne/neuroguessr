@@ -15,7 +15,7 @@ import { Socket } from "socket.io";
 import Joi from "joi";
 import { logger } from "./logging.ts";
 import { getDistance } from "./utils_compute.ts";
-import { handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
+import { extractPersistentState, handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
 import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
 
@@ -188,42 +188,150 @@ export function initSocketHandlers() {
           handleDisconnect(socket.id);
         });
 
-        // Rest of join-lobby logic 
-        const result = await joinLobby(socket, sessionCode, userName, isAnonymous, token, anonToken);
+        // Check if this is a classic challenge first
+        const sessionResult = await sql`
+          SELECT * FROM multi_sessions WHERE session_code = ${sessionCode}
+        ` as MultiSession[];
         
-        const duration = Date.now() - startTime;
-        if (result.success) {
-          logger.info('Join lobby successful', {
-            socketId: socket.id,
-            sessionCode,
-            userName,
-            isAnonymous,
-            clientIP,
-            duration: `${duration}ms`
-          });
-        } else {
-          logger.warn('Join lobby failed', {
-            socketId: socket.id,
-            sessionCode,
-            userName,
-            error: result.error || 'Unknown error',
-            clientIP,
-            duration: `${duration}ms`
-          });
-        }
-        
-        if (result.error) {
-          socket.emit('error', { message: result.error });
+        if (!sessionResult.length) {
+          socket.emit('error', { message: "Lobby does not exist" });
           return;
         }
         
-        // Store socketInfo for lookups during disconnects
-        socketInfo[socket.id] = { sessionCode, userName };
+        const sessionData = sessionResult[0];
+        const isClassicChallenge = sessionData.is_classic_challenge || false;
         
-        // Send initial data to client
-        if (result.anonToken) {
-          socket.emit('anon-token', { anonToken: result.anonToken });
+        if (isClassicChallenge) {
+          // Handle classic challenge logic
+          const challenge = sessionData;
+          const now = new Date();
+          const startDate = new Date(challenge.start_date!!);
+          const endDate = new Date(challenge.end_date!!);
+
+          // Check timing
+          if (now < startDate) {
+            socket.emit('error', { message: 'Challenge has not started yet' });
+            return;
+          }
+
+          if (now > endDate) {
+            socket.emit('error', { message: 'Challenge has ended' });
+            return;
+          }
+
+          // Get user ID for replay prevention check
+          let userId: number | undefined = undefined;
+          let finalUserName: string = userName;
+
+          if (!token) {
+            socket.emit('error', { message: 'Classic challenges require you to be logged in. Please log in to participate.' });
+            return;
+          }
+
+          try {
+            const jwtPayload: any = jwt.verify(token, config.jwt_secret);
+            userId = jwtPayload.id;
+            finalUserName = jwtPayload.username;
+          } catch (jwtError) {
+            socket.emit('error', { message: 'Invalid authentication token' });
+            return;
+          }
+
+          // Check replay prevention for authenticated users
+          if (userId) {
+            const completedResult = await sql`
+              SELECT id FROM finished_sessions
+              WHERE user_id = ${userId}
+              AND classic_challenge_id = ${challenge.id}
+            `;
+
+            if (completedResult.length > 0) {
+              socket.emit('error', { message: 'You have already completed this classic challenge' });
+              return;
+            }
+          }
+
+          // Create a unique session code for this user's challenge instance
+          const userSessionCode = await getUniqueCode();
+          const userSessionToken = crypto.randomBytes(32).toString('hex');
+
+          console.log("got to config")
+          const newSessionConfig = JSON.parse(challenge.persistent_config || "")
+          newSessionConfig.sessionCode = userSessionCode;
+          console.log(newSessionConfig)
+
+          // Create new temporary database entry for this user's personal challenge
+          const insertResult = await sql`
+            INSERT INTO multi_sessions (
+              session_code, session_token, creator_id, 
+              is_classic_challenge, start_date, end_date, name,
+              persistent_config, created_at
+            ) VALUES (
+              ${userSessionCode}, ${userSessionToken}, ${userId!},
+              true, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
+              ${JSON.stringify(newSessionConfig)}, NOW() 
+            )
+            RETURNING id
+          `;
+          const sessionId = insertResult[0].id;
+
+          // Now join the lobby with the real session code
+          const joinResult = await joinLobby(socket, userSessionCode, finalUserName, false, token, undefined);
+
+          if (joinResult.success) {
+            // Mark this as a classic challenge session
+            const gameRef = games[userSessionCode];
+            if (gameRef) {
+              gameRef.isClassicChallenge = true;
+              gameRef.name = challenge.name || undefined;
+              gameRef.startDate = startDate;
+              gameRef.endDate = endDate;
+              gameRef.classicChallengeId = challenge.id; // Store the challenge ID
+              // Keep original sessionCode for display purposes
+              gameRef.originalSessionCode = sessionCode;
+            }
+
+            socket.emit('joined-classic-challenge', {
+              sessionCode,
+              userSessionCode,
+              userSessionToken,
+              challengeName: challenge.name,
+              startDate: challenge.start_date,
+              endDate: challenge.end_date,
+            });
+          } else {
+            socket.emit('error', { message: joinResult.error || 'Failed to join challenge' });
+          }
+
+          // Store socketInfo 
+          socketInfo[socket.id] = { sessionCode:userSessionCode, userName };
+        } else {
+          // Handle regular multiplayer lobby
+          const result = await joinLobby(socket, sessionCode, userName, isAnonymous, token, anonToken);
+          
+          if (result.error) {
+            socket.emit('error', { message: result.error });
+            return;
+          }
+          
+          // Store socketInfo for lookups during disconnects
+          socketInfo[socket.id] = { sessionCode, userName };
+          
+          // Send initial data to client
+          if (result.anonToken) {
+            socket.emit('anon-token', { anonToken: result.anonToken });
+          }
         }
+        
+        const duration = Date.now() - startTime;
+        logger.info('Join lobby successful', {
+          socketId: socket.id,
+          sessionCode,
+          userName,
+          isAnonymous,
+          clientIP,
+          duration: `${duration}ms`
+        });
         
       } catch (error) {
         logger.error("Socket join error:", error);
@@ -499,6 +607,10 @@ export function initSocketHandlers() {
           gameRef.startDate = new Date(start_date);
           gameRef.endDate = new Date(end_date);
           gameRef.name = name;
+          gameRef.parameters.commands = generateGameCommands(gameRef.parameters)
+          
+          // Extract the persistent game state
+          const persistentState = extractPersistentState(gameRef);
 
           // Update the database record
           await sql`
@@ -506,7 +618,8 @@ export function initSocketHandlers() {
             SET is_classic_challenge = TRUE,
                 start_date = ${start_date},
                 end_date = ${end_date},
-                name = ${name}
+                name = ${name},
+                persistent_config = ${JSON.stringify(persistentState)}
             WHERE session_code = ${sessionCode}
           `;
 
@@ -515,7 +628,6 @@ export function initSocketHandlers() {
             challenge: {
               sessionCode,
               name,
-              challenge_name: name,
               start_date,
               end_date
             }
@@ -763,6 +875,120 @@ export function initSocketHandlers() {
       }
     });
 
+    // Handle join classic challenge
+    socket.on('join-classic-challenge', async (data: {
+      sessionCode: string;
+      userToken?: string;
+      anonToken?: string;
+    }) => {
+      try {
+        const { sessionCode, userToken, anonToken } = data;
+
+        if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+          socket.emit('error', { message: 'Invalid session code format' });
+          return;
+        }
+
+        // Check if challenge exists and is active
+        const challengeResult = await sql`
+          SELECT ms.id, ms.start_date, ms.end_date, ms.name
+          FROM multi_sessions ms
+          WHERE ms.session_code = ${sessionCode}
+          AND ms.is_classic_challenge = TRUE
+        ` as Array<{
+          id: number;
+          start_date: string;
+          end_date: string;
+          name: string | null;
+        }>;
+
+        if (challengeResult.length === 0) {
+          socket.emit('error', { message: 'Classic challenge not found' });
+          return;
+        }
+
+        const challenge = challengeResult[0];
+        const now = new Date();
+        const startDate = new Date(challenge.start_date);
+        const endDate = new Date(challenge.end_date);
+
+        // Check timing
+        if (now < startDate) {
+          socket.emit('error', { message: 'Challenge has not started yet' });
+          return;
+        }
+
+        if (now > endDate) {
+          socket.emit('error', { message: 'Challenge has ended' });
+          return;
+        }
+
+        // Get user ID for replay prevention check
+        let userId: number | undefined = undefined;
+        let userName: string = 'Anonymous'; // Default fallback
+
+        if (userToken) {
+          try {
+            const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
+            userId = jwtPayload.id;
+            userName = jwtPayload.username;
+          } catch (jwtError) {
+            socket.emit('error', { message: 'Invalid authentication token' });
+            return;
+          }
+        } else {
+          socket.emit('error', { message: 'Classic challenges require you to be logged in. Please log in to participate.' });
+          return;
+        }
+
+        // Check replay prevention for authenticated users
+        if (userId) {
+          const completedResult = await sql`
+            SELECT id FROM finished_sessions
+            WHERE user_id = ${userId}
+            AND classic_challenge_id = ${challenge.id}
+          `;
+
+          if (completedResult.length > 0) {
+            socket.emit('error', { message: 'You have already completed this classic challenge' });
+            return;
+          }
+        }
+
+        // Create single-user lobby for the challenge
+        // Use userId-sessionCode as unique lobby key to prevent collisions between users
+        const uniqueSessionCode = `classic_challenge-${sessionCode}-${userId}`;
+        const joinResult = await joinLobby(socket, uniqueSessionCode, userName, false, userToken, undefined);
+
+        if (joinResult.success) {
+          // Mark this as a classic challenge session
+          const gameRef = games[uniqueSessionCode];
+          if (gameRef) {
+            gameRef.isClassicChallenge = true;
+            gameRef.name = challenge.name || undefined;
+            gameRef.startDate = startDate;
+            gameRef.endDate = endDate;
+            gameRef.classicChallengeId = challenge.id; // Store the challenge ID
+            // Keep original sessionCode for display purposes
+            gameRef.originalSessionCode = sessionCode;
+          }
+
+          socket.emit('joined-classic-challenge', {
+            sessionCode,
+            challengeName: challenge.name,
+            startDate: challenge.start_date,
+            endDate: challenge.end_date
+          });
+        } else {
+          socket.emit('error', { message: joinResult.error || 'Failed to join challenge' });
+        }
+
+      } catch (error) {
+        logger.error("Join classic challenge error:", error);
+        socket.emit('error', { message: 'Error joining classic challenge' });
+      }
+    });
+
     // Handle destroy session (creator leaving config screen)
     socket.on('destroy-session', async (data: {
       sessionCode: string,
@@ -790,13 +1016,15 @@ export function initSocketHandlers() {
       userToken?: string
     }) => {
       try {
-        const { sessionCode, userName } = data;
-        const playerKey = `${sessionCode}:${userName}`;
+        const info = socketInfo[socket.id];
+        if (!info) return;
+        const { userName } = data;
+        const playerKey = `${info.sessionCode}:${userName}`;
         
-        logger.info(`User ${userName} explicitly leaving lobby ${sessionCode}`);
+        logger.info(`User ${userName} explicitly leaving lobby ${info.sessionCode}`);
         
         // First, remove socket from the game room to stop receiving updates
-        socket.leave(`game:${sessionCode}`);
+        socket.leave(`game:${info.sessionCode}`);
         
         // Remove this specific socket from the user's socket list
         if (socketClients[playerKey]) {
@@ -805,7 +1033,7 @@ export function initSocketHandlers() {
           // If this was the last socket for this user, clean up completely
           if (socketClients[playerKey].length === 0) {
             // Use the same cleanup logic as disconnect but for explicit leave
-            await handleExplicitUserLeave(sessionCode, userName, playerKey);
+            await handleExplicitUserLeave(info.sessionCode, userName, playerKey);
           }
         }
       } catch (error) {
@@ -1106,7 +1334,7 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
   
   try {
     const sessionResult = await sql`
-      SELECT is_challenge, persistent_config, is_classic_challenge, challenge_name, start_date, end_date, name 
+      SELECT is_challenge, persistent_config, is_classic_challenge, start_date, end_date, name 
       FROM multi_sessions 
       WHERE session_code = ${sessionCode} 
       LIMIT 1
@@ -1116,7 +1344,6 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
       isChallenge = sessionResult[0].is_challenge || false;
       persistentConfig = sessionResult[0].persistent_config || null;
       isClassicChallenge = sessionResult[0].is_classic_challenge || false;
-      challengeName = sessionResult[0].challenge_name || null;
       startDate = sessionResult[0].start_date ? new Date(sessionResult[0].start_date) : null;
       endDate = sessionResult[0].end_date ? new Date(sessionResult[0].end_date) : null;
       name = sessionResult[0].name || null;
@@ -1126,7 +1353,7 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
   }
 
   // If we have persistent config, restore from it
-  if (persistentConfig && isChallenge) {
+  if (persistentConfig && (isChallenge || isClassicChallenge)) {
     try {
       const persistentState: PersistentGameState = JSON.parse(persistentConfig);
       
@@ -1160,6 +1387,7 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
   // Create default session (fallback or non-challenge)
   games[sessionCode] = {
     sessionCode: sessionCode,
+    originalSessionCode: sessionCode,
     hasStarted: false,
     hasFinishedCountdown: false,
     hasEnded: false,
@@ -1291,7 +1519,7 @@ function handleDisconnect(socketId: string) {
         const player = playerInfo[playerKey];
         
         // Handle creator disconnection (game-level action)
-        if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId) {
+        if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId && !gameRef.isClassicChallenge) {
           // This is a critical game-level action, so we'll handle it outside the user-level atomic update
           return { shouldDestroyGame: true, player };
         }
@@ -1524,11 +1752,12 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
 
 async function handleLaunchGame(data: {
   sessionCode: string,
-  sessionToken: string,
+  sessionToken?: string,
+  userToken?: string,
   userName: string
 }) {
   try {
-    const { sessionCode, sessionToken, userName } = data;
+    const { sessionCode, sessionToken, userToken, userName } = data;
     const gameRef = games[sessionCode];
     if (!gameRef) {
       emitToUser(sessionCode, userName, "error", {message: "Lobby does not exist"})
@@ -1536,25 +1765,29 @@ async function handleLaunchGame(data: {
     }
     updateGameActivity(sessionCode);
     
-    // Check that the sessionToken matches the one in the multisessions table
-    const sessionResult = await sql`
-      SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
-    ` as { session_token: string }[];
-    if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
-      emitToUser(sessionCode, userName, "error", {message: "Invalid session token for this lobby"})
-      return {success: false};
-    }
+    // For classic challenges, skip session token validation and allow single-player
+    if (!gameRef.isClassicChallenge) {
+      // Check that the sessionToken matches the one in the multisessions table
+      const sessionResult = await sql`
+        SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
+      ` as { session_token: string }[];
+      if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
+        emitToUser(sessionCode, userName, "error", {message: "Invalid session token for this lobby"})
+        return {success: false};
+      }
 
-    // Get all users in the lobby from playerInfo
-    const userList = Object.values(playerInfo)
-      .filter(info => info.sessionCode === sessionCode)
-      .map(info => info.userName)
-      .filter(Boolean);
-      
-    if (userList.length <= 1) {
-      emitToUser(sessionCode, userName, "error", {message: "Insufficient users in lobby"})
-      return {success: false};
+      // Get all users in the lobby from playerInfo
+      const userList = Object.values(playerInfo)
+        .filter(info => info.sessionCode === sessionCode)
+        .map(info => info.userName)
+        .filter(Boolean);
+        
+      if (userList.length <= 1) {
+        emitToUser(sessionCode, userName, "error", {message: "Insufficient users in lobby"})
+        return {success: false};
+      }
     }
+    
     if (gameRef.hasStarted) {
       emitToUser(sessionCode, userName, "error", {message: "Game already started"})
       return {success: false};
@@ -1563,6 +1796,7 @@ async function handleLaunchGame(data: {
     logger.info("Starting game", sessionCode)
     
     // Atomic game start to prevent race conditions
+    console.log(gameRef)
     const startResult = await atomicGameUpdate(sessionCode, async () => {
       // Double-check game hasn't already started
       if (gameRef.hasStarted) {

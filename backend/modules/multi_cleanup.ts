@@ -55,10 +55,15 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
     // Notify watchers that lobbies list may have changed
     emitPublicLobbiesUpdate();
   }
-}export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
+}
+
+export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
   try {
     if (gameRef.hasEnded) return;
     gameRef.hasEnded = true;
+    logger.info("Cloturing game", {
+      sessionCode: gameRef.sessionCode
+    });
 
     const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
     const allScores = Object.values(gameRef.individualScores);
@@ -97,6 +102,7 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
       const name = gameRef.name || null;
       const classicChallengeStartDate = gameRef.startDate || null;
       const classicChallengeEndDate = gameRef.endDate || null;
+      const classicChallengeId = gameRef.classicChallengeId || null;
 
       // The rest of your database code...
       savePromises.push(
@@ -106,13 +112,13 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
             min_time_per_region, max_time_per_region, avg_time_per_region,
             min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
             quit_reason, multiplayer_games_won, duration, created_at,
-            name, classic_challenge_start_date, classic_challenge_end_date
+            name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id
           ) VALUES (
             ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
             ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
             ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
             ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
-            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}
+            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId}
           )
         `.catch(e => {
           logger.error(`Error saving stats for ${username}:`, e);
@@ -125,11 +131,18 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
 
     // 2. Perform complete game cleanup (skip database deletion if we have recurrence)
     const sessionCode = gameRef.sessionCode;
-    console.log(gameBackup, gameRef.isChallenge, gameRef.parameters.recurrence);
     const hasRecurrence = !!(gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence);
 
-    if (!hasRecurrence) {
-      // Delete the session from database only if no recurrence
+    // For classic challenges, we need to clean up temporary database entries
+    if (gameRef.isClassicChallenge && gameRef.originalSessionCode) {
+      // This is a temporary session created for a user-specific classic challenge
+      // Delete the temporary entry, but keep the original challenge intact
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+        .catch(e => {
+          logger.error(`Error deleting temporary classic challenge session ${sessionCode}:`, e);
+        });
+    } else if (!hasRecurrence) {
+      // Delete the session from database only if no recurrence and not a temporary classic challenge
       await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
         .catch(e => {
           logger.error(`Error deleting session ${sessionCode}:`, e);
