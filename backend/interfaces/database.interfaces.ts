@@ -111,6 +111,7 @@ export interface MultiSession {
   is_classic_challenge?: boolean;
   start_date?: string | null;
   end_date?: string | null;
+  classic_challenge_referral?: number;
 }
 
 export interface AdvancedGameSettings {

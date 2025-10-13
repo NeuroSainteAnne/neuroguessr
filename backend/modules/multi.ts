@@ -219,6 +219,11 @@ export function initSocketHandlers() {
             return;
           }
 
+          if(challenge.classic_challenge_referral){
+            socket.emit('error', { message: 'Cannot create a self-referring challenge' });
+            return;
+          }
+
           // Get user ID for replay prevention check
           let userId: number | undefined = undefined;
           let finalUserName: string = userName;
@@ -249,27 +254,37 @@ export function initSocketHandlers() {
               socket.emit('error', { message: 'You have already completed this classic challenge' });
               return;
             }
+
+            // Check if user already has an active session for this challenge
+            const activeSessionResult = await sql`
+              SELECT id FROM multi_sessions
+              WHERE classic_challenge_referral = ${sessionCode}
+            `;
+
+            if (activeSessionResult.length > 0) {
+              socket.emit('error', { message: 'You already have an active session for this classic challenge. Please complete or leave your current session first.' });
+              return;
+            }
           }
 
           // Create a unique session code for this user's challenge instance
           const userSessionCode = await getUniqueCode();
           const userSessionToken = crypto.randomBytes(32).toString('hex');
 
-          console.log("got to config")
+          console.log("challenge", challenge)
           const newSessionConfig = JSON.parse(challenge.persistent_config || "")
           newSessionConfig.sessionCode = userSessionCode;
-          console.log(newSessionConfig)
 
           // Create new temporary database entry for this user's personal challenge
           const insertResult = await sql`
             INSERT INTO multi_sessions (
               session_code, session_token, creator_id, 
               is_classic_challenge, start_date, end_date, name,
-              persistent_config, created_at
+              persistent_config, created_at, classic_challenge_referral
             ) VALUES (
               ${userSessionCode}, ${userSessionToken}, ${userId!},
               true, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
-              ${JSON.stringify(newSessionConfig)}, NOW() 
+              ${JSON.stringify(newSessionConfig)}, NOW(), ${sessionCode}
             )
             RETURNING id
           `;
@@ -875,120 +890,6 @@ export function initSocketHandlers() {
       }
     });
 
-    // Handle join classic challenge
-    socket.on('join-classic-challenge', async (data: {
-      sessionCode: string;
-      userToken?: string;
-      anonToken?: string;
-    }) => {
-      try {
-        const { sessionCode, userToken, anonToken } = data;
-
-        if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
-          socket.emit('error', { message: 'Invalid session code format' });
-          return;
-        }
-
-        // Check if challenge exists and is active
-        const challengeResult = await sql`
-          SELECT ms.id, ms.start_date, ms.end_date, ms.name
-          FROM multi_sessions ms
-          WHERE ms.session_code = ${sessionCode}
-          AND ms.is_classic_challenge = TRUE
-        ` as Array<{
-          id: number;
-          start_date: string;
-          end_date: string;
-          name: string | null;
-        }>;
-
-        if (challengeResult.length === 0) {
-          socket.emit('error', { message: 'Classic challenge not found' });
-          return;
-        }
-
-        const challenge = challengeResult[0];
-        const now = new Date();
-        const startDate = new Date(challenge.start_date);
-        const endDate = new Date(challenge.end_date);
-
-        // Check timing
-        if (now < startDate) {
-          socket.emit('error', { message: 'Challenge has not started yet' });
-          return;
-        }
-
-        if (now > endDate) {
-          socket.emit('error', { message: 'Challenge has ended' });
-          return;
-        }
-
-        // Get user ID for replay prevention check
-        let userId: number | undefined = undefined;
-        let userName: string = 'Anonymous'; // Default fallback
-
-        if (userToken) {
-          try {
-            const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
-            userId = jwtPayload.id;
-            userName = jwtPayload.username;
-          } catch (jwtError) {
-            socket.emit('error', { message: 'Invalid authentication token' });
-            return;
-          }
-        } else {
-          socket.emit('error', { message: 'Classic challenges require you to be logged in. Please log in to participate.' });
-          return;
-        }
-
-        // Check replay prevention for authenticated users
-        if (userId) {
-          const completedResult = await sql`
-            SELECT id FROM finished_sessions
-            WHERE user_id = ${userId}
-            AND classic_challenge_id = ${challenge.id}
-          `;
-
-          if (completedResult.length > 0) {
-            socket.emit('error', { message: 'You have already completed this classic challenge' });
-            return;
-          }
-        }
-
-        // Create single-user lobby for the challenge
-        // Use userId-sessionCode as unique lobby key to prevent collisions between users
-        const uniqueSessionCode = `classic_challenge-${sessionCode}-${userId}`;
-        const joinResult = await joinLobby(socket, uniqueSessionCode, userName, false, userToken, undefined);
-
-        if (joinResult.success) {
-          // Mark this as a classic challenge session
-          const gameRef = games[uniqueSessionCode];
-          if (gameRef) {
-            gameRef.isClassicChallenge = true;
-            gameRef.name = challenge.name || undefined;
-            gameRef.startDate = startDate;
-            gameRef.endDate = endDate;
-            gameRef.classicChallengeId = challenge.id; // Store the challenge ID
-            // Keep original sessionCode for display purposes
-            gameRef.originalSessionCode = sessionCode;
-          }
-
-          socket.emit('joined-classic-challenge', {
-            sessionCode,
-            challengeName: challenge.name,
-            startDate: challenge.start_date,
-            endDate: challenge.end_date
-          });
-        } else {
-          socket.emit('error', { message: joinResult.error || 'Failed to join challenge' });
-        }
-
-      } catch (error) {
-        logger.error("Join classic challenge error:", error);
-        socket.emit('error', { message: 'Error joining classic challenge' });
-      }
-    });
-
     // Handle destroy session (creator leaving config screen)
     socket.on('destroy-session', async (data: {
       sessionCode: string,
@@ -1283,6 +1184,15 @@ async function getUniqueCode(): Promise<string> {
     return code;
 }
 
+// Helper function to generate session token
+function generateSessionToken(sessionCode: string, creatorId?: number): string {
+  return jwt.sign({ 
+    sessionCode, 
+    creatorId, 
+    type: "multiplayer-creator" 
+  }, config.jwt_secret, { expiresIn: "1h" });
+}
+
 export const createMultiplayerSession = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user.id; 
@@ -1519,8 +1429,14 @@ function handleDisconnect(socketId: string) {
         const player = playerInfo[playerKey];
         
         // Handle creator disconnection (game-level action)
-        if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId && !gameRef.isClassicChallenge) {
-          // This is a critical game-level action, so we'll handle it outside the user-level atomic update
+        if(gameRef.isClassicChallenge){
+          if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
+            // should destroy the classic challenge and store the results to finished sessions
+            console.log("SHOULD DESTROY CLASSIC")
+            return { shouldDestroyGame: true, player };
+          }
+          // not a classic instance: we don't destroy it
+        } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId) {
           return { shouldDestroyGame: true, player };
         }
         
@@ -1536,6 +1452,10 @@ function handleDisconnect(socketId: string) {
     
     // Handle game destruction if creator left
     if (result.shouldDestroyGame) {
+      // For classic challenges, save abandonment record before destroying
+      if (result.player?.userId && gameRef.isClassicChallenge) {
+        await clotureMultiplayerGame(gameRef);
+      }
       getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
       cleanupGame(sessionCode);
       emitPublicLobbiesUpdate();
@@ -1576,7 +1496,14 @@ async function handleExplicitUserLeave(sessionCode: string, userName: string, pl
     if (!player) return { shouldBroadcastLeave: false };
     
     // Handle creator leaving before game starts
-    if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
+    if(gameRef.isClassicChallenge){
+          if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
+            // should destroy the classic challenge and store the results to finished sessions
+            console.log("SHOULD DESTROY CLASSIC")
+            return { shouldDestroyGame: true, player };
+          }
+          // not a classic instance: we don't destroy it
+    } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
       return { shouldDestroyGame: true, player };
     }
     
@@ -1589,6 +1516,10 @@ async function handleExplicitUserLeave(sessionCode: string, userName: string, pl
     
     // Handle game destruction if creator left
     if (result.shouldDestroyGame) {
+      // For classic challenges, save abandonment record before destroying
+      if (result.player?.userId && gameRef.isClassicChallenge) {
+        await clotureMultiplayerGame(gameRef);
+      }
       getIO().to(`game:${sessionCode}`).emit('lobby-cancelled', {});
       cleanupGame(sessionCode);
       emitPublicLobbiesUpdate();
@@ -1796,7 +1727,6 @@ async function handleLaunchGame(data: {
     logger.info("Starting game", sessionCode)
     
     // Atomic game start to prevent race conditions
-    console.log(gameRef)
     const startResult = await atomicGameUpdate(sessionCode, async () => {
       // Double-check game hasn't already started
       if (gameRef.hasStarted) {
@@ -2172,15 +2102,6 @@ async function handleValidateGuess(data: {
       logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
   }
-}
-
-// Helper function to generate session token
-function generateSessionToken(sessionCode: string, creatorId?: number): string {
-  return jwt.sign({ 
-    sessionCode, 
-    creatorId, 
-    type: "multiplayer-creator" 
-  }, config.jwt_secret, { expiresIn: "1h" });
 }
 
 // Get multiplayer session info for meta tag generation
