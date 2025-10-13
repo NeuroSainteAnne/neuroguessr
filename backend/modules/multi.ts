@@ -634,7 +634,9 @@ export function initSocketHandlers() {
                 start_date = ${start_date},
                 end_date = ${end_date},
                 name = ${name},
-                persistent_config = ${JSON.stringify(persistentState)}
+                persistent_config = ${JSON.stringify(persistentState)},
+                atlas = ${gameRef.parameters.atlas || null},
+                total_duration = ${gameRef.parameters.totalDuration || null}
             WHERE session_code = ${sessionCode}
           `;
 

@@ -206,6 +206,49 @@ export const deleteRealtimeChallenge = async (req: Request, res: Response) => {
     logger.error("deleteRealtimeChallenge error", error);
     res.status(500).json({ error: 'Internal server error' });
   }
+};
+
+export const deleteClassicChallenge = async (req: Request, res: Response) => {
+  try {
+    const { sessionCode } = req.params;
+    const userId: number = (req as AuthenticatedRequest).user.id;
+    const isAdmin: boolean = (req as AuthenticatedRequest).user.admin;
+
+    if (!isAdmin) {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+      res.status(400).json({ error: 'Invalid session code format' });
+      return;
+    }
+
+    // Delete the classic challenge session from database
+    const result = await sql`
+      DELETE FROM multi_sessions
+      WHERE session_code = ${sessionCode}
+      AND is_classic_challenge = TRUE
+    `;
+
+    if (result.count === 0) {
+      res.status(404).json({ error: 'Classic challenge not found' });
+      return;
+    }
+
+    // Also remove from active games if it's running
+    if (games[sessionCode]) {
+      delete games[sessionCode];
+      logger.info(`Removed active classic challenge session ${sessionCode} from memory`);
+    }
+
+    logger.info(`Admin ${userId} deleted classic challenge session ${sessionCode}`);
+    res.status(200).json({ message: 'Classic challenge deleted successfully' });
+
+  } catch (error) {
+    logger.error("deleteClassicChallenge error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };// Save persistent configuration for realtime challenge mode
 
 export const handleSaveAsRealtimeChallenge = async ({ sessionCode, sessionToken, userToken, userName, name, recurrent }: { sessionCode: string; sessionToken: string; userToken: string; userName: string; name?: string; recurrent?: Recurrence; }) => {
@@ -462,19 +505,17 @@ export async function restorePersistentRealTimeChallengeSessions() {
   }
 }
 
-// Get active classic challenges for subscribers
+// Get active and upcoming classic challenges for subscribers
 export const getActiveClassicChallenges = async (req: Request, res: Response) => {
   try {
-    const userId = (req as AuthenticatedRequest).user.id;
     const currentTime = new Date().toISOString();
 
     const result = await sql`
       SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
-             u.username AS creator_name, ms.parameters
+             u.username AS creator_name, ms.total_duration
       FROM multi_sessions ms
       LEFT JOIN users u ON u.id = ms.creator_id
       WHERE ms.is_classic_challenge = TRUE
-      AND ms.start_date <= ${currentTime}
       AND ms.end_date > ${currentTime}
       ORDER BY ms.start_date ASC
     ` as Array<{
@@ -485,20 +526,35 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
       start_date: string;
       end_date: string;
       creator_name: string | null;
-      parameters: any;
+      total_duration: number | null;
     }>;
 
-    const classicChallenges = result.map(session => ({
-      id: session.id,
-      sessionCode: String(session.session_code).padStart(8, '0'),
-      name: session.name || undefined,
-      startDate: session.start_date,
-      endDate: session.end_date,
-      creator: session.creator_name || 'Unknown',
-      atlas: session.parameters?.atlas,
-      totalDuration: session.parameters?.totalDuration,
-      createdAt: session.created_at?.toISOString?.() || undefined
-    }));
+    const classicChallenges = result.map(session => {
+      const startDate = new Date(session.start_date);
+      const endDate = new Date(session.end_date);
+      const now = new Date();
+
+      let status: 'upcoming' | 'active' | 'ended';
+      if (startDate > now) {
+        status = 'upcoming';
+      } else if (endDate > now) {
+        status = 'active';
+      } else {
+        status = 'ended';
+      }
+
+      return {
+        id: session.id,
+        sessionCode: String(session.session_code).padStart(8, '0'),
+        name: session.name || undefined,
+        startDate: session.start_date,
+        endDate: session.end_date,
+        creator: session.creator_name || 'Unknown',
+        totalDuration: session.total_duration,
+        status,
+        createdAt: session.created_at?.toISOString?.() || undefined
+      };
+    });
 
     res.status(200).json({ challenges: classicChallenges });
 
@@ -612,6 +668,47 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error("canJoinClassicChallenge error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Check if user has completed a classic challenge
+export const checkClassicChallengeCompletion = async (req: Request, res: Response) => {
+  try {
+    const { sessionCode } = req.params;
+    const userId = (req as AuthenticatedRequest).user.id;
+
+    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+      return res.status(400).json({ error: 'Invalid session code format' });
+    }
+
+    // Get the challenge ID
+    const challengeResult = await sql`
+      SELECT ms.id
+      FROM multi_sessions ms
+      WHERE ms.session_code = ${sessionCode}
+      AND ms.is_classic_challenge = TRUE
+    ` as Array<{
+      id: number;
+    }>;
+
+    if (challengeResult.length === 0) {
+      return res.status(404).json({ error: 'Classic challenge not found' });
+    }
+
+    const challengeId = challengeResult[0].id;
+
+    // Check if user has completed this challenge
+    const completedResult = await sql`
+      SELECT id FROM finished_sessions
+      WHERE user_id = ${userId}
+      AND classic_challenge_id = ${challengeId}
+    `;
+
+    res.status(200).json({ completed: completedResult.length > 0 });
+
+  } catch (error) {
+    logger.error("checkClassicChallengeCompletion error", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

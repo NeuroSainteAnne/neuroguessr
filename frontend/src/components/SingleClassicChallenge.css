@@ -1,0 +1,125 @@
+.next-challenge-widget {
+    margin: 20px auto;
+    padding: 10px;
+    max-width: 800px;
+    background: #575757cc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.challenge-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.challenge-info h3 {
+    margin: 0 0 0 0;
+    color: #e6e6e6;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.session-code {
+    font-family: monospace;
+    font-weight: bold;
+    color: #4698ef;
+    font-size: 1.1em;
+    text-align: center;
+}
+
+.challenge-details {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.start-time {
+    color: #48ec6e;
+    font-size: 1.1em;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.challenge-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-item {
+    color: #bec7ce;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.meta-item strong {
+    color: #e6e6e6;
+}
+
+.join-challenge-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.join-challenge-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.join-challenge-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+.delete-challenge-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    margin-top: 8px;
+}
+
+.delete-challenge-btn:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.delete-challenge-btn:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .next-challenge-widget {
+        margin: 15px;
+        padding: 15px;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .challenge-info {
+        align-items: center;
+    }
+
+    .challenge-details {
+        align-items: center;
+    }
+
+    .challenge-meta {
+        align-items: center;
+    }
+}

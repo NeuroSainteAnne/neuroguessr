@@ -579,6 +579,18 @@ const MultiPlayer = ({
 
 
   const renderWaitingContent = ({error}: {error: string|null}) => {
+    // Show error screen if there's an error and we're not connected/in-game
+    if (error && !isConnected && !isGameRunning) {
+      return (
+        <div className="waiting-content">
+          <div className="join-multiplayer-box">
+            <h2>{t("join_multiplayer_lobby")}</h2>
+            <div style={{ color: 'red', marginTop: 16, fontSize: 18 }}>{error}</div>
+          </div>
+        </div>
+      );
+    }
+
     if ((isLoggedIn && !askedSessionCode) || (!isLoggedIn && config.activateAnonymousMode && !isConnected && !askedSessionToken)) {
       return (<div className="waiting-content">
         <div className="join-multiplayer-box">

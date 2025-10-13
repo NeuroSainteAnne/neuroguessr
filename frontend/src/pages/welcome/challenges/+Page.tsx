@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { SingleRTChallenge } from '../../../components/SingleRTChallenge';
+import { SingleClassicChallenge } from '../../../components/SingleClassicChallenge';
 import './ChallengesPage.css';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
 import { Challenge } from '../../../types/types';
 import { formatTime } from '../../../utils/formatters';
-import { navigate } from 'vike/client/router';
 
 interface ClassicChallenge {
   id: number;
@@ -18,6 +18,7 @@ interface ClassicChallenge {
   creator: string;
   atlas: string;
   totalDuration: number;
+  status: 'upcoming' | 'active' | 'ended';
   createdAt: string;
 }
 
@@ -101,20 +102,6 @@ export function Page() {
     return date.toLocaleString();
   };
 
-  const formatChallengeStatus = (startDate: string, endDate: string) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) {
-      return `Starts ${formatTime({ms: start.getTime() - now.getTime(), showSeconds: false})}`;
-    } else if (now > end) {
-      return 'Ended';
-    } else {
-      return `Ends ${formatTime({ms: end.getTime() - now.getTime(), showSeconds: false})}`;
-    }
-  };
-
   const handleDeletionError = (errorMessage: string) => {
     setError(errorMessage);
   };
@@ -122,21 +109,6 @@ export function Page() {
   const handleAfterDeletion = () => {
     fetchChallenges();
     refreshNextChallenge();
-  };
-
-  const handleJoinClassicChallenge = async (sessionCode: string) => {
-    if (!isLoggedIn || !authToken) {
-      setError('Please log in to join challenges');
-      return;
-    }
-
-    try {
-      // Navigate to multiplayer page with the classic challenge session code
-      navigate(`/multiplayer/${sessionCode}`);
-    } catch (err) {
-      console.error('Error joining classic challenge:', err);
-      setError('Failed to join challenge');
-    }
   };
 
   const title = t('all_challenges') || 'All Challenges';
@@ -170,63 +142,20 @@ export function Page() {
             {/* Classic Challenges */}
             <section className="challenges-section">
               <h2>{t('classic_challenges') || 'Classic Challenges'}</h2>
-              {userIsAdmin && (
-                <div style={{ marginBottom: '15px' }}>
-                  <button
-                    onClick={() => navigate('/welcome/classic-challenges')}
-                    style={{
-                      backgroundColor: '#ff6b35',
-                      color: 'white',
-                      padding: '8px 16px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    + Create Classic Challenge
-                  </button>
-                </div>
-              )}
               {classicChallenges.length === 0 ? (
                 <div className="no-challenges">
-                  {t('no_classic_challenges') || 'No classic challenges available'}
+                  {t('no_challenges') || 'No challenges available'}
                 </div>
               ) : (
-                <div className="classic-challenges-grid">
+                <div className="challenges-grid">
                   {classicChallenges.map((challenge) => (
-                    <div key={challenge.id} className="classic-challenge-card">
-                      <div className="challenge-card-header">
-                        <h3>{challenge.name || 'Unnamed Challenge'}</h3>
-                        <div className="challenge-status">
-                          {formatChallengeStatus(challenge.startDate, challenge.endDate)}
-                        </div>
-                      </div>
-                      <div className="challenge-details">
-                        <div className="detail-item">
-                          <strong>Atlas:</strong> {challenge.atlas}
-                        </div>
-                        <div className="detail-item">
-                          <strong>Duration:</strong> {formatTime({ms: challenge.totalDuration * 1000, showSeconds: false})}
-                        </div>
-                        <div className="detail-item">
-                          <strong>Period:</strong> {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}
-                        </div>
-                        <div className="detail-item">
-                          <strong>Created by:</strong> {challenge.creator}
-                        </div>
-                      </div>
-                      <div className="challenge-actions">
-                        <button
-                          className="join-challenge-btn"
-                          onClick={() => handleJoinClassicChallenge(challenge.sessionCode)}
-                          disabled={new Date() < new Date(challenge.startDate) || new Date() > new Date(challenge.endDate)}
-                        >
-                          {new Date() < new Date(challenge.startDate) ? 'Not Started' : 
-                           new Date() > new Date(challenge.endDate) ? 'Ended' : 
-                           'Join Challenge'}
-                        </button>
-                      </div>
-                    </div>
+                    <SingleClassicChallenge
+                      key={challenge.id}
+                      challenge={challenge}
+                      allowDeletion={userIsAdmin}
+                      callbackAfterDeletion={handleAfterDeletion}
+                      callbackDeletionFailed={handleDeletionError}
+                    />
                   ))}
                 </div>
               )}
@@ -237,7 +166,7 @@ export function Page() {
               <h2>{t('realtime_challenges') || 'Real-time Challenges'}</h2>
               {publicChallenges.length === 0 ? (
                 <div className="no-challenges">
-                  {t('no_public_challenges') || 'No public real-time challenges available'}
+                  {t('no_challenges') || 'No challenges available'}
                 </div>
               ) : (
                 <div>
@@ -263,7 +192,7 @@ export function Page() {
                 <h2>{t('private_realtime_challenges') || 'Private Real-time Challenges'}</h2>
                 {privateChallenges.length === 0 ? (
                   <div className="no-challenges">
-                    {t('no_private_challenges') || 'No private real-time challenges available'}
+                    {t('no_challenges') || 'No challenges available'}
                   </div>
                 ) : (
                   <div className="challenges-grid">
