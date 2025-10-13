@@ -1,4 +1,5 @@
 import { useApp } from '../context/AppContext';
+import { formatTime } from '../utils/formatters';
 import { consoleLog } from '../utils/logging';
 import './SingleClassicChallenge.css';
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ interface ClassicChallenge {
   name?: string;
   startDate: string;
   endDate: string;
+  public: boolean;
   creator: string;
   atlas: string;
   totalDuration: number;
@@ -60,17 +62,22 @@ export function SingleClassicChallenge({
     checkCompletion();
   }, [isLoggedIn, authToken, challenge.id, challenge.sessionCode]);
 
-  const formatChallengeStatus = (startDate: string, endDate: string) => {
+  const formatTimeUntil = (startTime: string) => {
     const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(startTime);
+    const diff = start.getTime() - now.getTime();
+    
+    if (diff <= 0) return t('already_started');
+    return `${formatTime({ms:diff, showSeconds:false})}`
+  };
 
+  const formatChallengeStatus = (startDate: string, endDate: string) => {
     if (challenge.status === 'upcoming') {
-      return `Starts in ${Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60))}h`;
+      return `${t("starts_in")} ${formatTimeUntil(startDate)}`;
     } else if (challenge.status === 'ended') {
-      return 'Ended';
+      return `${t("ended")}`;   
     } else {
-      return `Ends in ${Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60))}h`;
+      return `${t("ends_in")} ${formatTimeUntil(endDate)}`;
     }
   };
 

@@ -366,23 +366,45 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
 
     try {
       setNextChallengeLoading(true);
-      const response = await fetch('/api/multi/next-realtime-challenge');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch next challenge: ${response.status}`);
+      // Fetch both next realtime and next classic challenge
+      const [rtResponse, ccResponse] = await Promise.all([
+        fetch('/api/multi/next-realtime-challenge'),
+        fetch('/api/multi/next-classic-challenge', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(isLoggedIn && authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          }
+        })
+      ]);
+
+      let rtChallenge = null;
+      let ccChallenge = null;
+
+      if (rtResponse.ok) {
+        const rtData = await rtResponse.json();
+        rtChallenge = rtData.challenge ? {type:"realtime", ...rtData.challenge} : null;
       }
-      
-      const data = await response.json();
-      
-      // Handle the case where there are no challenges
-      if (!data.challenge) {
-        setNextChallenge(null);
-        setNextChallengeError(null);
-        setLastChallengeFetch(now);
-        return;
+
+      if (ccResponse.ok) {
+        const ccData = await ccResponse.json();
+        ccChallenge = ccData.challenge ? {type:"classic", ...ccData.challenge} : null;
       }
-      
-      setNextChallenge(data.challenge);
+
+      // Decide which challenge is earlier
+      let chosenChallenge = null;
+      if (rtChallenge && ccChallenge) {
+        // Compare startTime (realtime) and startDate (classic)
+        const rtTime = new Date(rtChallenge.startTime).getTime();
+        const ccTime = new Date(ccChallenge.startDate).getTime();
+        chosenChallenge = rtTime <= ccTime ? rtChallenge : ccChallenge;
+      } else if (rtChallenge) {
+        chosenChallenge = rtChallenge;
+      } else if (ccChallenge) {
+        chosenChallenge = ccChallenge;
+      }
+
+      setNextChallenge(chosenChallenge);
       setNextChallengeError(null);
       setLastChallengeFetch(now);
     } catch (err) {

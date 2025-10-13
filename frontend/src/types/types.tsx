@@ -73,17 +73,6 @@ export type PastRegion = {
   atlas: string;
 }
 
-export type Challenge = {
-  sessionCode: string;
-  startTime: string;
-  atlas?: string;
-  totalDuration?: number;
-  name?: string;
-  creator: string;
-  createdAt: string;
-  isPublic?: boolean;
-}
-
 export type ImageMetadata = {
   // unique if of image
   id: string
@@ -109,3 +98,29 @@ export type ImageMetadata = {
   // TODO was documented as bpx
   bpv: number
 }
+
+export interface ClassicChallenge {
+  type: 'classic';
+  id: number;
+  sessionCode: string;
+  name?: string;
+  startDate: string;
+  endDate: string;
+  public: boolean;
+  creator: string;
+  atlas: string;
+  totalDuration: number;
+  status: 'upcoming' | 'active' | 'ended';
+  createdAt: string;
+  isNext?: boolean;
+}
+
+export interface RTChallenge {
+  type: 'realtime';
+  sessionCode: string;
+  startTime: string;
+  name?: string;
+  isNext?: boolean;
+}
+
+export type Challenge = ClassicChallenge | RTChallenge;

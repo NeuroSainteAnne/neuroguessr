@@ -547,6 +547,7 @@ const MultiplayerConfigScreen = () => {
                 name: classicChallengeName.trim(),
                 start_date: startDate.toISOString(),
                 end_date: endDate.toISOString(),
+                public: isPublic,
                 userToken: authToken
             };
 

@@ -1,31 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { SingleRTChallenge } from '../../../components/SingleRTChallenge';
-import { SingleClassicChallenge } from '../../../components/SingleClassicChallenge';
+import { SingleChallenge } from '../../../components/SingleChallenge';
 import './ChallengesPage.css';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
-import { Challenge } from '../../../types/types';
-import { formatTime } from '../../../utils/formatters';
-
-interface ClassicChallenge {
-  id: number;
-  sessionCode: string;
-  name?: string;
-  startDate: string;
-  endDate: string;
-  creator: string;
-  atlas: string;
-  totalDuration: number;
-  status: 'upcoming' | 'active' | 'ended';
-  createdAt: string;
-}
+import { ClassicChallenge, RTChallenge } from '../../../types/types';
 
 export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
-  const [publicChallenges, setPublicChallenges] = useState<Challenge[]>([]);
-  const [privateChallenges, setPrivateChallenges] = useState<Challenge[]>([]);
+  const [realtimeChallenges, setRealtimeChallenges] = useState<RTChallenge[]>([]);
   const [classicChallenges, setClassicChallenges] = useState<ClassicChallenge[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +34,7 @@ export function Page() {
 
       const rtData = await rtResponse.json();
       consoleLog("verbose", "Fetched real-time challenges");
-      setPublicChallenges(rtData.challenges.filter((challenge: Challenge) => challenge.isPublic));
-      setPrivateChallenges(rtData.challenges.filter((challenge: Challenge) => !challenge.isPublic));
+      setRealtimeChallenges(rtData.challenges);
 
       // Fetch classic challenges
       const ccResponse = await fetch('/api/classic-challenges', {
@@ -87,20 +70,6 @@ export function Page() {
     
     return () => clearInterval(interval);
   }, [authToken, isLoggedIn]);
-
-  const formatTimeUntilStart = (startTime: string) => {
-    const now = new Date();
-    const start = new Date(startTime);
-    const diff = start.getTime() - now.getTime();
-    
-    if (diff <= 0) return t('already_started');
-    return `${t('starts_in')} ${formatTime({ms:diff, showSeconds:false})}`
-  };
-
-  const formatDateTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleString();
-  };
 
   const handleDeletionError = (errorMessage: string) => {
     setError(errorMessage);
@@ -149,9 +118,12 @@ export function Page() {
               ) : (
                 <div className="challenges-grid">
                   {classicChallenges.map((challenge) => (
-                    <SingleClassicChallenge
+                    <SingleChallenge
                       key={challenge.id}
-                      challenge={challenge}
+                      challenge={{
+                        ...challenge,
+                        type: 'classic'
+                      }}
                       allowDeletion={userIsAdmin}
                       callbackAfterDeletion={handleAfterDeletion}
                       callbackDeletionFailed={handleDeletionError}
@@ -164,19 +136,19 @@ export function Page() {
             {/* Real-time Challenges */}
             <section className="challenges-section">
               <h2>{t('realtime_challenges') || 'Real-time Challenges'}</h2>
-              {publicChallenges.length === 0 ? (
+              {realtimeChallenges.length === 0 ? (
                 <div className="no-challenges">
                   {t('no_challenges') || 'No challenges available'}
                 </div>
               ) : (
                 <div>
-                  {publicChallenges.map((challenge) => (
-                    <SingleRTChallenge
+                  {realtimeChallenges.map((challenge) => (
+                    <SingleChallenge
                       key={challenge.sessionCode}
-                      sessionCode={challenge.sessionCode}
-                      startTime={formatTimeUntilStart(challenge.startTime)}
-                      scheduledTime={formatDateTime(challenge.startTime)}
-                      name={challenge.name || undefined}
+                      challenge={{
+                        ...challenge,
+                        type: 'realtime'
+                      }}
                       allowDeletion={userIsAdmin}
                       callbackAfterDeletion={handleAfterDeletion}
                       callbackDeletionFailed={handleDeletionError}
@@ -185,33 +157,6 @@ export function Page() {
                 </div>
               )}
             </section>
-
-            {/* Private Real-time Challenges (Admin only) */}
-            {userIsAdmin && (
-              <section className="challenges-section">
-                <h2>{t('private_realtime_challenges') || 'Private Real-time Challenges'}</h2>
-                {privateChallenges.length === 0 ? (
-                  <div className="no-challenges">
-                    {t('no_challenges') || 'No challenges available'}
-                  </div>
-                ) : (
-                  <div className="challenges-grid">
-                    {privateChallenges.map((challenge) => (
-                      <SingleRTChallenge
-                        key={challenge.sessionCode}
-                        sessionCode={challenge.sessionCode}
-                        startTime={formatTimeUntilStart(challenge.startTime)}
-                        scheduledTime={formatDateTime(challenge.startTime)}
-                        name={challenge.name || undefined}
-                        allowDeletion={userIsAdmin}
-                        callbackAfterDeletion={fetchChallenges}
-                        callbackDeletionFailed={handleDeletionError}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
           </>
         )}
 

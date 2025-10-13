@@ -582,10 +582,11 @@ export function initSocketHandlers() {
       name: string;
       start_date: Date;
       end_date: Date;
+      public: boolean;
       userToken: string;
     }) => {
       try {
-        const { sessionCode, sessionToken, name, start_date, end_date, userToken } = data;
+        const { sessionCode, sessionToken, name, start_date, end_date, public: isPublic, userToken } = data;
 
         // Verify admin privileges
         if (!userToken) {
@@ -634,6 +635,7 @@ export function initSocketHandlers() {
                 start_date = ${start_date},
                 end_date = ${end_date},
                 name = ${name},
+                public = ${isPublic},
                 persistent_config = ${JSON.stringify(persistentState)},
                 atlas = ${gameRef.parameters.atlas || null},
                 total_duration = ${gameRef.parameters.totalDuration || null}

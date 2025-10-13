@@ -18,7 +18,7 @@ export const getNextRealtimeChallenge = async (req: Request, res: Response) => {
       SELECT ms.session_code, ms.created_at, ms.persistent_config, ms.name, u.username AS creator_name
       FROM multi_sessions ms
       LEFT JOIN users u ON u.id = ms.creator_id
-      WHERE ms.is_challenge = TRUE 
+      WHERE ms.is_challenge = TRUE
       AND ms.public = TRUE
       AND ms.persistent_config IS NOT NULL
       AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
@@ -61,6 +61,142 @@ export const getNextRealtimeChallenge = async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error("getNextRealtimeChallenge error", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Get next upcoming or active classic challenge
+export const getNextClassicChallenge = async (req: Request, res: Response) => {
+  try {
+    const currentTime = new Date().toISOString();
+
+    // Check if user is authenticated and admin
+    const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
+    const token: string | undefined = authHeader && authHeader.split(' ')[1];
+    let isAdmin = false;
+    let userId: number | null = null;
+    if (token) {
+      jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
+        if (!err) {
+          isAdmin = (decoded as User).admin || false;
+          userId = (decoded as User).id || null;
+        }
+      });
+    }
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(token, config.jwt_secret) as any;
+        isAdmin = decoded.admin || false;
+        userId = decoded.id || null;
+      } catch (jwtError) {
+        // Token is invalid, continue as guest
+        logger.warn("Invalid token in getNextClassicChallenge:", jwtError);
+      }
+    }
+
+    // Build query based on user permissions
+    let query;
+    if (isAdmin) {
+      // Admin can see all classic challenges (public and private)
+      query = sql`
+        SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
+                ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
+        FROM multi_sessions ms
+        LEFT JOIN users u ON u.id = ms.creator_id
+        WHERE ms.is_classic_challenge = TRUE
+        AND ms.start_date <= ${currentTime}
+        AND ms.end_date > ${currentTime}
+        AND ms.id NOT IN (
+          SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId}
+        )
+        ORDER BY ms.start_date ASC
+        LIMIT 1
+      `;
+    } else {
+      // Non-admin users can only see public classic challenges
+      if (userId) {
+        query = sql`
+          SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
+                 ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
+          FROM multi_sessions ms
+          LEFT JOIN users u ON u.id = ms.creator_id
+          WHERE ms.is_classic_challenge = TRUE
+          AND ms.public = TRUE
+          AND ms.start_date <= ${currentTime}
+          AND ms.end_date > ${currentTime}
+          AND ms.id NOT IN (
+            SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId}
+          )
+          ORDER BY ms.start_date ASC
+          LIMIT 1
+        `;
+      } else {
+        query = sql`
+          SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
+                 ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
+          FROM multi_sessions ms
+          LEFT JOIN users u ON u.id = ms.creator_id
+          WHERE ms.is_classic_challenge = TRUE
+          AND ms.public = TRUE
+          AND ms.start_date <= ${currentTime}
+          AND ms.end_date > ${currentTime}
+          ORDER BY ms.start_date ASC
+          LIMIT 1
+        `;
+      }
+    }
+
+    const result = await query as unknown as Array<{
+      id: number;
+      session_code: string;
+      created_at: Date;
+      name: string | null;
+      start_date: string;
+      end_date: string;
+      atlas: string | null;
+      public: boolean;
+      creator_name: string | null;
+      total_duration: number | null;
+    }>;
+
+    if (result.length === 0) {
+      return res.status(200).json({ challenge: null, message: 'No upcoming or active classic challenges found' });
+    }
+
+    const session = result[0];
+    const sessionCode = String(session.session_code).padStart(8, '0');
+    const startDate = new Date(session.start_date);
+    const endDate = new Date(session.end_date);
+    const now = new Date();
+
+    let status: 'upcoming' | 'active' | 'ended';
+    if (startDate > now) {
+      status = 'upcoming';
+    } else if (endDate > now) {
+      status = 'active';
+    } else {
+      status = 'ended';
+    }
+
+    const classicChallenge = {
+      id: session.id,
+      sessionCode,
+      startDate: session.start_date,
+      endDate: session.end_date,
+      atlas: session.atlas,
+      totalDuration: session.total_duration,
+      name: session.name || undefined,
+      status,
+      creator: session.creator_name || 'Unknown',
+      createdAt: session.created_at?.toISOString?.() || undefined
+    };
+
+    res.status(200).json({ challenge: classicChallenge });
+
+  } catch (error) {
+    logger.error("getNextClassicChallenge error", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -510,21 +646,67 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
   try {
     const currentTime = new Date().toISOString();
 
-    const result = await sql`
-      SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
-             u.username AS creator_name, ms.total_duration
-      FROM multi_sessions ms
-      LEFT JOIN users u ON u.id = ms.creator_id
-      WHERE ms.is_classic_challenge = TRUE
-      AND ms.end_date > ${currentTime}
-      ORDER BY ms.start_date ASC
-    ` as Array<{
+    // Check if user is authenticated and admin
+    const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
+    const token: string | undefined = authHeader && authHeader.split(' ')[1];
+    let isAdmin = false;
+    let userId = null;
+    if (token) {
+      jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
+        if (!err) {
+          isAdmin = (decoded as User).admin || false;
+          userId = (decoded as User).id || null;
+        }
+      });
+    }
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(token, config.jwt_secret) as any;
+        userId = decoded.id;
+        isAdmin = decoded.admin || false;
+      } catch (jwtError) {
+        // Token is invalid, continue as guest
+        logger.warn("Invalid token in getActiveClassicChallenges:", jwtError);
+      }
+    }
+
+    // Build query based on user permissions
+    let query;
+    if (isAdmin) {
+      // Admin can see all classic challenges (public and private)
+      query = sql`
+        SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
+               ms.public, u.username AS creator_name, ms.total_duration
+        FROM multi_sessions ms
+        LEFT JOIN users u ON u.id = ms.creator_id
+        WHERE ms.is_classic_challenge = TRUE
+        AND ms.end_date > ${currentTime}
+        ORDER BY ms.start_date ASC
+      `;
+    } else {
+      // Non-admin users can only see public classic challenges
+      query = sql`
+        SELECT ms.id, ms.session_code, ms.created_at, ms.name, ms.start_date, ms.end_date,
+               ms.public, u.username AS creator_name, ms.total_duration
+        FROM multi_sessions ms
+        LEFT JOIN users u ON u.id = ms.creator_id
+        WHERE ms.is_classic_challenge = TRUE
+        AND ms.public = TRUE
+        AND ms.end_date > ${currentTime}
+        ORDER BY ms.start_date ASC
+      `;
+    }
+
+    const result = await query as unknown as Array<{
       id: number;
       session_code: string;
       created_at: Date;
       name: string | null;
       start_date: string;
       end_date: string;
+      public: boolean;
       creator_name: string | null;
       total_duration: number | null;
     }>;
@@ -549,6 +731,7 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         name: session.name || undefined,
         startDate: session.start_date,
         endDate: session.end_date,
+        public: session.public,
         creator: session.creator_name || 'Unknown',
         totalDuration: session.total_duration,
         status,
@@ -556,7 +739,13 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
       };
     });
 
-    res.status(200).json({ challenges: classicChallenges });
+    res.status(200).json({
+      challenges: classicChallenges,
+      userPermissions: {
+        isAdmin,
+        canSeePrivate: isAdmin
+      }
+    });
 
   } catch (error) {
     logger.error("getActiveClassicChallenges error", error);
