@@ -63,6 +63,7 @@ const MultiPlayer = ({
   const [error, setError] = useState<string | null>(null);
   const [lobbyUsers, setLobbyUsers] = useState<string[]>([]);
   const [playerScores, setPlayerScores] = useState<Record<string,number>>({});
+  const [maximumScore, setMaximumScore] = useState<number>(0);
   const socketRef = useRef<Socket | null>(null);
   const anonTokenRef = useRef<string|null>(null)
   const [parameters, setParameters] = useState<MultiplayerParametersType|null>(null)
@@ -160,6 +161,15 @@ const MultiPlayer = ({
     });
     socket.on('anon-token', (data: any) => {
       anonTokenRef.current = data.anonToken;
+    });
+    socket.on('lobby-users', (data: any) => {
+      setLobbyUsers(data.users);
+      setIsConnected(true);
+      if(!isLoggedIn){
+        setIsAnonymous(true)
+      }
+      if (guessButtonRef.current) guessButtonRef.current.disabled = true;
+      tryLaunchGame()
     });
     socket.on('joined-classic-challenge', (data: any) => {
       consoleLog('verbose', 'Successfully joined classic challenge');
@@ -291,6 +301,7 @@ const MultiPlayer = ({
     });
     socket.on('all-scores-update', (data: any) => {
       setPlayerScores(data.scores);
+      setMaximumScore(data.maximumScore)
     });
     socket.on('game-end', (data: any) => {
       if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {
@@ -695,6 +706,7 @@ const MultiPlayer = ({
           <div className="current-user-score">
             <div>
               {t("score")}: {playerScores[isLoggedIn ? userUsername : anonUsername] ?? 0}
+              {maximumScore && <span className='maximum-score'> / {maximumScore}</span>}
             </div>
             <div className="position">
               {(() => {

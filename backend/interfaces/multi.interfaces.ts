@@ -52,6 +52,7 @@ export interface MultiplayerGame {
   endDate?: Date;
   classicChallengeId?: number;
   originalSessionCode: string; // For classic challenges, stores the original session code
+  theoreticalMaximumScore?: number; // Pre-calculated theoretical maximum score for percentage calculations
 }
 
 export type Recurrence = {

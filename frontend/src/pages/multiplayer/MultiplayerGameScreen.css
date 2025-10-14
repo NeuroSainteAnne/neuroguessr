@@ -149,9 +149,23 @@
     transition: all 0.3s ease;
 }
 
+.maximum-score {
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    display: none;
+    transition: all 0.3s ease;
+}
+
 .multiplayer-score-display:hover .score-divider {
     opacity: 1;
     visibility: visible;
+}
+
+.multiplayer-score-display:hover .maximum-score {
+    opacity: 1;
+    visibility: visible;
+    display: inline;
 }
 
 .multiplayer-score-display:hover .all-scores {

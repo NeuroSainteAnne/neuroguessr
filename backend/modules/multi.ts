@@ -18,6 +18,7 @@ import { getDistance } from "./utils_compute.ts";
 import { extractPersistentState, handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
 import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
+import { handleCreateClassicChallenge } from "./multi_classic_challenge.ts";
 
 // Atomic game update locks to prevent race conditions
 const gameStateLocks = new Map<string, boolean>();
@@ -117,12 +118,12 @@ const DEFAULT_DURATION_PER_REGION = 15;
 const DEFAULT_GAMEOVER_ON_ERROR = false;
 export const DEFAULT_LOAD_ATLAS_DURATION = 5; // seconds to load atlas
 export const DEFAULT_COUNTDOWN_TIME = 5; // 5 seconds countdown before game start
-const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
-const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
+export const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
+export const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
 const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
 const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
 export const INACTIVE_GAME_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
+export const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
 export const DELAY_FOR_CHALLENGES_IN_PUBLIC = 5 * 60 * 1000; // 5 minutes
 
 // In-memory maps
@@ -586,80 +587,11 @@ export function initSocketHandlers() {
       userToken: string;
     }) => {
       try {
-        const { sessionCode, sessionToken, name, start_date, end_date, public: isPublic, userToken } = data;
-
-        // Verify admin privileges
-        if (!userToken) {
-          socket.emit('error', { message: "Authentication token required" });
-          return;
-        }
-
-        try {
-          const jwtPayload: any = jwt.verify(userToken, config.jwt_secret);
-          if (!jwtPayload || !jwtPayload.admin) {
-            socket.emit('error', { message: "Admin privileges required" });
-            return;
-          }
-
-          // Validate that this is a valid session
-          const sessionResult = await sql`
-            SELECT session_token FROM multi_sessions WHERE session_code = ${sessionCode}
-          ` as { session_token: string; }[];
-
-          if (sessionResult.length === 0 || sessionResult[0].session_token !== sessionToken) {
-            socket.emit('error', { message: "Invalid session token" });
-            return;
-          }
-
-          // Get the game reference
-          const gameRef = games[sessionCode];
-          if (!gameRef) {
-            socket.emit('error', { message: "Game session not found" });
-            return;
-          }
-
-          // Convert the existing session to a classic challenge
-          gameRef.isClassicChallenge = true;
-          gameRef.startDate = new Date(start_date);
-          gameRef.endDate = new Date(end_date);
-          gameRef.name = name;
-          gameRef.parameters.commands = generateGameCommands(gameRef.parameters)
-          
-          // Extract the persistent game state
-          const persistentState = extractPersistentState(gameRef);
-
-          // Update the database record
-          await sql`
-            UPDATE multi_sessions 
-            SET is_classic_challenge = TRUE,
-                start_date = ${start_date},
-                end_date = ${end_date},
-                name = ${name},
-                public = ${isPublic},
-                persistent_config = ${JSON.stringify(persistentState)},
-                atlas = ${gameRef.parameters.atlas || null},
-                total_duration = ${gameRef.parameters.totalDuration || null}
-            WHERE session_code = ${sessionCode}
-          `;
-
-          logger.info(`Session ${sessionCode} converted to classic challenge "${name}" by user ${jwtPayload.id}`);
-          socket.emit('classic-challenge-created', { 
-            challenge: {
-              sessionCode,
-              name,
-              start_date,
-              end_date
-            }
-          });
-
-        } catch (jwtError) {
-          socket.emit('error', { message: "Invalid authentication token" });
-          return;
-        }
-
+        const result = await handleCreateClassicChallenge(data, socket);
+        socket.emit('classic-challenge-created', result);
       } catch (error) {
         logger.error("Create classic challenge error:", error);
-        socket.emit('error', { message: "Error creating classic challenge" });
+        socket.emit('error', { message: error });
       }
     });
 
@@ -1640,7 +1572,7 @@ export function getRandomLut(atlasName: string) : {lut: ColorMap|undefined, mapp
     return {lut, mapping, inverseMapping}
 }
 
-function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
+export function generateGameCommands(params: MultiplayerParametersType): GameCommands[]|undefined {
   try {
     const commands : GameCommands[] = [];
     if(!params.atlas) return;
@@ -1683,6 +1615,34 @@ function generateGameCommands(params: MultiplayerParametersType): GameCommands[]
       logger.error("Error creating commands:", error);
       return []
   }
+}
+
+// Calculate theoretical maximum score for a multiplayer game
+export function calculateTheoreticalMaximumScore(gameRef: MultiplayerGame): number {
+  // Get the number of guess commands (regions)
+  const guessCommands = gameRef.commands?.filter(cmd => cmd.action === "guess") || [];
+  const numRegions = guessCommands.length;
+
+  if (numRegions === 0) {
+    return 0;
+  }
+
+  let totalTheoreticalScore = 0;
+  let currentBlindMode = false;
+
+  // Process commands in order to track blind mode changes
+  for (const command of gameRef.commands || []) {
+    if (command.action === "load-atlas") {
+      currentBlindMode = command.blindMode || false;
+    } else if (command.action === "guess") {
+      const duration = command.duration || 15; // Default to 15 seconds if not specified
+      const baseScore = MAX_POINTS_PER_REGION + (duration * BONUS_POINTS_PER_SECOND);
+      const scoreForRegion = currentBlindMode ? Math.floor(baseScore * BLIND_MODE_MULTIPLIER) : baseScore;
+      totalTheoreticalScore += scoreForRegion;
+    }
+  }
+
+  return totalTheoreticalScore;
 }
 
 async function handleLaunchGame(data: {
@@ -1744,6 +1704,9 @@ async function handleLaunchGame(data: {
         gameRef.commands = generateGameCommands(gameRef.parameters) || []
         gameRef.totalGuessNumber = gameRef.parameters.regionsNumber
       }
+      
+      // Calculate theoretical maximum score at game start
+      gameRef.theoreticalMaximumScore = calculateTheoreticalMaximumScore(gameRef);
       
       gameRef.hasStarted = true;
       gameRef.duration = Date.now();
@@ -1810,7 +1773,7 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
     if(command.action == "guess") gameRef.currentRegionId = command.regionId || -1;
     
     // Broadcast scores to all users
-    broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores });
+    broadcastToSession(gameRef.sessionCode, 'all-scores-update', { scores: gameRef.individualScores, maximumScore: gameRef.theoreticalMaximumScore });
 
     // After the first command, check for additional atlases to preload
     if (gameRef.currentCommandIndex === 0) {

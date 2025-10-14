@@ -1,7 +1,7 @@
 import { ExternalGameCommands, GameCommands, MultiplayerGame } from "interfaces/multi.interfaces.ts";
 import { sql } from "./database_init.ts";
 import { logger } from "./logging.ts";
-import { socketClients, playerInfo, socketInfo, games, broadcastToSession, DEFAULT_COUNTDOWN_TIME, DEFAULT_LOAD_ATLAS_DURATION, getRandomLut, validateExternalGameCommands, INACTIVE_GAME_TIMEOUT_MS, config } from "./multi.ts";
+import { socketClients, playerInfo, socketInfo, games, broadcastToSession, DEFAULT_COUNTDOWN_TIME, DEFAULT_LOAD_ATLAS_DURATION, getRandomLut, validateExternalGameCommands, INACTIVE_GAME_TIMEOUT_MS, config, MAX_POINTS_PER_REGION, BONUS_POINTS_PER_SECOND, BLIND_MODE_MULTIPLIER } from "./multi.ts";
 import { emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { backupGameForRecurrence, handleGameRecurrence } from "./multi_recurrence.ts";
 import { getIO } from "./socket.io.ts";
@@ -104,6 +104,10 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       const classicChallengeEndDate = gameRef.endDate || null;
       const classicChallengeId = gameRef.classicChallengeId || null;
 
+      // Use pre-calculated theoretical maximum score and calculate percentage
+      const theoreticalMaximumScore = gameRef.theoreticalMaximumScore || 0;
+      const scorePercentage = theoreticalMaximumScore > 0 ? Math.round((score / theoreticalMaximumScore) * 10000) / 100 : 0; // Round to 2 decimal places
+
       // The rest of your database code...
       savePromises.push(
         sql`
@@ -112,13 +116,15 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
             min_time_per_region, max_time_per_region, avg_time_per_region,
             min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
             quit_reason, multiplayer_games_won, duration, created_at,
-            name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id
+            name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id,
+            theoretical_maximum_score, score_percentage
           ) VALUES (
             ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
             ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
             ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
             ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
-            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId}
+            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId},
+            ${theoreticalMaximumScore}, ${scorePercentage}
           )
         `.catch(e => {
           logger.error(`Error saving stats for ${username}:`, e);
