@@ -304,7 +304,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
                     <td className="mode-cell">{getModeName(entry.mode)}</td>
                     <td className="atlas-cell">{getAtlasName(entry.atlas)}</td>
                     <td className="atlas-cell">{entry.blind_mode ? t("yes") : t("no")}</td>
-                    <td className="score-cell">{entry.best_score}</td>
+                    <td className="score-cell">
+                      {entry.mode === 'multiplayer' 
+                        ? `${Number(entry.best_score).toFixed(1)}%` 
+                        : entry.best_score}
+                    </td>
                   </tr>
                 ))
               ) : (

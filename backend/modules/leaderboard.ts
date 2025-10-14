@@ -21,9 +21,24 @@ function getSummedLeaderboard(leaderboard: LeaderboardEntry[]) {
     leaderboard.forEach(entry => {
         const key = `${entry.username}||${entry.mode}||${String(entry.blind_mode) || "null"}`;
         if (!summed[key]) {
-            summed[key] = { username: entry.username, mode: entry.mode, blind_mode: entry.blind_mode, best_score: 0, atlas: "total" };
+            summed[key] = { 
+                username: entry.username, 
+                mode: entry.mode, 
+                blind_mode: entry.blind_mode, 
+                best_score: 0, // Initialize differently for multiplayer
+                atlas: "total" 
+            };
         }
-        summed[key].best_score += entry.best_score;
+        
+        if (entry.mode === 'multiplayer') {
+            // For multiplayer, take the maximum percentage (best_score contains percentage)
+            if (entry.best_score > summed[key].best_score) {
+                summed[key].best_score = entry.best_score;
+            }
+        } else {
+            // For other modes, sum the scores
+            summed[key].best_score += Number(entry.best_score);
+        }
     });
 
     // Convert to array and sort by best_score descending
@@ -40,10 +55,13 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
                 mode,
                 atlas,
                 blind_mode,
-                MAX(score) AS best_score
+                CASE 
+                    WHEN mode = 'multiplayer' THEN MAX(score_percentage)
+                    ELSE MAX(score)
+                END AS best_score
             FROM finished_sessions
             WHERE 1=1
-                ${mode ? sql` AND mode = ${mode}` : sql` AND mode != ${'multiplayer'}`}
+                ${mode ? sql` AND mode = ${mode}` : sql``}
                 ${timeLimit ? sql` AND NOW() - created_at <= ${`'${timeLimit} days'`}` : sql``}
                 ${blindMode !== null ? sql` AND blind_mode = ${blindMode}` : sql``}
             GROUP BY user_id, mode, atlas, blind_mode
