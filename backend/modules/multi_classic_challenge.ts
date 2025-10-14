@@ -130,7 +130,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
         AND ms.start_date <= ${currentTime}
         AND ms.end_date > ${currentTime}
         AND ms.id NOT IN (
-          SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId}
+          SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
         )
         ORDER BY ms.start_date ASC
         LIMIT 1
@@ -148,7 +148,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
           AND ms.id NOT IN (
-            SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId}
+            SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
           )
           ORDER BY ms.start_date ASC
           LIMIT 1
