@@ -115,11 +115,11 @@ export function SingleChallenge({
     }
 
     // Classic challenge logic
-    if (checkingCompletion) return 'Checking...';
-    if (isCompleted) return 'Completed';
+    if (checkingCompletion) return t("challenge_checking");
+    if (isCompleted) return t("challenge_completed");
     if (!isLoggedIn) return t('login_required') || 'Login Required';
-    if (challenge.status === 'upcoming') return 'Not Started';
-    if (challenge.status === 'ended') return 'Ended';
+    if (challenge.status === 'upcoming') return t("challenge_not_started");
+    if (challenge.status === 'ended') return t("challenge_ended");
     return t('join_challenge') || 'Join Challenge';
   };
 
@@ -147,14 +147,14 @@ export function SingleChallenge({
             </div>
             <div className="challenge-meta">
               <div className="meta-item">
-                <strong>Duration:</strong> {Math.floor(challenge.totalDuration / 60)}m {challenge.totalDuration % 60}s
+                <strong>{t("challenge_duration")}:</strong> {Math.floor(challenge.totalDuration / 60)}m {challenge.totalDuration % 60}s
               </div>
-              <div className="meta-item">
+              {/*<div className="meta-item">
                 <strong>Start:</strong> {new Date(challenge.startDate).toLocaleString()}
               </div>
               <div className="meta-item">
                 <strong>End:</strong> {new Date(challenge.endDate).toLocaleString()}
-              </div>
+              </div>*/}
             </div>
           </>
         ) : (

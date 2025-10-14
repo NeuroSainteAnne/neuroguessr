@@ -422,6 +422,11 @@
   "no_upcoming_challenges": "Aucun défi à venir",
   "error_loading_challenge": "Erreur lors du chargement du défi",
   "login_required": "Identification requise",
+  "challenge_duration": "Durée",
+  "challenge_checking": "Vérification...",
+  "challenge_completed": "Terminé",
+  "challenge_not_started": "Non débuté",
+  "challenge_ended": "Terminé",
 
   "*****CHALLENGES*****":"",
   "neuroguessr_challenges_title": "NeuroGuessr - Défis",
@@ -441,5 +446,13 @@
   "change_code_description": "Vous pouvez changer le code de session actuel pour n'importe quel nombre à 8 chiffres.",
   "enter_new_code": "ex : 12345678",
   "changing": "Changement...",
-  "change": "Changer"
+  "change": "Changer",
+  "create_classic_challenge": "Créer Challenge",
+  "challenge_name": "Nom du challenge",
+  "start_date": "Date de début",
+  "end_date": "Date de fin",
+  "cancel": "Annuler",
+  "create_challenge": "Créer challenge",
+  "challenge_details": "Détails du challenge",
+  "name": "Nom"
 }

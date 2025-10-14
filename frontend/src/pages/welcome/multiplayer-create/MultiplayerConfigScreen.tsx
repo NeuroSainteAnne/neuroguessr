@@ -149,7 +149,7 @@ const MultiplayerConfigScreen = () => {
     // Classic Challenge Creation Modal states
     const [showClassicChallengeModal, setShowClassicChallengeModal] = useState<boolean>(false);
     const [classicChallengeName, setClassicChallengeName] = useState<string>("");
-    const [classicChallengeDescription, setClassicChallengeDescription] = useState<string>("");
+    //const [classicChallengeDescription, setClassicChallengeDescription] = useState<string>("");
     const [classicChallengeStartDate, setClassicChallengeStartDate] = useState<string>("");
     const [classicChallengeEndDate, setClassicChallengeEndDate] = useState<string>("");
     const [creatingClassicChallenge, setCreatingClassicChallenge] = useState<boolean>(false);
@@ -572,7 +572,7 @@ const MultiplayerConfigScreen = () => {
             // Reset modal and show success
             setShowClassicChallengeModal(false);
             setClassicChallengeName("");
-            setClassicChallengeDescription("");
+            //setClassicChallengeDescription("");
             setClassicChallengeStartDate("");
             setClassicChallengeEndDate("");
             
@@ -1919,7 +1919,7 @@ const MultiplayerConfigScreen = () => {
                             />
                         </div>
 
-                        <div style={{ marginBottom: '20px' }}>
+                        {/*<div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                                 {t("description") || "Description"}
                             </label>
@@ -1938,7 +1938,7 @@ const MultiplayerConfigScreen = () => {
                                 }}
                                 disabled={creatingClassicChallenge}
                             />
-                        </div>
+                        </div>*/}
 
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
@@ -1985,7 +1985,7 @@ const MultiplayerConfigScreen = () => {
                                 onClick={() => {
                                     setShowClassicChallengeModal(false);
                                     setClassicChallengeName("");
-                                    setClassicChallengeDescription("");
+                                    //setClassicChallengeDescription("");
                                     setClassicChallengeStartDate("");
                                     setClassicChallengeEndDate("");
                                     setClassicChallengeError(null);

@@ -421,6 +421,11 @@
   "no_upcoming_challenges": "No upcoming challenges",
   "error_loading_challenge": "Error loading challenges",
   "login_required": "Login required",
+  "challenge_duration": "Duration",
+  "challenge_checking": "Checking...",
+  "challenge_completed": "Completed",
+  "challenge_not_started": "Not started",
+  "challenge_ended": "Ended",
 
   "*****CHALLENGES*****":"",
   "neuroguessr_challenges_title": "NeuroGuessr - Real-time Challenges",
@@ -440,5 +445,13 @@
   "change_code_description": "You can change the current session code to any 8-digit number.",
   "enter_new_code": "e.g., 12345678",
   "changing": "Changing...",
-  "change": "Change"
+  "change": "Change",
+  "create_classic_challenge": "Create challenge",
+  "challenge_name": "Challenge name",
+  "start_date": "Start date",
+  "end_date": "End date",
+  "cancel": "Cancel",
+  "create_challenge": "Create challenge",
+  "challenge_details": "Challenge details",
+  "name": "Name"
 }
