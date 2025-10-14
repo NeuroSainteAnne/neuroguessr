@@ -64,6 +64,7 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
                 ${mode ? sql` AND mode = ${mode}` : sql``}
                 ${timeLimit ? sql` AND NOW() - created_at <= ${`'${timeLimit} days'`}` : sql``}
                 ${blindMode !== null ? sql` AND blind_mode = ${blindMode}` : sql``}
+                AND (mode != 'multiplayer' OR (theoretical_maximum_score IS NOT NULL AND theoretical_maximum_score > 0))
             GROUP BY user_id, mode, atlas, blind_mode
         `;
 

@@ -172,7 +172,10 @@ export const database_init = async () => {
                     name TEXT DEFAULT NULL,
                     start_date TIMESTAMP WITH TIME ZONE,
                     end_date TIMESTAMP WITH TIME ZONE,
-                    classic_challenge_referral INTEGER DEFAULT NULL
+                    classic_challenge_referral INTEGER DEFAULT NULL,
+                    total_duration INTEGER DEFAULT NULL,
+                    atlas TEXT DEFAULT NULL
+
                 );
             `;
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_multi_sessions_session_code ON multi_sessions(session_code);`
@@ -191,6 +194,16 @@ export const database_init = async () => {
             await sql`
                 ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS classic_challenge_referral INTEGER DEFAULT NULL;
+            `;
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS total_duration INTEGER DEFAULT NULL;
+            `;
+
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS atlas TEXT DEFAULT NULL;
             `;
 
             await sql`
