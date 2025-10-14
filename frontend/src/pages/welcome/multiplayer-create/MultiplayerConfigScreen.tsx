@@ -1414,6 +1414,65 @@ const MultiplayerConfigScreen = () => {
         setShowClassicChallengeModal(true);
     };
 
+    const changeCodeWidget = () => {
+        return (
+            <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
+                <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
+                <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
+                    {t("change_code_description")} 
+                </p>
+                {!showChangeCodeInput ? (
+                    <button 
+                        onClick={() => setShowChangeCodeInput(true)}
+                        style={{ 
+                            backgroundColor: '#21669f', 
+                            color: 'white', 
+                            padding: '8px 16px', 
+                            border: 'none', 
+                            borderRadius: 4, 
+                            cursor: 'pointer' 
+                        }}
+                    >
+                        {t("change_session_code")}
+                    </button>
+                ) : (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <input
+                            type="text"
+                            placeholder={t("enter_new_code")}
+                            value={newCodeInput}
+                            onChange={(e) => setNewCodeInput(e.target.value)}
+                            maxLength={8}
+                            style={{ 
+                                padding: '8px 12px', 
+                                border: '1px solid #ccc', 
+                                borderRadius: 4, 
+                                fontSize: 16,
+                                fontFamily: 'monospace',
+                                letterSpacing: 2
+                            }}
+                        />
+                        <button 
+                            onClick={changeSessionCode}
+                            disabled={changeCodeLoading}
+                            style={{ 
+                                backgroundColor: '#28a745', 
+                                color: 'white', 
+                                padding: '8px 16px', 
+                                border: 'none', 
+                                borderRadius: 4, 
+                                cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
+                                opacity: changeCodeLoading ? 0.6 : 1
+                            }}
+                        >
+                            {changeCodeLoading ? t("changing") : t("change")}
+                        </button>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
     return (
         <div className="page-container">
             <title>NeuroGuessr - Create multiplayer game</title>
@@ -1640,6 +1699,7 @@ const MultiplayerConfigScreen = () => {
                         <section className="lobby-wait">
                             <h2><img src="/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
                             {renderQRCodeContainer({})}
+                            {userIsAdmin && changeCodeWidget()}
                         </section>
                         <div className='lobby-and-buttons-container'>
                             <h3>{t("players_in_lobby")}</h3>
@@ -1798,62 +1858,7 @@ const MultiplayerConfigScreen = () => {
                                 </div>
                             </div>
                         )}
-                        {userIsAdmin && (
-                            <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
-                                <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
-                                <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
-                                    {t("change_code_description")}
-                                </p>
-                                {!showChangeCodeInput ? (
-                                    <button 
-                                        onClick={() => setShowChangeCodeInput(true)}
-                                        style={{ 
-                                            backgroundColor: '#21669f', 
-                                            color: 'white', 
-                                            padding: '8px 16px', 
-                                            border: 'none', 
-                                            borderRadius: 4, 
-                                            cursor: 'pointer' 
-                                        }}
-                                    >
-                                        {t("change_session_code")}
-                                    </button>
-                                ) : (
-                                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                        <input
-                                            type="text"
-                                            placeholder={t("enter_new_code")}
-                                            value={newCodeInput}
-                                            onChange={(e) => setNewCodeInput(e.target.value)}
-                                            maxLength={8}
-                                            style={{ 
-                                                padding: '8px 12px', 
-                                                border: '1px solid #ccc', 
-                                                borderRadius: 4, 
-                                                fontSize: 16,
-                                                fontFamily: 'monospace',
-                                                letterSpacing: 2
-                                            }}
-                                        />
-                                        <button 
-                                            onClick={changeSessionCode}
-                                            disabled={changeCodeLoading}
-                                            style={{ 
-                                                backgroundColor: '#28a745', 
-                                                color: 'white', 
-                                                padding: '8px 16px', 
-                                                border: 'none', 
-                                                borderRadius: 4, 
-                                                cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
-                                                opacity: changeCodeLoading ? 0.6 : 1
-                                            }}
-                                        >
-                                            {changeCodeLoading ? t("changing") : t("change")}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        {userIsAdmin && changeCodeWidget()}
                     </div>
                 </div>
             )}
