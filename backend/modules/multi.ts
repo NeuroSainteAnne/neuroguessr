@@ -1284,7 +1284,7 @@ function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerG
     .filter(Boolean);
 
   // Send data to the new user
-  socket.emit('lobby-users', { users: userList });
+  if(!gameRef.isClassicChallenge) socket.emit('lobby-users', { users: userList });
   socket.emit('parameters-updated', { parameters: gameRef.parameters });
 
   // Only broadcast "player-joined" for new users, not rejoining ones
