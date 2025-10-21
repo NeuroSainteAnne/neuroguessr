@@ -32,7 +32,7 @@ interface ChallengeResultsData {
 }
 
 export function Page() {
-  const { authToken, isLoggedIn, userUsername, pageContext } = useApp();
+  const { authToken, isLoggedIn, userUsername, pageContext, t } = useApp();
   const { challengeId } = pageContext.routeParams;
   const [data, setData] = useState<ChallengeResultsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,7 @@ export function Page() {
 
   useEffect(() => {
     if (!challengeId) {
-      setError("No challenge ID provided");
+      setError(t("no_challenge_id"));
       setLoading(false);
       return;
     }
@@ -57,15 +57,14 @@ export function Page() {
     })
     .then(data => {
         setData(data);
-        console.log(data)
         setLoading(false);
     })
     .catch(err => {
         console.error("Error fetching challenge results:", err);
-        setError(err.message || "Failed to load challenge results");
+        setError(err.message || t("failed_to_load_results"));
         setLoading(false);
     });
-  }, [challengeId, authToken, isLoggedIn]);
+  }, [challengeId, authToken, isLoggedIn, t]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -76,28 +75,31 @@ export function Page() {
     if (data && data.challenge.startDate && data.challenge.endDate) {
       const updateCountdown = () => {
         const now = new Date();
-        let targetDate: Date;
-        let label: string;
         
         if (data.state === 'pending') {
-          targetDate = new Date(data.challenge.startDate);
-          label = 'until start';
+          const targetDate = new Date(data.challenge.startDate);
+          const diff = targetDate.getTime() - now.getTime();
+          
+          if (diff <= 0) {
+            setTimeDisplay(t("starting_soon"));
+            return;
+          }
+          
+          setTimeDisplay(formatTime({ms: diff, showSeconds: true}));
         } else if (data.state === 'started') {
-          targetDate = new Date(data.challenge.endDate);
-          label = 'remaining';
+          const targetDate = new Date(data.challenge.endDate);
+          const diff = targetDate.getTime() - now.getTime();
+          
+          if (diff <= 0) {
+            setTimeDisplay(t("ended"));
+            return;
+          }
+          
+          setTimeDisplay(formatTime({ms: diff, showSeconds: true}));
         } else {
           setTimeDisplay('');
           return;
         }
-        
-        const diff = targetDate.getTime() - now.getTime();
-        
-        if (diff <= 0) {
-          setTimeDisplay(data.state === 'pending' ? 'Starting soon' : 'Ended');
-          return;
-        }
-        
-        setTimeDisplay(formatTime({ms: diff, showSeconds: true}));
       };
       
       updateCountdown();
@@ -107,12 +109,12 @@ export function Page() {
       setTimeDisplay('');
       return;
     }
-  }, [data]);
+  }, [data, t]);
 
   if (loading) {
     return (
       <div className="challenge-results-page">
-        <div className="loading">Loading challenge results...</div>
+        <div className="loading">{t("loading")}</div>
       </div>
     );
   }
@@ -121,9 +123,9 @@ export function Page() {
     return (
       <div className="challenge-results-page">
         <div className="error">
-          <h2>Error</h2>
+          <h2>{t("error")}</h2>
           <p>{error}</p>
-          <a href="/welcome">Back to home</a>
+          <a href="/welcome">{t("back_to_home")}</a>
         </div>
       </div>
     );
@@ -133,8 +135,8 @@ export function Page() {
     return (
       <div className="challenge-results-page">
         <div className="error">
-          <h2>Challenge not found</h2>
-          <a href="/welcome">Back to home</a>
+          <h2>{t("challenge_not_found")}</h2>
+          <a href="/welcome">{t("back_to_home")}</a>
         </div>
       </div>
     );
@@ -148,63 +150,67 @@ export function Page() {
   return (
     <div className="challenge-results-page">
       <div className="challenge-header">
-        <h1>{challenge.name || "Classic Challenge"}</h1>
+        <h1>{challenge.name || t("classic_challenge")}</h1>
         <div className="challenge-results-info">
           <div className="info-item">
-            <strong>Created by:</strong> {challenge.creator}
+            <strong>{t("created_by")}:</strong> {challenge.creator}
           </div>
           <div className="info-item">
-            <strong>Status:</strong>
+            <strong>{t("status")}:</strong>
             <span className={`status status-${state}`}>
-              {state === 'pending' && `Not started yet ${timeDisplay ? `(${timeDisplay} until start)` : ''}`}
-              {state === 'started' && `In progress ${timeDisplay ? `(${timeDisplay} remaining)` : ''}`}
-              {state === 'finished' && 'Completed'}
+              {state === 'pending' && `${t("not_started_yet")} ${timeDisplay ? `(${timeDisplay} ${t("until_start")})` : ''}`}
+              {state === 'started' && `${t("in_progress")} ${timeDisplay ? `(${timeDisplay} ${t("remaining")})` : ''}`}
+              {state === 'finished' && t("completed")}
             </span>
           </div>
           <div className="info-item">
-            <strong>Start:</strong> {formatDate(challenge.startDate)}
+            <strong>{t("start")}:</strong> {formatDate(challenge.startDate)}
           </div>
           <div className="info-item">
-            <strong>End:</strong> {formatDate(challenge.endDate)}
+            <strong>{t("end")}:</strong> {formatDate(challenge.endDate)}
           </div>
         </div>
       </div>
 
       {currentUserParticipation && (
         <div className="user-participation">
-          <h2>Your Participation</h2>
+          <h2>{t("your_participation")}</h2>
           <div className="participation-details">
             <div className="detail-item">
-              <strong>Ranking:</strong> #{currentUserParticipation.ranking} / {participants.length}
+              <strong>{t("ranking")}:</strong>
+              {currentUserParticipation.ranking == 1 ? "🏆 " : ""}
+              {currentUserParticipation.ranking == 2 ? "🥈 " : ""}
+              {currentUserParticipation.ranking == 3 ? "🥉 " : ""}
+              #{currentUserParticipation.ranking} / {participants.length}
             </div>
             <div className="detail-item">
-              <strong>Score:</strong> {currentUserParticipation.score}
+              <strong>{t("score")}:</strong> {currentUserParticipation.score}
             </div>
             <div className="detail-item">
-              <strong>Time per region (sec):</strong> {Math.round(currentUserParticipation.avgTimePerRegion/100)/10}
+              <strong>{t("time_per_region")}:</strong> {Math.round(currentUserParticipation.avgTimePerRegion/100)/10}
             </div>
             <div className="detail-item">
-              <strong>Completed:</strong> {formatDate(currentUserParticipation.completionDate)}
+              <strong>{t("completed_at")}:</strong> {formatDate(currentUserParticipation.completionDate)}
             </div>
           </div>
         </div>
       )}
 
       <div className="participants-section">
-        <h2>Participants ({participants.length})</h2>
+        <h2>{t("participants")} ({participants.length})</h2>
         {participants.length === 0 ? (
           <p className="no-participants">
-            {state === 'pending' && "No one has participated yet."}
-            {state === 'started' && "No one has completed the challenge yet."}
-            {state === 'finished' && "No participants completed this challenge."}
+            {state === 'pending' && t("no_participants_pending")}
+            {state === 'started' && t("no_participants_started")}
+            {state === 'finished' && t("no_participants_finished")}
           </p>
         ) : (
           <div className="participants-table">
             <div className="table-header">
               <div className="col-rank">#</div>
-              <div className="col-name">Name</div>
-              <div className="col-score">Score</div>
-              <div className="col-tpr">Time per region (sec)</div>
+              <div className="col-name">{t("name_header")}</div>
+              <div className="col-score">{t("score")}</div>
+              <div className="col-tpr">{t("time_per_region")}</div>
             </div>
             {participants.map((participant) => (
               <div 
@@ -226,7 +232,7 @@ export function Page() {
       <div className="actions">
         {state !== 'finished' && sessionCode && !currentUserParticipation && (
           <a href={`/multiplayer/${sessionCode}`} className="join-button">
-            {state === 'pending' ? 'View Challenge' : 'Join Challenge'}
+            {state === 'pending' ? t("view_challenge") : t("join_challenge")}
           </a>
         )}
       </div>
