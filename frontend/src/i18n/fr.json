@@ -489,5 +489,6 @@
   "failed_to_load_results": "Échec du chargement des résultats",
   "until_start": "avant le début",
   "remaining": "restant",
-  "starting_soon": "Commence bientôt"
+  "starting_soon": "Commence bientôt",
+  "view_challenge_results": "Voir les résultats du challenge"
 }

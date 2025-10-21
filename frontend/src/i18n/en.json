@@ -488,5 +488,6 @@
   "failed_to_load_results": "Failed to load challenge results",
   "until_start": "until start",
   "remaining": "remaining",
-  "starting_soon": "Starting soon"
+  "starting_soon": "Starting soon",
+  "view_challenge_results": "View Challenge Results"
 }

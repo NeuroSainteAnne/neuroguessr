@@ -81,7 +81,8 @@ const MultiPlayer = ({
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
-  const [classicChallengeRankings, setClassicChallengeRankings] = useState<any[]>([]);
+  const [classicChallengeId, setClassicChallengeId] = useState<number | null>(null);
+  const [classicChallengeRankings, setClassicChallengeRankings] = useState<Array<{username: string, score: number, ranking?: number}>>([]);
   const [classicChallengeTotalParticipants, setClassicChallengeTotalParticipants] = useState<number>(0);
   const [isClassicChallenge, setIsClassicChallenge] = useState<boolean>(false);
   const [isClassicChallengeFromCheck, setIsClassicChallengeFromCheck] = useState<boolean | null>(null);
@@ -201,6 +202,7 @@ const MultiPlayer = ({
     socket.on('joined-classic-challenge', (data: any) => {
       consoleLog('verbose', 'Successfully joined classic challenge');
       setIsClassicChallenge(true);
+      setClassicChallengeId(data.challengeId); // Store the challenge ID
       setLobbyUsers([isLoggedIn ? userUsername : anonUsername]); // Single user for classic challenges
       setIsConnected(true);
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
@@ -923,6 +925,19 @@ const MultiPlayer = ({
 
               {/* Publish to Leaderboard Box for users who haven't set preference */}
               {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+              
+              {/* Challenge Results Button */}
+              {classicChallengeId && (
+                <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                  <a 
+                    href={`/challenge-results/${classicChallengeId}`}
+                    className="join-multiplayer-button"
+                    style={{ display: 'inline-block', textDecoration: 'none' }}
+                  >
+                    {t("view_challenge_results") || "View Challenge Results"}
+                  </a>
+                </div>
+              )}
             </>
           ) : (
             // Regular Multiplayer Ending Screen

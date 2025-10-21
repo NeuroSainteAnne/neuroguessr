@@ -313,6 +313,7 @@ export function initSocketHandlers() {
               userSessionCode,
               userSessionToken,
               challengeName: challenge.name,
+              challengeId: challenge.id,
               startDate: challenge.start_date,
               endDate: challenge.end_date,
             });
