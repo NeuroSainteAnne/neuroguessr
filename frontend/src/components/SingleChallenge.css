@@ -74,7 +74,7 @@
     font-size: 0.9em;
 }
 
-.join-challenge-btn {
+.join-challenge-btn, .see-results-btn {
     background-color: #007bff;
     color: white;
     border: none;
@@ -85,15 +85,24 @@
     font-weight: 500;
     transition: background-color 0.2s;
     margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    text-align: center;
+    min-height: 32px;
+    box-sizing: border-box;
 }
 
-.join-challenge-btn:hover:not(:disabled) {
-    background-color: #0056b3;
+.join-challenge-btn:hover, .see-results-btn:hover {
+    text-decoration: none;
+    color: white;
 }
 
-.join-challenge-btn:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
+.join-challenge-btn:hover:not(:disabled),
+.see-results-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: scale(1.1);
 }
 
 .delete-challenge-btn {
@@ -107,6 +116,13 @@
     font-weight: 500;
     transition: background-color 0.2s;
     margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    text-align: center;
+    min-height: 32px;
+    box-sizing: border-box;
 }
 
 .delete-challenge-btn:hover {

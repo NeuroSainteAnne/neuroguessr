@@ -75,7 +75,9 @@ export function SingleChallenge({
       // This should be handled by the parent component
       return;
     }
+    
     if (challenge.sessionCode) {
+      // Navigate to multiplayer page to join the challenge
       window.location.href = `/multiplayer/${challenge.sessionCode}`;
     }
   };
@@ -119,14 +121,12 @@ export function SingleChallenge({
     if (isCompleted) return t("challenge_completed");
     if (!isLoggedIn) return t('login_required') || 'Login Required';
     if (challenge.status === 'upcoming') return t("challenge_not_started");
-    if (challenge.status === 'ended') return t("challenge_ended");
     return t('join_challenge') || 'Join Challenge';
   };
 
   const canJoin = challenge.type === 'realtime' ||
-                  (isLoggedIn && challenge.status === 'active');
+                  (challenge.type === 'classic' && isLoggedIn && challenge.status === 'active');
                   
-
   const isDisabled = !canJoin || (challenge.type === 'classic' && isCompleted);
 
   return (
@@ -169,13 +169,21 @@ export function SingleChallenge({
         )}
       </div>
 
-      <button
+      {challenge.type === 'classic' && isDisabled ? (
+        <a
+          className="see-results-btn"
+          href={`/challenge-results/${challenge.id}`}
+        >
+          {t("see_results") || 'See Results'}
+        </a>
+      ) : (<button
         className="join-challenge-btn"
         onClick={handleJoinChallenge}
         disabled={isDisabled}
       >
         {getJoinButtonText()}
-      </button>
+      </button>)}
+
       {allowDeletion && userIsAdmin && <button
         className="delete-challenge-btn"
         onClick={() => handleDeleteChallenge(challenge.sessionCode)}
