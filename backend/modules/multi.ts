@@ -2120,15 +2120,122 @@ export const checkIfClassicChallenge = async (req: Request, res: Response) => {
   try {
     const { sessionCode } = req.params;
     const sessions = await sql`
-      SELECT is_classic_challenge FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
-    ` as { is_classic_challenge: boolean | null }[];
+      SELECT id, is_classic_challenge FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
+    ` as { id: number; is_classic_challenge: boolean | null }[];
     if (!sessions.length) {
       return res.status(404).send({ isClassicChallenge: false });
     }
     const isClassic = sessions[0].is_classic_challenge === true ? true : false;
-    res.status(200).send({ isClassicChallenge: isClassic });
+    res.status(200).send({ isClassicChallenge: isClassic, challengeId: isClassic ? sessions[0].id : null });
   } catch (error) {
     logger.error("Error checking if classic challenge:", error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+};
+
+export const getChallengeResults = async (req: Request, res: Response) => {
+  try {
+    const { challengeId } = req.params;
+    
+    // Try to get challenge details from multi_sessions first (for ongoing challenges)
+    let challengeResult = await sql`
+      SELECT 
+        ms.id,
+        ms.session_code,
+        ms.name,
+        ms.start_date,
+        ms.end_date,
+        u.username as creator_username
+      FROM multi_sessions ms
+      JOIN users u ON ms.creator_id = u.id
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+    `;
+    
+    let sessionCode = null;
+    
+    // If not found in multi_sessions, try finished_sessions (for completed challenges where multi_sessions was deleted)
+    if (!challengeResult.length) {
+      challengeResult = await sql`
+        SELECT 
+          fs.classic_challenge_id as id,
+          NULL as session_code,
+          fs.name,
+          fs.classic_challenge_start_date as start_date,
+          fs.classic_challenge_end_date as end_date,
+          'Unknown' as creator_username
+        FROM finished_sessions fs
+        WHERE fs.classic_challenge_id = ${challengeId}
+        LIMIT 1
+      `;
+    } else {
+      sessionCode = challengeResult[0].session_code;
+    }
+    
+    if (!challengeResult.length) {
+      return res.status(404).send({ message: "Challenge not found" });
+    }
+    
+    const challenge = challengeResult[0];
+    const now = new Date();
+    const startDate = new Date(challenge.start_date);
+    const endDate = new Date(challenge.end_date);
+    
+    // Determine challenge state
+    let state: 'pending' | 'started' | 'finished';
+    if (now < startDate) {
+      state = 'pending';
+    } else if (now > endDate) {
+      state = 'finished';
+    } else {
+      state = 'started';
+    }
+    
+    // Get participants (users who have finished sessions for this challenge)
+    const participantsResult = await sql`
+      SELECT
+        fs.user_id,
+        fs.score,
+        fs.duration,
+        fs.correct,
+        fs.incorrect,
+        fs.attempts,
+        fs.avg_time_per_region,
+        fs.created_at as completion_date,
+        u.username,
+        ROW_NUMBER() OVER (ORDER BY fs.score DESC, fs.avg_time_per_region ASC) as ranking
+      FROM finished_sessions fs
+      JOIN users u ON fs.user_id = u.id
+      WHERE fs.classic_challenge_id = ${challengeId}
+        AND u.publish_to_leaderboard = true
+      ORDER BY fs.score DESC, fs.duration ASC
+    `;
+    
+    res.status(200).send({
+      challenge: {
+        id: challenge.id,
+        name: challenge.name,
+        startDate: challenge.start_date,
+        endDate: challenge.end_date,
+        creator: challenge.creator_username
+      },
+      sessionCode,
+      state,
+      participants: participantsResult.map(p => ({
+        userId: p.user_id,
+        username: p.username,
+        score: p.score,
+        duration: p.duration,
+        correct: p.correct,
+        incorrect: p.incorrect,
+        attempts: p.attempts,
+        avgTimePerRegion: p.avg_time_per_region,
+        completionDate: p.completion_date,
+        ranking: p.ranking
+      }))
+    });
+    
+  } catch (error) {
+    logger.error("Error getting challenge results:", error);
     res.status(500).send({ message: "Internal Server Error" });
   }
 };
