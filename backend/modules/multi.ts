@@ -17,7 +17,8 @@ import { logger } from "./logging.ts";
 import { getDistance } from "./utils_compute.ts";
 import { extractPersistentState, handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
 import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
-import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, handleDestroySession, setupInactiveGameCheck } from "./multi_cleanup.ts";
+import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, 
+  handleDestroySession, setupInactiveGameCheck, getClassicChallengeRankings, saveFinishedSessions} from "./multi_cleanup.ts";
 import { handleCreateClassicChallenge } from "./multi_classic_challenge.ts";
 
 // Atomic game update locks to prevent race conditions
@@ -1740,15 +1741,20 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
 
     // If all commands sent, stop
     if (gameRef.currentCommandIndex >= gameRef.commands.length) {
-      // Optionally broadcast game end
-      const allScores = Object.values(gameRef.individualScores);
-      const maxScore = Math.max(...allScores);
-      Object.keys(gameRef.individualScores).forEach(userName => {
-        emitToUser(gameRef.sessionCode, userName, "game-end", {
-          scores: gameRef.individualScores,
-          youWon: gameRef.individualScores[userName] === maxScore && maxScore > 0
+      // Handle classic challenge ending differently
+      if (gameRef.isClassicChallenge && gameRef.classicChallengeId) {
+        await handleClassicChallengeEnd(gameRef);
+      } else {
+        // Standard multiplayer game end
+        const allScores = Object.values(gameRef.individualScores);
+        const maxScore = Math.max(...allScores);
+        Object.keys(gameRef.individualScores).forEach(userName => {
+          emitToUser(gameRef.sessionCode, userName, "game-end", {
+            scores: gameRef.individualScores,
+            youWon: gameRef.individualScores[userName] === maxScore && maxScore > 0
+          });
         });
-      });
+      }
       clotureMultiplayerGame(gameRef)
       return;
     }
@@ -2110,4 +2116,73 @@ export const getMultiplayerSessionStartDate = async (req: Request, res: Response
   }
 };
 
+export const checkIfClassicChallenge = async (req: Request, res: Response) => {
+  try {
+    const { sessionCode } = req.params;
+    const sessions = await sql`
+      SELECT is_classic_challenge FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
+    ` as { is_classic_challenge: boolean | null }[];
+    if (!sessions.length) {
+      return res.status(404).send({ isClassicChallenge: false });
+    }
+    const isClassic = sessions[0].is_classic_challenge === true ? true : false;
+    res.status(200).send({ isClassicChallenge: isClassic });
+  } catch (error) {
+    logger.error("Error checking if classic challenge:", error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+};
+
 setupInactiveGameCheck();
+
+async function handleClassicChallengeEnd(gameRef: MultiplayerGame) {
+  try {    
+    if (!gameRef.classicChallengeId) return;
+
+    // Persist final scores before computing rankings so the current user's row is present
+    await saveFinishedSessions(gameRef);
+
+    // Get rankings for all users who published to leaderboard
+    const rankings = await getClassicChallengeRankings(gameRef.classicChallengeId);
+
+    // For each user in the current game session
+    for (const userName of Object.keys(gameRef.individualScores)) {
+      // Skip anonymous users
+      if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(userName)) {
+        // Send basic end data for anonymous users
+        emitToUser(gameRef.sessionCode, userName, "game-end", {
+          scores: { [userName]: gameRef.individualScores[userName] },
+          youWon: false, // Anonymous users don't get rankings
+          isAnonymous: true
+        });
+        continue;
+      }
+
+      // Get user info
+      const playerKey = `${gameRef.sessionCode}:${userName}`;
+      const player = playerInfo[playerKey];
+      if (!player || !player.userId) continue;
+
+      const userScore = gameRef.individualScores[userName] || 0;
+
+      // Send all rankings and user's score - frontend will handle publish_to_leaderboard logic
+      emitToUser(gameRef.sessionCode, userName, "game-end", {
+        scores: { [userName]: userScore },
+        rankings: rankings,
+        totalParticipants: rankings.length,
+        isClassicChallenge: true
+      });
+    }
+  } catch (error) {
+    logger.error("Error handling classic challenge end:", error);
+    // Fallback to basic game end
+    const allScores = Object.values(gameRef.individualScores);
+    const maxScore = Math.max(...allScores);
+    Object.keys(gameRef.individualScores).forEach(userName => {
+      emitToUser(gameRef.sessionCode, userName, "game-end", {
+        scores: gameRef.individualScores,
+        youWon: gameRef.individualScores[userName] === maxScore && maxScore > 0
+      });
+    });
+  }
+}

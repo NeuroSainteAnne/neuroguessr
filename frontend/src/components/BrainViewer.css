@@ -668,3 +668,9 @@
   transform: translateY(-50%);
   touch-action: none;
 }
+
+.auth-buttons{
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}

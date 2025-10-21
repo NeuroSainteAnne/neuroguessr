@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge } from "./modules/multi.ts";
 import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
 import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
 import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge, checkClassicChallengeCompletion } from "modules/multi_classic_challenge.ts";
@@ -96,6 +96,9 @@ app.post('/api/cloture-game-session', authenticateToken,
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
 app.post('/api/multi/destroy-session', authenticateToken, destroyMultiplayerSession)
 app.get('/api/multi/public-lobbies', getPublicLobbies)
+app.get('/api/multi/check-classic/:sessionCode', (req, res, next) => {
+    Promise.resolve(checkIfClassicChallenge(req, res)).catch(next);
+})
 app.get('/api/multi/next-realtime-challenge', (req, res, next) => {
     Promise.resolve(getNextRealtimeChallenge(req, res)).catch(next);
 })

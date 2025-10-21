@@ -143,7 +143,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         }
 
         // Verify the existing token
-        jwt.verify(token, config.jwt_secret, (err: any, decoded: any) => {
+        jwt.verify(token, config.jwt_secret, async (err: any, decoded: any) => {
             const duration = Date.now() - startTime;
             
             if (err) {
@@ -156,24 +156,46 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
                 return res.status(403).send({ message: "Invalid or expired token" });
             }
 
-            // Cast the decoded token to User
-            const user = decoded as User;
+            try {
+                // Fetch the complete user information from the database
+                const users = await sql`
+                    SELECT * FROM users WHERE id = ${decoded.id} LIMIT 1
+                `;
+                if (!users.length) {
+                    logger.warn('Token refresh failed - user not found', {
+                        userId: decoded.id,
+                        clientIP,
+                        duration: `${duration}ms`,
+                        reason: 'user_not_found'
+                    });
+                    return res.status(403).send({ message: "User not found" });
+                }
+                const user = users[0] as User;
 
-            // Generate a new token with a refreshed expiration time
-            const newToken = getUserToken(user);
+                // Generate a new token with refreshed expiration time
+                const newToken = getUserToken(user);
 
-            logger.info('Token refresh successful', {
-                userId: user.id,
-                username: user.username,
-                clientIP,
-                duration: `${duration}ms`,
-                tokenRefreshed: true
-            });
+                logger.info('Token refresh successful', {
+                    userId: user.id,
+                    username: user.username,
+                    clientIP,
+                    duration: `${duration}ms`,
+                    tokenRefreshed: true
+                });
 
-            res.status(200).send({ 
-                token: newToken, 
-                message: "Token refreshed successfully" 
-            });
+                res.status(200).send({ 
+                    token: newToken, 
+                    message: "Token refreshed successfully" 
+                });
+            } catch (dbError) {
+                logger.error('Token refresh failed - database error', {
+                    userId: decoded.id,
+                    clientIP,
+                    duration: `${duration}ms`,
+                    error: dbError instanceof Error ? dbError.message : 'Unknown database error'
+                });
+                res.status(500).send({ message: "Internal Server Error" });
+            }
         });
     } catch (error: unknown) {
         const duration = Date.now() - startTime;

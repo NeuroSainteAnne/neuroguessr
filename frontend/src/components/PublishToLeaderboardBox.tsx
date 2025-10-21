@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import "./PublishToLeaderboardBox.css"
 
-export const PublishToLeaderboardBox = () => {
+export const PublishToLeaderboardBox = ({forRank = false}:{forRank?: boolean | undefined}) => {
   const { t, updateToken } = useApp();
   const [publishErrorText, setPublishErrorText] = useState<string>("");
   const handleClick = async (val: boolean) => {
@@ -30,7 +30,9 @@ export const PublishToLeaderboardBox = () => {
   };
   return (
     <>
-      <h2>{t("publish_to_leaderboard_header")}</h2>
+      <h2>{forRank 
+              ? t("publish_results_for_rank") 
+              : t("publish_to_leaderboard_header")}</h2>
       <p dangerouslySetInnerHTML={{ __html: t("publish_to_leaderboard_explanation") }}></p>
       <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
         <button

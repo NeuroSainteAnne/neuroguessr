@@ -95,7 +95,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             firstname: string;
             lastname: string;
             password: string;
-            publish_to_leaderboard: boolean;
+            publish_to_leaderboard: boolean | null;
             language: string;
             clinical_trial_gender: string | null;
             clinical_trial_age: number | null;
@@ -118,7 +118,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
             updates.password = await bcrypt.hash(password, salt);
         }
                 
-        if (publishToLeaderboard) {
+        if (publishToLeaderboard !== undefined) {
             updates.publish_to_leaderboard = publishToLeaderboard;
         }
                 
@@ -156,6 +156,7 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
         `;
         const updatedUser = updatedUsers[0] as User;
         const updatedToken = getUserToken(updatedUser);
+        console.log("USER", updatedUser)
 
         res.status(200).send({ message: "User updated successfully", token: updatedToken });
     } catch (error: unknown) {

@@ -287,6 +287,14 @@
   "neuroguessr_login_title": "NeuroGuessr - Login",
   "construction_in_progress": "This page is under construction",
 
+  "classic_challenge_requires_login": "Please connect",
+  "please_login_or_signup": "Please connect or subscribe before playing challenge.",
+  "classic_challenge_ended_title": "Challenge ended!",
+  "your_score": "Your score",
+  "your_temp_ranking": "Your temporary ranking",
+  "total_participants": "Total participants",
+  "publish_results_for_rank": "Publish your results to see your rank?",
+
   "*****LEADERBOARD*****":"",
 
   "neuroguessr_leaderboard_title": "NeuroGuessr - Leaderboard",

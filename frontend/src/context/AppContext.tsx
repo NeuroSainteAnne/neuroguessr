@@ -431,6 +431,10 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (authToken && isTokenValid(authToken)) {
       setIsGuest(false);
       setIsLoggedIn(true);
+      refreshToken().then((newToken) => {
+          consoleLog("verbose", "Token refreshed successfully");
+          updateToken(newToken);
+      });       
     }
   }, []);
 

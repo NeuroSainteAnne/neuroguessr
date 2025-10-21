@@ -48,6 +48,9 @@ const MultiPlayer = ({
       setHeaderText, setHeaderTextMode, setHeaderTime,
       showNotification, setAskedAtlas
    } = useApp();
+
+  // Get the current path from pageContext
+  const currentPath = pageContext?.urlPathname || '';
   const { 
     guessButtonRef, currentTarget, setPastRegions,
     atlasRef, setHasEnded, hasEndedRef,
@@ -78,7 +81,12 @@ const MultiPlayer = ({
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
+  const [classicChallengeRankings, setClassicChallengeRankings] = useState<any[]>([]);
+  const [classicChallengeTotalParticipants, setClassicChallengeTotalParticipants] = useState<number>(0);
   const [isClassicChallenge, setIsClassicChallenge] = useState<boolean>(false);
+  const [isClassicChallengeFromCheck, setIsClassicChallengeFromCheck] = useState<boolean | null>(null);
+  const [showAuthRequired, setShowAuthRequired] = useState<boolean>(false);
+  const [isCheckingClassicChallenge, setIsCheckingClassicChallenge] = useState<boolean>(true);
 
   const handleConnect = () => {
     setError(null);
@@ -86,13 +94,32 @@ const MultiPlayer = ({
       setError("Please enter a valid 8-digit code.");
       return;
     }
-    if(!isLoggedIn && config.activateAnonymousMode){
-      if(!anonUsername){
-        setError(t("temp_username_or_connect"));
-        return;
-      }
-    }
-    joinLobby(inputCode)
+
+    // First, check if it's a classic challenge
+    fetch(`/api/multi/check-classic/${inputCode}`)
+      .then(res => res.json())
+      .then(data => {
+        setIsClassicChallengeFromCheck(data.isClassicChallenge);
+        if (data.isClassicChallenge && !isLoggedIn) {
+          setShowAuthRequired(true);
+          return;
+        }
+        // Proceed to join
+        if(!isLoggedIn && config.activateAnonymousMode){
+          if(!anonUsername){
+            setError(t("temp_username_or_connect"));
+            return;
+          }
+        }
+        // Reset classic challenge state when joining new lobby
+        setClassicChallengeRankings([])
+        setClassicChallengeTotalParticipants(0)
+        setIsClassicChallenge(false)
+        joinLobby(inputCode)
+      })
+      .catch(_ => {
+        setError("Failed to check session type.");
+      });
   }
   const anonUsernameInputRef = useRef<HTMLInputElement>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
@@ -321,6 +348,13 @@ const MultiPlayer = ({
       hasEndedRef.current = true
       clearInterface()
       setHasWon(data.youWon)
+      
+      // Handle classic challenge data
+      if (data.isClassicChallenge) {
+        setClassicChallengeRankings(data.rankings || []);
+        setClassicChallengeTotalParticipants(data.totalParticipants || 0);
+      }
+      
       setShowMultiplayerOverlay(true)
     });
     socket.on('guess-result', (data: any) => {
@@ -522,23 +556,72 @@ const MultiPlayer = ({
   }
 
   useEffect(() => {
-    if (isLoggedIn && askedSessionCode) {
-      clearInterface()
-      setLobbyUsers([])
-      setPlayerScores({})
-      setShowMultiplayerOverlay(false)
-      setInputCode(askedSessionCode)
-      joinLobby(askedSessionCode)
-    } else if(askedSessionCode && config.activateAnonymousMode){
-      setIsAnonymous(false)
-      clearInterface()
-      setLobbyUsers([])
-      setPlayerScores({})
-      setShowMultiplayerOverlay(false)
-      setInputCode(askedSessionCode)
-      if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
+    if (askedSessionCode) {
+      setIsCheckingClassicChallenge(true);
+      // Check if it's a classic challenge
+      fetch(`/api/multi/check-classic/${askedSessionCode}`)
+        .then(res => res.json())
+        .then(data => {
+          setIsClassicChallengeFromCheck(data.isClassicChallenge);
+          if (data.isClassicChallenge && !isLoggedIn) {
+            setShowAuthRequired(true);
+          } else {
+            // Proceed as normal
+            if (isLoggedIn) {
+              clearInterface()
+              setLobbyUsers([])
+              setPlayerScores({})
+              setShowMultiplayerOverlay(false)
+              setClassicChallengeRankings([])
+              setClassicChallengeTotalParticipants(0)
+              setIsClassicChallenge(false)
+              setInputCode(askedSessionCode)
+              joinLobby(askedSessionCode)
+            } else if (config.activateAnonymousMode) {
+              setIsAnonymous(false)
+              clearInterface()
+              setLobbyUsers([])
+              setPlayerScores({})
+              setShowMultiplayerOverlay(false)
+              setClassicChallengeRankings([])
+              setClassicChallengeTotalParticipants(0)
+              setIsClassicChallenge(false)
+              setInputCode(askedSessionCode)
+              if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
+            }
+          }
+          setIsCheckingClassicChallenge(false);
+        })
+        .catch(_ => {
+          // On error, proceed as if not classic challenge
+          if (isLoggedIn) {
+            clearInterface()
+            setLobbyUsers([])
+            setPlayerScores({})
+            setShowMultiplayerOverlay(false)
+            setClassicChallengeRankings([])
+            setClassicChallengeTotalParticipants(0)
+            setIsClassicChallenge(false)
+            setInputCode(askedSessionCode)
+            joinLobby(askedSessionCode)
+          } else if (config.activateAnonymousMode) {
+            setIsAnonymous(false)
+            clearInterface()
+            setLobbyUsers([])
+            setPlayerScores({})
+            setShowMultiplayerOverlay(false)
+            setClassicChallengeRankings([])
+            setClassicChallengeTotalParticipants(0)
+            setIsClassicChallenge(false)
+            setInputCode(askedSessionCode)
+            if(anonUsernameInputRef.current) anonUsernameInputRef.current.focus();
+          }
+          setIsCheckingClassicChallenge(false);
+        });
+    } else {
+      setIsCheckingClassicChallenge(false);
     }
-  }, [askedSessionCode, askedSessionToken, isLoggedIn])
+  }, [askedSessionCode, isLoggedIn])
 
   useEffect(()=>{
     tryLaunchGame()
@@ -590,6 +673,22 @@ const MultiPlayer = ({
 
 
   const renderWaitingContent = ({error}: {error: string|null}) => {
+    // Show auth required screen for classic challenges when not logged in
+    if (showAuthRequired) {
+      return (
+        <div className="waiting-content">
+          <div className="join-multiplayer-box">
+            <h2>{t("classic_challenge_requires_login") || "Classic Challenge Requires Login"}</h2>
+            <p>{t("please_login_or_signup") || "Please log in or sign up to participate in this classic challenge."}</p>
+            <div className="auth-buttons">
+              <a href={`/login?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button">{t("sign_in") || "Sign In"}</a>
+              <a href={`/register?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button ">{t("sign_up") || "Sign Up"}</a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Show error screen if there's an error and we're not connected/in-game
     if (error && !isConnected && !isGameRunning) {
       return (
@@ -602,7 +701,9 @@ const MultiPlayer = ({
       );
     }
 
-    if ((isLoggedIn && !askedSessionCode) || (!isLoggedIn && config.activateAnonymousMode && !isConnected && !askedSessionToken)) {
+    if ((isLoggedIn && !askedSessionCode) || 
+        (!isLoggedIn && config.activateAnonymousMode && 
+          !isConnected && !askedSessionToken && isClassicChallengeFromCheck !== true && !isCheckingClassicChallenge)) {
       return (<div className="waiting-content">
         <div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
@@ -648,7 +749,7 @@ const MultiPlayer = ({
               }}>
                 {formatTime({ms:countdownRemaining*1000})}
               </div>
-              <div>
+              {!isClassicChallenge && <div>
                 <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
                 <ul>
                     {lobbyUsers.map((user, index) => (
@@ -657,7 +758,7 @@ const MultiPlayer = ({
                       </li>
                     ))}
                 </ul>
-              </div>
+              </div>}
             </div>
           ) : (
             <>
@@ -763,27 +864,93 @@ const MultiPlayer = ({
       
       {showMultiplayerOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
         <div className="overlay-content" ref={multiplayerOverlayRef}>
-          <h2>{t("multiplayer_ended_title")}</h2>
-          <p><span>{t("multiplayer_ended_score")}</span></p>
-          <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
-            {[...lobbyUsers]
-              .sort((a, b) => {
-                const scoreA = playerScores[a];
-                const scoreB = playerScores[b];
-                if (scoreA === undefined && scoreB === undefined) return 0;
-                if (scoreA === undefined) return 1;
-                if (scoreB === undefined) return -1;
-                return scoreB - scoreA;
-              })
-              .map((u) => (
-                <li key={u} style={(u === userUsername || u === anonUsername) ? { color: (hasWon?'green':'red'), fontWeight: 'bold' } : {}}>
-                  {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
-                </li>
-              ))
-            }
-          </ul>
-          <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
-          {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+          {isClassicChallenge ? (
+            // Classic Challenge Ending Screen
+            <>
+              <h2>{t("classic_challenge_ended_title") || "Classic Challenge Completed"}</h2>
+              
+              {/* User's Score */}
+              <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                  {t("your_score") || "Your Score"}: {playerScores[isLoggedIn ? userUsername : anonUsername] || 0}
+                </p>
+              </div>
+
+              {/* Ranking or Publish Prompt */}
+              {(() => {
+                const currentUser = isLoggedIn ? userUsername : anonUsername;
+                const userScore = playerScores[currentUser] || 0;
+                
+                if (userPublishToLeaderboard === true) {
+                  // User publishes to leaderboard - show their ranking from the rankings array
+                  const existingRanking = classicChallengeRankings.find(r => r.username === currentUser);
+                  
+                  let rankingsToUse = classicChallengeRankings;
+                  let totalParticipants = classicChallengeTotalParticipants;
+                  
+                  if (!existingRanking) {
+                    // Add user's score to rankings if not already included
+                    rankingsToUse = [...classicChallengeRankings, { username: currentUser, score: userScore }];
+                    // Sort by score descending, then by username for tie-breaking
+                    rankingsToUse.sort((a, b) => {
+                      if (b.score !== a.score) return b.score - a.score;
+                      return a.username.localeCompare(b.username);
+                    });
+                    // Add ranking numbers
+                    rankingsToUse = rankingsToUse.map((r, index) => ({ ...r, ranking: index + 1 }));
+                    totalParticipants += 1;
+                  }
+                  
+                  const userRanking = rankingsToUse.find(r => r.username === currentUser);
+                  
+                  return (
+                    <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                      <p style={{ fontSize: '20px' }}>
+                        {t("your_temp_ranking") || "Your Temporary Ranking"}: #{userRanking?.ranking || '?'} / {totalParticipants}
+                      </p>
+                      <p style={{ fontSize: '16px', color: '#666' }}>
+                        {t("total_participants") || "Total Participants"}: {totalParticipants}
+                      </p>
+                    </div>
+                  );
+                } else {
+                  // User doesn't publish to leaderboard
+                  return (
+                    <PublishToLeaderboardBox forRank={true}/>
+                  );
+                }
+              })()}
+
+              {/* Publish to Leaderboard Box for users who haven't set preference */}
+              {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+            </>
+          ) : (
+            // Regular Multiplayer Ending Screen
+            <>
+              <h2>{t("multiplayer_ended_title")}</h2>
+              <p><span>{t("multiplayer_ended_score")}</span></p>
+              <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
+                {[...lobbyUsers]
+                  .sort((a, b) => {
+                    const scoreA = playerScores[a];
+                    const scoreB = playerScores[b];
+                    if (scoreA === undefined && scoreB === undefined) return 0;
+                    if (scoreA === undefined) return 1;
+                    if (scoreB === undefined) return -1;
+                    return scoreB - scoreA;
+                  })
+                  .map((u) => (
+                    <li key={u} style={(u === userUsername || u === anonUsername) ? { color: (hasWon?'green':'red'), fontWeight: 'bold' } : {}}>
+                      {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
+                    </li>
+                  ))
+                }
+              </ul>
+              <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
+              {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+            </>
+          )}
+
           <div className="overlay-buttons">
             <button 
               className="eye-button" 

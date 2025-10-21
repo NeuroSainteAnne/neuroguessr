@@ -65,75 +65,11 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
       sessionCode: gameRef.sessionCode
     });
 
-    const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
-    const allScores = Object.values(gameRef.individualScores);
-    const maxScore = Math.max(...allScores);
-
     // 1. Backup the game state for potential recurrence
     const gameBackup = backupGameForRecurrence(gameRef);
 
-    // Save data for authenticated users
-    const savePromises = [];
-    for (const username in gameRef.individualScores || {}) {
-      // Skip anonymous users
-      if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
-      const playerKey = `${gameRef.sessionCode}:${username}`;
-      const player = playerInfo[playerKey];
-      if (!player) continue;
-      let userId = player.userId;
-      if (!userId) continue; // If no userId, do not store anything for this user
-      const mode = 'multiplayer';
-      const atlas = gameRef.currentAtlas;
-      const blindMode = gameRef.isCurrentlyBlind || false;
-      const score = gameRef.individualScores[username] || 0;
-      const attempts = gameRef.individualAttempts[username] || 0;
-      const correct = gameRef.individualSuccesses[username] || 0;
-      const incorrect = attempts - correct;
-      const durations = gameRef.individualDurations[username] || [];
-      const correctDurations = gameRef.individualCorrectDurations[username] || [];
-      const minTimePerRegion = durations.length > 0 ? Math.min(...durations) : null;
-      const maxTimePerRegion = durations.length > 0 ? Math.max(...durations) : null;
-      const avgTimePerRegion = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
-      const minTimePerCorrectRegion = correctDurations.length > 0 ? Math.min(...correctDurations) : null;
-      const maxTimePerCorrectRegion = correctDurations.length > 0 ? Math.max(...correctDurations) : null;
-      const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a, b) => a + b, 0) / correctDurations.length) : null;
-      const quitReason = 'end';
-      const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
-      const name = gameRef.name || null;
-      const classicChallengeStartDate = gameRef.startDate || null;
-      const classicChallengeEndDate = gameRef.endDate || null;
-      const classicChallengeId = gameRef.classicChallengeId || null;
-
-      // Use pre-calculated theoretical maximum score and calculate percentage
-      const theoreticalMaximumScore = gameRef.theoreticalMaximumScore || 0;
-      const scorePercentage = theoreticalMaximumScore > 0 ? Math.round((score / theoreticalMaximumScore) * 10000) / 100 : 0; // Round to 2 decimal places
-
-      // The rest of your database code...
-      savePromises.push(
-        sql`
-          INSERT INTO finished_sessions (
-            user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
-            min_time_per_region, max_time_per_region, avg_time_per_region,
-            min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
-            quit_reason, multiplayer_games_won, duration, created_at,
-            name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id,
-            theoretical_maximum_score, score_percentage
-          ) VALUES (
-            ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
-            ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
-            ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
-            ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
-            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId},
-            ${theoreticalMaximumScore}, ${scorePercentage}
-          )
-        `.catch(e => {
-          logger.error(`Error saving stats for ${username}:`, e);
-        })
-      );
-    }
-
-    // Wait for all saves to complete before proceeding
-    await Promise.allSettled(savePromises);
+    // Save finished session data to DB
+    await saveFinishedSessions(gameRef);
 
     // 2. Perform complete game cleanup (skip database deletion if we have recurrence)
     const sessionCode = gameRef.sessionCode;
@@ -173,21 +109,114 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     }
   }
 }
+
+/**
+ * Extracted helper to persist finished session rows for a game. This is separated
+ * so callers (like handleClassicChallengeEnd) can record the final scores to the
+ * `finished_sessions` table before any cleanup/broadcast happens.
+ */
+export async function saveFinishedSessions(gameRef: MultiplayerGame) {
+  try {
+    const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
+    const allScores = Object.values(gameRef.individualScores || {});
+    const maxScore = allScores.length ? Math.max(...allScores) : 0;
+
+    const savePromises: Promise<any>[] = [];
+    for (const username in gameRef.individualScores || {}) {
+      // Skip anonymous users
+      if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
+      const playerKey = `${gameRef.sessionCode}:${username}`;
+      const player = playerInfo[playerKey];
+      if (!player) continue;
+      const userId = player.userId;
+      if (!userId) continue; // If no userId, do not store anything for this user
+
+      const mode = 'multiplayer';
+      const atlas = gameRef.currentAtlas;
+      const blindMode = gameRef.isCurrentlyBlind || false;
+      const score = gameRef.individualScores[username] || 0;
+      const attempts = gameRef.individualAttempts[username] || 0;
+      const correct = gameRef.individualSuccesses[username] || 0;
+      const incorrect = attempts - correct;
+      const durations = gameRef.individualDurations[username] || [];
+      const correctDurations = gameRef.individualCorrectDurations[username] || [];
+      const minTimePerRegion = durations.length > 0 ? Math.min(...durations) : null;
+      const maxTimePerRegion = durations.length > 0 ? Math.max(...durations) : null;
+      const avgTimePerRegion = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+      const minTimePerCorrectRegion = correctDurations.length > 0 ? Math.min(...correctDurations) : null;
+      const maxTimePerCorrectRegion = correctDurations.length > 0 ? Math.max(...correctDurations) : null;
+      const avgTimePerCorrectRegion = correctDurations.length > 0 ? Math.round(correctDurations.reduce((a, b) => a + b, 0) / correctDurations.length) : null;
+      const quitReason = 'end';
+      const multiplayerGamesWon = (score === maxScore && maxScore > 0) ? 1 : 0;
+      const name = gameRef.name || null;
+      const classicChallengeStartDate = gameRef.startDate || null;
+      const classicChallengeEndDate = gameRef.endDate || null;
+      const classicChallengeId = gameRef.classicChallengeId || null;
+
+      const theoreticalMaximumScore = gameRef.theoreticalMaximumScore || 0;
+      const scorePercentage = theoreticalMaximumScore > 0 ? Math.round((score / theoreticalMaximumScore) * 10000) / 100 : 0; // Round to 2 decimals
+
+      // Idempotency: if classicChallengeId is set, skip inserting if a row already exists for this user+challenge
+      let shouldInsert = true;
+      if (classicChallengeId) {
+        try {
+          const existing = await sql`
+            SELECT id FROM finished_sessions
+            WHERE user_id = ${userId} AND classic_challenge_id = ${classicChallengeId}
+            ORDER BY created_at DESC LIMIT 1
+          ` as { id: number }[];
+          if (existing && existing.length > 0) shouldInsert = false;
+        } catch (err) {
+          logger.error('Error checking existing finished_sessions for idempotency:', err);
+          // On error, proceed to insert to avoid data loss
+          shouldInsert = true;
+        }
+      }
+
+      if (!shouldInsert) continue;
+
+      savePromises.push(
+        sql`
+          INSERT INTO finished_sessions (
+            user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
+            min_time_per_region, max_time_per_region, avg_time_per_region,
+            min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+            quit_reason, multiplayer_games_won, duration, created_at,
+            name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id,
+            theoretical_maximum_score, score_percentage
+          ) VALUES (
+            ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
+            ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
+            ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
+            ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
+            ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId},
+            ${theoreticalMaximumScore}, ${scorePercentage}
+          )
+        `.catch(e => {
+          logger.error('Error inserting finished_session for user ' + userId + ':', e);
+        })
+      );
+    }
+
+    await Promise.allSettled(savePromises);
+  } catch (err) {
+    logger.error('Error in saveFinishedSessions:', err);
+  }
+}
+
 export function cleanupExternalCommands(externalCommands: ExternalGameCommands[], isChallenge: boolean = false): GameCommands[] | undefined {
   try {
     const { error } = validateExternalGameCommands(externalCommands);
     if (error) throw error;
     const commands: GameCommands[] = [];
-    let currentAtlas = undefined;
+    let currentAtlas: string | undefined = undefined;
     let regionPool: number[] = [];
     let index = 0;
 
     for (const command of externalCommands) {
       if (command.action === "countdown") {
         if (index === 0) {
-          let countdownCommand: any = {
-            action: "countdown"
-          };
+          let countdownCommand: any = { action: "countdown" };
 
           // Handle startTime vs duration
           if (command.startTime) {
@@ -216,10 +245,7 @@ export function cleanupExternalCommands(externalCommands: ExternalGameCommands[]
         continue;
       } else {
         if (index === 0) {
-          commands.push({
-            action: "countdown",
-            duration: DEFAULT_COUNTDOWN_TIME,
-          });
+          commands.push({ action: "countdown", duration: DEFAULT_COUNTDOWN_TIME });
         }
       }
 
@@ -361,4 +387,34 @@ export const handleDestroySession = async (data: {
     return { status: 500, message: "Error destroying session" };
   }
 };
+export async function getClassicChallengeRankings(challengeId: number): Promise<{userId: number, username: string, score: number, ranking: number}[]> {
+  try {
+    // Get all finished sessions for this challenge where users have publish_to_leaderboard=true
+    const results = await sql`
+      SELECT 
+        fs.user_id,
+        u.username,
+        fs.score_percentage as score
+      FROM finished_sessions fs
+      JOIN users u ON fs.user_id = u.id
+      WHERE fs.classic_challenge_id = ${challengeId}
+        AND u.publish_to_leaderboard = true
+        AND fs.score_percentage IS NOT NULL
+      ORDER BY fs.score_percentage DESC, fs.created_at ASC
+    ` as { user_id: number, username: string, score: number }[];
+
+    // Add ranking
+    const rankings = results.map((result, index) => ({
+      userId: result.user_id,
+      username: result.username,
+      score: result.score,
+      ranking: index + 1
+    }));
+
+    return rankings;
+  } catch (error) {
+    logger.error("Error getting classic challenge rankings:", error);
+    return [];
+  }
+}
 

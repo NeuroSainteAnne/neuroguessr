@@ -284,7 +284,15 @@
   "neuroguessr_singleplayer_title": "NeuroGuessr - Jeu",
   "neuroguessr_stats_title": "NeuroGuessr - Statistiques",
   "neuroguessr_login_title": "NeuroGuessr - Connexion",
+
   "construction_in_progress": "Construction en cours ! Merci de votre patience.",
+  "classic_challenge_requires_login": "Connexion nécessaire",
+  "please_login_or_signup": "Merci de vous identifier ou de vous inscrire pour continuer.",
+  "classic_challenge_ended_title": "Défi terminé !",
+  "your_score": "Votre score",
+  "your_temp_ranking": "Votre classement temporaire",
+  "total_participants": "Nombre de participants",
+  "publish_results_for_rank": "Publier vos résultats afin de voir votre rang ?",
 
   
   "*****LEADERBOARD*****":"",
