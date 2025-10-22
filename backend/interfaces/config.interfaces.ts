@@ -7,6 +7,7 @@ export interface EmailConfig {
     proxy?: string;
     clientId?: string;
     clientSecret?: string;
+    refreshToken?: string;
     redirectPath?: string;
     scope?: string;
 }

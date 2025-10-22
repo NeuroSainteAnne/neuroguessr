@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import './ChallengeResults.css';
 import { formatTime } from '../../utils/formatters';
+import ChallengeEmailOptIn from '../../components/ChallengeEmailOptIn';
 
 interface Challenge {
   id: number;
@@ -38,6 +39,7 @@ export function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<string>('');
+  // email opt-in is handled by reusable component
 
   useEffect(() => {
     if (!challengeId) {
@@ -66,9 +68,7 @@ export function Page() {
     });
   }, [challengeId, authToken, isLoggedIn, t]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
+  
 
   // Update countdown for challenges
   useEffect(() => {
@@ -107,9 +107,13 @@ export function Page() {
       return () => clearInterval(interval);
     } else {
       setTimeDisplay('');
-      return;
     }
+    return undefined;
   }, [data, t]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   if (loading) {
     return (
@@ -193,6 +197,12 @@ export function Page() {
               <strong>{t("completed_at")}:</strong> {formatDate(currentUserParticipation.completionDate)}
             </div>
           </div>
+          
+          {currentUserParticipation && state !== 'finished' && (
+            <div className="email-optin-section">
+              <ChallengeEmailOptIn challengeId={challenge.id} />
+            </div>
+          )}
         </div>
       )}
 

@@ -490,5 +490,19 @@
   "until_start": "until start",
   "remaining": "remaining",
   "starting_soon": "Starting soon",
-  "view_challenge_results": "View Challenge Results"
+  "view_challenge_results": "View Challenge Results",
+  "email_optin_button": "Receive final results by email",
+  "email_optin_sent": "Request acknowledged!",
+  "email_subject": "NeuroGuessr Challenge Results: {{challengeName}}",
+  "email_greeting": "Hello {{firstname}}!",
+  "email_challenge_results": "Challenge Results",
+  "email_your_score": "Your Score: {{score}}",
+  "email_your_ranking": "Your Ranking: {{ranking}} out of {{totalParticipants}} participants",
+  "email_challenge_details": "Challenge Details",
+  "email_challenge_name": "Challenge Name: {{challengeName}}",
+  "email_start_date": "Start Date: {{startDate}}",
+  "email_end_date": "End Date: {{endDate}}",
+  "email_atlas": "Atlas: {{atlas}}",
+  "email_footer": "Thank you for participating in NeuroGuessr! Keep learning neuroanatomy.",
+  "email_error_sending": "Failed to send challenge results email"
 }

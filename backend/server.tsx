@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge, getChallengeResults } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge, getChallengeResults, challengeEmailOptIn } from "./modules/multi.ts";
 import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
 import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
 import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge, checkClassicChallengeCompletion } from "modules/multi_classic_challenge.ts";
@@ -101,6 +101,9 @@ app.get('/api/multi/check-classic/:sessionCode', (req, res, next) => {
 })
 app.get('/api/multi/challenge-results/:challengeId', (req, res, next) => {
     Promise.resolve(getChallengeResults(req, res)).catch(next);
+})
+app.post('/api/multi/challenge-email-optin/:challengeId', authenticateToken, (req, res, next) => {
+    Promise.resolve(challengeEmailOptIn(req, res)).catch(next);
 })
 app.get('/api/multi/next-realtime-challenge', (req, res, next) => {
     Promise.resolve(getNextRealtimeChallenge(req, res)).catch(next);

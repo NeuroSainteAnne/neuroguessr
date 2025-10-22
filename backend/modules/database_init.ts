@@ -6,6 +6,7 @@ type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
 import { debug } from 'console';
 import { logger } from './logging.ts';
+import { sendChallengeResultsEmails } from './multi.ts';
 const config: Config = configJson;
 
 // Create a new database or open an existing one
@@ -124,7 +125,7 @@ export const database_init = async () => {
             await sql`
                 CREATE TABLE IF NOT EXISTS finished_sessions (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
                     mode TEXT NOT NULL,
                     atlas TEXT NOT NULL,
                     blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
@@ -147,7 +148,8 @@ export const database_init = async () => {
                     classic_challenge_start_date TIMESTAMP WITH TIME ZONE,
                     classic_challenge_end_date TIMESTAMP WITH TIME ZONE,
                     theoretical_maximum_score DECIMAL(5,2),
-                    score_percentage DECIMAL(5,2)
+                    score_percentage DECIMAL(5,2),
+                    send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE
                 );
             `;
             await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`;
@@ -207,8 +209,18 @@ export const database_init = async () => {
             `;
 
             await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS finished_at TIMESTAMP WITH TIME ZONE;
+            `;
+
+            await sql`
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE;
             `;
 
             await sql`
@@ -315,6 +327,25 @@ export const database_init = async () => {
             `;
         });
 
+        // Allow NULL user_id for challenge metadata records
+        await sql.begin(async sql => {
+            await sql`
+                ALTER TABLE finished_sessions 
+                DROP CONSTRAINT IF EXISTS finished_sessions_user_id_fkey;
+            `;
+            
+            await sql`
+                ALTER TABLE finished_sessions 
+                ALTER COLUMN user_id DROP NOT NULL;
+            `;
+            
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD CONSTRAINT finished_sessions_user_id_fkey 
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+            `;
+        });
+
         logger.info("Database schema initialized successfully.");
         if(config.addTestUser){
             const salt = await bcrypt.genSalt(Number(config.salt));
@@ -347,7 +378,6 @@ export const cleanExpiredTokens = async () => {
 
 export const cleanOldGameSessions = async () => {
     try {
-        const suppressionDelay = 60 * 60 * 1000; // in ms 
         // Delete from gameprogress where the session is older than 1 hour
         const result = await sql`
             DELETE FROM game_progress
@@ -366,7 +396,78 @@ export const cleanOldGameSessions = async () => {
         if (resultSessions.count !== 0) {
             logger.info(`Cleaned up ${resultSessions.count} old game_sessions.`);
         }
-        // Delete from multisessions older than 1 hour
+
+        // Handle finished classic challenges: send emails and preserve challenge records
+        const finishedChallenges = await sql`
+            SELECT 
+                ms.id, 
+                ms.name, 
+                ms.start_date, 
+                ms.end_date, 
+                ms.atlas,
+                ms.creator_id,
+                COUNT(fs.id) as participant_count
+            FROM multi_sessions ms
+            LEFT JOIN finished_sessions fs ON fs.classic_challenge_id = ms.id
+            WHERE ms.is_classic_challenge = TRUE
+            AND ms.end_date < NOW()
+            GROUP BY ms.id, ms.name, ms.start_date, ms.end_date, ms.atlas, ms.creator_id
+        `;
+
+        for (const challenge of finishedChallenges) {
+            try {
+                // Send emails to participants who opted in
+                await sendChallengeResultsEmails(challenge.id);
+                logger.info(`Sent challenge results emails for finished challenge ${challenge.id} (${challenge.name})`);
+            } catch (emailError) {
+                logger.error(`Error sending emails for challenge ${challenge.id}:`, emailError);
+            }
+
+            // If no participants, create a metadata record to preserve the challenge trace
+            if (challenge.participant_count === 0) {
+                try {
+                    await sql`
+                        INSERT INTO finished_sessions (
+                            user_id,
+                            mode,
+                            atlas,
+                            score,
+                            duration,
+                            name,
+                            classic_challenge_id,
+                            classic_challenge_start_date,
+                            classic_challenge_end_date,
+                            quit_reason
+                        ) VALUES (
+                            NULL,
+                            'classic_challenge',
+                            ${challenge.atlas || 'unknown'},
+                            0,
+                            0,
+                            ${challenge.name},
+                            ${challenge.id},
+                            ${challenge.start_date},
+                            ${challenge.end_date},
+                            'no_participants'
+                        )
+                    `;
+                    logger.info(`Created metadata record for challenge ${challenge.id} with no participants`);
+                } catch (insertError) {
+                    logger.error(`Error creating metadata record for challenge ${challenge.id}:`, insertError);
+                }
+            }
+
+            try {
+                await sql`
+                    DELETE FROM multi_sessions WHERE id = ${challenge.id}
+                `;
+                logger.info(`Deleted multi_session record for challenge ${challenge.id}`);
+            } catch (deleteError) {
+                logger.error(`Error deleting multi_session record for challenge ${challenge.id}:`, deleteError);
+            }
+        }
+
+        // Delete from multisessions older than 1 hour (non-challenge sessions only)
         const resultMultiSessions = await sql`
             DELETE FROM multi_sessions
             WHERE created_at <= NOW() - INTERVAL '1 hour'

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import "./MultiplayerGameScreen.css"
 import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
+import ChallengeEmailOptIn from '../../components/ChallengeEmailOptIn';
 import { useSocket } from '../../context/SocketContext';
 import {  MultiplayerParametersType } from '../../types/types';
 import config from "../../../config.json"
@@ -936,6 +937,9 @@ const MultiPlayer = ({
                   >
                     {t("view_challenge_results") || "View Challenge Results"}
                   </a>
+                  <div style={{ marginTop: 12 }}>
+                    <ChallengeEmailOptIn challengeId={classicChallengeId} />
+                  </div>
                 </div>
               )}
             </>

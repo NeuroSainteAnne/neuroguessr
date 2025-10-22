@@ -56,6 +56,7 @@ backend/
     "mail_password": "",      // Email password
     "clientId": "",           // OAuth client ID
     "clientSecret": "",       // OAuth client secret
+    "refreshToken": "",       // OAuth refresh token
     "redirectPath": "",       // OAuth redirect path
     "scope": "https://mail.google.com/"
   },

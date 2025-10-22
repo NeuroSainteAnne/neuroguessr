@@ -171,6 +171,46 @@
   justify-content: center;
 }
 
+.email-optin-section {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.email-optin-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.email-optin-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.email-optin-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.loading-spinner-button {
+  animation: spin 1s linear infinite;
+  font-size: 1.2em;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .back-button,
 .join-button {
   display: inline-block;

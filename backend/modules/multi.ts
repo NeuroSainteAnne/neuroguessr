@@ -20,6 +20,7 @@ import { buildPublicLobbies, emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, 
   handleDestroySession, setupInactiveGameCheck, getClassicChallengeRankings, saveFinishedSessions} from "./multi_cleanup.ts";
 import { handleCreateClassicChallenge } from "./multi_classic_challenge.ts";
+import { logoString, sendEmail } from "./email.ts";
 
 // Atomic game update locks to prevent race conditions
 const gameStateLocks = new Map<string, boolean>();
@@ -2294,3 +2295,173 @@ async function handleClassicChallengeEnd(gameRef: MultiplayerGame) {
     });
   }
 }
+
+// Email opt-in for challenge participants
+export const challengeEmailOptIn = async (req: Request, res: Response) => {
+  try {
+    const { challengeId } = req.params;
+    const userId = (req as AuthenticatedRequest).user.id;
+
+    // Check if the user has a finished session for this challenge
+    const finishedSessionResult = await sql`
+      SELECT id FROM finished_sessions
+      WHERE user_id = ${userId} AND classic_challenge_id = ${challengeId}
+    `;
+
+    if (finishedSessionResult.length === 0) {
+      return res.status(404).send({ message: "You have not participated in this challenge" });
+    }
+
+    // Update the email opt-in flag
+    await sql`
+      UPDATE finished_sessions
+      SET send_classic_challenge_email = TRUE
+      WHERE user_id = ${userId} AND classic_challenge_id = ${challengeId}
+    `;
+
+    res.status(200).send({ message: "Email opt-in successful" });
+
+  } catch (error) {
+    logger.error("Error opting in for challenge email:", error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+};
+
+export const sendChallengeResultsEmails = async (challengeId: number) => {
+  try {
+    // Get challenge details
+    const challengeResult = await sql`
+      SELECT
+        ms.id,
+        ms.session_code,
+        ms.name,
+        ms.start_date,
+        ms.end_date,
+        u.username as creator_username
+      FROM multi_sessions ms
+      JOIN users u ON ms.creator_id = u.id
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+    `;
+
+    if (!challengeResult.length) {
+      logger.warn(`Challenge ${challengeId} not found for email sending`);
+      return;
+    }
+
+    const challenge = challengeResult[0];
+
+    // Get participants who opted in for emails
+    const participantsResult = await sql`
+      SELECT
+        fs.score,
+        fs.duration,
+        fs.correct,
+        fs.incorrect,
+        fs.attempts,
+        fs.avg_time_per_region,
+        fs.created_at as completion_date,
+        u.username,
+        u.email,
+        u.firstname,
+        u.lastname,
+        u.language,
+        ROW_NUMBER() OVER (ORDER BY fs.score DESC, fs.avg_time_per_region ASC) as ranking
+      FROM finished_sessions fs
+      JOIN users u ON fs.user_id = u.id
+      WHERE fs.classic_challenge_id = ${challengeId}
+        AND fs.send_classic_challenge_email = TRUE
+      ORDER BY fs.score DESC, fs.duration ASC
+    `;
+
+    if (participantsResult.length === 0) {
+      logger.info(`No opt-in participants for challenge ${challengeId}`);
+      return;
+    }
+
+    // Import email function
+    const backendI18n = (await import("./backend-i18n.ts")).default;
+
+    // Send email to each participant
+    for (const participant of participantsResult) {
+      const lang = participant.language || 'fr';
+
+      const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US');
+      };
+
+      const subject = backendI18n.t('email_subject', {
+        lng: lang,
+        challengeName: challenge.name || backendI18n.t('classic_challenge', { lng: lang })
+      });
+
+      const message = `
+        <head>
+            <style>
+                body { background-color:#363636; width:100%; font-family: Open Sans,system-ui,Arial,Helvetica,sans-serif; color: #d9dddc; text-align:left; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .logo { width: 64px; height: 64px; }
+                .title { font-size: 32px; margin: 15px 0; color: #ffffff; }
+                .challenge-info { background-color: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .user-results { background-color: #1a1a1a; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .result-item { margin-bottom: 10px; }
+                .ranking { font-size: 24px; font-weight: bold; color: #4CAF50; }
+                .footer { text-align: center; font-size: 14px; color: #888; margin-top: 30px; }
+                .label { font-weight: bold; color: #ffffff; }
+                .value { color: #d9dddc; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <a href="https://www.neuroguessr.org"><img src="cid:logo@neuroguessr" class="logo" alt="NeuroGuessr Logo"></a>
+                    <h1 class="title"><a href="https://www.neuroguessr.org" style="color: #ffffff; text-decoration: none;">NeuroGuessr</a></h1>
+                </div>
+
+                <div class="challenge-info">
+                    <h2>${backendI18n.t('email_challenge_results', { lng: lang })}</h2>
+                    <p><span class="label">${backendI18n.t('email_challenge_name', { lng: lang })}:</span> <span class="value">${challenge.name || backendI18n.t('classic_challenge', { lng: lang })}</span></p>
+                    <p><span class="label">${backendI18n.t('created_by', { lng: lang })}:</span> <span class="value">${challenge.creator_username}</span></p>
+                    <p><span class="label">${backendI18n.t('email_start_date', { lng: lang })}:</span> <span class="value">${formatDate(challenge.start_date)}</span></p>
+                    <p><span class="label">${backendI18n.t('email_end_date', { lng: lang })}:</span> <span class="value">${formatDate(challenge.end_date)}</span></p>
+                </div>
+
+                <div class="user-results">
+                    <h3>${backendI18n.t('email_your_participation', { lng: lang })}</h3>
+                    <div class="result-item">
+                        <span class="label">${backendI18n.t('email_your_ranking', { lng: lang })}:</span>
+                        <span class="ranking">
+                            ${participant.ranking === 1 ? '🏆 ' : participant.ranking === 2 ? '🥈 ' : participant.ranking === 3 ? '🥉 ' : ''}
+                            #${participant.ranking}
+                        </span>
+                    </div>
+                    <div class="result-item">
+                        <span class="label">${backendI18n.t('email_your_score', { lng: lang })}:</span> <span class="value">${participant.score}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="label">${backendI18n.t('email_time_per_region', { lng: lang })}:</span> <span class="value">${Math.round(participant.avg_time_per_region / 100) / 10}s</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="label">${backendI18n.t('email_completed_at', { lng: lang })}:</span> <span class="value">${formatDate(participant.completion_date)}</span>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p>${backendI18n.t('email_footer', { lng: lang })}</p>
+                </div>
+            </div>
+        </body>
+      `;
+
+      try {
+        await sendEmail(participant.email, subject, message);
+        logger.info(`Challenge results email sent to ${participant.email} for challenge ${challengeId}`);
+      } catch (emailError) {
+        logger.error(`Failed to send challenge results email to ${participant.email}:`, emailError);
+      }
+    }
+
+  } catch (error) {
+    logger.error(`Error sending challenge results emails for challenge ${challengeId}:`, error);
+  }
+};
