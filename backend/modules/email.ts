@@ -12,7 +12,6 @@ import configJson from '../config.json' with { type: "json" };
 import path from "path";
 import fs from "fs";
 import { logger } from "./logging.ts";
-import stub from 'nodemailer-stub-transport';
 const config: Config = configJson;
 
 // Read and encode the image as base64
@@ -57,11 +56,6 @@ export const sendEmail = async (
           }
         ]
       }
-      var transporter2 = nodemailer.createTransport(stub());
-
-      transporter2.sendMail(emailMessage, function(error, info) {
-          console.log(info.response.toString());
-      });
       await transporter.sendMail(
         emailMessage
       );
