@@ -18,8 +18,9 @@
 
 .canvas-and-info-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     width: 100%;
+    height :100%;
     position: relative;
 }
 .canvas-and-scroll-container {
