@@ -135,7 +135,7 @@ export function Page() {
                   {t('no_challenges') || 'No challenges available'}
                 </div>
               ) : (
-                <div className="challenges-grid">
+                <div className="challenges-flex">
                   {classicChallenges.map((challenge) => (
                     <SingleChallenge
                       key={challenge.id}
