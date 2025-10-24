@@ -11,6 +11,7 @@ export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
   const [realtimeChallenges, setRealtimeChallenges] = useState<RTChallenge[]>([]);
   const [classicChallenges, setClassicChallenges] = useState<ClassicChallenge[]>([]);
+  const [pastChallenges, setPastChallenges] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,24 @@ export function Page() {
       } else {
         consoleLog("verbose", "Failed to fetch classic challenges");
         setClassicChallenges([]);
+      }
+
+      // Fetch past challenges
+      const pcResponse = await fetch('/api/past-challenges', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isLoggedIn && authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        }
+      });
+
+      if (pcResponse.ok) {
+        const pcData = await pcResponse.json();
+        consoleLog("verbose", "Fetched past challenges");
+        setPastChallenges(pcData.challenges || []);
+      } else {
+        consoleLog("verbose", "Failed to fetch past challenges");
+        setPastChallenges([]);
       }
 
     } catch (err) {
@@ -157,6 +176,35 @@ export function Page() {
                 </div>
               )}
             </section>
+
+            {/* Past Challenges */}
+            {isLoggedIn && (<section className="challenges-section">
+              <h2>{t('past_challenges') || 'Past Challenges'}</h2>
+              {pastChallenges.length === 0 ? (
+                <div className="no-challenges">
+                  {t('no_past_challenges') || 'No past challenges available'}
+                </div>
+              ) : (
+                <div className="challenges-grid">
+                  {pastChallenges.map((challenge) => (
+                    <div key={challenge.id} className="past-challenge-card">
+                      <h3>{challenge.name}</h3>
+                      <p><strong>{t('start_date') || 'Start Date'}:</strong> {new Date(challenge.startDate).toLocaleString()}</p>
+                      <p><strong>{t('end_date') || 'End Date'}:</strong> {new Date(challenge.endDate).toLocaleString()}</p>
+                      {challenge.userScore !== null && (
+                        <>
+                          <p><strong>{t('your_score') || 'Your Score'}:</strong> {parseInt(challenge.userScore)}{challenge.theoreticalMaximumScore ? ` / ${parseInt(challenge.theoreticalMaximumScore)}` : ''}</p>
+                          <p><strong>{t('your_ranking') || 'Your Ranking'}:</strong> {challenge.userRanking == 1 ? "🏆 " : challenge.userRanking == 2 ? "🥈 " : challenge.userRanking == 3 ? "🥉 " : ""}#{challenge.userRanking} / {challenge.participantCount}</p>
+                        </>
+                      )}
+                      <a href={`/challenge-results/${challenge.id}`} className="view-results-btn">
+                        {t('view_results') || 'View Results'}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>)}
           </>
         )}
 

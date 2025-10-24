@@ -17,7 +17,7 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge, getChallengeResults, challengeEmailOptIn } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge, getChallengeResults, challengeEmailOptIn, getPastChallenges } from "./modules/multi.ts";
 import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
 import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
 import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge, checkClassicChallengeCompletion } from "modules/multi_classic_challenge.ts";
@@ -124,6 +124,9 @@ app.post('/api/multi/can-join-classic-challenge', authenticateToken, (req, res, 
 })
 app.get('/api/classic-challenges/:sessionCode/completion', authenticateToken, (req, res, next) => {
     Promise.resolve(checkClassicChallengeCompletion(req, res)).catch(next);
+})
+app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
+    Promise.resolve(getPastChallenges(req, res)).catch(next);
 })
 app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
     Promise.resolve(deleteClassicChallenge(req, res)).catch(next);

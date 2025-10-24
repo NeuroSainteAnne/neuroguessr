@@ -2242,6 +2242,90 @@ export const getChallengeResults = async (req: Request, res: Response) => {
   }
 };
 
+export const getPastChallenges = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id;
+    const isAdmin = (req as AuthenticatedRequest).user?.admin;
+
+    let challenges;
+    if (isAdmin) {
+      // For admins, get all past classic challenges from finished_sessions with their personal score and ranking
+      challenges = await sql`
+        SELECT DISTINCT
+          fs.classic_challenge_id as id,
+          fs.name,
+          fs.classic_challenge_start_date as start_date,
+          fs.classic_challenge_end_date as end_date,
+          user_participation.score as user_score,
+          user_participation.ranking as user_ranking,
+          participant_counts.participant_count,
+          MAX(fs.theoretical_maximum_score) as theoretical_maximum_score
+        FROM finished_sessions fs
+        LEFT JOIN (
+          SELECT
+            classic_challenge_id,
+            score,
+            ROW_NUMBER() OVER (PARTITION BY classic_challenge_id ORDER BY score DESC, avg_time_per_region ASC) as ranking
+          FROM finished_sessions
+          WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
+        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id
+        LEFT JOIN (
+          SELECT
+            classic_challenge_id,
+            COUNT(DISTINCT user_id) as participant_count
+          FROM finished_sessions
+          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
+          GROUP BY classic_challenge_id
+        ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
+        WHERE fs.classic_challenge_id IS NOT NULL
+        GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
+        ORDER BY fs.classic_challenge_end_date DESC
+      `;
+    } else if (userId) {
+      // For regular users, get challenges they participated in with their score and ranking
+      challenges = await sql`
+        SELECT DISTINCT
+          fs.classic_challenge_id as id,
+          fs.name,
+          fs.classic_challenge_start_date as start_date,
+          fs.classic_challenge_end_date as end_date,
+          user_participation.score as user_score,
+          user_participation.ranking as user_ranking,
+          participant_counts.participant_count,
+          MAX(fs.theoretical_maximum_score) as theoretical_maximum_score
+        FROM finished_sessions fs
+        JOIN (
+          SELECT
+            classic_challenge_id,
+            score,
+            ROW_NUMBER() OVER (PARTITION BY classic_challenge_id ORDER BY score DESC, avg_time_per_region ASC) as ranking
+          FROM finished_sessions
+          WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
+        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id
+        LEFT JOIN (
+          SELECT
+            classic_challenge_id,
+            COUNT(DISTINCT user_id) as participant_count
+          FROM finished_sessions
+          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
+          GROUP BY classic_challenge_id
+        ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
+        WHERE fs.user_id = ${userId} AND fs.classic_challenge_id IS NOT NULL
+        GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
+        ORDER BY fs.classic_challenge_end_date DESC
+      `;
+    } else {
+      // Not logged in, no past challenges
+      return res.status(200).send({ challenges: [] });
+    }
+
+    res.status(200).send({ challenges });
+  } catch (error) {
+    logger.error("Error getting past challenges:", error);
+    res.status(500).send({ message: "Internal Server Error" });
+  }
+};
+
 setupInactiveGameCheck();
 
 async function handleClassicChallengeEnd(gameRef: MultiplayerGame) {

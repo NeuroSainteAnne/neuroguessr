@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import './ChallengeResults.css';
 import { formatTime } from '../../utils/formatters';
 import ChallengeEmailOptIn from '../../components/ChallengeEmailOptIn';
+import SearchBar from '../../components/SearchBar';
+import GameSelector from '../welcome/GameSelector';
 
 interface Challenge {
   id: number;
@@ -150,102 +152,107 @@ export function Page() {
 
   // Find current user's participation from participants array
   const currentUserParticipation = participants.find(p => p.username === userUsername) || null;
-  
+  const title = t("challenge_results_title", { challengeName: challenge.name }) || 'Challenge Results';
   return (
-    <div className="challenge-results-page">
-      <div className="challenge-header">
-        <h1>{challenge.name || t("classic_challenge")}</h1>
-        <div className="challenge-results-info">
-          <div className="info-item">
-            <strong>{t("created_by")}:</strong> {challenge.creator}
-          </div>
-          <div className="info-item">
-            <strong>{t("status")}:</strong>
-            <span className={`status status-${state}`}>
-              {state === 'pending' && `${t("not_started_yet")} ${timeDisplay ? `(${timeDisplay} ${t("until_start")})` : ''}`}
-              {state === 'started' && `${t("in_progress")} ${timeDisplay ? `(${timeDisplay} ${t("remaining")})` : ''}`}
-              {state === 'finished' && t("completed")}
-            </span>
-          </div>
-          <div className="info-item">
-            <strong>{t("start")}:</strong> {formatDate(challenge.startDate)}
-          </div>
-          <div className="info-item">
-            <strong>{t("end")}:</strong> {formatDate(challenge.endDate)}
-          </div>
+    <>
+      <title>{title}</title>
+      <SearchBar />
+      <GameSelector />
+        <div className="challenge-results-page">
+        <div className="challenge-header">
+            <h1>{challenge.name || t("classic_challenge")}</h1>
+            <div className="challenge-results-info">
+            <div className="info-item">
+                <strong>{t("created_by")}:</strong> {challenge.creator}
+            </div>
+            <div className="info-item">
+                <strong>{t("status")}:</strong>
+                <span className={`status status-${state}`}>
+                {state === 'pending' && `${t("not_started_yet")} ${timeDisplay ? `(${timeDisplay} ${t("until_start")})` : ''}`}
+                {state === 'started' && `${t("in_progress")} ${timeDisplay ? `(${timeDisplay} ${t("remaining")})` : ''}`}
+                {state === 'finished' && t("completed")}
+                </span>
+            </div>
+            <div className="info-item">
+                <strong>{t("start")}:</strong> {formatDate(challenge.startDate)}
+            </div>
+            <div className="info-item">
+                <strong>{t("end")}:</strong> {formatDate(challenge.endDate)}
+            </div>
+            </div>
         </div>
-      </div>
 
-      {currentUserParticipation && (
-        <div className="user-participation">
-          <h2>{t("your_participation")}</h2>
-          <div className="participation-details">
-            <div className="detail-item">
-              <strong>{t("ranking")}:</strong>
-              {currentUserParticipation.ranking == 1 ? "🏆 " : ""}
-              {currentUserParticipation.ranking == 2 ? "🥈 " : ""}
-              {currentUserParticipation.ranking == 3 ? "🥉 " : ""}
-              #{currentUserParticipation.ranking} / {participants.length}
-            </div>
-            <div className="detail-item">
-              <strong>{t("score")}:</strong> {currentUserParticipation.score}
-            </div>
-            <div className="detail-item">
-              <strong>{t("time_per_region")}:</strong> {Math.round(currentUserParticipation.avgTimePerRegion/100)/10}
-            </div>
-            <div className="detail-item">
-              <strong>{t("completed_at")}:</strong> {formatDate(currentUserParticipation.completionDate)}
-            </div>
-          </div>
-          
-          {currentUserParticipation && state !== 'finished' && (
-            <div className="email-optin-section">
-              <ChallengeEmailOptIn challengeId={challenge.id} />
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="participants-section">
-        <h2>{t("participants")} ({participants.length})</h2>
-        {participants.length === 0 ? (
-          <p className="no-participants">
-            {state === 'pending' && t("no_participants_pending")}
-            {state === 'started' && t("no_participants_started")}
-            {state === 'finished' && t("no_participants_finished")}
-          </p>
-        ) : (
-          <div className="participants-table">
-            <div className="table-header">
-              <div className="col-rank">#</div>
-              <div className="col-name">{t("name_header")}</div>
-              <div className="col-score">{t("score")}</div>
-              <div className="col-tpr">{t("time_per_region")}</div>
-            </div>
-            {participants.map((participant) => (
-              <div 
-                key={participant.userId} 
-                className={`table-row ${participant.username === userUsername ? 'current-user' : ''}`}
-              >
-                <div className="col-rank">#{participant.ranking}</div>
-                <div className="col-name">
-                  {participant.username}
+        {currentUserParticipation && (
+            <div className="user-participation">
+            <h2>{t("your_participation")}</h2>
+            <div className="participation-details">
+                <div className="detail-item">
+                <strong>{t("ranking")}:</strong>
+                {currentUserParticipation.ranking == 1 ? "🏆 " : ""}
+                {currentUserParticipation.ranking == 2 ? "🥈 " : ""}
+                {currentUserParticipation.ranking == 3 ? "🥉 " : ""}
+                #{currentUserParticipation.ranking} / {participants.length}
                 </div>
-                <div className="col-score">{participant.score}</div>
-                <div className="col-tpr">{Math.round(participant.avgTimePerRegion/100)/10}</div>
-              </div>
-            ))}
-          </div>
+                <div className="detail-item">
+                <strong>{t("score")}:</strong> {currentUserParticipation.score}
+                </div>
+                <div className="detail-item">
+                <strong>{t("time_per_region")}:</strong> {Math.round(currentUserParticipation.avgTimePerRegion/100)/10}
+                </div>
+                <div className="detail-item">
+                <strong>{t("completed_at")}:</strong> {formatDate(currentUserParticipation.completionDate)}
+                </div>
+            </div>
+            
+            {currentUserParticipation && state !== 'finished' && (
+                <div className="email-optin-section">
+                <ChallengeEmailOptIn challengeId={challenge.id} />
+                </div>
+            )}
+            </div>
         )}
-      </div>
 
-      <div className="actions">
-        {state !== 'finished' && sessionCode && !currentUserParticipation && (
-          <a href={`/multiplayer/${sessionCode}`} className="join-button">
-            {state === 'pending' ? t("view_challenge") : t("join_challenge")}
-          </a>
-        )}
-      </div>
-    </div>
+        <div className="participants-section">
+            <h2>{t("participants")} ({participants.length})</h2>
+            {participants.length === 0 ? (
+            <p className="no-participants">
+                {state === 'pending' && t("no_participants_pending")}
+                {state === 'started' && t("no_participants_started")}
+                {state === 'finished' && t("no_participants_finished")}
+            </p>
+            ) : (
+            <div className="participants-table">
+                <div className="table-header">
+                <div className="col-rank">#</div>
+                <div className="col-name">{t("name_header")}</div>
+                <div className="col-score">{t("score")}</div>
+                <div className="col-tpr">{t("time_per_region")}</div>
+                </div>
+                {participants.map((participant) => (
+                <div 
+                    key={participant.userId} 
+                    className={`table-row ${participant.username === userUsername ? 'current-user' : ''}`}
+                >
+                    <div className="col-rank">#{participant.ranking}</div>
+                    <div className="col-name">
+                    {participant.username}
+                    </div>
+                    <div className="col-score">{participant.score}</div>
+                    <div className="col-tpr">{Math.round(participant.avgTimePerRegion/100)/10}</div>
+                </div>
+                ))}
+            </div>
+            )}
+        </div>
+
+        <div className="actions">
+            {state !== 'finished' && sessionCode && !currentUserParticipation && (
+            <a href={`/multiplayer/${sessionCode}`} className="join-button">
+                {state === 'pending' ? t("view_challenge") : t("join_challenge")}
+            </a>
+            )}
+        </div>
+        </div>
+    </>
   );
 }

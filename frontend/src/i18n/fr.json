@@ -443,6 +443,10 @@
   "all_challenges": "Tous les défis",
   "classic_challenges": "Défis",
   "realtime_challenges": "Défis en temps réel",
+  "past_challenges": "Défis passés",
+  "no_past_challenges": "Aucun défi passé disponible",
+  "view_results": "Voir les résultats",
+  "your_ranking": "Votre classement",
   "no_challenges": "Aucun défi disponible",
   "error_loading_challenges": "Échec du chargement des défis",
   "loading_challenges": "Chargement des défis...",
@@ -466,6 +470,7 @@
   "name": "Nom",
 
   "*****CHALLENGE RESULTS*****":"",
+  "challenge_results_title": "NeuroGuessr - Résultats du Défi",
   "classic_challenge": "Challenge Classique",
   "status": "Statut",
   "not_started_yet": "Pas encore commencé",

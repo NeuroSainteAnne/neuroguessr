@@ -442,6 +442,10 @@
   "all_challenges": "All Real-time Challenges",
   "classic_challenges": "Challenges",
   "realtime_challenges": "Real-time Challenges",
+  "past_challenges": "Past Challenges",
+  "no_past_challenges": "No past challenges available",
+  "view_results": "View Results",
+  "your_ranking": "Your Ranking",
   "no_challenges": "No challenges available",
   "error_loading_challenges": "Failed to load real-time challenges",
   "loading_challenges": "Loading challenges...",
@@ -465,6 +469,7 @@
   "name": "Name",
 
   "*****CHALLENGE RESULTS*****":"",
+  "challenge_results_title": "NeuroGuessr - Challenge Results",
   "classic_challenge": "Classic Challenge",
   "status": "Status",
   "not_started_yet": "Not started yet",
