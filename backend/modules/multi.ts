@@ -2264,11 +2264,12 @@ export const getPastChallenges = async (req: Request, res: Response) => {
         LEFT JOIN (
           SELECT
             classic_challenge_id,
+            user_id,
             score,
             ROW_NUMBER() OVER (PARTITION BY classic_challenge_id ORDER BY score DESC, avg_time_per_region ASC) as ranking
           FROM finished_sessions
-          WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
-        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id
+          WHERE classic_challenge_id IS NOT NULL
+        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
             classic_challenge_id,
@@ -2297,11 +2298,12 @@ export const getPastChallenges = async (req: Request, res: Response) => {
         JOIN (
           SELECT
             classic_challenge_id,
+            user_id,
             score,
             ROW_NUMBER() OVER (PARTITION BY classic_challenge_id ORDER BY score DESC, avg_time_per_region ASC) as ranking
           FROM finished_sessions
-          WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
-        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id
+          WHERE classic_challenge_id IS NOT NULL
+        ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
             classic_challenge_id,
