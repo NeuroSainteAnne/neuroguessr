@@ -1,5 +1,7 @@
 .canvas-container{
     width: 100%;
+    grid-column: 2 / span 2;
+    grid-row: 1;
     height: calc(100% - 110px);
     overflow: hidden;
     box-sizing: border-box;
@@ -16,21 +18,27 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.canvas-and-info-container {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    height :100%;
-    position: relative;
-}
 .canvas-and-scroll-container {
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    align-content: center;
+    grid-template-columns: min-content 1fr 1fr;
+    grid-template-rows: 1fr 60px;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
     position: relative;
+}
+
+.button-container {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+    max-height: 60px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    z-index: 10;
+    justify-content: center;
 }
 
 
@@ -63,25 +71,10 @@
 
 
 @media (max-width: 768px) {
-    .canvas-and-info-container {
-        flex-direction: column; /* Stack elements vertically */
-        align-items: center; /* Center elements horizontally */
-        justify-content: center; /* Center elements vertically */
+    .canvas-and-scroll-container {
+        display: grid;
+        grid-template-columns: min-content 1fr 1fr 50px;
     }
-}
-
-/* Styles for Buttons Below Canvas (viewer page) - Keep existing */
-.button-container {
-    /*position: absolute;
-    bottom: 2vh;
-    left: 50%;
-    transform: translateX(-50%);*/
-    margin-top: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    z-index: 10;
-    justify-content: center;
 }
 
 /* Guess and Return Button - Keep existing */
@@ -614,6 +607,8 @@
 
 /* Mobile view styles */
 .mobile-controls {
+    grid-column: 4;
+    grid-row: 1;
   position: relative;
   display: flex;
   flex-direction: column;

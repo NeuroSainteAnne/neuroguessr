@@ -24,7 +24,6 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
     return (
         <>
             <div className='canvas-and-scroll-container'>
-                <div className='canvas-and-info-container'>
                     {hasEnded && (gameMode == "time-attack" || gameMode == "streak" || gameMode == "multiplayer") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
                         highlightPastRegion={highlightWrapper} />}
                     <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (isGameRunning && isConnected) || hasEnded)?"block":"none")}}>
@@ -43,7 +42,27 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                             {alternateContent}
                         </div>
                     )}
-                </div>
+                    {!isLoading && <div className="button-container">
+                        {gameMode !== "multiplayer" && <button
+                            data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
+                            className="home-button" onClick={() => { navigate("/welcome") }}>
+                            <i className="fas fa-home"></i>
+                        </button>}
+                        {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
+                            data-umami-event="recolorize button"
+                            onClick={handleRecolorization}>{t("restore_color")}</button>}
+                        {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && <button className="guess-button" ref={guessButtonRef}
+                            data-umami-event="guess button" data-umami-event-guesssource={gameMode}
+                            onClick={validateGuessHandler}>
+                            <span className="confirm-text">{t("confirm_guess")}</span>
+                            {!isMobileView && <span className="space-text">{t("space_key")}</span>}</button>}
+                        {hasEnded && gameMode !== "multiplayer" &&
+                            <button className="restart-button"
+                                data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
+                                onClick={() => { startGameHandler() }}>
+                                <i className="fas fa-sync-alt"></i>
+                            </button>}
+                    </div>}
                 {isMobileView && (
                     <div className="mobile-controls">
                         {/* Custom scroll bar */}
@@ -86,27 +105,6 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                     </div>
                 )}
             </div>
-            {!isLoading && <div className="button-container">
-                {gameMode !== "multiplayer" && <button
-                    data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
-                    className="home-button" onClick={() => { navigate("/welcome") }}>
-                    <i className="fas fa-home"></i>
-                </button>}
-                {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
-                    data-umami-event="recolorize button"
-                    onClick={handleRecolorization}>{t("restore_color")}</button>}
-                {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && <button className="guess-button" ref={guessButtonRef}
-                    data-umami-event="guess button" data-umami-event-guesssource={gameMode}
-                    onClick={validateGuessHandler}>
-                    <span className="confirm-text">{t("confirm_guess")}</span>
-                    <span className="space-text">{t("space_key")}</span></button>}
-                {hasEnded && gameMode !== "multiplayer" &&
-                    <button className="restart-button"
-                        data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
-                        onClick={() => { startGameHandler() }}>
-                        <i className="fas fa-sync-alt"></i>
-                    </button>}
-            </div>}
         </>
     )
 }
