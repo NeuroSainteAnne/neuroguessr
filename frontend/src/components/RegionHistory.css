@@ -1,5 +1,7 @@
 /* Region Summary Styles */
 .region-summary {
+  grid-column: 1;
+  grid-row: 2;
   margin: 20px;
   max-height: calc(100% - 40px);
   height: calc(100% - 40px);
@@ -12,6 +14,8 @@
 
 @media (max-width: 700px) {
     .region-summary {
+        grid-column: 2 / span 2;
+        grid-row: 1;
         height: auto;
         flex-direction: column; /* Stack elements vertically */
         align-items: center; /* Center elements horizontally */

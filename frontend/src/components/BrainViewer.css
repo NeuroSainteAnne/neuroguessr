@@ -1,13 +1,15 @@
 .canvas-container{
     width: 100%;
     grid-column: 2 / span 2;
-    grid-row: 1;
+    grid-row: 2;
     height: calc(100% - 110px);
     overflow: hidden;
     box-sizing: border-box;
 }
 
 .alternate-content-container {
+    grid-column: 2 / span 2;
+    grid-row: 2;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -22,7 +24,7 @@
     display: grid;
     align-content: center;
     grid-template-columns: min-content 1fr 1fr;
-    grid-template-rows: 1fr 60px;
+    grid-template-rows: min-content 1fr 60px;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -32,7 +34,7 @@
 
 .button-container {
     grid-column: 2 / span 2;
-    grid-row: 2;
+    grid-row: 3;
     max-height: 60px;
     display: flex;
     flex-wrap: wrap;
@@ -608,7 +610,7 @@
 /* Mobile view styles */
 .mobile-controls {
     grid-column: 4;
-    grid-row: 1;
+    grid-row: 2;
   position: relative;
   display: flex;
   flex-direction: column;
