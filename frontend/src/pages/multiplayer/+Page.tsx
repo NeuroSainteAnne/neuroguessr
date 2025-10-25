@@ -89,6 +89,7 @@ const MultiPlayer = ({
   const [isClassicChallengeFromCheck, setIsClassicChallengeFromCheck] = useState<boolean | null>(null);
   const [showAuthRequired, setShowAuthRequired] = useState<boolean>(false);
   const [isCheckingClassicChallenge, setIsCheckingClassicChallenge] = useState<boolean>(true);
+  const joiningInProgressRef = useRef<boolean>(false);
 
   const handleConnect = () => {
     setError(null);
@@ -152,9 +153,10 @@ const MultiPlayer = ({
   }, [anonUsername])
 
   const joinLobby = async (inputCode: string) => {
-    if (isConnected) return;
+    if (isConnected || joiningInProgressRef.current) return;
     if (!isLoggedIn && !config.activateAnonymousMode) return;
     
+    joiningInProgressRef.current = true;
     consoleLog("verbose", `Attempting to join multiplayer lobby: ${inputCode} as ${isLoggedIn ? 'logged-in user' : 'anonymous'}`);
 
     setError(null);
@@ -179,13 +181,16 @@ const MultiPlayer = ({
     socket.on('connect_error', (err: any) => {
       consoleLog("verbose", `Multiplayer connection error: ${err.message}`);
       setError(`Connection error: ${err.message}`);
+      joiningInProgressRef.current = false;
       cleanupSocket();
     });
     socket.on('error', (data: any) => {
       setError(data.message);
+      joiningInProgressRef.current = false;
     });
     socket.on('fatal-error', (data: any) => {
       setError(data.message);
+      joiningInProgressRef.current = false;
       cleanupSocket();
     });
     socket.on('anon-token', (data: any) => {
@@ -194,6 +199,7 @@ const MultiPlayer = ({
     socket.on('lobby-users', (data: any) => {
       setLobbyUsers(data.users);
       setIsConnected(true);
+      joiningInProgressRef.current = false;
       if(!isLoggedIn){
         setIsAnonymous(true)
       }
@@ -206,6 +212,7 @@ const MultiPlayer = ({
       setClassicChallengeId(data.challengeId); // Store the challenge ID
       setLobbyUsers([isLoggedIn ? userUsername : anonUsername]); // Single user for classic challenges
       setIsConnected(true);
+      joiningInProgressRef.current = false;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       // Store the user-specific session code for classic challenges
       if (data.userSessionCode) {
@@ -234,6 +241,7 @@ const MultiPlayer = ({
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
     });
     socket.on('game-command', (data: any) => {
+      console.log("received command", Date.now())
       if (data.command.action === 'countdown') {
         // Handle countdown command
         const duration = data.command.duration || 5; // Default to 5 seconds

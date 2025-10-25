@@ -1303,7 +1303,7 @@ function initUserInLobby(socket: Socket, userName: string, gameRef: MultiplayerG
   if (gameRef.hasStarted) {
     socket.emit('game-start');
     
-    if (gameRef.commands && gameRef.currentCommandIndex < gameRef.commands.length) {
+    if (!rejoiningMode && gameRef.commands && gameRef.currentCommandIndex < gameRef.commands.length) {
       const currentCommand = gameRef.commands[gameRef.currentCommandIndex];
       
       // Adjust duration for countdown commands
