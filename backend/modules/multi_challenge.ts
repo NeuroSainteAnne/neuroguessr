@@ -315,6 +315,7 @@ export const handleSaveAsRealtimeChallenge = async ({ sessionCode, sessionToken,
 
 export function extractPersistentState(gameRef: MultiplayerGame): PersistentGameState {
   return {
+    id: gameRef.id,
     sessionCode: gameRef.sessionCode,
     originalSessionCode: gameRef.sessionCode,
     hasStarted: gameRef.hasStarted,

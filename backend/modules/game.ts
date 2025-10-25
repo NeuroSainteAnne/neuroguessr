@@ -13,6 +13,7 @@ import configJson from '../config.json' with { type: "json" };
 import crypto from 'crypto';
 import { logger } from "./logging.ts";
 import { getDistance } from "./utils_compute.ts";
+import { userInfo } from "os";
 const config: Config = configJson;
 
 const TOTAL_REGIONS_TIME_ATTACK = 18;
@@ -371,6 +372,14 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
         let minDistance = Infinity; 
         let nearestCenter : number[] | undefined = undefined; 
         let nearestBoundary : number[] | undefined = undefined; 
+
+        if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
+            const {distance, center, boundary} = getDistance(regionCenters[session.atlas][regionId], coordinates, session.atlas, regionId);
+            minDistance = distance
+            nearestCenter = center
+            nearestBoundary = boundary
+        }
+
         if (session.mode == "streak") {
             if (isCorrect) {
                 scoreIncrement = 1;
@@ -383,12 +392,6 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 }
             } else {
                 newStreak = 0; // Reset streak on incorrect guess
-                if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const {distance, center, boundary} = getDistance(regionCenters[session.atlas][regionId], coordinates, session.atlas, regionId);
-                    minDistance = distance
-                    nearestCenter = center
-                    nearestBoundary = boundary
-                }
                 // Check if the error is within the allowed distance
                 if (minDistance <= MAX_STREAK_DISTANCE) {
                     // Increment consecutive errors
@@ -402,17 +405,11 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
             if (isCorrect) {
                 scoreIncrement = MAX_POINTS_PER_REGION;
             } else {
-                if (regionCenters[session.atlas] && regionCenters[session.atlas][regionId]) {
-                    const {distance, center, boundary} = getDistance(regionCenters[session.atlas][regionId], coordinates, session.atlas, regionId);
-                    minDistance = distance
-                    nearestCenter = center
-                    nearestBoundary = boundary
-                    // Calculate score based on distance
-                    if (minDistance <= MAX_PENALTY_DISTANCE) {
-                        scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
-                    } else {
-                        scoreIncrement = 0; // No points for too far away
-                    }
+                // Calculate score based on distance
+                if (minDistance <= MAX_PENALTY_DISTANCE) {
+                    scoreIncrement = Math.floor((1 - (minDistance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
+                } else {
+                    scoreIncrement = 0; // No points for too far away
                 }
             }
         }
@@ -441,6 +438,62 @@ export const validateRegion = async (req: ValidateRegionRequest, res: Response):
                 score_increment = ${scoreIncrement},
                 attempts = ${attempts}
             WHERE id = ${activeProgress.id}
+        `;
+
+        await sql`
+            INSERT INTO individual_clicks (
+                is_authenticated,
+                user_id,
+                singleplayer_session_id,
+                singleplayer_mode,
+                command_index,
+                atlas,
+                blind_mode,
+                region_id,
+                clicked_x,
+                clicked_y,
+                clicked_z,
+                clicked_x_mm,
+                clicked_y_mm,
+                clicked_z_mm,
+                nearest_center_x_mm,
+                nearest_center_y_mm,
+                nearest_center_z_mm,
+                boundary_point_x_mm,
+                boundary_point_y_mm,
+                boundary_point_z_mm,
+                distance_to_target,
+                time_taken,
+                is_correct,
+                score_increment,
+                attempts
+            ) VALUES (
+                TRUE,
+                ${session.user_id},
+                ${sessionId},
+                ${session.mode},
+                0, 
+                ${session.atlas},
+                ${session.blind_mode},
+                ${regionId},
+                ${x},
+                ${y},
+                ${z},
+                ${coordinates.mm[0] ?? null},
+                ${coordinates.mm[1] ?? null},
+                ${coordinates.mm[2] ?? null},
+                ${nearestCenter ? nearestCenter[0] : null},
+                ${nearestCenter ? nearestCenter[1] : null},
+                ${nearestCenter ? nearestCenter[2] : null},
+                ${nearestBoundary ? nearestBoundary[0] : null},
+                ${nearestBoundary ? nearestBoundary[1] : null},
+                ${nearestBoundary ? nearestBoundary[2] : null},
+                ${minDistance === Infinity ? null : minDistance},
+                ${timeTaken},
+                ${isCorrect},
+                ${scoreIncrement},
+                ${attempts}
+            )
         `;
 
         let endgame = false;

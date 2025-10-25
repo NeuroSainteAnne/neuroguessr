@@ -121,6 +121,40 @@ export const database_init = async () => {
             await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`;
 
+            await sql`
+                CREATE TABLE IF NOT EXISTS individual_clicks (
+                    id SERIAL PRIMARY KEY,
+                    is_authenticated BOOLEAN NOT NULL,
+                    user_id INTEGER,
+                    singleplayer_session_id INTEGER,
+                    singleplayer_mode TEXT DEFAULT NULL,
+                    command_index INTEGER DEFAULT NULL,
+                    multiplayer_session_id INTEGER DEFAULT NULL,
+                    multiplayer_is_challenge BOOLEAN DEFAULT FALSE,
+                    multiplayer_is_classic_challenge BOOLEAN DEFAULT FALSE,
+                    multiplayer_classic_challenge_id INTEGER DEFAULT NULL,
+                    atlas TEXT NOT NULL,
+                    blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
+                    region_id INTEGER NOT NULL,
+                    clicked_x INTEGER DEFAULT NULL,
+                    clicked_y INTEGER DEFAULT NULL,
+                    clicked_z INTEGER DEFAULT NULL,
+                    clicked_x_mm DOUBLE PRECISION DEFAULT NULL,
+                    clicked_y_mm DOUBLE PRECISION DEFAULT NULL,
+                    clicked_z_mm DOUBLE PRECISION DEFAULT NULL,
+                    distance_to_target DOUBLE PRECISION DEFAULT NULL,
+                    nearest_center_x_mm DOUBLE PRECISION DEFAULT NULL,
+                    nearest_center_y_mm DOUBLE PRECISION DEFAULT NULL,
+                    nearest_center_z_mm DOUBLE PRECISION DEFAULT NULL,
+                    boundary_point_x_mm DOUBLE PRECISION DEFAULT NULL,
+                    boundary_point_y_mm DOUBLE PRECISION DEFAULT NULL,
+                    boundary_point_z_mm DOUBLE PRECISION DEFAULT NULL,
+                    time_taken INTEGER NOT NULL,
+                    is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+                    score_increment INTEGER NOT NULL DEFAULT 0,
+                    attempts INTEGER NOT NULL DEFAULT 0
+                );
+            `;
 
             await sql`
                 CREATE TABLE IF NOT EXISTS finished_sessions (

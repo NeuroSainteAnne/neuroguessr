@@ -99,6 +99,7 @@ export function backupGameForRecurrence(gameRef: MultiplayerGame): MultiplayerGa
 
   // Create a deep copy of the relevant game state
   return {
+    id: gameRef.id,
     sessionCode: gameRef.sessionCode,
     originalSessionCode: gameRef.originalSessionCode,
     hasStarted: false, // Reset for next occurrence

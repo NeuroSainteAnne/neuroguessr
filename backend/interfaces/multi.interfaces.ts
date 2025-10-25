@@ -21,6 +21,7 @@ export interface MultiplayerParametersType {
 }
 
 export interface MultiplayerGame {
+  id: number;
   sessionCode: string;
   hasStarted: boolean;
   hasFinishedCountdown: boolean;
@@ -62,6 +63,7 @@ export type Recurrence = {
 
 // Persistent game state for challenge mode (saved to database)
 export interface PersistentGameState {
+  id: number;
   sessionCode: string;
   originalSessionCode: string;
   hasStarted: boolean;

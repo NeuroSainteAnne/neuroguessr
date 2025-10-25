@@ -1180,10 +1180,11 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
   let startDate: Date | null = null;
   let endDate: Date | null = null;
   let name: string | null = null;
+  let id: number | null = null;
   
   try {
     const sessionResult = await sql`
-      SELECT is_challenge, persistent_config, is_classic_challenge, start_date, end_date, name 
+      SELECT id, is_challenge, persistent_config, is_classic_challenge, start_date, end_date, name 
       FROM multi_sessions 
       WHERE session_code = ${sessionCode} 
       LIMIT 1
@@ -1195,7 +1196,7 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
       isClassicChallenge = sessionResult[0].is_classic_challenge || false;
       startDate = sessionResult[0].start_date ? new Date(sessionResult[0].start_date) : null;
       endDate = sessionResult[0].end_date ? new Date(sessionResult[0].end_date) : null;
-      name = sessionResult[0].name || null;
+      id = sessionResult[0].id || null;
     }
   } catch (error) {
     logger.error("Error fetching session data for createEmptySession:", error);
@@ -1232,9 +1233,15 @@ async function createEmptySession(sessionCode: string, creatorId?: number) {
       logger.error("Error parsing persistent config, creating default session:", parseError);
     }
   }
+  
+  if(id === null){
+    logger.error("Did not find game:", sessionCode);
+    return;
+  }
 
   // Create default session (fallback or non-challenge)
   games[sessionCode] = {
+    id: id,
     sessionCode: sessionCode,
     originalSessionCode: sessionCode,
     hasStarted: false,
@@ -1497,9 +1504,21 @@ export function emitToUser(sessionCode: string, userName: string, event: string,
   });
 }
 
-// Helper to broadcast to all users in a session
+// Helper to broadcast to all users in a session (one message per user, to avoid duplicates for multi-tab users)
 export function broadcastToSession(sessionCode: string, event: string, data: any) {
-  getIO().to(`game:${sessionCode}`).emit(event, data);
+  console.log("broadcasting", event)
+  for (const playerKey in socketClients) {
+    if (playerKey.startsWith(`${sessionCode}:`)) {
+      const socketIds = socketClients[playerKey];
+      console.log(playerKey, socketIds)
+      if (socketIds.length > 0) {
+        const socket = getIO().sockets.sockets.get(socketIds[0]);
+        if (socket) {
+          socket.emit(event, data);
+        }
+      }
+    }
+  }
 }
 
 function verifyUserAccess(sessionCode: string, userName: string, userToken?: string, anonToken?: string): boolean {
@@ -2037,6 +2056,69 @@ async function handleValidateGuess(data: {
     if(gameRef.isCurrentlyBlind) {
       scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER);
     }
+
+    const playerKey = `${sessionCode}:${userName}`;
+    const player = playerInfo[playerKey];
+
+    await sql`
+        INSERT INTO individual_clicks (
+            is_authenticated,
+            user_id,
+            multiplayer_session_id,
+            multiplayer_is_challenge,
+            multiplayer_is_classic_challenge,
+            multiplayer_classic_challenge_id,
+            command_index,
+            atlas,
+            blind_mode,
+            region_id,
+            clicked_x,
+            clicked_y,
+            clicked_z,
+            clicked_x_mm,
+            clicked_y_mm,
+            clicked_z_mm,
+            nearest_center_x_mm,
+            nearest_center_y_mm,
+            nearest_center_z_mm,
+            boundary_point_x_mm,
+            boundary_point_y_mm,
+            boundary_point_z_mm,
+            distance_to_target,
+            time_taken,
+            is_correct,
+            score_increment,
+            attempts
+        ) VALUES (
+            ${player?.userId !== undefined},
+            ${player?.userId || null},
+            ${gameRef.id},
+            ${gameRef.isChallenge || false},
+            ${gameRef.isClassicChallenge || false},
+            ${gameRef.classicChallengeId || null},
+            ${gameRef.currentCommandIndex},
+            ${gameRef.currentAtlas},
+            ${gameRef.isCurrentlyBlind},
+            ${gameRef.currentRegionId},
+            ${x},
+            ${y},
+            ${z},
+            ${voxelProp.mm[0] ?? null},
+            ${voxelProp.mm[1] ?? null},
+            ${voxelProp.mm[2] ?? null},
+            ${nearestCenter ? nearestCenter[0] : null},
+            ${nearestCenter ? nearestCenter[1] : null},
+            ${nearestCenter ? nearestCenter[2] : null},
+            ${nearestBoundary ? nearestBoundary[0] : null},
+            ${nearestBoundary ? nearestBoundary[1] : null},
+            ${nearestBoundary ? nearestBoundary[2] : null},
+            ${minDistance === Infinity ? null : minDistance},
+            ${elapsed},
+            ${isCorrect},
+            ${scoreIncrement},
+            ${(gameRef.individualAttempts[userName] || 0) + 1}
+        )
+    `;
     
     // Atomic update for score modifications to prevent race conditions
     const scoreUpdateResult = await atomicGameUpdate(`${sessionCode}:scores`, async () => {

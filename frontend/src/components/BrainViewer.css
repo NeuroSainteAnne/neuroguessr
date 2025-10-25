@@ -2,6 +2,7 @@
     width: 100%;
     grid-column: 2 / span 2;
     grid-row: 2;
+    min-height: 500px;
     height: calc(100% - 110px);
     overflow: hidden;
     box-sizing: border-box;
