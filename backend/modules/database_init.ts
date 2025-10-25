@@ -6,7 +6,7 @@ type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
 import { debug } from 'console';
 import { logger } from './logging.ts';
-import { sendChallengeResultsEmails } from './multi.ts';
+import { sendClassicChallengeResultsEmails } from "./multi_classic_challenge.ts";
 const config: Config = configJson;
 
 // Create a new database or open an existing one
@@ -451,7 +451,7 @@ export const cleanOldGameSessions = async () => {
         for (const challenge of finishedChallenges) {
             try {
                 // Send emails to participants who opted in
-                await sendChallengeResultsEmails(challenge.id);
+                await sendClassicChallengeResultsEmails(challenge.id);
                 logger.info(`Sent challenge results emails for finished challenge ${challenge.id} (${challenge.name})`);
             } catch (emailError) {
                 logger.error(`Error sending emails for challenge ${challenge.id}:`, emailError);

@@ -17,7 +17,12 @@ import configJson from './config.json' with { type: "json" };
 import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, initSocketHandlers, getMultiplayerSessionStartDate, checkIfClassicChallenge, getChallengeResults, challengeEmailOptIn, getPastChallenges } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate } from "./modules/multi.ts";
+import { checkIfClassicChallenge } from "modules/multi_classic_challenge.ts";
+import { getClassicChallengeResults } from "modules/multi_classic_challenge.ts";
+import { classicChallengeEmailOptIn } from "modules/multi_classic_challenge.ts";
+import { getPastClassicChallenges } from "modules/multi_classic_challenge.ts";
+import { initSocketHandlers } from "modules/socket.ts";
 import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
 import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
 import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge, checkClassicChallengeCompletion } from "modules/multi_classic_challenge.ts";
@@ -100,10 +105,10 @@ app.get('/api/multi/check-classic/:sessionCode', (req, res, next) => {
     Promise.resolve(checkIfClassicChallenge(req, res)).catch(next);
 })
 app.get('/api/multi/challenge-results/:challengeId', (req, res, next) => {
-    Promise.resolve(getChallengeResults(req, res)).catch(next);
+    Promise.resolve(getClassicChallengeResults(req, res)).catch(next);
 })
 app.post('/api/multi/challenge-email-optin/:challengeId', authenticateToken, (req, res, next) => {
-    Promise.resolve(challengeEmailOptIn(req, res)).catch(next);
+    Promise.resolve(classicChallengeEmailOptIn(req, res)).catch(next);
 })
 app.get('/api/multi/next-realtime-challenge', (req, res, next) => {
     Promise.resolve(getNextRealtimeChallenge(req, res)).catch(next);
@@ -126,7 +131,7 @@ app.get('/api/classic-challenges/:sessionCode/completion', authenticateToken, (r
     Promise.resolve(checkClassicChallengeCompletion(req, res)).catch(next);
 })
 app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
-    Promise.resolve(getPastChallenges(req, res)).catch(next);
+    Promise.resolve(getPastClassicChallenges(req, res)).catch(next);
 })
 app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
     Promise.resolve(deleteClassicChallenge(req, res)).catch(next);

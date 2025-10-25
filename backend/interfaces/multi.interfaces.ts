@@ -112,3 +112,29 @@ export interface ExternalGameCommands {
   startTime?: string; // ISO date string for countdown action
   blindMode?: boolean;
 }
+export type ColorMap = {
+  R: number[];
+  G: number[];
+  B: number[];
+  A: number[];
+  I: number[];
+  min?: number;
+  max?: number;
+  labels: string[];
+  centers?: number[][][];
+};
+
+export type JoinLobbyData = {
+  sessionCode: string;
+  userName: string;
+  isAnonymous: boolean;
+  token?: string;
+  anonToken?: string;
+}
+
+export type ChangeSessionCodeData = {
+  currentSessionCode: string;
+  newSessionCode: string;
+  sessionToken: string;
+  userToken: string;
+}
