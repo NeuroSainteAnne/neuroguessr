@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Config } from '../interfaces/config.interfaces.ts';
 import configJson from '../config.json' with { type: "json" };
 import { logger } from './logging.ts';
+import { initSinglePlayerSockets } from './single.ts';
 
 const config: Config = configJson;
 
@@ -61,6 +62,9 @@ export function initSocketIO(server: Server) {
       });
     });
   });
+
+  // Initialize single player socket handlers
+  initSinglePlayerSockets();
 
   logger.info('Socket.IO server initialized successfully');
 

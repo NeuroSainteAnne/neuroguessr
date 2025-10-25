@@ -1,0 +1,462 @@
+import { Socket } from "socket.io";
+import { logger } from "./logging.ts";
+import { sql } from "./database_init.ts";
+import { imageRef, imageMetadata, regionCenters, validRegions } from "./game.ts";
+import { getDistance } from "./utils_compute.ts";
+import { getIO } from "./socket.io.ts";
+import jwt from "jsonwebtoken";
+import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
+import { config } from "./multi.ts";
+
+const MAX_POINTS_PER_REGION = 50;
+const BONUS_POINTS_PER_SECOND = 1;
+const MAX_POINTS_WITH_PENALTY = 30;
+const MAX_PENALTY_DISTANCE = 100;
+const BLIND_MODE_MULTIPLIER = 1.5;
+const STREAK_BONUS_AFTER = 5;
+const STREAK_BONUS = 5;
+const MAX_STREAK_DISTANCE = 50;
+const MAX_NUMBER_FAR_STREAK = 3;
+const MAX_TIME_IN_SECONDS = 100;
+const TOTAL_REGIONS_TIME_ATTACK = 18;
+function getUserId(authToken: string | undefined, socketId: string): number {
+  if (authToken) {
+    try {
+      const decoded = jwt.verify(authToken, config.jwt_secret || 'fallback-secret') as any;
+      return decoded.id;
+    } catch (err) {
+      throw new Error('Invalid authentication token');
+    }
+  } else {
+    // Generate anonymous user ID from socket ID (simple hash)
+    let hash = 0;
+    for (let i = 0; i < socketId.length; i++) {
+      const char = socketId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+}
+export interface SinglePlayerGameState {
+  userId: number;
+  atlas: string;
+  mode: string;
+  blindMode: boolean;
+  currentRegionId?: number;
+  score: number;
+  streak: number;
+  consecutiveErrors: number;
+  attempts: number;
+  startTime: number;
+  regionsAnswered: Set<number>;
+  isActive: boolean;
+  lastActivity: number;
+}
+
+// In-memory storage for active single player games
+export const activeSingleGames = new Map<number, SinglePlayerGameState>();
+
+// Clean up inactive games (called periodically)
+export function cleanupInactiveSingleGames() {
+  const now = Date.now();
+  const timeoutMs = 30 * 60 * 1000; // 30 minutes
+
+  for (const [userId, gameState] of activeSingleGames.entries()) {
+    if (now - gameState.lastActivity > timeoutMs) {
+      logger.info(`Cleaning up inactive single player game for user ${userId}`);
+      activeSingleGames.delete(userId);
+    }
+  }
+}
+
+// Start a single player game
+export async function startSingleGame(socket: Socket, data: {
+  atlas: string;
+  mode: string;
+  blindMode: boolean;
+  authToken?: string;
+}) {
+  try {
+    const { atlas, mode, blindMode, authToken } = data;
+
+    // Get user ID (authenticated or anonymous)
+    let userId: number;
+    try {
+      userId = getUserId(authToken, socket.id);
+    } catch (err) {
+      socket.emit('single-game-error', { message: 'Invalid authentication token' });
+      return;
+    }
+
+    // Validate atlas exists
+    if (!validRegions[atlas]) {
+      socket.emit('single-game-error', { message: 'Invalid atlas selected' });
+      return;
+    }
+
+    // Clean up any existing game for this user
+    const isAnonymous = !authToken;
+    if (activeSingleGames.has(userId)) {
+      await endSingleGame(userId, 'abandoned', isAnonymous);
+    }
+
+    // Initialize game state
+    const gameState: SinglePlayerGameState = {
+      userId,
+      atlas,
+      mode,
+      blindMode,
+      score: 0,
+      streak: 0,
+      consecutiveErrors: 0,
+      attempts: 0,
+      startTime: Date.now(),
+      regionsAnswered: new Set(),
+      isActive: true,
+      lastActivity: Date.now()
+    };
+
+    activeSingleGames.set(userId, gameState);
+
+    logger.info('Single player game started', {
+      userId,
+      atlas,
+      mode,
+      blindMode,
+      socketId: socket.id
+    });
+
+    socket.emit('single-game-started', {
+      message: 'Game started successfully',
+      gameState: {
+        atlas: gameState.atlas,
+        mode: gameState.mode,
+        blindMode: gameState.blindMode,
+        score: gameState.score,
+        streak: gameState.streak
+      }
+    });
+
+    getNextSingleRegion(socket, { authToken });
+
+  } catch (error) {
+    logger.error('Error starting single player game:', error);
+    socket.emit('single-game-error', { message: 'Failed to start game' });
+  }
+}
+
+// Get next region for single player game
+export async function getNextSingleRegion(socket: Socket, data: { authToken?: string }) {
+  try {
+    const { authToken } = data;
+
+    // Get user ID (authenticated or anonymous)
+    let userId: number;
+    try {
+      userId = getUserId(authToken, socket.id);
+    } catch (err) {
+      socket.emit('single-game-error', { message: 'Invalid authentication token' });
+      return;
+    }
+    const gameState = activeSingleGames.get(userId);
+
+    if (!gameState || !gameState.isActive) {
+      socket.emit('single-game-error', { message: 'No active game found' });
+      return;
+    }
+
+    gameState.lastActivity = Date.now();
+
+    // Check if time is up for time-attack mode
+    if (gameState.mode === "time-attack") {
+      const elapsedTime = (Date.now() - gameState.startTime) / 1000;
+      if (elapsedTime >= MAX_TIME_IN_SECONDS) {
+        const isAnonymous = !authToken;
+        await endSingleGame(userId, 'timeout', isAnonymous);
+        socket.emit('single-game-ended', {
+          reason: 'timeout',
+          finalScore: gameState.score,
+          elapsedTime
+        });
+        return;
+      }
+    }
+
+    // Select next region
+    let randomRegionId: number | null = null;
+    const atlasValidRegions = validRegions[gameState.atlas];
+
+    if (gameState.mode === "time-attack") {
+      // In time-attack, allow repeats but prefer unused regions
+      const availableRegions = atlasValidRegions.filter(id => !gameState.regionsAnswered.has(id));
+      if (availableRegions.length > 0) {
+        randomRegionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+      } else {
+        // All regions used, allow repeats
+        randomRegionId = atlasValidRegions[Math.floor(Math.random() * atlasValidRegions.length)];
+      }
+    } else {
+      // For other modes, ensure no repeats
+      const availableRegions = atlasValidRegions.filter(id => !gameState.regionsAnswered.has(id));
+      if (availableRegions.length === 0) {
+        // Game finished
+        const isAnonymous = !authToken;
+        await endSingleGame(userId, 'completed', isAnonymous);
+        socket.emit('single-game-ended', {
+          reason: 'completed',
+          finalScore: gameState.score,
+          regionsAnswered: gameState.regionsAnswered.size
+        });
+        return;
+      }
+      randomRegionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+    }
+
+    if (randomRegionId !== null) {
+      gameState.currentRegionId = randomRegionId;
+      gameState.attempts = 0; // Reset attempts for new region
+
+      socket.emit('next-region', {
+        regionId: randomRegionId,
+        attempts: gameState.attempts
+      });
+
+      logger.info('Next region selected for single player', {
+        userId,
+        regionId: randomRegionId,
+        mode: gameState.mode
+      });
+    }
+
+  } catch (error) {
+    logger.error('Error getting next single player region:', error);
+    socket.emit('single-game-error', { message: 'Failed to get next region' });
+  }
+}
+
+// Validate guess for single player game
+export async function validateSingleGuess(socket: Socket, data: {
+  authToken?: string;
+  coordinates: { mm: number[]; vox: number[] };
+}) {
+  try {
+    const { authToken, coordinates } = data;
+
+    // Get user ID (authenticated or anonymous)
+    let userId: number;
+    try {
+      userId = getUserId(authToken, socket.id);
+    } catch (err) {
+      socket.emit('single-game-error', { message: 'Invalid authentication token' });
+      return;
+    }
+    const gameState = activeSingleGames.get(userId);
+
+    if (!gameState || !gameState.isActive || !gameState.currentRegionId) {
+      socket.emit('single-game-error', { message: 'No active game or region' });
+      return;
+    }
+
+    gameState.lastActivity = Date.now();
+    gameState.attempts++;
+
+    const regionId = gameState.currentRegionId;
+    const [x, y, z] = coordinates.vox;
+
+    // Validate coordinates are within bounds
+    const atlasMetadata = imageMetadata[gameState.atlas];
+    if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
+      socket.emit('guess-result', {
+        isCorrect: false,
+        scoreIncrement: 0,
+        message: 'Coordinates out of bounds'
+      });
+      return;
+    }
+
+    // Get voxel value at clicked position
+    const voxelValue = imageRef[gameState.atlas].getValue(x, y, z);
+    const isCorrect = voxelValue === regionId;
+
+    let scoreIncrement = 0;
+    let streakBonus = 0;
+    let newStreak = gameState.streak;
+    let newConsecutiveErrors = gameState.consecutiveErrors;
+    let streakTooFar = false;
+    let minDistance = Infinity;
+    let nearestCenter: number[] | undefined = undefined;
+    let nearestBoundary: number[] | undefined = undefined;
+
+    // Calculate distance and score
+    let distanceResult: { distance: number; center: number[] | undefined; boundary: number[] | undefined } | null = null;
+
+    if (regionCenters[gameState.atlas] && regionCenters[gameState.atlas][regionId]) {
+      const centers = regionCenters[gameState.atlas][regionId];
+      distanceResult = getDistance(centers, coordinates, gameState.atlas, regionId);
+      minDistance = distanceResult.distance;
+      nearestCenter = distanceResult.center;
+      nearestBoundary = distanceResult.boundary;
+    }
+
+    if (gameState.mode === "streak") {
+      // Streak mode logic
+      if (isCorrect) {
+        if (minDistance <= MAX_STREAK_DISTANCE) {
+          newStreak++;
+          newConsecutiveErrors = 0;
+          scoreIncrement = MAX_POINTS_PER_REGION;
+
+          if (newStreak >= STREAK_BONUS_AFTER) {
+            streakBonus = STREAK_BONUS;
+            scoreIncrement += streakBonus;
+          }
+        } else {
+          streakTooFar = true;
+          newStreak = 0;
+          newConsecutiveErrors++;
+          scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
+        }
+      } else {
+        newStreak = 0;
+        newConsecutiveErrors++;
+        scoreIncrement = 0;
+      }
+    } else if (gameState.mode === "time-attack") {
+      // Time-attack mode logic
+      const elapsedTime = (Date.now() - gameState.startTime) / 1000;
+      const timeRemaining = Math.max(0, MAX_TIME_IN_SECONDS - elapsedTime);
+
+      if (isCorrect) {
+        scoreIncrement = MAX_POINTS_PER_REGION + (timeRemaining * BONUS_POINTS_PER_SECOND);
+        newStreak++;
+        newConsecutiveErrors = 0;
+      } else {
+        scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
+        newStreak = 0;
+        newConsecutiveErrors++;
+      }
+    } else {
+      // Practice mode logic
+      if (isCorrect) {
+        scoreIncrement = MAX_POINTS_PER_REGION;
+        newStreak++;
+        newConsecutiveErrors = 0;
+      } else {
+        scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
+        newStreak = 0;
+        newConsecutiveErrors++;
+      }
+    }
+
+    // Apply blind mode multiplier
+    if (gameState.blindMode) {
+      scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER);
+    }
+
+    // Update game state
+    gameState.score += scoreIncrement;
+    gameState.streak = newStreak;
+    gameState.consecutiveErrors = newConsecutiveErrors;
+
+    if (isCorrect) {
+      gameState.regionsAnswered.add(regionId);
+    }
+
+    socket.emit('guess-result', {
+      isCorrect,
+      scoreIncrement,
+      totalScore: gameState.score,
+      streak: gameState.streak,
+      distance: minDistance,
+      attempts: gameState.attempts,
+      regionCompleted: isCorrect
+    });
+
+    logger.info('Single player guess validated', {
+      userId,
+      regionId,
+      isCorrect,
+      scoreIncrement,
+      totalScore: gameState.score,
+      streak: gameState.streak
+    });
+
+  } catch (error) {
+    logger.error('Error validating single player guess:', error);
+    socket.emit('single-game-error', { message: 'Failed to validate guess' });
+  }
+}
+
+// End single player game
+export async function endSingleGame(userId: number, reason: string = 'completed', isAnonymous: boolean = false) {
+  const gameState = activeSingleGames.get(userId);
+  if (!gameState) return;
+
+  try {
+    const elapsedTime = Date.now() - gameState.startTime;
+
+    // Only save to database for authenticated users
+    if (!isAnonymous) {
+      await sql`
+        INSERT INTO finished_sessions (
+          user_id, mode, atlas, blind_mode, score, regions_answered,
+          streak, created_at, duration_ms, game_type
+        ) VALUES (
+          ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
+          ${gameState.blindMode}, ${gameState.score}, ${gameState.regionsAnswered.size},
+          ${gameState.streak}, NOW(), ${elapsedTime}, 'single'
+        )
+      `;
+
+      logger.info('Single player game ended and saved', {
+        userId,
+        reason,
+        finalScore: gameState.score,
+        regionsAnswered: gameState.regionsAnswered.size,
+        elapsedTime: `${elapsedTime}ms`
+      });
+    } else {
+      logger.info('Anonymous single player game ended (not saved)', {
+        userId,
+        reason,
+        finalScore: gameState.score,
+        regionsAnswered: gameState.regionsAnswered.size,
+        elapsedTime: `${elapsedTime}ms`
+      });
+    }
+
+  } catch (error) {
+    logger.error('Error saving single player game result:', error);
+  } finally {
+    // Clean up game state
+    activeSingleGames.delete(userId);
+  }
+}
+
+// Handle socket disconnection for single player
+export function handleSinglePlayerDisconnect(socket: Socket) {
+  // Find user ID associated with this socket (we'd need to track this)
+  // For now, we'll rely on periodic cleanup
+  logger.info('Single player socket disconnected', { socketId: socket.id });
+}
+
+// Initialize single player socket handlers
+export function initSinglePlayerSockets() {
+  const io = getIO();
+
+  io.on('connection', (socket) => {
+    // Single player game events
+    socket.on('start-single-game', (data) => startSingleGame(socket, data));
+    socket.on('get-next-single-region', (data) => getNextSingleRegion(socket, data));
+    socket.on('validate-single-guess', (data) => validateSingleGuess(socket, data));
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      handleSinglePlayerDisconnect(socket);
+    });
+  });
+
+  // Set up periodic cleanup
+  setInterval(cleanupInactiveSingleGames, 5 * 60 * 1000); // Every 5 minutes
+}

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { isTokenValid, refreshToken } from '../../utils/helper_login';
 import { defineNiiOptions } from '../../utils/helper_nii';
 import { useApp } from '../../context/AppContext';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -10,150 +9,7 @@ import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBo
 import SearchBar from '../../components/SearchBar';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import CacheMonitor from '../../components/CacheMonitor';
-
-
-async function startOnlineSession(isLoggedIn: boolean, token: string, mode: string, atlas: string, blindMode: boolean): Promise<{ sessionToken: string, sessionId: string } | null> {
-    // Check if the player is logged in
-    if (!isLoggedIn || !token) {
-        return null;
-    }
-    if (!isTokenValid(token)) {
-        if (!refreshToken()) {
-            return null;
-        }
-    }
-    try {
-        // Send a request to the backend to start a session
-        const response = await fetch('/api/start-game-session', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ mode, atlas, blindMode }),
-        });
-
-        if (!response.ok) {
-            console.error("Failed to online game session on the backend.");
-            const result = await response.json();
-            console.error(result.message || "Failed to start game session.");
-            return null;
-        }
-
-        const result = await response.json();
-        return { sessionToken: result.sessionToken, sessionId: result.sessionId };
-    } catch (error) {
-        console.error("Error starting online game session:", error);
-        console.error("An error occurred while starting online game session. Please try again later.");
-        return null;
-    }
-}
-
-function getDistance(centers: number[][], coordinates: {mm: number[], vox: number[]}, atlasProxy?: any, targetRegionId?: number): {distance: number, center: number[]|undefined, boundary: number[]|undefined} {
-    const [xMm, yMm, zMm] = coordinates.mm;
-    let minDistance = Infinity;
-    let nearestCenter: number[]|undefined = undefined;
-    let nearestBoundary: number[]|undefined = undefined;
-    if(xMm === undefined || yMm === undefined || zMm === undefined){
-        return { distance: Infinity, center: undefined, boundary: undefined };
-    }
-
-    for (const center of centers) {
-        let distance: number;
-        let boundaryPoint: number[] | null = null;
-        if(center[0] === undefined || center[1] === undefined || center[2] === undefined){
-            continue;
-        }
-
-        if (atlasProxy && targetRegionId !== undefined) {
-            // Find the boundary point where the region begins along the line
-            boundaryPoint = findRegionBoundary(coordinates, center, atlasProxy, targetRegionId);
-            if (boundaryPoint && boundaryPoint[0] && boundaryPoint[1] && boundaryPoint[2]) {
-                // Calculate distance to the boundary point instead of center
-                distance = Math.sqrt(
-                    Math.pow(boundaryPoint[0] - xMm, 2) +
-                    Math.pow(boundaryPoint[1] - yMm, 2) +
-                    Math.pow(boundaryPoint[2] - zMm, 2)
-                );
-            } else {
-                // Fallback to center distance if boundary not found
-                distance = Math.sqrt(
-                    Math.pow(center[0] - xMm, 2) +
-                    Math.pow(center[1] - yMm, 2) +
-                    Math.pow(center[2] - zMm, 2)
-                );
-            }
-        } else {
-            // Original distance calculation to center
-            distance = Math.sqrt(
-                Math.pow(center[0] - xMm, 2) +
-                Math.pow(center[1] - yMm, 2) +
-                Math.pow(center[2] - zMm, 2)
-            );
-        }
-        
-        if (distance < minDistance) {
-            minDistance = distance;
-            nearestCenter = center;
-            nearestBoundary = boundaryPoint || undefined;
-        }
-    }
-    return { distance: minDistance, center: nearestCenter, boundary: nearestBoundary };
-}
-
-function findRegionBoundary(guessCoords: {mm: number[], vox: number[]}, centerMm: number[], atlasProxy: any, targetRegionId: number): number[] | null {
-    const [guessX, guessY, guessZ] = guessCoords.mm;
-    const [centerX, centerY, centerZ] = centerMm;
-    if(centerX === undefined || centerY === undefined || centerZ === undefined ||
-        guessX === undefined || guessY === undefined || guessZ === undefined
-    ) {
-        return null;
-    }
-
-    // Calculate direction vector from guess to center
-    const dirX = centerX - guessX;
-    const dirY = centerY - guessY;
-    const dirZ = centerZ - guessZ;
-    
-    // Calculate total distance
-    const totalDistance = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-    
-    if (totalDistance === 0) return null; // Same point
-    
-    // Sample along the line at 0.5mm intervals (adjust resolution as needed)
-    const stepSize = 0.5; // mm
-    const numSteps = Math.ceil(totalDistance / stepSize);
-    
-    for (let i = 0; i <= numSteps; i++) {
-        const t = (i * stepSize) / totalDistance;
-        if (t > 1) break; // Don't go beyond the center
-        
-        // Calculate current point along the line
-        const currentMm = [
-            guessX + t * dirX,
-            guessY + t * dirY,
-            guessZ + t * dirZ
-        ];
-        
-        // Convert to voxel coordinates
-        const currentVox = atlasProxy.mm2vox(currentMm);
-        
-        // Check if this voxel belongs to the target region
-        const voxelValue = atlasProxy.getValue(
-            Math.round(currentVox[0]),
-            Math.round(currentVox[1]),
-            Math.round(currentVox[2])
-        );
-        
-        if (voxelValue === targetRegionId) {
-            // Found the boundary - return this point
-            return currentMm;
-        }
-    }
-    
-    // If no boundary found, return null (region might not be reachable along this line)
-    return null;
-}
+import { useSinglePlayerSocket } from '../../hooks/useSinglePlayerSocket';
 
 export function Page() {
     const { pageContext } = useApp();
@@ -198,26 +54,12 @@ function SinglePlayer({
     canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
 }) {
     const { t, askedAtlas, viewerOptions,
-        isLoggedIn, authToken, userPublishToLeaderboard,
+        isLoggedIn, userPublishToLeaderboard,
         isMobileView,
         setHeaderText, setHeaderTextMode, setHeaderScore,
         setHeaderStreak, setHeaderErrors, setHeaderTime,
         setShowHelpOverlay, showNotification,
         pageContext } = useApp();
-    // Time Attack specific constants
-    const TOTAL_REGIONS_TIME_ATTACK = 18;
-    const MAX_POINTS_PER_REGION = 50; // 1000 total points / 20 regions
-    const MAX_TIME_IN_SECONDS = 100; // nombre de secondes pour le Time Attack
-    const BONUS_POINTS_PER_SECOND = 1; // nombre de points bonus par seconde restante (max 100*10 = 1000 points)
-    const MAX_POINTS_TIMEATTACK = MAX_POINTS_PER_REGION * TOTAL_REGIONS_TIME_ATTACK + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
-    const MAX_POINTS_WITH_PENALTY = 30 // 30 points max if clicked outside the region
-    const MAX_PENALTY_DISTANCE = 100; // Arbitrary distance in mm for max penalty (0 points)
-    const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3; // Number of attempts before highlighting the target region in practice mode
-    const BLIND_MODE_MULTIPLIER = 1.5; // Multiplier for points in blind mode
-    const STREAK_BONUS_AFTER = 5;
-    const STREAK_BONUS = 5;
-    const MAX_STREAK_DISTANCE = 50; // Maximum distance in mm to prevent streak stop
-    const MAX_NUMBER_FAR_STREAK = 3; // Maximum distance in mm to prevent streak stop
     const { routeParams } = pageContext;
     const gameMode = routeParams?.['mode'];
     const blindMode = routeParams?.['blind'] === "true" || false;
@@ -233,15 +75,10 @@ function SinglePlayer({
     const [currentAttempts, setCurrentAttempts] = useState<number>(0);
     const currentAttemptsRef = useRef<number>(0);
     const usedRegions = useRef<number[]>([]);
-    const startTime = useRef<number | null>(null);
-    const timerInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-    const sessionToken = useRef<string | null>(null);
-    const sessionId = useRef<string | null>(null);
     const [showStreakOverlay, setShowStreakOverlay] = useState<boolean>(false);
     const streakOverlayRef = useRef<HTMLDivElement>(null);
     const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
     const timeattackOverlayRef = useRef<HTMLDivElement>(null);
-    const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
     const [showCacheMonitor, setShowCacheMonitor] = useState<boolean>(false);
 
     const {
@@ -249,6 +86,99 @@ function SinglePlayer({
         guessButtonRef, atlasRef, isGameRunning, highlightedRegion, highlightWrapper, setHighlightedRegion, unHighlight,
         niivue, canvasRef, isLoading,
     } = useGame();
+
+    // Use socket-based single player game management
+    const {
+        isConnected,
+        gameState,
+        currentRegion,
+        lastGuessResult,
+        gameEnded,
+        error,
+        startGame: startSocketGame,
+        getNextRegion,
+        validateGuess
+    } = useSinglePlayerSocket();
+
+    // Handle socket connection status
+    useEffect(() => {
+        if (!isConnected) {
+            consoleLog("verbose", "Socket not connected for single player game");
+        }
+    }, [isConnected]);
+
+    // Handle game state updates from socket
+    useEffect(() => {
+        console.log("TRIGGERED GAMESTATE UPDATE", gameState)
+        if (gameState) {
+            setCurrentScore(gameState.score);
+            setCurrentStreak(gameState.streak);
+            console.log("STREAK", gameState.streak)
+            setHeaderScore(`${t("score")}: ${gameState.score}`);
+            setHeaderStreak(`${gameState.streak}`);
+        }
+    }, [gameState, t]);
+
+    // Handle new region from socket
+    useEffect(() => {
+        if (currentRegion && atlasRef.current) {
+            // Set the current target region
+            currentTarget.current = currentRegion.regionId;
+            setCurrentAttempts(currentRegion.attempts);
+            currentAttemptsRef.current = currentRegion.attempts;
+            
+            // Highlight region if needed
+            if (gameMode === 'practice' && currentRegion.attempts >= 3) {
+                setHighlightedRegion(currentRegion.regionId);
+            }
+        }
+    }, [currentRegion, gameMode]);
+
+    // Handle guess results from socket
+    useEffect(() => {
+        if (lastGuessResult) {
+            // Update UI based on guess result
+            if (lastGuessResult.isCorrect) {
+                setCurrentCorrects(prev => prev + 1);
+                // Request next region
+                getNextRegion();
+            } else {
+                setCurrentErrors(prev => prev + 1);
+                currentConsecutiveErrorsRef.current++;
+            }
+            
+            setCurrentAttempts(lastGuessResult.attempts);
+            currentAttemptsRef.current = lastGuessResult.attempts;
+        }
+    }, [lastGuessResult, getNextRegion]);
+
+    // Handle game end from socket
+    useEffect(() => {
+        if (gameEnded) {
+            setHasEnded(true);
+            hasEndedRef.current = true;
+            setFinalScore(gameEnded.finalScore);
+            if (gameEnded.elapsedTime) {
+                setFinalElapsed(gameEnded.elapsedTime);
+            }
+            
+            // Show appropriate end screen based on game mode
+            if (gameMode === 'time-attack') {
+                // For time attack, show the overlay with final score
+                setShowTimeattackOverlay(true);
+            } else {
+                // For other modes, show regular end screen
+                showNotification(`${t("game_over")}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
+            }
+        }
+    }, [gameEnded, gameMode, t]);
+
+    // Handle socket errors
+    useEffect(() => {
+        if (error) {
+            showNotification(error, false);
+        }
+    }, [error, showNotification]);
 
     useEffect(() => {
         currentStreakRef.current = currentStreak
@@ -274,10 +204,6 @@ function SinglePlayer({
             usedRegions.current = [];
             setIsGameRunning(false);
             setPastRegions([]);
-            if (timerInterval.current) {
-                clearInterval(timerInterval.current);
-                timerInterval.current = null;
-            }
         }
 
         if (cleanGameCallbackRef) {
@@ -321,10 +247,6 @@ function SinglePlayer({
             }
             if (guessButtonRef.current) guessButtonRef.current.disabled = true;
             atlasRef.current?.showShuffledRegions()
-            if (timerInterval.current) {
-                clearInterval(timerInterval.current);
-                timerInterval.current = null;
-            }
             if (tooltip) {
                 setTooltip({ ...tooltip, visible: false });
             }
@@ -340,207 +262,22 @@ function SinglePlayer({
 
 
     useEffect(() => {
-        const startGame = () => {
+        const startGameInternal = () => {
             setIsGameRunning(true);
             if (!atlasRef.current) return;
 
-            startOnlineSession(isLoggedIn, authToken, gameMode || 'practice', askedAtlas?.atlas || 'aal', blindMode).then((session) => {
-                if (session) {
-                    sessionToken.current = session.sessionToken;
-                    sessionId.current = session.sessionId;
-                    consoleLog("verbose", "Online session started:", session);
-                } else {
-                    console.warn("Failed to start online session, proceeding in offline mode.");
-                }
-            }).catch((error) => {
-                console.error("Error starting online session:", error);
-            }).finally(() => {
-                if (gameMode === 'time-attack') {
-                    if (!sessionToken.current) { // logic for local game
-                        // Shuffle validRegions and take the first 20 for Time Attack
-                        if (atlasRef.current && atlasRef.current.validRegions.length >= TOTAL_REGIONS_TIME_ATTACK) {
-                            atlasRef.current.validRegions.sort(() => 0.5 - Math.random());
-                            atlasRef.current.validRegions = atlasRef.current.validRegions.slice(0, TOTAL_REGIONS_TIME_ATTACK);
-                            consoleLog("verbose", `Selected ${TOTAL_REGIONS_TIME_ATTACK} regions for Time Attack: ${atlasRef.current.validRegions}`);
-                        } else if (atlasRef.current && atlasRef.current.validRegions.length > 0) {
-                            console.warn(`Not enough regions for Time Attack (${TOTAL_REGIONS_TIME_ATTACK} required), using all ${atlasRef.current.validRegions.length} available regions.`);
-                            atlasRef.current.validRegions.sort(() => 0.5 - Math.random()); // Still shuffle available regions
-                        } else {
-                            console.error("No valid regions available for Time Attack!");
-                            setHeaderText(t('no_regions_available') || 'No regions available.');
-                            return; // Stop game initialization if no regions
-                        }
-                    }
-                    startTimer(); // Start timer for Time Attack
-                }
-                // Start the first round
-                if (gameMode != "navigation") selectNewTarget();
-                setForceDisplayUpdate((u) => u + 1);
-            })
+            // Start game using socket instead of REST API
+            if (askedAtlas?.atlas) {
+                startSocketGame(askedAtlas.atlas, gameMode || 'practice', blindMode);
+                consoleLog("verbose", "Socket-based game started for atlas:", askedAtlas.atlas);
+            } else {
+                console.warn("No atlas selected, cannot start game.");
+            }
         }
         if (startGameCallbackRef) {
-            startGameCallbackRef.current = startGame; // Set the callback in the ref
+            startGameCallbackRef.current = startGameInternal; // Set the callback in the ref
         }
-    }, [startGameCallbackRef, isLoggedIn, authToken, gameMode, askedAtlas, blindMode]);
-
-
-
-    function startTimer() {
-        startTime.current = Date.now();
-        refreshTimer()
-        timerInterval.current = setInterval(() => {
-            refreshTimer()
-        }, 500);
-    }
-
-    const manualClotureGameSession = async (): Promise<number> => {
-        try {
-            const response = await fetch('/api/cloture-game-session', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
-            });
-            if (!response.ok) {
-                const result = await response.json();
-                throw new Error(result.message || "Unknown error");
-            }
-            const result = await response.json();
-            return result.finalScore;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    const refreshTimer = () => {
-        const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-        //const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
-        const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
-        const seconds = (remaining % 60).toString().padStart(2, '0');
-        setHeaderTime(`${t("time_label")}: ${minutes}:${seconds}`);
-
-        if (remaining <= 0 && !hasEndedRef.current) {
-            // Set ended flags synchronously first to prevent multiple calls
-            hasEndedRef.current = true;
-            setHasEnded(true);
-            if (isLoggedIn) {
-                manualClotureGameSession().then((finalScore) => {
-                    endTimeAttack(finalScore);
-                }).catch(() => {
-                    endTimeAttack(currentScoreRef.current);
-                });
-            } else {
-                endTimeAttack(currentScoreRef.current);
-            }
-            setPastRegions(prev => [...prev, {
-                regionId: currentTarget.current!,
-                regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
-                atlas: atlasRef.current?.atlas || "",
-                isCorrect: false,
-                score: 0,
-                distance: -1,
-            }]);
-        }
-    }
-
-    function endTimeAttack(givenFinalScore: number) {
-        if (timerInterval.current) clearInterval(timerInterval.current);
-        const elapsed = Math.floor((Date.now() - (startTime.current || 0)) / 1000);
-
-        setFinalScore(givenFinalScore);
-        setFinalElapsed(elapsed);
-        setShowTimeattackOverlay(true); // Show Time Attack end overlay
-
-        setHeaderTextMode("success")
-
-        // Stop the game
-        setIsGameRunning(false)
-        setHasEnded(true);
-        hasEndedRef.current = true;
-        selectedVoxelProp.current = null;
-        if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-    }
-
-    const selectNewTarget = async () => {
-        consoleLog("verbose", `Selecting new target for ${gameMode} mode`);
-        let regionId : number | undefined = undefined;
-        if (isLoggedIn) { // network region fetching
-            consoleLog("verbose", "Fetching next region from server");
-            try {
-                const response = await fetch('/api/get-next-region', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ sessionId: sessionId.current, sessionToken: sessionToken.current }),
-                });
-                if (!response.ok) {
-                    const result = await response.json();
-                    console.error("Failed to get next region:", result.message || "Unknown error");
-                    consoleLog("verbose", `Server request for next region failed: ${response.status} - ${result.message}`);
-                    return;
-                }
-                const result = await response.json();
-                if (result.regionId >= 0) {
-                    regionId = result.regionId;
-                    consoleLog("verbose", `Server provided region ID: ${regionId}`);
-                } else {
-                    console.warn("No valid region ID received from server.");
-                    return;
-                }
-            } catch (error) {
-                console.error("Error occured during next region fetching:", error);
-                return;
-            }
-        } else if (atlasRef.current && atlasRef.current.validRegions && usedRegions.current) {
-            let availableRegions = atlasRef.current.validRegions.filter(r => !usedRegions.current.includes(r));
-            if ((gameMode === 'time-attack' || gameMode === "streak") && availableRegions.length === 0) {
-                // if no region remaining, we'll take a random region
-                availableRegions = atlasRef.current.validRegions
-            }
-            if (availableRegions.length !== 0) {
-                regionId = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-                if (regionId !== undefined && (gameMode === 'time-attack' || gameMode === 'streak')) {
-                    usedRegions.current.push(regionId);
-                }
-            }
-        }
-
-        if (regionId === -1) { // did not found region
-            if (gameMode === 'time-attack') {
-                // TODO take into account server response = -1
-                const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-                // Calculate time bonus points
-                const timeBonus = remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0;
-                // Apply blind mode multiplier to the entire score
-                const finalScore = Math.round(currentScoreRef.current = (timeBonus * (blindMode ? BLIND_MODE_MULTIPLIER : 1)));
-                endTimeAttack(finalScore);
-                return;
-            } else if (gameMode === 'streak') {
-                setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-                setShowStreakOverlay(true);
-                return;
-            } else {
-                // If no more regions in Practice, end the game
-                resetGameCallbackRef.current(); // Or handle as an error in other modes
-                return;
-            }
-        }
-        currentTarget.current = regionId
-        if (atlasRef.current && currentTarget.current) {
-            showNotification('new_target', true, { region: atlasRef.current.labels[currentTarget.current] }, 1500);
-        }
-
-        if (currentTarget.current) {
-            setForceDisplayUpdate((u) => u + 1); // Update display with the new target label
-            selectedVoxelProp.current = null; // Reset selected voxel
-            if (gameMode == "practice") setCurrentAttempts(0); // Reset attempts in practice mode
-            atlasRef.current?.showShuffledRegions()
-        }
-    }
+    }, [startGameCallbackRef, gameMode, askedAtlas, blindMode]);
 
     useEffect(() => {
         const genericKeyPressCallback = (e: KeyboardEvent) => {
@@ -607,314 +344,19 @@ function SinglePlayer({
     }, [isGameRunning, canvasInteractionRef]);
 
     useEffect(() => {
-        const validateGuess = async () => {
-            if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
-                console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
+        const validateGuessInternal = async () => {
+            if (!selectedVoxelProp.current || !isGameRunning) {
+                console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning });
                 return;
             }
-            let guessSuccess = null;
-            let isEndgame = false;
-            let clickedRegion = null;
-            let scoreIncrement = 0;
-            let streak = 0;
-            let consecutiveErrors = 0;
-            let quitReason = "";
-            let givenFinalScore = 0;
-            let performHighlight = false;
-            let distance = Infinity;
-            let nearestCenter: number[]|undefined = undefined;
-            let nearestBoundary: number[]|undefined = undefined;
-            if (isLoggedIn) {
-                try {
-                    const token = localStorage.getItem('authToken');
-                    const response = await fetch('/api/validate-region', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            sessionId: sessionId.current,
-                            sessionToken: sessionToken.current,
-                            coordinates: selectedVoxelProp.current
-                        }),
-                    });
-                    const result = await response.json();
-                    guessSuccess = result.isCorrect;
-                    isEndgame = result.endgame;
-                    clickedRegion = result.voxelValue;
-                    scoreIncrement = result.scoreIncrement;
-                    givenFinalScore = result.finalScore;
-                    performHighlight = result.performHighlight;
-                    distance = result.distance;
-                    streak = result.streak;
-                    consecutiveErrors = result.consecutiveErrors;
-                    quitReason = result.quitReason;
-                    nearestCenter = result.nearestCenter;
-                    nearestBoundary = result.nearestBoundary;
-                    consoleLog("verbose", "Nearest center:", nearestCenter);
-                    consoleLog("verbose", "Nearest boundary:", nearestBoundary);
-                } catch (error) {
-                    consoleLog("normal", "Error occurred during region validation:", error);
-                    return;
-                }
-            } else {
-                clickedRegion = selectedVoxelProp.current.idx;
-                guessSuccess = clickedRegion === currentTarget.current;
-                if (gameMode === 'time-attack') {
-                    isEndgame = currentAttemptsRef.current + 1 >= TOTAL_REGIONS_TIME_ATTACK
-                }
-                if (gameMode === 'streak') {
-                    if (guessSuccess) {
-                        currentConsecutiveErrorsRef.current = 0
-                        isEndgame = false
-                    } else {
-                        currentConsecutiveErrorsRef.current += 1
-                        if (atlasRef.current && atlasRef.current.centers) {
-                            const currentCenters = atlasRef.current.centers[currentTarget.current];
-                            if(currentCenters){
-                                const {distance:minDistance, center, boundary} = getDistance(currentCenters, selectedVoxelProp.current, atlasRef.current, currentTarget.current)
-                                distance = minDistance;
-                                nearestCenter = center;
-                                nearestBoundary = boundary;
-                            }
-                        }
-                        if (distance > MAX_STREAK_DISTANCE) {
-                            isEndgame = true;
-                            quitReason = "streak-too-far"
-                        } else if (currentConsecutiveErrorsRef.current >= MAX_NUMBER_FAR_STREAK) {
-                            isEndgame = true;
-                            quitReason = "streak-max-errors"
-                        }
-                    }
-                    consecutiveErrors = currentConsecutiveErrorsRef.current;
-                }
-            }
-            let previousScore = currentScoreRef.current;
-            scoreIncrement = getUpdatedScore({
-                isEndgame, guessSuccess, scoreIncrement,
-                performHighlight, distance, nearestCenter, nearestBoundary, streak, consecutiveErrors, quitReason
-            }).scoreIncrement
 
-            if (isEndgame) {
-                performEndGame({ finalScore: isLoggedIn ? givenFinalScore : previousScore + scoreIncrement })
-            }
+            // Use socket to validate guess instead of REST API
+            validateGuess(selectedVoxelProp.current);
         }
         if (validateGuessCallbackRef) {
-            validateGuessCallbackRef.current = validateGuess; // Set the callback in the ref
+            validateGuessCallbackRef.current = validateGuessInternal; // Set the callback in the ref
         }
     }, [validateGuessCallbackRef, isGameRunning, gameMode]);
-
-    const getUpdatedScore = ({ isEndgame, guessSuccess, scoreIncrement, performHighlight, 
-        distance = Infinity, nearestCenter = undefined, nearestBoundary = undefined,
-        streak = 0, consecutiveErrors = 0, quitReason = "" }:
-        { isEndgame: boolean, guessSuccess: boolean, scoreIncrement: number, performHighlight: boolean,
-            distance: number, nearestCenter: number[]|undefined, nearestBoundary: number[]|undefined,
-            streak: number, consecutiveErrors: number, quitReason: string }): { scoreIncrement: number } => {
-        if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current) {
-            console.warn('Cannot update score:', { selectedVoxelProp, isGameRunning, currentTarget });
-            return { scoreIncrement };
-        }
-        const targetName = atlasRef.current && atlasRef.current.labels?.[currentTarget.current] ? atlasRef.current.labels[currentTarget.current] : t('unknown_region');
-        const clickedRegionName = atlasRef.current && selectedVoxelProp.current.idx && atlasRef.current.labels?.[selectedVoxelProp.current.idx] ? atlasRef.current.labels[selectedVoxelProp.current.idx] : t('unknown_region');
-        const selectedVoxelSave = selectedVoxelProp.current;
-        if (guessSuccess) {
-            // Correct Guess
-            setCurrentCorrects((cs) => cs + 1); // Increment correct count       
-            if (gameMode === 'time-attack') {
-                // Add full points for correct guess - scoreIncrement already has blind mode multiplier applied if from server
-                const points = isLoggedIn ? scoreIncrement : Math.floor(MAX_POINTS_PER_REGION * (blindMode ? BLIND_MODE_MULTIPLIER : 1));
-                setCurrentScore((curScore) => curScore + points);
-            }
-            if (gameMode === 'streak') {
-                if (isLoggedIn) {
-                    // Online mode - use server values
-                    setCurrentStreak(() => streak);
-                    setCurrentScore((cs) => cs + scoreIncrement);
-                    setCurrentErrors(() => consecutiveErrors);
-                } else {
-                    const newStreak = currentStreakRef.current + 1;
-                    setCurrentStreak(newStreak);
-                    let pointsForGuess = 1;
-                    // Apply streak bonus if applicable
-                    if (newStreak % STREAK_BONUS_AFTER === 0) {
-                        pointsForGuess += STREAK_BONUS;
-                    }
-                    // Apply blind mode multiplier if applicable
-                    if (blindMode) {
-                        pointsForGuess = Math.floor(pointsForGuess * BLIND_MODE_MULTIPLIER);
-                    }
-                    // Update score
-                    setCurrentScore((cs) => cs + pointsForGuess);
-                    // Reset consecutive errors on correct guess
-                    setCurrentErrors(0);
-                    currentConsecutiveErrorsRef.current = 0;
-                }
-            }
-            if (gameMode === 'practice') {
-                setCurrentAttempts(0); // Reset attempts on correct guess
-            } else {
-                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-            }
-
-            setHeaderTextMode("success"); // Indicate correct guess visually
-            atlasRef.current?.showShuffledRegions()
-            selectedVoxelProp.current = null; // Reset selected voxel after guess
-            if (guessButtonRef.current) guessButtonRef.current.disabled = true; // Disable guess button until next target
-
-            // Move to the next target after a short delay to show feedback
-            if (!isEndgame) {
-                setTimeout(() => {
-                    selectNewTarget();
-                }, 100);
-            }
-        } else { // Incorrect Guess
-            if (gameMode === 'practice') {
-                // Use i18next interpolation for the incorrect message
-                const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-                setHeaderText(incorrectMessage);
-                setHeaderTextMode("failure")
-
-                consoleLog("verbose", `Incorrect guess: ${clickedRegionName} (ID: ${clickedRegionName}), Expected: ${targetName} (ID: ${currentTarget})`);
-
-                consoleLog("verbose", `Current attempts: ${currentAttempts}/${MAX_ATTEMPTS_BEFORE_HIGHLIGHT}`);
-                if ((!isLoggedIn && currentAttemptsRef.current >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT - 1) ||
-                    (isLoggedIn && performHighlight)) {
-                    setHighlightedRegion(currentTarget.current);
-                    highlightWrapper(currentTarget.current, true); // Highlight the target region
-                }
-                // Increased timeout duration to make the incorrect message visible longer
-                setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-                setTimeout(() => {
-                    const findPrefix = t('find') || 'Find: ';
-                    setHeaderText(findPrefix + targetName);
-                    setHeaderTextMode("normal")
-                }, 3000); // Increased delay to 3 seconds
-            } else if (gameMode === "streak") {
-                if (!isLoggedIn) {
-                    const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-                    setHeaderText(incorrectMessage);
-                    setHeaderTextMode("failure");
-                } else {
-                    // Use i18next interpolation for the incorrect message
-                    const incorrectMessage = t('incorrect_clicked', { region: clickedRegionName });
-                    setHeaderText(incorrectMessage);
-                    setHeaderTextMode("failure");
-                }
-                if (isEndgame && quitReason === "streak-too-far") {
-                    if (distance === Infinity) {
-                        showNotification('streak_ended', false);
-                    } else {
-                        showNotification('streak_ended_too_far', false, { distance: Math.round(distance) });
-                    }
-                } else if (isEndgame && quitReason === "streak-max-errors") {
-                    showNotification('streak_ended_max_errors', false, { maxErrors: MAX_NUMBER_FAR_STREAK });
-                } else if (!isEndgame) {
-                    showNotification('streak_incorrect', false, { consecutiveErrors: consecutiveErrors, maxErrors: MAX_NUMBER_FAR_STREAK });
-                }
-                // Automatically move to the next target after a short delay
-                if (!isEndgame) {
-                    setTimeout(async () => {
-                        await selectNewTarget();
-                        setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-                        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-                        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
-                    }, 100);
-                }
-            } else if (gameMode === 'time-attack') {
-                // *** MODIFIED FOR TIME ATTACK: Calculate and add partial score for incorrect guess ***
-                if (!isLoggedIn && atlasRef.current && atlasRef.current.labels) {
-                    if (atlasRef.current.centers) {
-                        // Calculate Euclidean distance between centers
-                        const currentCenters = atlasRef.current.centers[currentTarget.current]
-                        if(currentCenters){
-                            const {distance:minDistance, center, boundary} = getDistance(currentCenters, selectedVoxelProp.current, atlasRef.current, currentTarget.current)
-                            distance = minDistance;
-                            nearestCenter = center;
-                            nearestBoundary = boundary;
-                        }
-                        // Calculate score based on distance
-                        if (distance <= MAX_PENALTY_DISTANCE) {
-                            scoreIncrement = Math.floor((1 - (distance / MAX_PENALTY_DISTANCE)) * MAX_POINTS_WITH_PENALTY);
-                        } else {
-                            scoreIncrement = 0; // No points for too far away
-                        }
-                        if (blindMode) {
-                            scoreIncrement = Math.floor(scoreIncrement * BLIND_MODE_MULTIPLIER); // Apply blind mode multiplier
-                        }
-                    } else {
-                        console.warn(`Center data missing for region ${currentTarget} or ${selectedVoxelProp.current}. Cannot calculate distance-based score.`);
-                        // Option: award minimal points or 0 if center data is missing
-                        scoreIncrement = 0; // Award 0 points if centers are missing
-                    }
-                }
-
-                setHeaderTextMode("failure"); // Indicate incorrect guess visually
-
-                // Automatically move to the next target after a short delay
-                if (!isEndgame) {
-                    setTimeout(async () => {
-                        await selectNewTarget();
-                        setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-                        setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-                        setCurrentScore((score) => score + scoreIncrement); // Add points earned for this attempt to the total score
-                    }, 100);
-                }
-            } else {
-                setCurrentErrors((prevErrors) => prevErrors + 1); // Increment error count
-                setCurrentAttempts((curAttempts) => curAttempts + 1); // Increment attempts 
-            }
-
-            selectedVoxelProp.current = null;
-            if (guessButtonRef.current) guessButtonRef.current.disabled = true;
-
-            // Only update game display for score/error/streak *after* the incorrect message timeout in practice mode
-            if (gameMode !== 'practice') {
-                setForceDisplayUpdate((u) => u + 1);
-            }
-        }
-
-        // Add region to history
-        if (gameMode === 'time-attack' || gameMode == "streak") {
-            setPastRegions(prev => [...prev, {
-                regionId: currentTarget.current!,
-                regionName: atlasRef.current?.labels?.[currentTarget.current!] || t('unknown_region'),
-                atlas: atlasRef.current?.atlas || "",
-                isCorrect: guessSuccess,
-                score: scoreIncrement,
-                distance: guessSuccess ? 0 : distance,
-                clickedPosition: selectedVoxelSave ? {
-                    mm: [...selectedVoxelSave.mm],
-                    vox: [...selectedVoxelSave.vox]
-                } : undefined,
-                regionCenter: nearestCenter ?? (atlasRef.current?.centers && currentTarget.current != null ? atlasRef.current.centers[currentTarget.current]?.[0] : undefined),
-                regionBoundary: nearestBoundary ? nearestBoundary : undefined
-            }]);
-        }
-
-        return { scoreIncrement }
-    }
-
-    function performEndGame({ finalScore }: { finalScore: number }) {
-        if (gameMode === 'streak') {
-            // Apply blind mode multiplier consistently to the final streak score
-            setCurrentStreak(0); // Reset streak on incorrect guess in streak mode
-            setShowStreakOverlay(true);
-            setHeaderTextMode("failure"); // Indicate streak ended visually
-            setIsGameRunning(false);
-            setFinalScore(finalScore);
-        } else if (gameMode === 'time-attack') {
-            if (!isLoggedIn) {
-                const remaining = Math.floor(((startTime.current || Date.now()) + MAX_TIME_IN_SECONDS * 1000 - Date.now()) / 1000);
-                const timeBonus = (remaining > 0 ? remaining * BONUS_POINTS_PER_SECOND : 0) * (blindMode ? BLIND_MODE_MULTIPLIER : 1);
-                finalScore = Math.round((currentScoreRef.current + timeBonus));
-            }
-            endTimeAttack(finalScore)
-        }
-        setHasEnded(true)
-        hasEndedRef.current = true;
-    }
 
     const updateGameDisplay = () => {
         // Update labels based on mode
@@ -940,7 +382,7 @@ function SinglePlayer({
             const prefix = t('find') || 'Find: ';
             // For time attack, display the current question number
             if (gameMode === 'time-attack') {
-                setHeaderText(`${currentAttempts}/${TOTAL_REGIONS_TIME_ATTACK} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+                setHeaderText(`${currentAttempts}/18 - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
             } else {
                 if(currentTarget.current !== undefined){
                     setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
@@ -954,7 +396,7 @@ function SinglePlayer({
 
     useEffect(() => {
         updateGameDisplay();
-    }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion, forceDisplayUpdate]);
+    }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;
@@ -1048,8 +490,8 @@ function SinglePlayer({
                     <div className="score-progress-bar w3-light-grey w3-round">
                         <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
                             style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
-                        <span className="progress-label progress-label-med">{Math.round(MAX_POINTS_TIMEATTACK * 0.5)}</span>
-                        <span className="progress-label progress-label-max">{Math.round(MAX_POINTS_TIMEATTACK * 1)}</span>
+                        <span className="progress-label progress-label-med">{Math.round(1000 * 0.5)}</span>
+                        <span className="progress-label progress-label-max">{Math.round(1000 * 1)}</span>
                     </div>
                     <div className="overlay-buttons">
                         <button
