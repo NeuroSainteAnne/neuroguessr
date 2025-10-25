@@ -241,7 +241,6 @@ const MultiPlayer = ({
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
     });
     socket.on('game-command', (data: any) => {
-      console.log("received command", Date.now())
       if (data.command.action === 'countdown') {
         // Handle countdown command
         const duration = data.command.duration || 5; // Default to 5 seconds
