@@ -159,7 +159,7 @@ export const database_init = async () => {
             await sql`
                 CREATE TABLE IF NOT EXISTS finished_sessions (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
                     mode TEXT NOT NULL,
                     atlas TEXT NOT NULL,
                     blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
@@ -376,7 +376,7 @@ export const database_init = async () => {
             await sql`
                 ALTER TABLE finished_sessions 
                 ADD CONSTRAINT finished_sessions_user_id_fkey 
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
             `;
         });
 

@@ -55,6 +55,11 @@ export interface SinglePlayerGameState {
   lastActivity: number;
   endTimer?: NodeJS.Timeout;
   askedId: number; // autoincremental ID for each asked region
+  correctCount: number; // number of correct guesses
+  incorrectCount: number; // number of incorrect guesses
+  lastAsked: number; // timestamp of last sent command (start-game, next-region)
+  regionSuccessDurations: number[]; // durations for successful regions
+  regionFailedDurations: number[]; // durations for failed attempts
 }
 
 // In-memory storage for active single player games
@@ -122,7 +127,12 @@ export async function startSingleGame(socket: Socket, data: {
       regionsAnswered: new Set(),
       isActive: true,
       lastActivity: Date.now(),
-      askedId: 0
+      askedId: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+      lastAsked: Date.now(), // Set when game starts
+      regionSuccessDurations: [],
+      regionFailedDurations: []
     };
 
     // Set up automatic end timer for time-attack mode
@@ -254,6 +264,9 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
       gameState.currentRegionId = randomRegionId;
       gameState.attempts = 0; // Reset attempts for new region
 
+      // Update lastAsked timestamp for the sent command
+      gameState.lastAsked = Date.now();
+
       const nextRegionData: any = {
         regionId: randomRegionId,
         attempts: gameState.attempts,
@@ -308,7 +321,6 @@ export async function validateSingleGuess(socket: Socket, data: {
       return;
     }
 
-    gameState.lastActivity = Date.now();
     gameState.attempts++;
 
     const regionId = gameState.currentRegionId;
@@ -414,6 +426,22 @@ export async function validateSingleGuess(socket: Socket, data: {
     gameState.streak = newStreak;
     gameState.consecutiveErrors = newConsecutiveErrors;
 
+    // Track correct/incorrect counts and durations
+    const currentTime = Date.now();
+    if (isCorrect) {
+      gameState.correctCount++;
+      // Calculate duration from lastAsked (when region was presented) to now
+      const duration = currentTime - gameState.lastAsked;
+      gameState.regionSuccessDurations.push(duration);
+    } else {
+      gameState.incorrectCount++;
+      // Calculate duration from lastActivity to now for failed attempts
+      const duration = currentTime - gameState.lastActivity;
+      gameState.regionFailedDurations.push(duration);
+    }
+
+    gameState.lastActivity = Date.now();
+
     if (isCorrect && regionId) {
       gameState.regionsAnswered.add(regionId);
     }
@@ -515,35 +543,77 @@ export async function endSingleGame(userId: number, reason: string = 'completed'
   try {
     const elapsedTime = Date.now() - gameState.startTime;
 
-    // Only save to database for authenticated users
-    if (!isAnonymous) {
-      await sql`
-        INSERT INTO finished_sessions (
-          user_id, mode, atlas, blind_mode, score, regions_answered,
-          streak, created_at, duration_ms, game_type
-        ) VALUES (
-          ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
-          ${gameState.blindMode}, ${gameState.score}, ${gameState.regionsAnswered.size},
-          ${gameState.streak}, NOW(), ${elapsedTime}, 'single'
-        )
-      `;
+    // Calculate timing statistics from duration arrays
+    let minTimePerRegion: number | null = null;
+    let maxTimePerRegion: number | null = null;
+    let avgTimePerRegion: number | null = null;
+    let minTimePerCorrectRegion: number | null = null;
+    let maxTimePerCorrectRegion: number | null = null;
+    let avgTimePerCorrectRegion: number | null = null;
 
-      logger.info('Single player game ended and saved', {
-        userId,
-        reason,
-        finalScore: gameState.score,
-        regionsAnswered: gameState.regionsAnswered.size,
-        elapsedTime: `${elapsedTime}ms`
-      });
-    } else {
-      logger.info('Anonymous single player game ended (not saved)', {
-        userId,
-        reason,
-        finalScore: gameState.score,
-        regionsAnswered: gameState.regionsAnswered.size,
-        elapsedTime: `${elapsedTime}ms`
-      });
+    // Combine success and failed durations for overall region timing stats
+    const allRegionDurations = [...gameState.regionSuccessDurations, ...gameState.regionFailedDurations];
+    
+    if (allRegionDurations.length > 0) {
+      minTimePerRegion = Math.min(...allRegionDurations);
+      maxTimePerRegion = Math.max(...allRegionDurations);
+      avgTimePerRegion = allRegionDurations.reduce((a, b) => a + b, 0) / allRegionDurations.length;
     }
+
+    if (gameState.regionSuccessDurations.length > 0) {
+      minTimePerCorrectRegion = Math.min(...gameState.regionSuccessDurations);
+      maxTimePerCorrectRegion = Math.max(...gameState.regionSuccessDurations);
+      avgTimePerCorrectRegion = gameState.regionSuccessDurations.reduce((a, b) => a + b, 0) / gameState.regionSuccessDurations.length;
+    }
+
+    // Save to database for both authenticated and anonymous users
+    // Calculate theoretical maximum score for time-attack mode
+    let theoreticalMaxScore: number | null = null;
+    if (gameState.mode === "time-attack") {
+      theoreticalMaxScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+    }
+
+    // Calculate score percentage for time-attack mode
+    let scorePercentage: number | null = null;
+    if (theoreticalMaxScore !== null && theoreticalMaxScore > 0) {
+      scorePercentage = (gameState.score / theoreticalMaxScore) * 100;
+    }
+
+    await sql`
+      INSERT INTO finished_sessions (
+        user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
+        min_time_per_region, max_time_per_region, avg_time_per_region, 
+        min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+        quit_reason, duration, theoretical_maximum_score, score_percentage
+      ) VALUES (
+        ${isAnonymous ? null : gameState.userId}, ${gameState.mode}, ${gameState.atlas},
+        ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.attempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
+        ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion}, 
+        ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
+        ${reason}, ${elapsedTime}, ${theoreticalMaxScore}, ${scorePercentage}
+      )
+    `;
+
+    logger.info('Single player game ended and saved', {
+      userId: isAnonymous ? null : gameState.userId,
+      isAnonymous,
+      reason,
+      finalScore: gameState.score,
+      attempts: gameState.attempts,
+      correct: gameState.correctCount,
+      incorrect: gameState.incorrectCount,
+      timingStats: {
+        minTimePerRegion,
+        maxTimePerRegion,
+        avgTimePerRegion,
+        minTimePerCorrectRegion,
+        successDurationsCount: gameState.regionSuccessDurations.length,
+        failedDurationsCount: gameState.regionFailedDurations.length
+      },
+      elapsedTime: `${elapsedTime}ms`,
+      theoreticalMaxScore,
+      scorePercentage
+    });
 
   } catch (error) {
     logger.error('Error saving single player game result:', error);
