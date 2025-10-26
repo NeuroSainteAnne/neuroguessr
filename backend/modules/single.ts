@@ -20,27 +20,8 @@ const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3;
 const MAX_TIME_IN_SECONDS = 100;
 const TOTAL_REGIONS_TIME_ATTACK = 3;
 
-function getUserId(authToken: string | undefined, socketId: string): number {
-  if (authToken) {
-    try {
-      const decoded = jwt.verify(authToken, config.jwt_secret || 'fallback-secret') as any;
-      return decoded.id;
-    } catch (err) {
-      throw new Error('Invalid authentication token');
-    }
-  } else {
-    // Generate anonymous user ID from socket ID (simple hash)
-    let hash = 0;
-    for (let i = 0; i < socketId.length; i++) {
-      const char = socketId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash);
-  }
-}
 export interface SinglePlayerGameState {
-  userId: number;
+  userId: number | null;
   atlas: string;
   mode: string;
   blindMode: boolean;
@@ -63,7 +44,7 @@ export interface SinglePlayerGameState {
 }
 
 // In-memory storage for active single player games
-export const activeSingleGames = new Map<number, SinglePlayerGameState>();
+export const activeSingleGames = new Map<string, SinglePlayerGameState>();
 
 // Clean up inactive games (called periodically)
 export function cleanupInactiveSingleGames() {
@@ -93,9 +74,12 @@ export async function startSingleGame(socket: Socket, data: {
     const { atlas, mode, blindMode, authToken } = data;
 
     // Get user ID (authenticated or anonymous)
-    let userId: number;
+    let userId: number | null = null;
     try {
-      userId = getUserId(authToken, socket.id);
+      if(authToken){
+        const decoded = jwt.verify(authToken, config.jwt_secret || 'fallback-secret') as any;
+        userId = decoded.id;
+      }
     } catch (err) {
       socket.emit('single-game-error', { message: 'Invalid authentication token' });
       return;
@@ -108,9 +92,8 @@ export async function startSingleGame(socket: Socket, data: {
     }
 
     // Clean up any existing game for this user
-    const isAnonymous = !authToken;
-    if (activeSingleGames.has(userId)) {
-      await endSingleGame(userId, 'abandoned', isAnonymous);
+    if (activeSingleGames.has(socket.id)) {
+      await endSingleGame(socket.id, 'abandoned');
     }
 
     // Initialize game state
@@ -139,9 +122,9 @@ export async function startSingleGame(socket: Socket, data: {
     if (mode === "time-attack") {
       const endTime = gameState.startTime + (MAX_TIME_IN_SECONDS * 1000);
       gameState.endTimer = setTimeout(async () => {
-        const currentGameState = activeSingleGames.get(userId);
+        const currentGameState = activeSingleGames.get(socket.id);
         if (currentGameState && currentGameState.isActive) {
-          await endSingleGame(userId, 'timeout', isAnonymous);
+          await endSingleGame(socket.id, 'timeout');
           socket.emit('single-game-ended', {
             reason: 'timeout',
             finalScore: currentGameState.score,
@@ -152,7 +135,7 @@ export async function startSingleGame(socket: Socket, data: {
       }, MAX_TIME_IN_SECONDS * 1000);
     }
 
-    activeSingleGames.set(userId, gameState);
+    activeSingleGames.set(socket.id, gameState);
 
     logger.info('Single player game started', {
       userId,
@@ -202,14 +185,17 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
     const { authToken } = data;
 
     // Get user ID (authenticated or anonymous)
-    let userId: number;
+    let userId: number | null = null;
     try {
-      userId = getUserId(authToken, socket.id);
+      if(authToken){
+        const decoded = jwt.verify(authToken, config.jwt_secret || 'fallback-secret') as any;
+        userId = decoded.id;
+      }
     } catch (err) {
       socket.emit('single-game-error', { message: 'Invalid authentication token' });
       return;
     }
-    const gameState = activeSingleGames.get(userId);
+    const gameState = activeSingleGames.get(socket.id);
 
     if (!gameState || !gameState.isActive) {
       socket.emit('single-game-error', { message: 'No active game found' });
@@ -222,8 +208,7 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
     if (gameState.mode === "time-attack") {
       const elapsedTime = (Date.now() - gameState.startTime) / 1000;
       if (elapsedTime >= MAX_TIME_IN_SECONDS) {
-        const isAnonymous = !authToken;
-        await endSingleGame(userId, 'timeout', isAnonymous);
+        await endSingleGame(socket.id, 'timeout');
         socket.emit('single-game-ended', {
           reason: 'timeout',
           finalScore: gameState.score,
@@ -251,8 +236,7 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
       const availableRegions = atlasValidRegions.filter(id => !gameState.regionsAnswered.has(id));
       if (availableRegions.length === 0) {
         // Game finished
-        const isAnonymous = !authToken;
-        await endSingleGame(userId, 'completed', isAnonymous);
+        await endSingleGame(socket.id, 'completed');
         socket.emit('single-game-ended', {
           reason: 'completed',
           finalScore: gameState.score,
@@ -306,15 +290,17 @@ export async function validateSingleGuess(socket: Socket, data: {
     const { authToken, coordinates, pastRegionId } = data;
 
     // Get user ID (authenticated or anonymous)
-    let userId: number;
+    let userId: number | null = null;
     try {
-      userId = getUserId(authToken, socket.id);
+      if(authToken){
+        const decoded = jwt.verify(authToken, config.jwt_secret || 'fallback-secret') as any;
+        userId = decoded.id;
+      }
     } catch (err) {
       socket.emit('single-game-error', { message: 'Invalid authentication token' });
       return;
     }
-    const isAnonymous = !authToken;
-    const gameState = activeSingleGames.get(userId);
+    const gameState = activeSingleGames.get(socket.id);
 
     if (!gameState || !gameState.isActive) {
       socket.emit('single-game-error', { message: 'No active game' });
@@ -480,8 +466,8 @@ export async function validateSingleGuess(socket: Socket, data: {
         score_increment,
         attempts
       ) VALUES (
-        ${!isAnonymous},
-        ${isAnonymous ? null : gameState.userId},
+        ${gameState.userId !== null},
+        ${gameState.userId},
         ${gameState.mode},
         ${gameState.askedId},
         ${gameState.atlas},
@@ -540,8 +526,7 @@ export async function validateSingleGuess(socket: Socket, data: {
         // Check if game should end due to max consecutive errors
         if (newConsecutiveErrors >= MAX_NUMBER_ERRORS_STREAK) {
             // End the game
-            const isAnonymous = !authToken;
-            await endSingleGame(userId, 'max-consecutive-errors', isAnonymous);
+            await endSingleGame(socket.id, 'max-consecutive-errors');
             socket.emit('single-game-ended', {
               reason: 'max-consecutive-errors',
               finalScore: gameState.score,
@@ -551,8 +536,7 @@ export async function validateSingleGuess(socket: Socket, data: {
             return;
         } else if (streakTooFar) {
             // end the game
-            const isAnonymous = !authToken;
-            await endSingleGame(userId, 'exceeded-max-distance', isAnonymous);
+            await endSingleGame(socket.id, 'exceeded-max-distance');
             socket.emit('single-game-ended', {
                 reason: 'exceeded-max-distance',
                 finalScore: gameState.score,
@@ -573,8 +557,7 @@ export async function validateSingleGuess(socket: Socket, data: {
       if(gameState.askedId >= TOTAL_REGIONS_TIME_ATTACK){
           // Add time bonus for remaining seconds
           gameState.score += Math.max(0, remainingTime) * BONUS_POINTS_PER_SECOND;
-          const isAnonymous = !authToken;
-          await endSingleGame(userId, 'guessed-all-regions', isAnonymous);
+          await endSingleGame(socket.id, 'guessed-all-regions');
           socket.emit('single-game-ended', {
             reason: 'guessed-all-regions',
             finalScore: gameState.score,
@@ -595,8 +578,8 @@ export async function validateSingleGuess(socket: Socket, data: {
 }
 
 // End single player game
-export async function endSingleGame(userId: number, reason: string = 'completed', isAnonymous: boolean = false) {
-  const gameState = activeSingleGames.get(userId);
+export async function endSingleGame(socketId: string, reason: string = 'completed') {
+  const gameState = activeSingleGames.get(socketId);
   if (!gameState) return;
 
   // Clear any active timer
@@ -654,7 +637,7 @@ export async function endSingleGame(userId: number, reason: string = 'completed'
         min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
         quit_reason, duration, theoretical_maximum_score, score_percentage
       ) VALUES (
-        ${isAnonymous ? null : gameState.userId}, ${gameState.mode}, ${gameState.atlas},
+        ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
         ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.attempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
         ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion}, 
         ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
@@ -663,8 +646,7 @@ export async function endSingleGame(userId: number, reason: string = 'completed'
     `;
 
     logger.info('Single player game ended and saved', {
-      userId: isAnonymous ? null : gameState.userId,
-      isAnonymous,
+      userId: gameState.userId,
       reason,
       finalScore: gameState.score,
       attempts: gameState.attempts,
@@ -687,14 +669,17 @@ export async function endSingleGame(userId: number, reason: string = 'completed'
     logger.error('Error saving single player game result:', error);
   } finally {
     // Clean up game state
-    activeSingleGames.delete(userId);
+    activeSingleGames.delete(socketId);
   }
 }
 
 // Handle socket disconnection for single player
-export function handleSinglePlayerDisconnect(socket: Socket) {
-  // Find user ID associated with this socket (we'd need to track this)
-  // For now, we'll rely on periodic cleanup
+export async function handleSinglePlayerDisconnect(socket: Socket) {
+  const gameState = activeSingleGames.get(socket.id);
+  if (gameState) {
+    // End the game with 'disconnected' reason
+    await endSingleGame(socket.id, 'disconnected');
+  }
   logger.info('Single player socket disconnected', { socketId: socket.id });
 }
 
