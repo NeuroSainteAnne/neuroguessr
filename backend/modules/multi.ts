@@ -1,4 +1,4 @@
-import type { AuthenticatedRequest, MultiValidateGuessRequest, UpdateMultiGameRequest } from "../interfaces/requests.interfaces.ts";
+import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
 import { sql } from "./database_init.ts";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";

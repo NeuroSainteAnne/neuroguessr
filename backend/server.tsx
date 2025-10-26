@@ -13,7 +13,7 @@ import { configUser } from "./modules/config_user.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
+import type {  GetStatsRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
 import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate } from "./modules/multi.ts";
@@ -28,8 +28,6 @@ import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChalleng
 import { deleteClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getNextClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getPublicLobbies } from "modules/multi_public.ts";
-import { createProxyMiddleware } from "http-proxy-middleware";
-import { renderPage } from 'vike/server';
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
 import { generateChallenge } from 'modules/altcha.ts';
 import rateLimit from 'express-rate-limit';

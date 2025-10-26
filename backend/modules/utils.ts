@@ -1,9 +1,7 @@
 import path from "path";
 import { fileURLToPath } from 'url';
-import fetch from "node-fetch";
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
-import { HttpsProxyAgent } from "https-proxy-agent";
 import { User } from "interfaces/database.interfaces.ts";
 import jwt from "jsonwebtoken";
 const config: Config = configJson;

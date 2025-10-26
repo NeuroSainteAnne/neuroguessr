@@ -1,11 +1,7 @@
 import { sql } from "./database_init.ts";
 import type { Response } from "express";
-import type { GameProgress, GameSession } from "../interfaces/database.interfaces.ts";
 import type { GetLeaderboardRequest, GetMostUsedAtlasRequest } from "../interfaces/requests.interfaces.ts";
-import type { Config } from "../interfaces/config.interfaces.ts";
-import configJson from '../config.json' with { type: "json" };
 import { logger } from "./logging.ts";
-const config: Config = configJson;
 
 interface LeaderboardEntry {
     username: string; 

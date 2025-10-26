@@ -1,7 +1,6 @@
 import Joi from "joi";
 import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import passwordComplexity from "joi-password-complexity";
 import { __dirname, getUserToken } from "./utils.ts";
 import type { Config } from "../interfaces/config.interfaces.ts";

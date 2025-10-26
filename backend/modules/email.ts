@@ -1,12 +1,5 @@
 import nodemailer from "nodemailer";
-import type { SentMessageInfo } from "nodemailer";
 import { __dirname } from "./utils.ts";
-import {google} from 'googleapis';
-import http from 'http';
-import url from 'url';
-import open from 'open';
-import destroyer from 'server-destroy';
-import {OAuth2Client} from 'google-auth-library';
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import path from "path";

@@ -1,8 +1,6 @@
 import { createChallenge, verifySolution } from 'altcha-lib';
-import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import { Request, Response } from 'express';
-import crypto from 'crypto';
 import { logger } from './logging.ts';
 
 /**

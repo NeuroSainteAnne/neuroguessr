@@ -1,10 +1,8 @@
 import postgres from 'postgres';
-import path from "path";
 import bcrypt from "bcrypt";
 import { __dirname } from "./utils.ts";
 type Config = import("../interfaces/config.interfaces.ts").Config;
 import configJson from '../config.json' with { type: "json" };
-import { debug } from 'console';
 import { logger } from './logging.ts';
 import { sendClassicChallengeResultsEmails } from "./multi_classic_challenge.ts";
 const config: Config = configJson;
@@ -80,46 +78,6 @@ export const database_init = async () => {
             `;
             await sql`CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);`
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_tokens_token ON tokens(token);`
-
-            await sql`
-                CREATE TABLE IF NOT EXISTS game_sessions (
-                    id SERIAL PRIMARY KEY,
-                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                    token TEXT NOT NULL,
-                    mode TEXT NOT NULL,
-                    atlas TEXT NOT NULL,
-                    blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    current_score INTEGER NOT NULL DEFAULT 0,
-                    current_streak INTEGER DEFAULT 0,
-                    consecutive_errors INTEGER DEFAULT 0
-                );
-            `;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_id ON game_sessions(user_id);`;
-            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_created_at ON game_sessions(created_at);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_user_created ON game_sessions(user_id, created_at);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_mode_atlas ON game_sessions(mode, atlas);`;
-            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);`;
-
-            await sql`
-                CREATE TABLE IF NOT EXISTS game_progress (
-                    id SERIAL PRIMARY KEY,
-                    session_id INTEGER NOT NULL REFERENCES game_sessions (id) ON DELETE CASCADE,
-                    session_token TEXT NOT NULL REFERENCES game_sessions (token) ON DELETE CASCADE,
-                    region_id INTEGER NOT NULL,
-                    time_taken INTEGER NOT NULL,
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                    is_correct BOOLEAN NOT NULL DEFAULT FALSE,
-                    score_increment INTEGER NOT NULL DEFAULT 0,
-                    attempts INTEGER NOT NULL DEFAULT 0,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            `;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_id ON game_progress(session_id);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_active ON game_progress(is_active);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_is_correct ON game_progress(is_correct);`;
-            await sql`CREATE INDEX IF NOT EXISTS idx_game_progress_session_token ON game_progress(session_token);`;
 
             await sql`
                 CREATE TABLE IF NOT EXISTS individual_clicks (
@@ -263,11 +221,6 @@ export const database_init = async () => {
             `;
 
             await sql`
-                ALTER TABLE game_progress 
-                ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
-            `;
-
-            await sql`
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
             `;
@@ -280,14 +233,6 @@ export const database_init = async () => {
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
-            await sql`
-                ALTER TABLE game_sessions 
-                ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0;
-            `;
-            await sql`
-                ALTER TABLE game_sessions 
-                ADD COLUMN IF NOT EXISTS consecutive_errors INTEGER DEFAULT 0;
-            `;
 
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
@@ -412,25 +357,6 @@ export const cleanExpiredTokens = async () => {
 
 export const cleanOldGameSessions = async () => {
     try {
-        // Delete from gameprogress where the session is older than 1 hour
-        const result = await sql`
-            DELETE FROM game_progress
-            WHERE session_id IN (
-                SELECT id FROM game_sessions WHERE created_at <= NOW() - INTERVAL '1 hour'
-            )
-        `;
-        if(result.count !== 0){
-            logger.info(`Cleaned up ${result.count} old gameprogress entries.`);
-        }
-        // Delete from gamesessions older than 1 hour
-        const resultSessions = await sql`
-            DELETE FROM game_sessions
-            WHERE created_at <= NOW() - INTERVAL '1 hour'
-        `;
-        if (resultSessions.count !== 0) {
-            logger.info(`Cleaned up ${resultSessions.count} old game_sessions.`);
-        }
-
         // Handle finished classic challenges: send emails and preserve challenge records
         const finishedChallenges = await sql`
             SELECT 

@@ -5,9 +5,7 @@ import { imageRef, imageMetadata, regionCenters, validRegions } from "./game.ts"
 import { getDistance } from "./utils_compute.ts";
 import { getIO } from "./socket.io.ts";
 import jwt from "jsonwebtoken";
-import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
 import { config } from "./multi.ts";
-import { get } from "http";
 
 const MAX_POINTS_PER_REGION = 50;
 const BONUS_POINTS_PER_SECOND = 1;
@@ -21,6 +19,7 @@ const MAX_NUMBER_ERRORS_STREAK = 3;
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3;
 const MAX_TIME_IN_SECONDS = 100;
 const TOTAL_REGIONS_TIME_ATTACK = 3;
+
 function getUserId(authToken: string | undefined, socketId: string): number {
   if (authToken) {
     try {
