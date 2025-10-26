@@ -10,7 +10,6 @@ import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./
 import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
-import { getNextRegion, manualClotureGameSession, startGameSession, validateRegion } from "./modules/game.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
@@ -87,15 +86,6 @@ app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 // stats.ts
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
-
-// game.ts
-app.post('/api/start-game-session', authenticateToken, 
-    (req, res) => startGameSession(req as StartGameSessionRequest, res));
-app.post('/api/get-next-region', authenticateToken, 
-    (req, res) => getNextRegion(req as GetNextRegionRequest, res));
-app.post('/api/validate-region', authenticateToken, validateRegion);
-app.post('/api/cloture-game-session', authenticateToken,
-    (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
 
 // multi.ts
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
