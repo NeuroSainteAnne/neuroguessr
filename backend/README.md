@@ -11,6 +11,9 @@ NeuroGuessr is a neuroanatomy educational gaming platform built with **Express.j
 ```
 backend/
 ├── 📁 assets/              # Static assets and resources
+│   ├── 📁 i18n/           # Internationalization files
+│   ├── 📄 maintenance.html # Maintenance page
+│   └── 📄 neuroguessr_logo.png # Application logo
 ├── 📁 interfaces/          # TypeScript type definitions
 │   ├── config.interfaces.ts
 │   ├── database.interfaces.ts
@@ -31,11 +34,22 @@ backend/
 │   ├── logging.ts         # Winston logging configuration
 │   ├── login.ts           # Authentication & JWT
 │   ├── multi.ts           # Multiplayer game logic
+│   ├── multi_challenge.ts # Challenge multiplayer games
+│   ├── multi_classic_challenge.ts # Classic challenge system
+│   ├── multi_cleanup.ts   # Multiplayer session cleanup
+│   ├── multi_public.ts    # Public multiplayer lobbies
+│   ├── multi_recurrence.ts # Recurring multiplayer events
 │   ├── registration.ts    # User registration & verification
+│   ├── single.ts          # Single-player game logic
 │   ├── socket.io.ts       # Socket.IO configuration
+│   ├── socket.ts          # Socket utilities
 │   ├── stats.ts           # User statistics
-│   └── utils.ts           # Utility functions
+│   ├── utils.ts           # Utility functions
+│   └── utils_compute.ts   # Computation utilities
+├── 📄 combined.log        # Application logs
+├── 📄 config-example.json # Configuration template
 ├── 📄 config.json         # Application configuration
+├── 📄 error.log           # Error logs
 ├── 📄 package.json        # Node.js dependencies
 ├── 📄 server.tsx          # Main Express server
 └── 📄 tsconfig.json       # TypeScript configuration
@@ -44,6 +58,10 @@ backend/
 ---
 
 ## ⚙️ **Configuration Management**
+
+### **Configuration Files**
+- **`config.json`**: Active application configuration
+- **`config-example.json`**: Configuration template with all available options
 
 ### **config.json Structure**
 ```json
@@ -97,15 +115,14 @@ backend/
 
 #### **`tokens` Table** (Email verification & password reset)
 
-#### **`game_sessions` Table** (Active game sessions)
-
-#### **`game_progress` Table** (Individual region attempts)
-
 #### **`finished_sessions` Table** (Completed games for statistics)
 
 #### **`multi_sessions` Table** (Multiplayer game sessions)
 
-#### **`advanced_game_settings` Table** (Custom game configurations)
+#### **`individual_clicks` Table** (For statistics purposes)
+- **Tracks**: Every user click during gameplay
+- **Fields**: User authentication status, coordinates, timing, correctness, scoring
+- **region_id**: Can be NULL for navigation mode or edge cases
 
 ---
 
@@ -194,6 +211,12 @@ The game supports multiple brain atlases loaded from NIfTI files
 - **Session Management**: In-memory game state with PostgreSQL persistence
 - **Anonymous Support**: Configurable anonymous player participation
 
+### **Multiplayer Features**
+- **Public Lobbies**: Discoverable multiplayer games
+- **Challenge System**: Custom multiplayer challenges with time limits
+- **Classic Challenges**: Recurring scheduled challenges with leaderboards
+- **Session Cleanup**: Automated cleanup of inactive multiplayer sessions
+
 ### **Multiplayer Game Flow**
 1. **Lobby Creation**: Host creates session with custom parameters
 2. **Player Joining**: Real-time lobby updates via Socket.IO
@@ -258,6 +281,10 @@ POST /api/get-most-used-atlases    # Atlas usage statistics
 ```
 POST /api/create-multiplayer-session  # Create multiplayer lobby
 GET  /api/multi/public-lobbies         # List public lobbies
+POST /api/multi/challenge/create       # Create challenge session
+GET  /api/multi/challenge/list         # List active challenges
+POST /api/multi/classic-challenge/create # Create classic challenge
+GET  /api/multi/classic-challenge/list  # List classic challenges
 ```
 
 ### **Advanced Features**
