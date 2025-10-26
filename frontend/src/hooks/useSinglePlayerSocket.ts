@@ -101,7 +101,7 @@ export function useSinglePlayerSocket() {
     });
 
     socket.on('next-region', (data: NextRegionData) => {
-      consoleLog('verbose', 'Received next region:', data);
+      consoleLog('verbose', 'Received next region');
       setCurrentRegion(data);
       setLastGuessResult(null);
       joiningInProgressRef.current = false;
@@ -151,7 +151,7 @@ export function useSinglePlayerSocket() {
   }, [authToken]);
 
   const startGame = useCallback((atlas: string, mode: string, blindMode: boolean) => {
-    console.log("START GAME CALLED", socketRef.current)
+    consoleLog("verbose", "Start game called")
     if (!socketRef.current) return;
 
     const emitStartGame = () => {
