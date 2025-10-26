@@ -274,7 +274,6 @@ function SinglePlayer({
                 const accuracy = gameEnded.attempts ? Math.round((gameEnded.correct / gameEnded.attempts) * 100) : 0;
                 const minutes = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime / 60) : 0;
                 const seconds = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime % 60) : 0;
-                console.log(gameEnded.elapsedTime)
                 showNotification(`${t("game_over", {accuracy, minutes, seconds})}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
             }
         }
