@@ -135,7 +135,7 @@ export const database_init = async () => {
                     multiplayer_classic_challenge_id INTEGER DEFAULT NULL,
                     atlas TEXT NOT NULL,
                     blind_mode BOOLEAN NOT NULL DEFAULT FALSE,
-                    region_id INTEGER NOT NULL,
+                    region_id INTEGER,
                     clicked_x INTEGER DEFAULT NULL,
                     clicked_y INTEGER DEFAULT NULL,
                     clicked_z INTEGER DEFAULT NULL,
