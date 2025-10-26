@@ -99,7 +99,6 @@ function SinglePlayer({
         gameEnded,
         error,
         startGame: startSocketGame,
-        getNextRegion,
         validateGuess
     } = useSinglePlayerSocket();
 
@@ -247,7 +246,7 @@ function SinglePlayer({
             setCurrentAttempts(lastGuessResult.attempts);
             currentAttemptsRef.current = lastGuessResult.attempts;
         }
-    }, [lastGuessResult, getNextRegion]);
+    }, [lastGuessResult]);
 
     // Handle game end from socket
     useEffect(() => {
@@ -642,7 +641,9 @@ function SinglePlayer({
                         </button>
                         <button id="restart-button-time-attack" className="restart-button"
                             data-umami-event="restart button" data-umami-event-restartsource="time-attack"
-                            onClick={() => { setShowTimeattackOverlay(false); startGameCallbackRef.current() }}>
+                            onClick={() => { setShowTimeattackOverlay(false);
+                                resetGameCallbackRef.current();
+                                startGameCallbackRef.current() }}>
                             <i className="fas fa-sync-alt"></i>
                         </button>
                     </div>

@@ -19,7 +19,7 @@ const STREAK_BONUS = 5;
 const MAX_STREAK_DISTANCE = 50;
 const MAX_NUMBER_ERRORS_STREAK = 3;
 const MAX_TIME_IN_SECONDS = 100;
-const TOTAL_REGIONS_TIME_ATTACK = 18;
+const TOTAL_REGIONS_TIME_ATTACK = 3;
 function getUserId(authToken: string | undefined, socketId: string): number {
   if (authToken) {
     try {
