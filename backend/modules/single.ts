@@ -313,6 +313,7 @@ export async function validateSingleGuess(socket: Socket, data: {
       socket.emit('single-game-error', { message: 'Invalid authentication token' });
       return;
     }
+    const isAnonymous = !authToken;
     const gameState = activeSingleGames.get(userId);
 
     if (!gameState || !gameState.isActive) {
@@ -431,19 +432,72 @@ export async function validateSingleGuess(socket: Socket, data: {
 
     // Track correct/incorrect counts and durations
     const currentTime = Date.now();
+    const duration = currentTime - gameState.lastAsked;
     if (isCorrect) {
       gameState.correctCount++;
       // Calculate duration from lastAsked (when region was presented) to now
-      const duration = currentTime - gameState.lastAsked;
       gameState.regionSuccessDurations.push(duration);
     } else {
       gameState.incorrectCount++;
       // Calculate duration from lastActivity to now for failed attempts
-      const duration = currentTime - gameState.lastActivity;
       gameState.regionFailedDurations.push(duration);
     }
 
     gameState.lastActivity = Date.now();
+
+    await sql`
+      INSERT INTO individual_clicks (
+        is_authenticated,
+        user_id,
+        singleplayer_mode,
+        command_index,
+        atlas,
+        blind_mode,
+        region_id,
+        clicked_x,
+        clicked_y,
+        clicked_z,
+        clicked_x_mm,
+        clicked_y_mm,
+        clicked_z_mm,
+        nearest_center_x_mm,
+        nearest_center_y_mm,
+        nearest_center_z_mm,
+        boundary_point_x_mm,
+        boundary_point_y_mm,
+        boundary_point_z_mm,
+        distance_to_target,
+        time_taken,
+        is_correct,
+        score_increment,
+        attempts
+      ) VALUES (
+        ${!isAnonymous},
+        ${isAnonymous ? null : gameState.userId},
+        ${gameState.mode},
+        ${gameState.askedId},
+        ${gameState.atlas},
+        ${gameState.blindMode},
+        ${regionId || null},
+        ${x},
+        ${y},
+        ${z},
+        ${coordinates.mm[0] ?? null},
+        ${coordinates.mm[1] ?? null},
+        ${coordinates.mm[2] ?? null},
+        ${nearestCenter ? nearestCenter[0] : null},
+        ${nearestCenter ? nearestCenter[1] : null},
+        ${nearestCenter ? nearestCenter[2] : null},
+        ${nearestBoundary ? nearestBoundary[0] : null},
+        ${nearestBoundary ? nearestBoundary[1] : null},
+        ${nearestBoundary ? nearestBoundary[2] : null},
+        ${minDistance === Infinity ? null : minDistance},
+        ${duration},
+        ${isCorrect},
+        ${scoreIncrement},
+        ${gameState.attempts}
+      )
+    `;
 
     if (isCorrect && regionId) {
       gameState.regionsAnswered.add(regionId);
