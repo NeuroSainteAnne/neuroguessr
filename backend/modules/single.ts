@@ -30,6 +30,7 @@ export interface SinglePlayerGameState {
   streak: number;
   consecutiveErrors: number;
   attempts: number;
+  totalAttempts: number,
   startTime: number;
   regionsAnswered: Set<number>;
   isActive: boolean;
@@ -106,6 +107,7 @@ export async function startSingleGame(socket: Socket, data: {
       streak: 0,
       consecutiveErrors: 0,
       attempts: 0,
+      totalAttempts: 0,
       startTime: Date.now(),
       regionsAnswered: new Set(),
       isActive: true,
@@ -129,6 +131,9 @@ export async function startSingleGame(socket: Socket, data: {
             reason: 'timeout',
             finalScore: currentGameState.score,
             elapsedTime: MAX_TIME_IN_SECONDS,
+            attempts: currentGameState.totalAttempts,
+            correct: currentGameState.correctCount,
+            incorrect: currentGameState.incorrectCount,
             remainingTime: 0
           });
         }
@@ -212,6 +217,9 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
         socket.emit('single-game-ended', {
           reason: 'timeout',
           finalScore: gameState.score,
+          attempts: gameState.totalAttempts,
+          correct: gameState.correctCount,
+          incorrect: gameState.incorrectCount,
           elapsedTime
         });
         return;
@@ -237,10 +245,15 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
       if (availableRegions.length === 0) {
         // Game finished
         await endSingleGame(socket.id, 'completed');
+        const elapsedTime = (Date.now() - gameState.startTime) / 1000;
         socket.emit('single-game-ended', {
           reason: 'completed',
           finalScore: gameState.score,
-          regionsAnswered: gameState.regionsAnswered.size
+          attempts: gameState.totalAttempts,
+          correct: gameState.correctCount,
+          incorrect: gameState.incorrectCount,
+          regionsAnswered: gameState.regionsAnswered.size,
+          elapsedTime
         });
         return;
       }
@@ -312,6 +325,7 @@ export async function validateSingleGuess(socket: Socket, data: {
     }
 
     gameState.attempts++;
+    gameState.totalAttempts++;
 
     const regionId = gameState.currentRegionId;
     const [x, y, z] = coordinates.vox;
@@ -530,6 +544,9 @@ export async function validateSingleGuess(socket: Socket, data: {
             socket.emit('single-game-ended', {
               reason: 'max-consecutive-errors',
               finalScore: gameState.score,
+              attempts: gameState.totalAttempts,
+              correct: gameState.correctCount,
+              incorrect: gameState.incorrectCount,
               lastDistance: minDistance,
               consecutiveErrors: newConsecutiveErrors
             });
@@ -540,6 +557,9 @@ export async function validateSingleGuess(socket: Socket, data: {
             socket.emit('single-game-ended', {
                 reason: 'exceeded-max-distance',
                 finalScore: gameState.score,
+                attempts: gameState.totalAttempts,
+                correct: gameState.correctCount,
+                incorrect: gameState.incorrectCount,
                 lastDistance: minDistance,
                 consecutiveErrors: newConsecutiveErrors
             });
@@ -561,6 +581,9 @@ export async function validateSingleGuess(socket: Socket, data: {
           socket.emit('single-game-ended', {
             reason: 'guessed-all-regions',
             finalScore: gameState.score,
+            attempts: gameState.totalAttempts,
+            correct: gameState.correctCount,
+            incorrect: gameState.incorrectCount,
             lastDistance: minDistance,
             consecutiveErrors: newConsecutiveErrors,
             elapsedTime,
@@ -638,7 +661,7 @@ export async function endSingleGame(socketId: string, reason: string = 'complete
         quit_reason, duration, theoretical_maximum_score, score_percentage
       ) VALUES (
         ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
-        ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.attempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
+        ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.totalAttempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
         ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion}, 
         ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
         ${reason}, ${elapsedTime}, ${theoreticalMaxScore}, ${scorePercentage}
@@ -649,7 +672,7 @@ export async function endSingleGame(socketId: string, reason: string = 'complete
       userId: gameState.userId,
       reason,
       finalScore: gameState.score,
-      attempts: gameState.attempts,
+      attempts: gameState.totalAttempts,
       correct: gameState.correctCount,
       incorrect: gameState.incorrectCount,
       timingStats: {
@@ -683,6 +706,31 @@ export async function handleSinglePlayerDisconnect(socket: Socket) {
   logger.info('Single player socket disconnected', { socketId: socket.id });
 }
 
+// Handle client-initiated game end
+export async function handleEndSingleGame(socket: Socket, data: { authToken?: string }) {
+  try {
+    // Get user ID (authenticated or anonymous)
+    let userId: number | null = null;
+    try {
+      if(data.authToken){
+        const decoded = jwt.verify(data.authToken, config.jwt_secret) as any;
+        userId = decoded.id;
+      }
+    } catch (err) {
+      // Ignore auth errors for game ending
+    }
+
+    const gameState = activeSingleGames.get(socket.id);
+    if (gameState) {
+      // End the game with 'abandoned' reason
+      await endSingleGame(socket.id, 'abandoned');
+      logger.info('Single player game ended by client', { socketId: socket.id, userId });
+    }
+  } catch (error) {
+    logger.error('Error ending single player game:', error);
+  }
+}
+
 // Initialize single player socket handlers
 export function initSinglePlayerSockets() {
   const io = getIO();
@@ -692,6 +740,7 @@ export function initSinglePlayerSockets() {
     socket.on('start-single-game', (data) => startSingleGame(socket, data));
     socket.on('get-next-single-region', (data) => getNextSingleRegion(socket, data));
     socket.on('validate-single-guess', (data) => validateSingleGuess(socket, data));
+    socket.on('end-single-game', (data) => handleEndSingleGame(socket, data));
 
     // Handle disconnection
     socket.on('disconnect', () => {

@@ -271,7 +271,11 @@ function SinglePlayer({
                 showNotification(t("streak_ended_too_far", { distance: gameEnded.lastDistance }), false);
             } else {
                 // For other modes, show regular end screen
-                showNotification(`${t("game_over")}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
+                const accuracy = gameEnded.attempts ? Math.round((gameEnded.correct / gameEnded.attempts) * 100) : 0;
+                const minutes = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime / 60) : 0;
+                const seconds = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime % 60) : 0;
+                console.log(gameEnded.elapsedTime)
+                showNotification(`${t("game_over", {accuracy, minutes, seconds})}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
             }
         }
     }, [gameEnded, gameMode, t]);

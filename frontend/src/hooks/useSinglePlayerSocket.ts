@@ -43,6 +43,9 @@ export interface NextRegionData {
 export interface GameEndedData {
   reason: string;
   finalScore: number;
+  correct: number;
+  attempts: number;
+  incorrect: number;
   elapsedTime?: number;
   regionsAnswered?: number;
   consecutiveErrors?: number;
@@ -154,6 +157,12 @@ export function useSinglePlayerSocket() {
             socket.off('region-highlight');
         }
       });
+      
+      // End any active game before cleanup
+      if (socketRef.current) {
+          socketRef.current!.emit('end-single-game', {authToken});
+      }
+      
       setIsConnected(false);
       setGameState(null);
       setCurrentRegion(null);
@@ -163,6 +172,20 @@ export function useSinglePlayerSocket() {
       setError(null);
     };
   }, [authToken]);
+
+  // Ensure game cleanup when user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if(socketRef.current){
+        socketRef.current.emit('end-single-game', {authToken});
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [authToken, gameState]);
 
   const startGame = useCallback((atlas: string, mode: string, blindMode: boolean) => {
     consoleLog("verbose", "Start game called")
@@ -247,10 +270,11 @@ export function useSinglePlayerSocket() {
   }, [authToken]);
 
   const endGame = useCallback(() => {
-    if (!socketRef.current || !authToken) return;
+    if (!socketRef.current) return;
 
-    // For now, we'll just clear the local state
-    // The server will handle cleanup on disconnect or timeout
+    socketRef.current!.emit('end-single-game', {authToken});
+
+    // Clear local state immediately
     setGameState(null);
     setCurrentRegion(null);
     setLastGuessResult(null);

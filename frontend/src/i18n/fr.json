@@ -66,9 +66,10 @@
 
   "click_to_identify": "Cliquer pour identifier une région",
   "no_region_selected": "Aucune région sélectionnée",
-  "game_over": "Terminé ! Précision : {accuracy}%, Temps : {minutes}m {seconds}s",
-  "previous_game": "Jeu Précédent - Précision : {accuracy}%, Temps : {minutes}m {seconds}s",
-  "previous_streak": "Série Précédente : {streak} régions",
+  "game_over": "Terminé ! Précision : {{accuracy}}%, Temps : {{minutes}}m {{seconds}}s",
+  "previous_game": "Jeu Précédent - Précision : {{accuracy}}%, Temps : {{minutes}}m {{seconds}}s",
+  "previous_streak": "Série Précédente : {{streak}} régions",
+  "final_score": "Score final",
   "find": "Trouver : ",
   "new_target": "Trouver {{region}}",
   "incorrect_clicked": "Vous avez cliqué sur {{region}} !",
