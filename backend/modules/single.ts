@@ -139,8 +139,9 @@ export async function startSingleGame(socket: Socket, data: {
       }
     });
 
-    getNextSingleRegion(socket, { authToken });
-
+    if(mode !== "navigation"){
+      getNextSingleRegion(socket, { authToken });
+    }
   } catch (error) {
     logger.error('Error starting single player game:', error);
     socket.emit('single-game-error', { message: 'Failed to start game' });
@@ -255,8 +256,12 @@ export async function validateSingleGuess(socket: Socket, data: {
     }
     const gameState = activeSingleGames.get(userId);
 
-    if (!gameState || !gameState.isActive || !gameState.currentRegionId) {
-      socket.emit('single-game-error', { message: 'No active game or region' });
+    if (!gameState || !gameState.isActive) {
+      socket.emit('single-game-error', { message: 'No active game' });
+      return;
+    }
+    if (!gameState.currentRegionId && gameState.mode !== "navigation") {
+      socket.emit('single-game-error', { message: 'No active region' });
       return;
     }
 
@@ -266,15 +271,17 @@ export async function validateSingleGuess(socket: Socket, data: {
     const regionId = gameState.currentRegionId;
     const [x, y, z] = coordinates.vox;
 
-    // Validate coordinates are within bounds
-    const atlasMetadata = imageMetadata[gameState.atlas];
-    if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
-      socket.emit('guess-result', {
-        isCorrect: false,
-        scoreIncrement: 0,
-        message: 'Coordinates out of bounds'
-      });
-      return;
+    if(regionId){
+      // Validate coordinates are within bounds
+      const atlasMetadata = imageMetadata[gameState.atlas];
+      if (x < 0 || x >= atlasMetadata.nx || y < 0 || y >= atlasMetadata.ny || z < 0 || z >= atlasMetadata.nz) {
+        socket.emit('guess-result', {
+          isCorrect: false,
+          scoreIncrement: 0,
+          message: 'Coordinates out of bounds'
+        });
+        return;
+      }
     }
 
     // Get voxel value at clicked position
@@ -293,7 +300,7 @@ export async function validateSingleGuess(socket: Socket, data: {
     // Calculate distance and score
     let distanceResult: { distance: number; center: number[] | undefined; boundary: number[] | undefined } | null = null;
 
-    if (regionCenters[gameState.atlas] && regionCenters[gameState.atlas][regionId]) {
+    if (regionId && regionCenters[gameState.atlas] && regionCenters[gameState.atlas][regionId]) {
       const centers = regionCenters[gameState.atlas][regionId];
       distanceResult = getDistance(centers, coordinates, gameState.atlas, regionId);
       minDistance = distanceResult.distance;
@@ -348,6 +355,8 @@ export async function validateSingleGuess(socket: Socket, data: {
       }
     } else { // Navigation mode logic
         isCorrect = true;
+        newConsecutiveErrors = 0;
+        newStreak = 0;
     }
 
     // Apply blind mode multiplier
@@ -360,7 +369,7 @@ export async function validateSingleGuess(socket: Socket, data: {
     gameState.streak = newStreak;
     gameState.consecutiveErrors = newConsecutiveErrors;
 
-    if (isCorrect) {
+    if (isCorrect && regionId) {
       gameState.regionsAnswered.add(regionId);
     }
 
@@ -414,6 +423,12 @@ export async function validateSingleGuess(socket: Socket, data: {
             return;
         }
         getNextSingleRegion(socket, { authToken });
+    }
+    if (gameState.mode === "practice") {
+      // Practice mode logic
+      if (isCorrect) {
+        getNextSingleRegion(socket, { authToken });
+      }
     }
   } catch (error) {
     logger.error('Error validating single player guess:', error);

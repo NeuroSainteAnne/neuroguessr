@@ -161,7 +161,6 @@ function SinglePlayer({
                 setHeaderTextMode("success");
                 setTimeout(() => {
                     setHeaderTextMode("normal");
-                    getNextRegion();
                 }, 500);
             } else {
                 setCurrentErrors(prev => prev + 1);
@@ -231,6 +230,7 @@ function SinglePlayer({
     useEffect(() => {
         const cleanGame = () => {
             cleanHeader();
+            setHighlightedRegion(null);
             unHighlight();
             usedRegions.current = [];
             setIsGameRunning(false);
