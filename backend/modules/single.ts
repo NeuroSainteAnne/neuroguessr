@@ -7,6 +7,7 @@ import { getIO } from "./socket.io.ts";
 import jwt from "jsonwebtoken";
 import type { AuthenticatedRequest } from "../interfaces/requests.interfaces.ts";
 import { config } from "./multi.ts";
+import { get } from "http";
 
 const MAX_POINTS_PER_REGION = 50;
 const BONUS_POINTS_PER_SECOND = 1;
@@ -16,7 +17,7 @@ const BLIND_MODE_MULTIPLIER = 1.5;
 const STREAK_BONUS_AFTER = 5;
 const STREAK_BONUS = 5;
 const MAX_STREAK_DISTANCE = 50;
-const MAX_NUMBER_FAR_STREAK = 3;
+const MAX_NUMBER_ERRORS_STREAK = 3;
 const MAX_TIME_IN_SECONDS = 100;
 const TOTAL_REGIONS_TIME_ATTACK = 18;
 function getUserId(authToken: string | undefined, socketId: string): number {
@@ -239,9 +240,10 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
 export async function validateSingleGuess(socket: Socket, data: {
   authToken?: string;
   coordinates: { mm: number[]; vox: number[] };
+  pastRegionId?: number;
 }) {
   try {
-    const { authToken, coordinates } = data;
+    const { authToken, coordinates, pastRegionId } = data;
 
     // Get user ID (authenticated or anonymous)
     let userId: number;
@@ -302,26 +304,23 @@ export async function validateSingleGuess(socket: Socket, data: {
     if (gameState.mode === "streak") {
       // Streak mode logic
       if (isCorrect) {
-        if (minDistance <= MAX_STREAK_DISTANCE) {
-          newStreak++;
-          newConsecutiveErrors = 0;
-          scoreIncrement = MAX_POINTS_PER_REGION;
-
-          if (newStreak >= STREAK_BONUS_AFTER) {
+        newStreak++;
+        newConsecutiveErrors = 0;
+        scoreIncrement = MAX_POINTS_PER_REGION;
+        if (newStreak >= STREAK_BONUS_AFTER) {
             streakBonus = STREAK_BONUS;
             scoreIncrement += streakBonus;
-          }
-        } else {
-          streakTooFar = true;
-          newStreak = 0;
-          newConsecutiveErrors++;
-          scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
         }
       } else {
-        newStreak = 0;
-        newConsecutiveErrors++;
-        scoreIncrement = 0;
+        if (minDistance <= MAX_STREAK_DISTANCE) {
+            newStreak = 0;
+            newConsecutiveErrors++;
+            scoreIncrement = 0;
+        } else {
+            streakTooFar = true;
+        }
       }
+
     } else if (gameState.mode === "time-attack") {
       // Time-attack mode logic
       const elapsedTime = (Date.now() - gameState.startTime) / 1000;
@@ -372,7 +371,12 @@ export async function validateSingleGuess(socket: Socket, data: {
       streak: gameState.streak,
       distance: minDistance,
       attempts: gameState.attempts,
-      regionCompleted: isCorrect
+      regionCompleted: isCorrect,
+      consecutiveErrors: gameState.consecutiveErrors,
+      maxErrorsStreak: MAX_NUMBER_ERRORS_STREAK,
+      pastRegionId,
+      regionCenter: nearestCenter,
+      regionBoundary: nearestBoundary
     });
 
     logger.info('Single player guess validated', {
@@ -384,6 +388,33 @@ export async function validateSingleGuess(socket: Socket, data: {
       streak: gameState.streak
     });
 
+    if (gameState.mode === "streak") {
+        // Check if game should end due to max consecutive errors
+        if (newConsecutiveErrors >= MAX_NUMBER_ERRORS_STREAK) {
+            // End the game
+            const isAnonymous = !authToken;
+            await endSingleGame(userId, 'max-consecutive-errors', isAnonymous);
+            socket.emit('single-game-ended', {
+            reason: 'max-consecutive-errors',
+            finalScore: gameState.score,
+            lastDistance: minDistance,
+            consecutiveErrors: newConsecutiveErrors
+            });
+            return;
+        } else if (streakTooFar) {
+            // end the game
+            const isAnonymous = !authToken;
+            await endSingleGame(userId, 'exceeded-max-distance', isAnonymous);
+            socket.emit('single-game-ended', {
+                reason: 'exceeded-max-distance',
+                finalScore: gameState.score,
+                lastDistance: minDistance,
+                consecutiveErrors: newConsecutiveErrors
+            });
+            return;
+        }
+        getNextSingleRegion(socket, { authToken });
+    }
   } catch (error) {
     logger.error('Error validating single player guess:', error);
     socket.emit('single-game-error', { message: 'Failed to validate guess' });

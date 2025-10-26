@@ -90,6 +90,8 @@ const MultiPlayer = ({
   const [showAuthRequired, setShowAuthRequired] = useState<boolean>(false);
   const [isCheckingClassicChallenge, setIsCheckingClassicChallenge] = useState<boolean>(true);
   const joiningInProgressRef = useRef<boolean>(false);
+  const pastRegionIdCounter = useRef<number>(0);
+  const currentPastRegionId = useRef<number | null>(null);
 
   const handleConnect = () => {
     setError(null);
@@ -293,19 +295,20 @@ const MultiPlayer = ({
           });
         }
       } else if (data.command.action === 'guess') {
-        if (currentTarget.current !== null && !hasAnswered.current) {
-          const curTar = currentTarget.current;    
-          if(curTar !== undefined) {
-            setPastRegions(prev => [...prev, {
-              regionId: curTar,
-              regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
-              atlas: atlasRef.current?.atlas || "",
-              isCorrect: false,
-              score: 0,
-              distance: -1, // Special value to indicate no guess was made
-            }]);
-          }
-        }
+        // Create empty pastRegion entry for the new region
+        const pastRegionId = pastRegionIdCounter.current++;
+        const regionName = atlasRef.current?.labels?.[data.command.regionId] || t('unknown_region');
+        setPastRegions(prev => [...prev, {
+          id: pastRegionId,
+          regionId: data.command.regionId,
+          regionName,
+          atlas: atlasRef.current?.atlas || "",
+          isCorrect: false,
+          score: 0,
+          distance: -1, // Special value to indicate no guess was made
+        }]);
+        currentPastRegionId.current = pastRegionId;
+
         hasAnswered.current = false;
         isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
@@ -341,19 +344,6 @@ const MultiPlayer = ({
       setMaximumScore(data.maximumScore)
     });
     socket.on('game-end', (data: any) => {
-      if (!isFirstGuess.current && currentTarget.current !== null && !hasAnswered.current) {
-        const curTar = currentTarget.current;
-        if(curTar !== undefined) {
-          setPastRegions(prev => [...prev, {
-            regionId: curTar,
-            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
-            atlas: atlasRef.current?.atlas || "",
-            isCorrect: false,
-            score: 0,
-            distance: -1, // Special value to indicate no guess was made
-          }]);
-        }
-      }
       setHasEnded(true)
       hasEndedRef.current = true
       clearInterface()
@@ -368,26 +358,24 @@ const MultiPlayer = ({
       setShowMultiplayerOverlay(true)
     });
     socket.on('guess-result', (data: any) => {
-        if(currentTarget.current){
-          const curTar = currentTarget.current;
-          setPastRegions(prev => [...prev, {
-            regionId: curTar,
-            regionName: atlasRef.current?.labels?.[curTar] || t('unknown_region'),
-            atlas: atlasRef.current?.atlas || "",
-            isCorrect: data.isCorrect,
-            score: data.scoreIncrement,
-            distance: data.isCorrect ? 0 : data.distance,
-            clickedPosition: selectedVoxelProp.current ? {
-              mm: [...selectedVoxelProp.current.mm],
-              vox: [...selectedVoxelProp.current.vox]
-            } : undefined,
-            regionCenter: data.nearestCenter 
-              ? data.nearestCenter 
-              : (atlasRef.current && atlasRef.current.centers && currentTarget.current !== undefined)
-                ? atlasRef.current.centers?.[currentTarget.current]?.[0]
-                : undefined,
-            regionBoundary: data.nearestBoundary ? data.nearestBoundary : undefined
-          }]);
+        // Update existing pastRegion if pastRegionId is provided
+        if (data.pastRegionId !== undefined) {
+          setPastRegions(prev => prev.map(region =>
+            region.id === data.pastRegionId
+              ? {
+                  ...region,
+                  isCorrect: data.isCorrect,
+                  score: data.scoreIncrement,
+                  distance: data.isCorrect ? 0 : data.distance,
+                  clickedPosition: data.clickedVoxelProp ? {
+                    mm: [...data.clickedVoxelProp.mm],
+                    vox: [...data.clickedVoxelProp.vox]
+                  } : undefined,
+                  regionCenter: data.nearestCenter,
+                  regionBoundary: data.nearestBoundary
+                }
+              : region
+          ));
         }
         if (data.isCorrect) {
           setHeaderTextMode("success");
@@ -663,10 +651,12 @@ const MultiPlayer = ({
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
       hasAnswered.current = true;
+
       socket.emit('validate-guess', {
         sessionCode: isClassicChallenge ? implicitCodeRef.current : inputCode,
         userName: isLoggedIn ? userUsername : anonUsername,
         voxelProp: selectedVoxelProp.current,
+        pastRegionId: currentPastRegionId.current,
         ...(isAnonymous && anonTokenRef.current ? { anonToken: anonTokenRef.current } : {}),
         ...(isLoggedIn ? { userToken: authToken } : {})
       });

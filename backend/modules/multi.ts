@@ -1212,10 +1212,11 @@ export async function handleValidateGuess(data: {
   userName: string,
   voxelProp: any,
   anonToken?: string,
-  userToken?: string
+  userToken?: string,
+  pastRegionId?: number
 }) : Promise<void> {
   try {
-    const { sessionCode, userName, voxelProp, anonToken, userToken } = data;
+    const { sessionCode, userName, voxelProp, anonToken, userToken, pastRegionId } = data;
     
     // Authentication check
     if (!verifyUserAccess(sessionCode, userName, userToken, anonToken)) {
@@ -1412,7 +1413,9 @@ export async function handleValidateGuess(data: {
       totalScore: finalScore,
       distance: minDistance,
       nearestCenter,
-      nearestBoundary
+      nearestBoundary,
+      pastRegionId,
+      clickedVoxelProp: voxelProp
     })
   } catch (error) {
       logger.error("Error validating guess:", error);

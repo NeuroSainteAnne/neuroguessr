@@ -113,6 +113,7 @@ export function initSocketHandlers() {
       voxelProp: any;
       anonToken?: string;
       userToken?: string;
+      pastRegionId?: number;
     }) => {
       try {
         const info = socketInfo[socket.id];

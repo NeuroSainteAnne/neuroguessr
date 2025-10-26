@@ -20,6 +20,11 @@ export interface GuessResult {
   distance: number;
   attempts: number;
   regionCompleted: boolean;
+  consecutiveErrors: number;
+  maxErrorsStreak: number;
+  pastRegionId?: number;
+  regionCenter?: number[];
+  regionBoundary?: number[];
 }
 
 export interface NextRegionData {
@@ -32,6 +37,8 @@ export interface GameEndedData {
   finalScore: number;
   elapsedTime?: number;
   regionsAnswered?: number;
+  consecutiveErrors?: number;
+  lastDistance?: number;
 }
 
 export function useSinglePlayerSocket() {
@@ -183,7 +190,7 @@ export function useSinglePlayerSocket() {
     }
   }, [authToken]);
 
-  const validateGuess = useCallback((coordinates: { mm: number[]; vox: number[] }) => {
+  const validateGuess = useCallback((coordinates: { mm: number[]; vox: number[] }, pastRegionId?: number) => {
     if (!socketRef.current) return;
 
     const emitValidateGuess = () => {
@@ -192,6 +199,9 @@ export function useSinglePlayerSocket() {
       };
       if (authToken) {
         data.authToken = authToken;
+      }
+      if (pastRegionId !== undefined) {
+        data.pastRegionId = pastRegionId;
       }
       socketRef.current!.emit('validate-single-guess', data);
     };

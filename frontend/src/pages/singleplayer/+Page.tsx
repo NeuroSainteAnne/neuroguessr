@@ -71,10 +71,10 @@ function SinglePlayer({
     const [currentErrors, setCurrentErrors] = useState<number>(0);
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const currentStreakRef = useRef<number>(0);
-    const currentConsecutiveErrorsRef = useRef<number>(0);
     const [currentAttempts, setCurrentAttempts] = useState<number>(0);
     const currentAttemptsRef = useRef<number>(0);
     const usedRegions = useRef<number[]>([]);
+    const pastRegionIdCounter = useRef<number>(0);
     const [showStreakOverlay, setShowStreakOverlay] = useState<boolean>(false);
     const streakOverlayRef = useRef<HTMLDivElement>(null);
     const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
@@ -138,6 +138,22 @@ function SinglePlayer({
     // Handle guess results from socket
     useEffect(() => {
         if (lastGuessResult && gameMode !== "navigation") {
+            // Update pastRegions if pastRegionId is provided
+            if (lastGuessResult.pastRegionId !== undefined) {
+                setPastRegions(prev => prev.map(region =>
+                    region.id === lastGuessResult.pastRegionId
+                        ? {
+                            ...region,
+                            isCorrect: lastGuessResult.isCorrect,
+                            score: lastGuessResult.scoreIncrement,
+                            distance: lastGuessResult.distance,
+                            regionCenter: lastGuessResult.regionCenter,
+                            regionBoundary: lastGuessResult.regionBoundary
+                        }
+                        : region
+                ));
+            }
+
             // Update UI based on guess result
             if (lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
@@ -149,8 +165,10 @@ function SinglePlayer({
                 }, 500);
             } else {
                 setCurrentErrors(prev => prev + 1);
-                currentConsecutiveErrorsRef.current++;
                 setHeaderTextMode("failure");
+                if(gameMode === "streak"){ 
+                    showNotification(`${t("incorrect")} ${lastGuessResult.consecutiveErrors}/${lastGuessResult.maxErrorsStreak}`, false);
+                }
             }
             setCurrentAttempts(lastGuessResult.attempts);
             currentAttemptsRef.current = lastGuessResult.attempts;
@@ -167,10 +185,17 @@ function SinglePlayer({
                 setFinalElapsed(gameEnded.elapsedTime);
             }
             
-            // Show appropriate end screen based on game mode
+            // Show appropriate end screen based on game mode and reason
             if (gameMode === 'time-attack') {
                 // For time attack, show the overlay with final score
                 setShowTimeattackOverlay(true);
+            } else if (gameMode === 'streak' && gameEnded.reason === 'max-consecutive-errors') {
+                // For streak mode ending due to max consecutive errors, show streak overlay
+                setShowStreakOverlay(true);
+            } else if (gameMode === 'streak' && gameEnded.reason === 'exceeded-max-distance') {
+                // For streak mode ending due to exceeded max distance, show streak overlay and notification
+                setShowStreakOverlay(true);
+                showNotification(t("streak_ended_too_far", { distance: gameEnded.lastDistance }), false);
             } else {
                 // For other modes, show regular end screen
                 showNotification(`${t("game_over")}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
@@ -222,7 +247,6 @@ function SinglePlayer({
         const resetGameState = () => {
             currentTarget.current = undefined;
             selectedVoxelProp.current = null;
-            currentConsecutiveErrorsRef.current = 0;
             setCurrentAttempts(0); // Reset attempts for practice mode
             setCurrentScore(0); // Reset score for Time Attack
             setCurrentCorrects(0); // Reset correct count for Practice/Streak
@@ -353,18 +377,38 @@ function SinglePlayer({
 
     useEffect(() => {
         const validateGuessInternal = async () => {
-            if (!selectedVoxelProp.current || !isGameRunning) {
-                console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning });
+            if (!selectedVoxelProp.current || !isGameRunning || !currentTarget.current || !atlasRef.current) {
+                console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget, atlasRef });
                 return;
             }
 
-            // Use socket to validate guess instead of REST API
-            validateGuess(selectedVoxelProp.current);
+            // For non-navigation modes, prepopulate pastRegions with empty entry
+            if (gameMode !== 'navigation') {
+                const pastRegionId = pastRegionIdCounter.current++;
+                const regionName = atlasRef.current!.labels?.[currentTarget.current!] || t('unknown_region');
+                
+                setPastRegions(prev => [...prev, {
+                    id: pastRegionId,
+                    regionId: currentTarget.current!,
+                    regionName,
+                    atlas: atlasRef.current!.atlas,
+                    isCorrect: false,
+                    clickedPosition: selectedVoxelProp.current || undefined,
+                    score: 0,
+                    distance: -1, // Special value to indicate no guess was made
+                }]);
+
+                // Use socket to validate guess instead of REST API
+                validateGuess(selectedVoxelProp.current, pastRegionId);
+            } else {
+                // Use socket to validate guess instead of REST API
+                validateGuess(selectedVoxelProp.current);
+            }
         }
         if (validateGuessCallbackRef) {
             validateGuessCallbackRef.current = validateGuessInternal; // Set the callback in the ref
         }
-    }, [validateGuessCallbackRef, isGameRunning, gameMode]);
+    }, [validateGuessCallbackRef, isGameRunning, gameMode, currentTarget, atlasRef, t]);
 
     const updateGameDisplay = () => {
         // Update labels based on mode
