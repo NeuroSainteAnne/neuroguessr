@@ -10,6 +10,8 @@ export interface SingleGameState {
   blindMode: boolean;
   score: number;
   streak: number;
+  endDate?: Date;
+  maxScore?: number; // For time-attack mode: theoretical maximum possible score
 }
 
 export interface GuessResult {
@@ -25,11 +27,17 @@ export interface GuessResult {
   pastRegionId?: number;
   regionCenter?: number[];
   regionBoundary?: number[];
+  clickedPosition?: {
+    mm: number[];
+    vox: number[];
+  };
 }
 
 export interface NextRegionData {
   regionId: number;
   attempts: number;
+  askedId?: number; // For time-attack mode: current question number
+  totalNumRegions?: number // For time-attack mode: total number of questions
 }
 
 export interface GameEndedData {
@@ -79,7 +87,12 @@ export function useSinglePlayerSocket() {
     // Game events
     socket.on('single-game-started', (data: { message: string; gameState: SingleGameState }) => {
       consoleLog('verbose', 'Single player game started');
-      setGameState(data.gameState);
+      // Parse endDate if it exists (comes as ISO string from server)
+      const gameStateData = { ...data.gameState };
+      if (gameStateData.endDate) {
+        gameStateData.endDate = new Date(gameStateData.endDate);
+      }
+      setGameState(gameStateData);
       setCurrentRegion(null);
       setLastGuessResult(null);
       setGameEnded(null);
@@ -88,7 +101,7 @@ export function useSinglePlayerSocket() {
     });
 
     socket.on('next-region', (data: NextRegionData) => {
-        consoleLog('verbose', 'Received next region:', data);
+      consoleLog('verbose', 'Received next region:', data);
       setCurrentRegion(data);
       setLastGuessResult(null);
       joiningInProgressRef.current = false;

@@ -80,6 +80,9 @@ function SinglePlayer({
     const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
     const timeattackOverlayRef = useRef<HTMLDivElement>(null);
     const [showCacheMonitor, setShowCacheMonitor] = useState<boolean>(false);
+    const [currentAskedId, setCurrentAskedId] = useState<number>(0);
+    const [currentTotalNumRegions, setCurrentTotalNumRegions] = useState<number>(18);
+    const [maxScore, setMaxScore] = useState<number | null>(null);
 
     const {
         setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
@@ -112,18 +115,87 @@ function SinglePlayer({
         if (gameState && gameMode !== "navigation") {
             setCurrentScore(gameState.score);
             setCurrentStreak(gameState.streak);
-            setHeaderScore(`${t("score")}: ${gameState.score}`);
-            setHeaderStreak(`${gameState.streak}`);
+            
+            // Store maxScore for time-attack mode
+            if (gameMode === 'time-attack' && gameState.maxScore) {
+                setMaxScore(gameState.maxScore);
+            }
+            
+            // Display score
+            setHeaderScore(`${t("score")}: ${Math.round(gameState.score)}`);
+            
+            if(gameMode === "streak"){
+                setHeaderStreak(`${gameState.streak}`);
+            }
+        }
+    }, [gameState, t, gameMode]);
+
+    // Handle timer for time-attack mode
+    useEffect(() => {
+        if (gameState?.mode === 'time-attack' && gameState.endDate) {
+            const endTime = gameState.endDate.getTime();
+            
+            const updateTimer = () => {
+                const now = Date.now();
+                const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
+                
+                if (remaining > 0) {
+                    const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+                    const seconds = (remaining % 60).toString().padStart(2, '0');
+                    setHeaderTime(`${t("remaining-time") || "Time left"}: ${minutes}:${seconds}`);
+                } else {
+                    setHeaderTime("");
+                }
+            };
+            
+            // Update immediately
+            updateTimer();
+            
+            // Set up interval to update every 250ms for smooth countdown
+            const intervalId = setInterval(updateTimer, 250);
+            
+            return () => {
+                clearInterval(intervalId);
+                setHeaderTime("");
+            };
+        } else {
+            setHeaderTime("");
+            return () => {}; // Return empty cleanup function
         }
     }, [gameState, t]);
 
     // Handle new region from socket
     useEffect(() => {
-        if (currentRegion && atlasRef.current && gameMode !== "navigation") {
+        if (currentRegion && gameMode !== "navigation") {
+            // Prepopulate pastRegions with empty entry in time attack mode
+            if (gameMode === "time-attack" && currentRegion.askedId !== undefined && atlasRef.current) {
+                const regionName = atlasRef.current.labels?.[currentRegion.regionId] || t('unknown_region');
+                setPastRegions(prev => [...prev, {
+                    id: currentRegion.askedId!,
+                    regionId: currentRegion.regionId,
+                    regionName,
+                    atlas: atlasRef.current!.atlas,
+                    isCorrect: false,
+                    clickedPosition: undefined,
+                    score: 0,
+                    distance: -1, // Special value to indicate no guess was made
+                }]);
+            }
+
             // Set the current target region
             currentTarget.current = currentRegion.regionId;
             setCurrentAttempts(currentRegion.attempts);
             currentAttemptsRef.current = currentRegion.attempts;
+            
+            // Set current asked ID for time-attack mode
+            if (gameMode === "time-attack"){
+                if(currentRegion.askedId !== undefined) {
+                    setCurrentAskedId(currentRegion.askedId);
+                }
+                if(currentRegion.totalNumRegions !== undefined){
+                    setCurrentTotalNumRegions(currentRegion.totalNumRegions)
+                }
+            }
             
             // Highlight region if needed
             if (gameMode === 'practice' && currentRegion.attempts >= 3) {
@@ -131,7 +203,9 @@ function SinglePlayer({
             }
 
             // show notification
-            showNotification(`${t("find")} ${atlasRef.current.labels[currentRegion.regionId]}`, true);
+            if (atlasRef.current && atlasRef.current.labels) {
+                showNotification(`${t("find")} ${atlasRef.current.labels[currentRegion.regionId]}`, true);
+            }
         }
     }, [currentRegion, gameMode]);
 
@@ -148,7 +222,8 @@ function SinglePlayer({
                             score: lastGuessResult.scoreIncrement,
                             distance: lastGuessResult.distance,
                             regionCenter: lastGuessResult.regionCenter,
-                            regionBoundary: lastGuessResult.regionBoundary
+                            regionBoundary: lastGuessResult.regionBoundary,
+                            clickedPosition: lastGuessResult.clickedPosition
                         }
                         : region
                 ));
@@ -157,7 +232,7 @@ function SinglePlayer({
             // Update UI based on guess result
             if (lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
-                // Request next region
+                // DIsplay success
                 setHeaderTextMode("success");
                 setTimeout(() => {
                     setHeaderTextMode("normal");
@@ -252,6 +327,8 @@ function SinglePlayer({
             setCurrentCorrects(0); // Reset correct count for Practice/Streak
             setCurrentErrors(0); // Reset errors
             setCurrentStreak(0); // Reset streak
+            setCurrentAskedId(0); // Reset asked ID for time-attack
+            setMaxScore(null); // Reset max score
             usedRegions.current = []; // Reset used regions for time attack
             setHeaderTextMode("normal"); // Reset header text mode
             setHasEnded(false);
@@ -382,8 +459,8 @@ function SinglePlayer({
                 return;
             }
 
-            // For non-navigation modes, prepopulate pastRegions with empty entry
-            if (gameMode !== 'navigation') {
+            // Prepopulate pastRegions with empty entry
+            if (gameMode === 'practice' || gameMode === "streak") {
                 const pastRegionId = pastRegionIdCounter.current++;
                 const regionName = atlasRef.current!.labels?.[currentTarget.current!] || t('unknown_region');
                 
@@ -400,6 +477,8 @@ function SinglePlayer({
 
                 // Use socket to validate guess instead of REST API
                 validateGuess(selectedVoxelProp.current, pastRegionId);
+            } else if (gameMode === 'time-attack') {
+                validateGuess(selectedVoxelProp.current, currentRegion?.askedId);
             } else {
                 // Use socket to validate guess instead of REST API
                 validateGuess(selectedVoxelProp.current);
@@ -408,7 +487,7 @@ function SinglePlayer({
         if (validateGuessCallbackRef) {
             validateGuessCallbackRef.current = validateGuessInternal; // Set the callback in the ref
         }
-    }, [validateGuessCallbackRef, isGameRunning, gameMode, currentTarget, atlasRef, t]);
+    }, [validateGuessCallbackRef, isGameRunning, gameMode, currentRegion, currentTarget, atlasRef, t]);
 
     const updateGameDisplay = () => {
         // Update labels based on mode
@@ -434,7 +513,7 @@ function SinglePlayer({
             const prefix = t('find') || 'Find: ';
             // For time attack, display the current question number
             if (gameMode === 'time-attack') {
-                setHeaderText(`${currentAttempts}/18 - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+                setHeaderText(`${currentAskedId}/${currentTotalNumRegions} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
             } else {
                 if(currentTarget.current !== undefined){
                     setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
@@ -448,7 +527,9 @@ function SinglePlayer({
 
     useEffect(() => {
         updateGameDisplay();
-    }, [currentScore, currentCorrects, currentErrors, currentStreak, gameMode, currentTarget.current, highlightedRegion]);
+    }, [currentScore, currentCorrects, currentErrors, currentStreak, 
+        gameMode, currentTarget.current, highlightedRegion, 
+        currentAskedId, currentTotalNumRegions]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;
@@ -537,13 +618,13 @@ function SinglePlayer({
                     <h2>{t("time_attack_ended_title")}</h2>
                     <p><span>{t("time_attack_ended_time")}</span>
                         <span id="final-time-attack-time">{finalElapsed}</span></p>
-                    <p><span>{t("time_attack_ended_score")}</span></p>
+                    <p><span>{t("time_attack_ended_score")} {Math.round(finalScore)}</span></p>
                     {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
                     <div className="score-progress-bar w3-light-grey w3-round">
                         <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
-                            style={{ width: (finalScore / 1000) * 100 + "%" }}>{finalScore}</div>
-                        <span className="progress-label progress-label-med">{Math.round(1000 * 0.5)}</span>
-                        <span className="progress-label progress-label-max">{Math.round(1000 * 1)}</span>
+                            style={{ width: (maxScore ? (finalScore / maxScore) * 100 : (finalScore / 1000) * 100) + "%" }}></div>
+                        <span className="progress-label progress-label-med">{Math.round((maxScore || 1000) * 0.5)}</span>
+                        <span className="progress-label progress-label-max">{Math.round(maxScore || 1000)}</span>
                     </div>
                     <div className="overlay-buttons">
                         <button

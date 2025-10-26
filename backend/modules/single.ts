@@ -11,15 +11,15 @@ import { get } from "http";
 
 const MAX_POINTS_PER_REGION = 50;
 const BONUS_POINTS_PER_SECOND = 1;
+const MAX_DISTANCE_WITH_PENALTY = 50;
 const MAX_POINTS_WITH_PENALTY = 30;
-const MAX_PENALTY_DISTANCE = 100;
 const BLIND_MODE_MULTIPLIER = 1.5;
 const STREAK_BONUS_AFTER = 5;
 const STREAK_BONUS = 5;
 const MAX_STREAK_DISTANCE = 50;
 const MAX_NUMBER_ERRORS_STREAK = 3;
-const MAX_TIME_IN_SECONDS = 100;
-const TOTAL_REGIONS_TIME_ATTACK = 18;
+const MAX_TIME_IN_SECONDS = 15;
+const TOTAL_REGIONS_TIME_ATTACK = 3;
 function getUserId(authToken: string | undefined, socketId: string): number {
   if (authToken) {
     try {
@@ -53,6 +53,8 @@ export interface SinglePlayerGameState {
   regionsAnswered: Set<number>;
   isActive: boolean;
   lastActivity: number;
+  endTimer?: NodeJS.Timeout;
+  askedId: number; // autoincremental ID for each asked region
 }
 
 // In-memory storage for active single player games
@@ -65,6 +67,10 @@ export function cleanupInactiveSingleGames() {
 
   for (const [userId, gameState] of activeSingleGames.entries()) {
     if (now - gameState.lastActivity > timeoutMs) {
+      // Clear any active timer before deleting
+      if (gameState.endTimer) {
+        clearTimeout(gameState.endTimer);
+      }
       logger.info(`Cleaning up inactive single player game for user ${userId}`);
       activeSingleGames.delete(userId);
     }
@@ -115,8 +121,26 @@ export async function startSingleGame(socket: Socket, data: {
       startTime: Date.now(),
       regionsAnswered: new Set(),
       isActive: true,
-      lastActivity: Date.now()
+      lastActivity: Date.now(),
+      askedId: 0
     };
+
+    // Set up automatic end timer for time-attack mode
+    if (mode === "time-attack") {
+      const endTime = gameState.startTime + (MAX_TIME_IN_SECONDS * 1000);
+      gameState.endTimer = setTimeout(async () => {
+        const currentGameState = activeSingleGames.get(userId);
+        if (currentGameState && currentGameState.isActive) {
+          await endSingleGame(userId, 'timeout', isAnonymous);
+          socket.emit('single-game-ended', {
+            reason: 'timeout',
+            finalScore: currentGameState.score,
+            elapsedTime: MAX_TIME_IN_SECONDS,
+            remainingTime: 0
+          });
+        }
+      }, MAX_TIME_IN_SECONDS * 1000);
+    }
 
     activeSingleGames.set(userId, gameState);
 
@@ -128,7 +152,8 @@ export async function startSingleGame(socket: Socket, data: {
       socketId: socket.id
     });
 
-    socket.emit('single-game-started', {
+    // Prepare response data
+    const responseData: any = {
       message: 'Game started successfully',
       gameState: {
         atlas: gameState.atlas,
@@ -137,7 +162,17 @@ export async function startSingleGame(socket: Socket, data: {
         score: gameState.score,
         streak: gameState.streak
       }
-    });
+    };
+
+    // Add endDate and maxScore for time-attack mode
+    if (mode === "time-attack") {
+      responseData.gameState.endDate = new Date(gameState.startTime + (MAX_TIME_IN_SECONDS * 1000));
+      // Calculate theoretical maximum score: all correct guesses plus maximum time bonus at end
+      const maxScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+      responseData.gameState.maxScore = maxScore;
+    }
+
+    socket.emit('single-game-started', responseData);
 
     if(mode !== "navigation"){
       getNextSingleRegion(socket, { authToken });
@@ -219,15 +254,23 @@ export async function getNextSingleRegion(socket: Socket, data: { authToken?: st
       gameState.currentRegionId = randomRegionId;
       gameState.attempts = 0; // Reset attempts for new region
 
-      socket.emit('next-region', {
+      const nextRegionData: any = {
         regionId: randomRegionId,
-        attempts: gameState.attempts
-      });
+        attempts: gameState.attempts,
+        askedId: gameState.askedId + 1,
+        totalNumRegions: TOTAL_REGIONS_TIME_ATTACK
+      };
+
+      socket.emit('next-region', nextRegionData);
+
+      // Increment askedId for time-attack mode
+      gameState.askedId++;
 
       logger.info('Next region selected for single player', {
         userId,
         regionId: randomRegionId,
-        mode: gameState.mode
+        mode: gameState.mode,
+        askedId: gameState.askedId
       });
     }
 
@@ -296,6 +339,8 @@ export async function validateSingleGuess(socket: Socket, data: {
     let minDistance = Infinity;
     let nearestCenter: number[] | undefined = undefined;
     let nearestBoundary: number[] | undefined = undefined;
+    let elapsedTime: number = 0;
+    let remainingTime: number = 0;
 
     // Calculate distance and score
     let distanceResult: { distance: number; center: number[] | undefined; boundary: number[] | undefined } | null = null;
@@ -330,15 +375,15 @@ export async function validateSingleGuess(socket: Socket, data: {
 
     } else if (gameState.mode === "time-attack") {
       // Time-attack mode logic
-      const elapsedTime = (Date.now() - gameState.startTime) / 1000;
-      const timeRemaining = Math.max(0, MAX_TIME_IN_SECONDS - elapsedTime);
+      elapsedTime = (Date.now() - gameState.startTime) / 1000;
+      remainingTime = Math.max(0, MAX_TIME_IN_SECONDS - elapsedTime);
 
       if (isCorrect) {
-        scoreIncrement = MAX_POINTS_PER_REGION + (timeRemaining * BONUS_POINTS_PER_SECOND);
+        scoreIncrement = MAX_POINTS_PER_REGION;
         newStreak++;
         newConsecutiveErrors = 0;
       } else {
-        scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
+        scoreIncrement = MAX_POINTS_WITH_PENALTY*Math.max(0, MAX_DISTANCE_WITH_PENALTY - Math.floor(minDistance))/MAX_DISTANCE_WITH_PENALTY;
         newStreak = 0;
         newConsecutiveErrors++;
       }
@@ -349,7 +394,7 @@ export async function validateSingleGuess(socket: Socket, data: {
         newStreak++;
         newConsecutiveErrors = 0;
       } else {
-        scoreIncrement = Math.max(0, MAX_POINTS_WITH_PENALTY - Math.floor(minDistance));
+        scoreIncrement = MAX_POINTS_WITH_PENALTY*Math.max(0, MAX_DISTANCE_WITH_PENALTY - Math.floor(minDistance))/MAX_DISTANCE_WITH_PENALTY;
         newStreak = 0;
         newConsecutiveErrors++;
       }
@@ -385,7 +430,8 @@ export async function validateSingleGuess(socket: Socket, data: {
       maxErrorsStreak: MAX_NUMBER_ERRORS_STREAK,
       pastRegionId,
       regionCenter: nearestCenter,
-      regionBoundary: nearestBoundary
+      regionBoundary: nearestBoundary,
+      clickedPosition: coordinates
     });
 
     logger.info('Single player guess validated', {
@@ -404,10 +450,10 @@ export async function validateSingleGuess(socket: Socket, data: {
             const isAnonymous = !authToken;
             await endSingleGame(userId, 'max-consecutive-errors', isAnonymous);
             socket.emit('single-game-ended', {
-            reason: 'max-consecutive-errors',
-            finalScore: gameState.score,
-            lastDistance: minDistance,
-            consecutiveErrors: newConsecutiveErrors
+              reason: 'max-consecutive-errors',
+              finalScore: gameState.score,
+              lastDistance: minDistance,
+              consecutiveErrors: newConsecutiveErrors
             });
             return;
         } else if (streakTooFar) {
@@ -430,6 +476,25 @@ export async function validateSingleGuess(socket: Socket, data: {
         getNextSingleRegion(socket, { authToken });
       }
     }
+    if (gameState.mode === "time-attack") {
+      if(gameState.askedId >= TOTAL_REGIONS_TIME_ATTACK){
+          // Add time bonus for remaining seconds
+          gameState.score += Math.max(0, remainingTime) * BONUS_POINTS_PER_SECOND;
+          const isAnonymous = !authToken;
+          await endSingleGame(userId, 'guessed-all-regions', isAnonymous);
+          socket.emit('single-game-ended', {
+            reason: 'guessed-all-regions',
+            finalScore: gameState.score,
+            lastDistance: minDistance,
+            consecutiveErrors: newConsecutiveErrors,
+            elapsedTime,
+            remainingTime
+          });
+          return;
+      } else {
+        getNextSingleRegion(socket, { authToken });
+      }
+    }
   } catch (error) {
     logger.error('Error validating single player guess:', error);
     socket.emit('single-game-error', { message: 'Failed to validate guess' });
@@ -440,6 +505,12 @@ export async function validateSingleGuess(socket: Socket, data: {
 export async function endSingleGame(userId: number, reason: string = 'completed', isAnonymous: boolean = false) {
   const gameState = activeSingleGames.get(userId);
   if (!gameState) return;
+
+  // Clear any active timer
+  if (gameState.endTimer) {
+    clearTimeout(gameState.endTimer);
+    gameState.endTimer = undefined;
+  }
 
   try {
     const elapsedTime = Date.now() - gameState.startTime;
