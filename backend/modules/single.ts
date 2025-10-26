@@ -18,6 +18,7 @@ const STREAK_BONUS_AFTER = 5;
 const STREAK_BONUS = 5;
 const MAX_STREAK_DISTANCE = 50;
 const MAX_NUMBER_ERRORS_STREAK = 3;
+const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3;
 const MAX_TIME_IN_SECONDS = 100;
 const TOTAL_REGIONS_TIME_ATTACK = 3;
 function getUserId(authToken: string | undefined, socketId: string): number {
@@ -444,6 +445,14 @@ export async function validateSingleGuess(socket: Socket, data: {
     }
 
     gameState.lastActivity = Date.now();
+
+    // Highlight region in practice mode after max failed attempts
+    if (gameState.mode === "practice" && !isCorrect && gameState.consecutiveErrors >= MAX_ATTEMPTS_BEFORE_HIGHLIGHT) {
+      socket.emit('region-highlight', {
+        regionId: regionId,
+        reason: 'max-failed-attempts'
+      });
+    }
 
     await sql`
       INSERT INTO individual_clicks (

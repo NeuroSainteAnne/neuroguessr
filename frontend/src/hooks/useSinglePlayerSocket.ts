@@ -49,6 +49,11 @@ export interface GameEndedData {
   lastDistance?: number;
 }
 
+export interface RegionHighlightData {
+  regionId: number;
+  reason: string;
+}
+
 export function useSinglePlayerSocket() {
   const { authToken } = useApp();
   const socketRef = useRef<Socket | null>(null);
@@ -57,6 +62,7 @@ export function useSinglePlayerSocket() {
   const [currentRegion, setCurrentRegion] = useState<NextRegionData | null>(null);
   const [lastGuessResult, setLastGuessResult] = useState<GuessResult | null>(null);
   const [gameEnded, setGameEnded] = useState<GameEndedData | null>(null);
+  const [regionHighlight, setRegionHighlight] = useState<RegionHighlightData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { createSocket, getSocket } = useSocket();
   const joiningInProgressRef = useRef<boolean>(false);
@@ -96,6 +102,7 @@ export function useSinglePlayerSocket() {
       setCurrentRegion(null);
       setLastGuessResult(null);
       setGameEnded(null);
+      setRegionHighlight(null);
       setError(null);
       joiningInProgressRef.current = false;
     });
@@ -125,6 +132,11 @@ export function useSinglePlayerSocket() {
       joiningInProgressRef.current = false;
     });
 
+    socket.on('region-highlight', (data: RegionHighlightData) => {
+      setRegionHighlight(data);
+      joiningInProgressRef.current = false;
+    });
+
     // Cleanup on unmount
     return () => {
       joiningInProgressRef.current = false;
@@ -139,6 +151,7 @@ export function useSinglePlayerSocket() {
             socket.off('guess-result');
             socket.off('single-game-ended');
             socket.off('single-game-error');
+            socket.off('region-highlight');
         }
       });
       setIsConnected(false);
@@ -146,6 +159,7 @@ export function useSinglePlayerSocket() {
       setCurrentRegion(null);
       setLastGuessResult(null);
       setGameEnded(null);
+      setRegionHighlight(null);
       setError(null);
     };
   }, [authToken]);
@@ -249,6 +263,7 @@ export function useSinglePlayerSocket() {
     currentRegion,
     lastGuessResult,
     gameEnded,
+    regionHighlight,
     error,
     startGame,
     getNextRegion,

@@ -97,6 +97,7 @@ function SinglePlayer({
         currentRegion,
         lastGuessResult,
         gameEnded,
+        regionHighlight,
         error,
         startGame: startSocketGame,
         validateGuess
@@ -195,11 +196,6 @@ function SinglePlayer({
                     setCurrentTotalNumRegions(currentRegion.totalNumRegions)
                 }
             }
-            
-            // Highlight region if needed
-            if (gameMode === 'practice' && currentRegion.attempts >= 3) {
-                setHighlightedRegion(currentRegion.regionId);
-            }
 
             // show notification
             if (atlasRef.current && atlasRef.current.labels) {
@@ -236,6 +232,10 @@ function SinglePlayer({
                 setTimeout(() => {
                     setHeaderTextMode("normal");
                 }, 500);
+                if(gameMode === "practice"){
+                    setHighlightedRegion(null);
+                    unHighlight()
+                }
             } else {
                 setCurrentErrors(prev => prev + 1);
                 setHeaderTextMode("failure");
@@ -282,6 +282,14 @@ function SinglePlayer({
             showNotification(error, false);
         }
     }, [error]);
+
+    // Handle region highlight from socket
+    useEffect(() => {
+        if (regionHighlight && gameMode === 'practice') {
+            setHighlightedRegion(regionHighlight.regionId);
+            highlightWrapper(regionHighlight.regionId, false, true);
+        }
+    }, [regionHighlight, gameMode]);
 
     useEffect(() => {
         currentStreakRef.current = currentStreak
