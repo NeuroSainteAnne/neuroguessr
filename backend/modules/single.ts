@@ -178,7 +178,10 @@ export async function startSingleGame(socket: Socket, data: {
     if (mode === "time-attack") {
       responseData.gameState.endDate = new Date(gameState.startTime + (MAX_TIME_IN_SECONDS * 1000));
       // Calculate theoretical maximum score: all correct guesses plus maximum time bonus at end
-      const maxScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+      const baseScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION;
+      const timeBonus = MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+      const blindMultiplier = blindMode ? BLIND_MODE_MULTIPLIER : 1;
+      const maxScore = (baseScore + timeBonus) * blindMultiplier;
       responseData.gameState.maxScore = maxScore;
     }
 
@@ -555,22 +558,25 @@ export async function endSingleGame(userId: number, reason: string = 'completed'
     const allRegionDurations = [...gameState.regionSuccessDurations, ...gameState.regionFailedDurations];
     
     if (allRegionDurations.length > 0) {
-      minTimePerRegion = Math.min(...allRegionDurations);
-      maxTimePerRegion = Math.max(...allRegionDurations);
-      avgTimePerRegion = allRegionDurations.reduce((a, b) => a + b, 0) / allRegionDurations.length;
+      minTimePerRegion = Math.round(Math.min(...allRegionDurations));
+      maxTimePerRegion = Math.round(Math.max(...allRegionDurations));
+      avgTimePerRegion = Math.round(allRegionDurations.reduce((a, b) => a + b, 0) / allRegionDurations.length);
     }
 
     if (gameState.regionSuccessDurations.length > 0) {
-      minTimePerCorrectRegion = Math.min(...gameState.regionSuccessDurations);
-      maxTimePerCorrectRegion = Math.max(...gameState.regionSuccessDurations);
-      avgTimePerCorrectRegion = gameState.regionSuccessDurations.reduce((a, b) => a + b, 0) / gameState.regionSuccessDurations.length;
+      minTimePerCorrectRegion = Math.round(Math.min(...gameState.regionSuccessDurations));
+      maxTimePerCorrectRegion = Math.round(Math.max(...gameState.regionSuccessDurations));
+      avgTimePerCorrectRegion = Math.round(gameState.regionSuccessDurations.reduce((a, b) => a + b, 0) / gameState.regionSuccessDurations.length);
     }
 
     // Save to database for both authenticated and anonymous users
     // Calculate theoretical maximum score for time-attack mode
     let theoreticalMaxScore: number | null = null;
     if (gameState.mode === "time-attack") {
-      theoreticalMaxScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION + MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+      const baseScore = TOTAL_REGIONS_TIME_ATTACK * MAX_POINTS_PER_REGION;
+      const timeBonus = MAX_TIME_IN_SECONDS * BONUS_POINTS_PER_SECOND;
+      const blindMultiplier = gameState.blindMode ? BLIND_MODE_MULTIPLIER : 1;
+      theoreticalMaxScore = (baseScore + timeBonus) * blindMultiplier;
     }
 
     // Calculate score percentage for time-attack mode
