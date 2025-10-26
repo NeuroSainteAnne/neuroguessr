@@ -43,7 +43,7 @@ export function useSinglePlayerSocket() {
   const [lastGuessResult, setLastGuessResult] = useState<GuessResult | null>(null);
   const [gameEnded, setGameEnded] = useState<GameEndedData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { createSocket } = useSocket();
+  const { createSocket, getSocket } = useSocket();
   const joiningInProgressRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export function useSinglePlayerSocket() {
 
     // Game events
     socket.on('single-game-started', (data: { message: string; gameState: SingleGameState }) => {
-        consoleLog('verbose', 'Single player game started:', data.gameState);
+      consoleLog('verbose', 'Single player game started');
       setGameState(data.gameState);
       setCurrentRegion(null);
       setLastGuessResult(null);
@@ -81,6 +81,7 @@ export function useSinglePlayerSocket() {
     });
 
     socket.on('next-region', (data: NextRegionData) => {
+        consoleLog('verbose', 'Received next region:', data);
       setCurrentRegion(data);
       setLastGuessResult(null);
       joiningInProgressRef.current = false;
@@ -106,8 +107,20 @@ export function useSinglePlayerSocket() {
 
     // Cleanup on unmount
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      joiningInProgressRef.current = false;
+        const socketsToClean = [socketRef.current, getSocket()].filter(Boolean);
+        
+        socketsToClean.forEach(socket => {
+        if (socket) {
+            socket.off('connect');
+            socket.off('disconnect');
+            socket.off('single-game-started');
+            socket.off('next-region');
+            socket.off('guess-result');
+            socket.off('single-game-ended');
+            socket.off('single-game-error');
+        }
+      });
       setIsConnected(false);
       setGameState(null);
       setCurrentRegion(null);
@@ -118,42 +131,82 @@ export function useSinglePlayerSocket() {
   }, [authToken]);
 
   const startGame = useCallback((atlas: string, mode: string, blindMode: boolean) => {
+    console.log("START GAME CALLED", socketRef.current)
     if (!socketRef.current) return;
 
-    const data: any = {
-      atlas,
-      mode,
-      blindMode
+    const emitStartGame = () => {
+      const data: any = {
+        atlas,
+        mode,
+        blindMode
+      };
+      if (authToken) {
+        data.authToken = authToken;
+      }
+      socketRef.current!.emit('start-single-game', data);
     };
-    if (authToken) {
-      data.authToken = authToken;
-    }
 
-    socketRef.current.emit('start-single-game', data);
+    // If socket is already connected, emit immediately
+    if (socketRef.current.connected) {
+      emitStartGame();
+    } else {
+      // Wait for connection and then emit
+      const onConnect = () => {
+        socketRef.current!.off('connect', onConnect);
+        emitStartGame();
+      };
+      socketRef.current.on('connect', onConnect);
+    }
   }, [authToken]);
 
   const getNextRegion = useCallback(() => {
     if (!socketRef.current) return;
 
-    const data: any = {};
-    if (authToken) {
-      data.authToken = authToken;
-    }
+    const emitGetNextRegion = () => {
+      const data: any = {};
+      if (authToken) {
+        data.authToken = authToken;
+      }
+      socketRef.current!.emit('get-next-single-region', data);
+    };
 
-    socketRef.current.emit('get-next-single-region', data);
+    // If socket is already connected, emit immediately
+    if (socketRef.current.connected) {
+      emitGetNextRegion();
+    } else {
+      // Wait for connection and then emit
+      const onConnect = () => {
+        socketRef.current!.off('connect', onConnect);
+        emitGetNextRegion();
+      };
+      socketRef.current.on('connect', onConnect);
+    }
   }, [authToken]);
 
   const validateGuess = useCallback((coordinates: { mm: number[]; vox: number[] }) => {
     if (!socketRef.current) return;
 
-    const data: any = {
-      coordinates
+    const emitValidateGuess = () => {
+      const data: any = {
+        coordinates
+      };
+      if (authToken) {
+        data.authToken = authToken;
+      }
+      socketRef.current!.emit('validate-single-guess', data);
     };
-    if (authToken) {
-      data.authToken = authToken;
-    }
 
-    socketRef.current.emit('validate-single-guess', data);
+    // If socket is already connected, emit immediately
+    if (socketRef.current.connected) {
+      emitValidateGuess();
+    } else {
+      // Wait for connection and then emit
+      const onConnect = () => {
+        socketRef.current!.off('connect', onConnect);
+        emitValidateGuess();
+      };
+      socketRef.current.on('connect', onConnect);
+    }
   }, [authToken]);
 
   const endGame = useCallback(() => {
@@ -180,3 +233,8 @@ export function useSinglePlayerSocket() {
     endGame
   };
 }
+export type CanvasInteractionContent = {
+    mm: number[];
+    vox: number[];
+    idx: number | undefined;
+} | undefined;

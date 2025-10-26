@@ -9,7 +9,7 @@ import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBo
 import SearchBar from '../../components/SearchBar';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import CacheMonitor from '../../components/CacheMonitor';
-import { useSinglePlayerSocket } from '../../hooks/useSinglePlayerSocket';
+import { CanvasInteractionContent, useSinglePlayerSocket } from '../../hooks/useSinglePlayerSocket';
 
 export function Page() {
     const { pageContext } = useApp();
@@ -27,7 +27,7 @@ export function Page() {
     const resetGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Reset game callback not initialized") });
     const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
     const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>(() => { consoleLog("verbose", "Generic key press callback not initialized") });
-    const canvasInteractionRef = useRef<((e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void)>(() => { consoleLog("verbose", "Canvas interaction callback not initialized") });
+    const canvasInteractionRef = useRef<((e: CanvasInteractionContent) => void)>(() => { consoleLog("verbose", "Canvas interaction callback not initialized") });
     return (
         <GameProvider gameMode={gameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
@@ -51,7 +51,7 @@ function SinglePlayer({
     resetGameCallbackRef: React.RefObject<() => void>,
     validateGuessCallbackRef: React.RefObject<() => void>,
     genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
-    canvasInteractionRef: React.RefObject<(e: { mm: number[]; vox: number[]; idx: number | undefined; } | undefined) => void>,
+    canvasInteractionRef: React.RefObject<(e: CanvasInteractionContent) => void>,
 }) {
     const { t, askedAtlas, viewerOptions,
         isLoggedIn, userPublishToLeaderboard,
@@ -109,11 +109,9 @@ function SinglePlayer({
 
     // Handle game state updates from socket
     useEffect(() => {
-        console.log("TRIGGERED GAMESTATE UPDATE", gameState)
-        if (gameState) {
+        if (gameState && gameMode !== "navigation") {
             setCurrentScore(gameState.score);
             setCurrentStreak(gameState.streak);
-            console.log("STREAK", gameState.streak)
             setHeaderScore(`${t("score")}: ${gameState.score}`);
             setHeaderStreak(`${gameState.streak}`);
         }
@@ -121,7 +119,7 @@ function SinglePlayer({
 
     // Handle new region from socket
     useEffect(() => {
-        if (currentRegion && atlasRef.current) {
+        if (currentRegion && atlasRef.current && gameMode !== "navigation") {
             // Set the current target region
             currentTarget.current = currentRegion.regionId;
             setCurrentAttempts(currentRegion.attempts);
@@ -131,22 +129,29 @@ function SinglePlayer({
             if (gameMode === 'practice' && currentRegion.attempts >= 3) {
                 setHighlightedRegion(currentRegion.regionId);
             }
+
+            // show notification
+            showNotification(`${t("find")} ${atlasRef.current.labels[currentRegion.regionId]}`, true);
         }
     }, [currentRegion, gameMode]);
 
     // Handle guess results from socket
     useEffect(() => {
-        if (lastGuessResult) {
+        if (lastGuessResult && gameMode !== "navigation") {
             // Update UI based on guess result
             if (lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
                 // Request next region
-                getNextRegion();
+                setHeaderTextMode("success");
+                setTimeout(() => {
+                    setHeaderTextMode("normal");
+                    getNextRegion();
+                }, 500);
             } else {
                 setCurrentErrors(prev => prev + 1);
                 currentConsecutiveErrorsRef.current++;
+                setHeaderTextMode("failure");
             }
-            
             setCurrentAttempts(lastGuessResult.attempts);
             currentAttemptsRef.current = lastGuessResult.attempts;
         }
@@ -201,6 +206,7 @@ function SinglePlayer({
     useEffect(() => {
         const cleanGame = () => {
             cleanHeader();
+            unHighlight();
             usedRegions.current = [];
             setIsGameRunning(false);
             setPastRegions([]);
@@ -302,7 +308,7 @@ function SinglePlayer({
     }, [genericKeyPressCallbackRef, showStreakOverlay, showTimeattackOverlay, showCacheMonitor]);
 
     useEffect(() => {
-        const canvasInteraction = (clickedRegionLocation: any) => {
+        const canvasInteraction = (clickedRegionLocation: CanvasInteractionContent) => {
             if (!isGameRunning || !niivue || !atlasRef.current) return;
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
@@ -310,8 +316,8 @@ function SinglePlayer({
                     setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
-                    const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx]
-                    if (currentLabel){
+                    const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx];
+                    if (currentLabel) {
                         showNotification(currentLabel, true, {}, 1500);
                     } 
                     if (tooltip) {
@@ -320,6 +326,7 @@ function SinglePlayer({
                     niivue.opts.crosshairColor = [1, 1, 1, 1];
                     niivue.drawScene();
                     window.history.pushState(null, '', `/singleplayer/navigation/${atlasRef.current.atlas}/${clickedRegionLocation.idx}`);
+                    validateGuess(clickedRegionLocation);
                 } else {
                     if (guessButtonRef.current) {
                         guessButtonRef.current.disabled = false;
@@ -330,6 +337,7 @@ function SinglePlayer({
             } else {
                 selectedVoxelProp.current = null;
                 if (gameMode === 'navigation') {
+                    window.history.pushState(null, '', `/singleplayer/navigation/${atlasRef.current.atlas}`);
                     setHeaderText(t('no_region_selected'));
                     setHighlightedRegion(null);
                     unHighlight();

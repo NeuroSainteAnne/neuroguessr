@@ -553,7 +553,7 @@ export function GameProvider({
 
             // Re-enable context menu
             e.currentTarget.oncontextmenu = null;
-        } else {
+        } else if(gameMode !== 'navigation') {
             handleCanvasInteraction(e);
         }
     };

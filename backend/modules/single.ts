@@ -277,7 +277,7 @@ export async function validateSingleGuess(socket: Socket, data: {
 
     // Get voxel value at clicked position
     const voxelValue = imageRef[gameState.atlas].getValue(x, y, z);
-    const isCorrect = voxelValue === regionId;
+    let isCorrect = voxelValue === regionId;
 
     let scoreIncrement = 0;
     let streakBonus = 0;
@@ -336,7 +336,7 @@ export async function validateSingleGuess(socket: Socket, data: {
         newStreak = 0;
         newConsecutiveErrors++;
       }
-    } else {
+    } else if (gameState.mode === "practice") {
       // Practice mode logic
       if (isCorrect) {
         scoreIncrement = MAX_POINTS_PER_REGION;
@@ -347,6 +347,8 @@ export async function validateSingleGuess(socket: Socket, data: {
         newStreak = 0;
         newConsecutiveErrors++;
       }
+    } else { // Navigation mode logic
+        isCorrect = true;
     }
 
     // Apply blind mode multiplier
