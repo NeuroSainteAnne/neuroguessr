@@ -494,7 +494,7 @@ export async function validateSingleGuess(socket: Socket, data: {
         ${minDistance === Infinity ? null : minDistance},
         ${duration},
         ${isCorrect},
-        ${scoreIncrement},
+        ${Math.round(scoreIncrement)},
         ${gameState.attempts}
       )
     `;

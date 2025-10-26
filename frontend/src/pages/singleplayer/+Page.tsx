@@ -282,7 +282,7 @@ function SinglePlayer({
         if (error) {
             showNotification(error, false);
         }
-    }, [error, showNotification]);
+    }, [error]);
 
     useEffect(() => {
         currentStreakRef.current = currentStreak
