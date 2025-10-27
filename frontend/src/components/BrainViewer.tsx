@@ -51,7 +51,7 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                         {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
                             data-umami-event="recolorize button"
                             onClick={handleRecolorization}>{t("restore_color")}</button>}
-                        {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && <button className="guess-button" ref={guessButtonRef}
+                        {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && !hasEnded && <button className="guess-button" ref={guessButtonRef}
                             data-umami-event="guess button" data-umami-event-guesssource={gameMode}
                             onClick={validateGuessHandler}>
                             <span className="confirm-text">{t("confirm_guess")}</span>

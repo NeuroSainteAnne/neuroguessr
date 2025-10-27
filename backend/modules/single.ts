@@ -18,7 +18,7 @@ const MAX_STREAK_DISTANCE = 50;
 const MAX_NUMBER_ERRORS_STREAK = 3;
 const MAX_ATTEMPTS_BEFORE_HIGHLIGHT = 3;
 const MAX_TIME_IN_SECONDS = 100;
-const TOTAL_REGIONS_TIME_ATTACK = 3;
+const TOTAL_REGIONS_TIME_ATTACK = 18;
 
 export interface SinglePlayerGameState {
   userId: number | null;
