@@ -831,11 +831,12 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
         ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
-            classic_challenge_id,
-            COUNT(DISTINCT user_id) as participant_count
-          FROM finished_sessions
-          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
-          GROUP BY classic_challenge_id
+            fs.classic_challenge_id,
+            COUNT(DISTINCT fs.user_id) as participant_count
+          FROM finished_sessions fs
+          JOIN users u ON fs.user_id = u.id
+          WHERE fs.classic_challenge_id IS NOT NULL AND fs.user_id IS NOT NULL AND u.publish_to_leaderboard = true
+          GROUP BY fs.classic_challenge_id
         ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
         WHERE fs.classic_challenge_id IS NOT NULL
         GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
@@ -865,11 +866,12 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
         ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
-            classic_challenge_id,
-            COUNT(DISTINCT user_id) as participant_count
-          FROM finished_sessions
-          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
-          GROUP BY classic_challenge_id
+            fs.classic_challenge_id,
+            COUNT(DISTINCT fs.user_id) as participant_count
+          FROM finished_sessions fs
+          JOIN users u ON fs.user_id = u.id
+          WHERE fs.classic_challenge_id IS NOT NULL AND fs.user_id IS NOT NULL AND u.publish_to_leaderboard = true
+          GROUP BY fs.classic_challenge_id
         ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
         WHERE fs.user_id = ${userId} AND fs.classic_challenge_id IS NOT NULL
         GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
