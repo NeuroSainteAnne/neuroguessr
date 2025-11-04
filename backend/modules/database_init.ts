@@ -43,6 +43,16 @@ export const database_init = async () => {
         // Create tables with optimized indexes
         await sql.begin(async sql => {
             await sql`
+                CREATE TABLE IF NOT EXISTS teams (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT DEFAULT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_name ON teams(name);`;
+
+            await sql`
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     username TEXT NOT NULL,
@@ -60,7 +70,8 @@ export const database_init = async () => {
                     clinical_trial_country TEXT DEFAULT NULL,
                     clinical_trial_occupation TEXT DEFAULT NULL,
                     clinical_trial_consent TEXT DEFAULT NULL,
-                    clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL
                 );
             `;
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
@@ -233,11 +244,13 @@ export const database_init = async () => {
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL;`
 
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);`;
 
             await sql`
                 CREATE TABLE IF NOT EXISTS advanced_game_settings (

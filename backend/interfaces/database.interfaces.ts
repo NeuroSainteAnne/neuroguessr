@@ -10,6 +10,7 @@ export interface User {
     admin: boolean;
     publish_to_leaderboard: boolean | null;
     language: string;
+    team_id: number | null;
     clinical_trial_gender: "male" | "female" | "other" | null;
     clinical_trial_age: number | null;
     clinical_trial_country: string | null;
@@ -121,4 +122,11 @@ export interface AdvancedGameSettings {
   created_at: Date;
   public: boolean;
   settings: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string; // ISO date string
 }

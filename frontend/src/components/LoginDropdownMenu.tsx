@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import "./LoginDropdownMenu.css";
 
 function LoginDropdownMenu() {
-    const {currentLanguage, t, userFirstName, userLastName, handleChangeLanguage, logout} = useApp();
+    const {currentLanguage, t, userFirstName, userLastName, userIsAdmin, handleChangeLanguage, logout} = useApp();
     const [isVisibleDropdown, setIsVisibleDropdown] = useState<boolean>(false)
     const dropdownMenuRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +49,13 @@ function LoginDropdownMenu() {
                     onClick={()=>{ setIsVisibleDropdown(false) }}>
                     <img src="/interface/statistics.png" alt="Stats icon" /> <span>{t("my_stats")}</span>
                 </a>
+                {userIsAdmin && (
+                    <a id="teams-button-dropdown" className="dropdown-item"
+                        href="/admin/teams"
+                        onClick={()=>{ setIsVisibleDropdown(false) }}>
+                        <img src="/interface/user_brain.png" alt="Teams icon" /> <span>Teams Management</span>
+                    </a>
+                )}
                 <div className="language-switcher-dropdown">
                     <button className={currentLanguage=="fr"?
                                 "lang-icon-btn-dropdown lang-icon-btn-dropdown-active":

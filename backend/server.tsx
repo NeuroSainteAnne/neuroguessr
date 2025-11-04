@@ -30,6 +30,18 @@ import { getNextClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getPublicLobbies } from "modules/multi_public.ts";
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
 import { generateChallenge } from 'modules/altcha.ts';
+import { 
+    getAllTeams, 
+    getTeamById, 
+    getTeamMembers, 
+    createTeam, 
+    updateTeam, 
+    deleteTeam,
+    assignUserToTeam,
+    unassignUserFromTeam,
+    getAllUsers,
+    requireAdmin
+} from 'modules/teams.ts';
 import rateLimit from 'express-rate-limit';
 import { logger } from './modules/logging.ts';
 
@@ -142,6 +154,17 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 
 // altcha.ts
 app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
+
+// teams.ts - Admin only routes
+app.get('/api/teams', authenticateToken, requireAdmin, getAllTeams);
+app.get('/api/teams/:id', authenticateToken, requireAdmin, getTeamById);
+app.get('/api/teams/:id/members', authenticateToken, requireAdmin, getTeamMembers);
+app.post('/api/teams', authenticateToken, requireAdmin, createTeam);
+app.put('/api/teams/:id', authenticateToken, requireAdmin, updateTeam);
+app.delete('/api/teams/:id', authenticateToken, requireAdmin, deleteTeam);
+app.put('/api/teams/:teamId/assign/:userId', authenticateToken, requireAdmin, assignUserToTeam);
+app.delete('/api/teams/:teamId/unassign/:userId', authenticateToken, requireAdmin, unassignUserFromTeam);
+app.get('/api/admin/users', authenticateToken, requireAdmin, getAllUsers);
 
 
 import i18next from 'i18next';
