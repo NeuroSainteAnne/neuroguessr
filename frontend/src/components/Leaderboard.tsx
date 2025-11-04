@@ -49,7 +49,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
       { value: 'multiplayer', label: t('multiplayer_mode') }
     ]);
     
-    setAtlasOptions(['', 'total', 'harvard-oxford']);
+    setAtlasOptions(['', 'harvard-oxford']);
 
     setTimeLimitOptions([
       { value: 7, label: t('last_week') },
@@ -85,7 +85,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
         });
         
         // Add the "all atlases" option at the beginning
-        options.unshift("total");
         options.unshift("");
         
         // Update the atlas options
@@ -112,7 +111,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
           mode: mode !== '' ? mode : undefined,
           atlas: atlas !== '' ? atlas : undefined,
           blindMode: blindMode === null ? null : blindMode,
-          appendTotal: atlas == '',
           numberLimit,
           timeLimit: timeLimit || 0 // 0 means no time limit
         }),
@@ -174,9 +172,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
 
   const getAtlasName = (atlasCode: string): string => {
     const atlas = atlasOptions.find(a => a === atlasCode);
-    if(atlas=== "total") {
-      return t('combined_score');
-    } else if(atlas === "") {
+    if(atlas === "") {
       return t('all_atlases');
     } else {
         return atlas ? atlasFiles?.[atlas]?.name ?? "" : ""
@@ -298,7 +294,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
               {leaderboard.length > 0 ? (
                 leaderboard.map((entry, index) => (
                   <tr key={`${entry.username}-${entry.mode}-${entry.atlas}-${entry.blind_mode}`} 
-                      className={`${entry.atlas === 'total' ? 'total-row' : ''} ${entry.username == userUsername ? "current-user-row" : ""}`} >
+                      className={`${entry.username == userUsername ? "current-user-row" : ""}`} >
                     <td className="rank-cell">{index + 1}</td>
                     <td className="username-cell">{entry.username}</td>
                     <td className="mode-cell">{getModeName(entry.mode)}</td>
