@@ -70,10 +70,11 @@ if(config.server.globalAuthentication.enabled){
 // login.ts
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: 'Too many authentication attempts',
+  max: 5, // limit each IP to 5 failed requests per windowMs
+  message: 'Too many failed authentication attempts',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed requests
 });
 app.post('/api/login', authLimiter, login);
 app.post('/api/refresh-token', refreshToken);
