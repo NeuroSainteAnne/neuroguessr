@@ -171,48 +171,59 @@
   overflow: hidden;
 }
 
-.table-header,
-.table-row {
+.participants-table .table-header,
+.participants-table .table-row {
   display: grid;
   grid-template-columns: 50px 2fr 75px 1fr;
   gap: 0;
   min-width: 600px;
 }
 
-.table-header {
+/* When teams are present, add team column */
+.participants-table .table-header:has(.col-team),
+.participants-table .table-row:has(.col-team) {
+  grid-template-columns: 50px 1fr 1fr 75px 1fr;
+}
+
+.participants-table .table-header {
   background: #303030;
   font-weight: bold;
   color: #6181a0;
 }
 
-.table-header > div,
-.table-row > div {
+.participants-table .table-header > div,
+.participants-table .table-row > div {
   padding: 12px 8px;
   border-right: 1px solid #dee2e6;
   display: flex;
   align-items: center;
 }
 
-.table-header > div:last-child,
-.table-row > div:last-child {
+.participants-table .table-header > div:last-child,
+.participants-table .table-row > div:last-child {
   border-right: none;
 }
 
-.table-row {
+.participants-table .table-row {
   border-bottom: 1px solid #dee2e6;
 }
 
-.table-row:last-child {
+.participants-table .table-row:last-child {
   border-bottom: none;
 }
 
-.table-row.current-user {
+.participants-table .table-row.current-user {
   background: #564612;
 }
 
-.table-row.current-user .col-name::after {
+.participants-table .table-row.current-user .col-name::after {
   font-weight: bold;
   color: #856404;
+}
+
+.col-team {
+  color: #8892b0;
+  font-size: 0.9em;
 }
 
 .col-rank {

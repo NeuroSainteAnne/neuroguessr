@@ -29,11 +29,20 @@ interface Participant {
   teamName: string | null;
 }
 
+interface TeamRanking {
+  teamId: number | null;
+  teamName: string;
+  playerCount: number;
+  avgScore: number;
+  avgTimePerRegion: number;
+}
+
 interface ChallengeResultsData {
   challenge: Challenge;
   sessionCode: string | null;
   state: 'pending' | 'started' | 'finished';
   participants: Participant[];
+  teamRankings?: TeamRanking[];
 }
 
 export function Page() {
@@ -150,63 +159,10 @@ export function Page() {
     );
   }
 
-  const { challenge, sessionCode, state, participants } = data;
+  const { challenge, sessionCode, state, participants, teamRankings } = data;
 
-  // Calculate team rankings if any participant has a team
-  const hasTeams = participants.some(p => p.teamId !== null);
-  
-  interface TeamStats {
-    teamId: number | null;
-    teamName: string;
-    playerCount: number;
-    totalScore: number;
-    totalAvgTimePerRegion: number;
-    avgScore: number;
-    avgTimePerRegion: number;
-  }
-
-  const teamRankings: TeamStats[] = hasTeams ? (() => {
-    const teamMap = new Map<number | null, TeamStats>();
-    
-    participants.forEach(p => {
-      const key = p.teamId;
-      const teamName = p.teamName || 'No Team';
-      
-      if (!teamMap.has(key)) {
-        teamMap.set(key, {
-          teamId: key,
-          teamName,
-          playerCount: 0,
-          totalScore: 0,
-          totalAvgTimePerRegion: 0,
-          avgScore: 0,
-          avgTimePerRegion: 0
-        });
-      }
-      
-      const team = teamMap.get(key)!;
-      team.playerCount++;
-      team.totalScore += p.score;
-      team.totalAvgTimePerRegion += p.avgTimePerRegion;
-    });
-    
-    // Calculate averages and sort
-    const teams = Array.from(teamMap.values()).map(team => ({
-      ...team,
-      avgScore: team.totalScore / team.playerCount,
-      avgTimePerRegion: team.totalAvgTimePerRegion / team.playerCount
-    }));
-    
-    // Sort by average score (desc), then by average time per region (asc)
-    teams.sort((a, b) => {
-      if (b.avgScore !== a.avgScore) {
-        return b.avgScore - a.avgScore;
-      }
-      return a.avgTimePerRegion - b.avgTimePerRegion;
-    });
-    
-    return teams;
-  })() : [];
+  // Use backend-calculated team rankings (includes all users, even those who didn't publish)
+  const hasTeams = teamRankings && teamRankings.length > 0;
 
   // Find current user's participation from participants array
   const currentUserParticipation = participants.find(p => p.username === userUsername) || null;
@@ -312,6 +268,7 @@ export function Page() {
                 <div className="table-header">
                 <div className="col-rank">#</div>
                 <div className="col-name">{t("name_header")}</div>
+                {hasTeams && <div className="col-team">Team</div>}
                 <div className="col-score">{t("score")}</div>
                 <div className="col-tpr">{t("time_per_region")}</div>
                 </div>
@@ -324,6 +281,7 @@ export function Page() {
                     <div className="col-name">
                     {participant.username}
                     </div>
+                    {hasTeams && <div className="col-team">{participant.teamName || '-'}</div>}
                     <div className="col-score">{participant.score}</div>
                     <div className="col-tpr">{Math.round(participant.avgTimePerRegion/100)/10}</div>
                 </div>

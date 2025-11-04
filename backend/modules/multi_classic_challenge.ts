@@ -1187,6 +1187,64 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
       ORDER BY fs.score DESC, fs.duration ASC
     `;
 
+    // Calculate team rankings including ALL users (even those who didn't publish)
+    const allParticipantsForTeams = await sql`
+      SELECT
+        fs.score,
+        fs.avg_time_per_region,
+        u.team_id,
+        t.name as team_name
+      FROM finished_sessions fs
+      JOIN users u ON fs.user_id = u.id
+      LEFT JOIN teams t ON u.team_id = t.id
+      WHERE fs.classic_challenge_id = ${challengeId}
+    `;
+
+    // Group by team and calculate averages
+    const teamStatsMap = new Map<number | null, {
+      teamId: number | null;
+      teamName: string;
+      playerCount: number;
+      totalScore: number;
+      totalAvgTimePerRegion: number;
+    }>();
+
+    allParticipantsForTeams.forEach((p: any) => {
+      const key = p.team_id;
+      const teamName = p.team_name || 'No Team';
+      
+      if (!teamStatsMap.has(key)) {
+        teamStatsMap.set(key, {
+          teamId: key,
+          teamName,
+          playerCount: 0,
+          totalScore: 0,
+          totalAvgTimePerRegion: 0
+        });
+      }
+      
+      const team = teamStatsMap.get(key)!;
+      team.playerCount++;
+      team.totalScore += p.score;
+      team.totalAvgTimePerRegion += p.avg_time_per_region;
+    });
+
+    // Calculate averages and sort
+    const teamRankings = Array.from(teamStatsMap.values())
+      .map(team => ({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        playerCount: team.playerCount,
+        avgScore: team.totalScore / team.playerCount,
+        avgTimePerRegion: team.totalAvgTimePerRegion / team.playerCount
+      }))
+      .sort((a, b) => {
+        if (b.avgScore !== a.avgScore) {
+          return b.avgScore - a.avgScore;
+        }
+        return a.avgTimePerRegion - b.avgTimePerRegion;
+      });
+
     res.status(200).send({
       challenge: {
         id: challenge.id,
@@ -1197,6 +1255,7 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
       },
       sessionCode,
       state,
+      teamRankings: teamRankings.length > 0 ? teamRankings : undefined,
       participants: participantsResult.map(p => ({
         userId: p.user_id,
         username: p.username,
