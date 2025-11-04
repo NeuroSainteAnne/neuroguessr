@@ -738,7 +738,7 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
     const activeSessionResult = await sql`
       SELECT id FROM multi_sessions
       WHERE classic_challenge_referral = ${sessionCode}
-      AND user_id = ${userId}
+      AND creator_id = ${userId}
     `;
 
     if (activeSessionResult.length > 0) {
