@@ -74,16 +74,17 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     // 2. Perform complete game cleanup (skip database deletion if we have recurrence)
     const sessionCode = gameRef.sessionCode;
     const hasRecurrence = !!(gameBackup && gameRef.isChallenge && gameRef.parameters.recurrence);
+    const isOriginalClassicChallenge = gameRef.isClassicChallenge && (!gameRef.originalSessionCode || gameRef.originalSessionCode === gameRef.sessionCode);
 
     // For classic challenges, we need to clean up temporary database entries
-    if (gameRef.isClassicChallenge && gameRef.originalSessionCode) {
+    if (isOriginalClassicChallenge) {
       // This is a temporary session created for a user-specific classic challenge
       // Delete the temporary entry, but keep the original challenge intact
       await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
         .catch(e => {
           logger.error(`Error deleting temporary classic challenge session ${sessionCode}:`, e);
         });
-    } else if (!hasRecurrence) {
+    } else if (gameRef.isChallenge && !hasRecurrence) {
       // Delete the session from database only if no recurrence and not a temporary classic challenge
       await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
         .catch(e => {
@@ -91,8 +92,8 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
         });
     }
 
-    // Use the common cleanup function (skip DB deletion if we have recurrence)
-    cleanupGame(gameRef.sessionCode, hasRecurrence);
+    // Use the common cleanup function (skip DB deletion if we have recurrence or for classic challenges original sessions)
+    cleanupGame(gameRef.sessionCode, hasRecurrence || isOriginalClassicChallenge);
 
     // broadcast a final message to all clients
     broadcastToSession(sessionCode, 'game-closed', {});
@@ -313,6 +314,7 @@ export function setupInactiveGameCheck() {
 
       // Skip games that are active
       if (game.hasStarted && !game.hasEnded) return;
+      if (game.isClassicChallenge && (!game.originalSessionCode || game.originalSessionCode === game.sessionCode)) return; // avoid classic challenge cleaning
 
       // Check if the game has been inactive
       const lastActivity = game.lastActivity || game.duration || 0;
