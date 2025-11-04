@@ -391,6 +391,7 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_classic_challenge = TRUE
         AND ms.end_date > ${currentTime}
+        AND ms.classic_challenge_referral IS NULL
         ORDER BY ms.start_date ASC
       `;
     } else {
@@ -403,6 +404,7 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         WHERE ms.is_classic_challenge = TRUE
         AND ms.public = TRUE
         AND ms.end_date > ${currentTime}
+        AND ms.classic_challenge_referral IS NULL
         ORDER BY ms.start_date ASC
       `;
     }
