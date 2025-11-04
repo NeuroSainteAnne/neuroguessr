@@ -414,7 +414,10 @@
   "clinical_trial_occupation_neurosurgeon": "Neurosurgeon",
   "clinical_trial_occupation_medical_student": "Medical Student",
   "clinical_trial_occupation_neuroscientist": "Neuroscientist",
+  "clinical_trial_occupation_psychiatrist": "Psychiatrist or psychiatry student",
+  "clinical_trial_occupation_engineer": "Engineer",
   "clinical_trial_occupation_researcher": "Researcher (Other Specialty)",
+  "clinical_trial_occupation_psychologist": "Psychologist",
   "clinical_trial_occupation_other": "Other",
 
   "*****NEXT CHALLENGE*****":"",
