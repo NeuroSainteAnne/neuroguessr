@@ -95,6 +95,69 @@
   color: #6181a0;
 }
 
+.teams-section {
+  margin-bottom: 30px;
+}
+
+.teams-section h2 {
+  margin-bottom: 20px;
+  color: #6181a0;
+}
+
+.teams-table {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.teams-table .table-header,
+.teams-table .table-row {
+  display: grid;
+  grid-template-columns: 50px 2fr 100px 120px 140px;
+  gap: 0;
+  min-width: 600px;
+}
+
+.teams-table .table-header {
+  background: #303030;
+  font-weight: bold;
+  color: #6181a0;
+}
+
+.teams-table .table-header > div,
+.teams-table .table-row > div {
+  padding: 12px 8px;
+  border-right: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+}
+
+.teams-table .table-header > div:last-child,
+.teams-table .table-row > div:last-child {
+  border-right: none;
+}
+
+.teams-table .table-row {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.teams-table .table-row:last-child {
+  border-bottom: none;
+}
+
+.teams-table .table-row.current-user-team {
+  background: #2a4a2e;
+}
+
+.col-team-name {
+  font-weight: 500;
+}
+
+.col-players {
+  justify-content: center;
+}
+
 .no-participants {
   text-align: center;
   color: #6c757d;
@@ -276,6 +339,12 @@
   .table-header,
   .table-row {
     grid-template-columns: 50px 2fr 80px 80px 80px 80px 120px;
+  }
+
+  .teams-table .table-header,
+  .teams-table .table-row {
+    grid-template-columns: 40px 2fr 70px 90px 110px;
+    font-size: 0.85em;
   }
 
   .actions {

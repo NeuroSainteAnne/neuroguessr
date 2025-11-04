@@ -428,8 +428,8 @@ export function Page() {
     return (
       <div className="teams-page">
         <div className="teams-container">
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
+          <div className="loading-state-teams">
+            <div className="loading-spinner-teams"></div>
             <p>Loading teams...</p>
           </div>
         </div>

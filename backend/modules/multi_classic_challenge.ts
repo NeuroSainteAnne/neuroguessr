@@ -1173,9 +1173,12 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         fs.avg_time_per_region,
         fs.created_at as completion_date,
         u.username,
+        u.team_id,
+        t.name as team_name,
         ROW_NUMBER() OVER (ORDER BY fs.score DESC, fs.avg_time_per_region ASC) as ranking
       FROM finished_sessions fs
       JOIN users u ON fs.user_id = u.id
+      LEFT JOIN teams t ON u.team_id = t.id
       WHERE fs.classic_challenge_id = ${challengeId}
         AND u.publish_to_leaderboard = true
       ORDER BY fs.score DESC, fs.duration ASC
@@ -1201,7 +1204,9 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         attempts: p.attempts,
         avgTimePerRegion: p.avg_time_per_region,
         completionDate: p.completion_date,
-        ranking: p.ranking
+        ranking: p.ranking,
+        teamId: p.team_id,
+        teamName: p.team_name
       }))
     });
 
