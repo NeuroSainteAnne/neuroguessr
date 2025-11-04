@@ -922,7 +922,7 @@ const MultiPlayer = ({
               })()}
 
               {/* Publish to Leaderboard Box for users who haven't set preference */}
-              {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
+              {isLoggedIn && !isClassicChallenge && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
               
               {/* Challenge Results Button */}
               {classicChallengeId && (
