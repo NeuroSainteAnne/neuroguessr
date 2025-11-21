@@ -173,6 +173,7 @@ export const database_init = async () => {
                     public BOOLEAN NOT NULL DEFAULT FALSE,
                     is_challenge BOOLEAN NOT NULL DEFAULT FALSE,
                     is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_classic_challenge_original_entry BOOLEAN NOT NULL DEFAULT FALSE,
                     persistent_config TEXT DEFAULT NULL,
                     name TEXT DEFAULT NULL,
                     start_date TIMESTAMP WITH TIME ZONE,
@@ -281,7 +282,12 @@ export const database_init = async () => {
                 ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE;
             `;
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS is_classic_challenge_original_entry BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
             await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_classic_challenge ON multi_sessions(is_classic_challenge);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_classic_challenge_original_entry ON multi_sessions(is_classic_challenge_original_entry);`;
 
             await sql`
                 ALTER TABLE multi_sessions 
@@ -382,7 +388,7 @@ export const cleanOldGameSessions = async () => {
                 COUNT(fs.id) as participant_count
             FROM multi_sessions ms
             LEFT JOIN finished_sessions fs ON fs.classic_challenge_id = ms.id
-            WHERE ms.is_classic_challenge = TRUE
+            WHERE ms.is_classic_challenge = TRUE AND ms.is_classic_challenge_original_entry = TRUE
             AND ms.end_date < NOW()
             GROUP BY ms.id, ms.name, ms.start_date, ms.end_date, ms.atlas, ms.creator_id
         `;
@@ -446,6 +452,7 @@ export const cleanOldGameSessions = async () => {
             WHERE created_at <= NOW() - INTERVAL '1 hour'
             AND is_challenge = FALSE
             AND is_classic_challenge = FALSE
+            AND is_classic_challenge_original_entry = FALSE
         `;
         if (resultMultiSessions.count !== 0) {
             logger.info(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);

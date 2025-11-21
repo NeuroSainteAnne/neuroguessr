@@ -49,7 +49,7 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
 
   // Delete from database if it exists (unless we're keeping it for recurrence)
   if (!skipDatabaseDeletion) {
-    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
+    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode} AND is_classic_challenge_original_entry = FALSE`.catch(e => {
       logger.error(`Error deleting session ${sessionCode}:`, e);
     });
     // Notify watchers that lobbies list may have changed
@@ -80,13 +80,13 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     if (isOriginalClassicChallenge) {
       // This is a temporary session created for a user-specific classic challenge
       // Delete the temporary entry, but keep the original challenge intact
-      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode} AND is_classic_challenge_original_entry = FALSE`
         .catch(e => {
           logger.error(`Error deleting temporary classic challenge session ${sessionCode}:`, e);
         });
     } else if (gameRef.isChallenge && !hasRecurrence) {
       // Delete the session from database only if no recurrence and not a temporary classic challenge
-      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode} AND is_classic_challenge_original_entry = FALSE`
         .catch(e => {
           logger.error(`Error deleting session ${sessionCode}:`, e);
         });

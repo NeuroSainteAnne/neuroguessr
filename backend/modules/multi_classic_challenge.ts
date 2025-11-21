@@ -34,7 +34,7 @@ export const deactivateClassicChallenge = async (socket: Socket, data: {
       const result = await sql`
         UPDATE multi_sessions
         SET end_date = NOW()
-        WHERE id = ${challengeId} AND is_classic_challenge = true
+        WHERE id = ${challengeId} AND is_classic_challenge = TRUE AND is_classic_challenge_original_entry = TRUE
       `;
 
       const success = result.count > 0;
@@ -101,6 +101,7 @@ export const handleCreateClassicChallenge = async (socket: Socket, data: {
     await sql`
       UPDATE multi_sessions 
       SET is_classic_challenge = TRUE,
+          is_classic_challenge_original_entry = TRUE,
           start_date = ${start_date},
           end_date = ${end_date},
           name = ${name},
@@ -167,7 +168,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                 ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
-        WHERE ms.is_classic_challenge = TRUE
+        WHERE ms.is_classic_challenge = TRUE AND is_classic_challenge_original_entry = TRUE
         AND ms.start_date <= ${currentTime}
         AND ms.end_date > ${currentTime}
         AND ms.id NOT IN (
@@ -184,7 +185,8 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                  ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
           FROM multi_sessions ms
           LEFT JOIN users u ON u.id = ms.creator_id
-          WHERE ms.is_classic_challenge = TRUE
+          WHERE ms.is_classic_challenge = TRUE 
+          AND is_classic_challenge_original_entry = TRUE
           AND ms.public = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
@@ -200,7 +202,8 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                  ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
           FROM multi_sessions ms
           LEFT JOIN users u ON u.id = ms.creator_id
-          WHERE ms.is_classic_challenge = TRUE
+          WHERE ms.is_classic_challenge = TRUE 
+          AND is_classic_challenge_original_entry = TRUE
           AND ms.public = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
@@ -282,8 +285,10 @@ export const deleteClassicChallenge = async (req: Request, res: Response) => {
     const result = await sql`
       DELETE FROM multi_sessions
       WHERE session_code = ${sessionCode}
-      AND is_classic_challenge = TRUE
+      AND is_classic_challenge = TRUE 
+      AND is_classic_challenge_original_entry = TRUE
     `;
+    logger.info(`Deleted active classic challenge session ${sessionCode} from database`);
 
     if (result.count === 0) {
       res.status(404).json({ error: 'Classic challenge not found' });
@@ -315,6 +320,7 @@ export const getActiveClassicChallengesRaw = async () => {
           FROM multi_sessions ms
           JOIN users u ON ms.creator_id = u.id
           WHERE ms.is_classic_challenge = true
+          AND ms.is_classic_challenge_original_entry = true
           AND ms.start_date <= NOW()
           AND ms.end_date >= NOW()
           ORDER BY ms.start_date ASC
@@ -332,6 +338,7 @@ export const getAllClassicChallengesRaw = async () => {
             FROM multi_sessions ms
             JOIN users u ON ms.creator_id = u.id
             WHERE ms.is_classic_challenge = true
+            AND ms.is_classic_challenge_original_entry = true
             ORDER BY ms.created_at DESC
           `;
 }
@@ -345,7 +352,7 @@ export const getClassicChallengesByIdRaw = async (challengeId: number) => {
       u.lastname as creator_lastname
     FROM multi_sessions ms
     JOIN users u ON ms.creator_id = u.id
-    WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+    WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND ms.is_classic_challenge_original_entry = true
   `;
 };
 
@@ -390,6 +397,7 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_classic_challenge = TRUE
+        AND ms.is_classic_challenge_original_entry = TRUE
         AND ms.end_date > ${currentTime}
         AND ms.classic_challenge_referral IS NULL
         ORDER BY ms.start_date ASC
@@ -402,6 +410,7 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_classic_challenge = TRUE
+        AND ms.is_classic_challenge_original_entry = TRUE
         AND ms.public = TRUE
         AND ms.end_date > ${currentTime}
         AND ms.classic_challenge_referral IS NULL
@@ -481,6 +490,7 @@ export const getClassicChallenge = async (req: Request, res: Response) => {
       LEFT JOIN users u ON u.id = ms.creator_id
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
+      AND ms.is_classic_challenge_original_entry = TURE
       AND ms.start_date <= ${currentTime}
       AND ms.end_date > ${currentTime}
     ` as Array<{
@@ -541,7 +551,7 @@ export const canJoinClassicChallengeSocket = async (data: {
 
   const challenge = await sql`
     SELECT * FROM multi_sessions
-    WHERE id = ${challengeId} AND is_classic_challenge = true
+    WHERE id = ${challengeId} AND is_classic_challenge = true AND is_classic_challenge_original_entry = TRUE
   `;
 
   if (challenge.length === 0) {
@@ -579,6 +589,7 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
       FROM multi_sessions ms
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
+      AND ms.is_classic_challenge_original_entry = TRUE
       AND ms.start_date <= ${currentTime}
       AND ms.end_date > ${currentTime}
     ` as Array<{
@@ -628,6 +639,7 @@ export const checkClassicChallengeCompletion = async (req: Request, res: Respons
       FROM multi_sessions ms
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
+      AND ms.is_classic_challenge_original_entry = TRUE
     ` as Array<{
       id: number;
     }>;
@@ -759,11 +771,11 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
   await sql`
     INSERT INTO multi_sessions (
       session_code, session_token, creator_id, 
-      is_classic_challenge, start_date, end_date, name,
+      is_classic_challenge, is_classic_challenge_original_entry, start_date, end_date, name,
       persistent_config, created_at, classic_challenge_referral
     ) VALUES (
       ${userSessionCode}, ${userSessionToken}, ${userId!},
-      true, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
+      true, false, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
       ${JSON.stringify(newSessionConfig)}, NOW(), ${sessionCode}
     )
   `;
@@ -984,7 +996,7 @@ export const sendClassicChallengeResultsEmails = async (challengeId: number) => 
         u.username as creator_username
       FROM multi_sessions ms
       JOIN users u ON ms.creator_id = u.id
-      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND is_classic_challenge_original_entry = true
     `;
 
     if (!challengeResult.length) {
@@ -1124,7 +1136,7 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         u.username as creator_username
       FROM multi_sessions ms
       JOIN users u ON ms.creator_id = u.id
-      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND ms.is_classic_challenge_original_entry = true
     `;
 
     let sessionCode = null;
@@ -1283,12 +1295,12 @@ export const checkIfClassicChallenge = async (req: Request, res: Response) => {
   try {
     const { sessionCode } = req.params;
     const sessions = await sql`
-      SELECT id, is_classic_challenge FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
-    ` as { id: number; is_classic_challenge: boolean | null; }[];
+      SELECT id, is_classic_challenge, is_classic_challenge_original_entry FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
+    ` as { id: number; is_classic_challenge: boolean | null; is_classic_challenge_original_entry: boolean | null }[];
     if (!sessions.length) {
       return res.status(404).send({ isClassicChallenge: false });
     }
-    const isClassic = sessions[0].is_classic_challenge === true ? true : false;
+    const isClassic = (sessions[0].is_classic_challenge === true && sessions[0].is_classic_challenge_original_entry === true) ? true : false;
     res.status(200).send({ isClassicChallenge: isClassic, challengeId: isClassic ? sessions[0].id : null });
   } catch (error) {
     logger.error("Error checking if classic challenge:", error);

@@ -110,6 +110,7 @@ export interface MultiSession {
   name?: string | null;
   classic_challenge_id?: number | null;
   is_classic_challenge?: boolean;
+  is_classic_challenge_original_entry?: boolean;
   start_date?: string | null;
   end_date?: string | null;
   classic_challenge_referral?: number;

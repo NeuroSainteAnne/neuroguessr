@@ -102,7 +102,7 @@ export const multiJoinLobby = async (socket: Socket, data: JoinLobbyData) => {
     }
 
     const sessionData = sessionResult[0];
-    const isClassicChallenge = sessionData.is_classic_challenge || false;
+    const isClassicChallenge = (sessionData.is_classic_challenge === true && sessionData.is_classic_challenge_original_entry === true) ? true : false;
 
     if (isClassicChallenge) {
       await joinClassicChallenge(socket, sessionData, data);

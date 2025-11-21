@@ -439,7 +439,7 @@ export async function restorePersistentRealTimeChallengeSessions() {
           } else {
             // For non-recurring challenges that have passed, delete them
             logger.info(`Deleting expired non-recurring realtime challenge session ${sessionCode}`);
-            await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`;
+            await sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode} AND is_challenge = TRUE`;
             deletedCount++;
             continue; // Skip further processing for deleted sessions
           }
