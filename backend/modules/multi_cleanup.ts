@@ -121,11 +121,18 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
     const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
     const allScores = Object.values(gameRef.individualScores || {});
     const maxScore = allScores.length ? Math.max(...allScores) : 0;
+    logger.info(`Saving finished session`,{
+      sessionCode: gameRef.sessionCode
+    });
 
     const savePromises: Promise<any>[] = [];
     for (const username in gameRef.individualScores || {}) {
       // Skip anonymous users
       if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
+      logger.info(`Saving scores from finished session`,{
+        sessionCode: gameRef.sessionCode,
+        username: username
+      });
       const playerKey = `${gameRef.sessionCode}:${username}`;
       const player = playerInfo[playerKey];
       if (!player) continue;
