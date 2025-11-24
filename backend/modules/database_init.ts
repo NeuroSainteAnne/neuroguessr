@@ -150,7 +150,7 @@ export const database_init = async () => {
                     classic_challenge_id INTEGER,
                     classic_challenge_start_date TIMESTAMP WITH TIME ZONE,
                     classic_challenge_end_date TIMESTAMP WITH TIME ZONE,
-                    theoretical_maximum_score DECIMAL(5,2),
+                    theoretical_maximum_score DECIMAL(8,2),
                     score_percentage DECIMAL(5,2),
                     send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE
                 );
@@ -316,7 +316,7 @@ export const database_init = async () => {
 
             await sql`
                 ALTER TABLE finished_sessions 
-                ADD COLUMN IF NOT EXISTS theoretical_maximum_score DECIMAL(5,2);
+                ADD COLUMN IF NOT EXISTS theoretical_maximum_score DECIMAL(8,2);
             `;
 
             await sql`
