@@ -131,13 +131,19 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
       if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
       logger.info(`Saving scores from finished session`,{
         sessionCode: gameRef.sessionCode,
-        username: username
+        username: username, playerKey: `${gameRef.sessionCode}:${username}`
       });
       const playerKey = `${gameRef.sessionCode}:${username}`;
       const player = playerInfo[playerKey];
       if (!player) continue;
       const userId = player.userId;
       if (!userId) continue; // If no userId, do not store anything for this user
+
+      logger.info(`Saving scores from finished session for user`,{
+        sessionCode: gameRef.sessionCode,
+        username: username, playerKey: `${gameRef.sessionCode}:${username}`,
+        userId
+      });
 
       const mode = 'multiplayer';
       const atlas = gameRef.currentAtlas;
