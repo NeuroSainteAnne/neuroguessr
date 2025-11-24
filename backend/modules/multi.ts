@@ -18,7 +18,7 @@ import { getDistance } from "./utils_compute.ts";
 import { extractPersistentState } from "./multi_challenge.ts";
 import { emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, 
-  handleDestroySession, setupInactiveGameCheck} from "./multi_cleanup.ts";
+  handleDestroySession, saveFinishedSessions, setupInactiveGameCheck} from "./multi_cleanup.ts";
 import { logoString } from "./email.ts";
 import { atomicGameUpdate, generateCode, isReservedSessionCode } from "./socket.ts";
 import { handleClassicChallengeEnd, joinClassicChallenge } from "./multi_classic_challenge.ts";
@@ -639,6 +639,11 @@ export function handleDisconnect(socketId: string) {
             // should destroy the classic challenge and store the results to finished sessions
             console.log("SHOULD DESTROY CLASSIC")
             return { shouldDestroyGame: true, player };
+          } else {
+            if(gameRef.hasStarted){
+              // save session as finished if it is a started classic challenge 
+              saveFinishedSessions(gameRef)
+            }
           }
           // not a classic instance: we don't destroy it
         } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId) {
@@ -702,12 +707,17 @@ export async function handleExplicitUserLeave(sessionCode: string, userName: str
     
     // Handle creator leaving before game starts
     if(gameRef.isClassicChallenge){
-          if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
-            // should destroy the classic challenge and store the results to finished sessions
-            console.log("SHOULD DESTROY CLASSIC")
-            return { shouldDestroyGame: true, player };
-          }
-          // not a classic instance: we don't destroy it
+      if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
+        // should destroy the classic challenge and store the results to finished sessions
+        console.log("SHOULD DESTROY CLASSIC")
+        return { shouldDestroyGame: true, player };
+      } else {
+        if(gameRef.hasStarted){
+          // save session as finished if it is a started classic challenge 
+          saveFinishedSessions(gameRef)
+        }
+      }
+      // not a classic instance: we don't destroy it
     } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
       return { shouldDestroyGame: true, player };
     }
