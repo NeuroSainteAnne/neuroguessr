@@ -69,8 +69,8 @@ if(config.server.globalAuthentication.enabled){
 
 // login.ts
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 failed requests per windowMs
+  windowMs: 5 * 60 * 1000, // 15 minutes
+  max: 15, // limit each IP to 5 failed requests per windowMs
   message: 'Too many failed authentication attempts',
   standardHeaders: true,
   legacyHeaders: false,

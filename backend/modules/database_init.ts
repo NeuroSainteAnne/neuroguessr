@@ -377,6 +377,24 @@ export const cleanExpiredTokens = async () => {
 export const cleanOldGameSessions = async () => {
     try {
         // Handle finished classic challenges: send emails and preserve challenge records
+        const finishedChallengesUser = await sql`
+            SELECT 
+                ms.id, 
+                ms.name, 
+                ms.start_date, 
+                ms.end_date, 
+                ms.atlas,
+                ms.creator_id,
+                COUNT(fs.id) as participant_count
+            FROM multi_sessions ms
+            LEFT JOIN finished_sessions fs ON fs.classic_challenge_id = ms.id
+            WHERE ms.is_classic_challenge = TRUE AND ms.is_classic_challenge_original_entry = FALSE
+            AND ms.end_date < NOW()
+            GROUP BY ms.id, ms.name, ms.start_date, ms.end_date, ms.atlas, ms.creator_id
+        `;
+
+        
+
         const finishedChallenges = await sql`
             SELECT 
                 ms.id, 
