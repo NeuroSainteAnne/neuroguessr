@@ -1089,7 +1089,13 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
       gameRef.commandTimeout = setTimeout(async () => { 
         // Atomic command progression to prevent race conditions
         const progressResult = await atomicGameUpdate(gameRef.sessionCode, async () => {
+          // Check if timeout was already cleared (e.g., by classic challenge auto-advance)
+          if (gameRef.commandTimeout === undefined) {
+            return null; // Timeout was cancelled, skip progression
+          }
+          
           gameRef.currentCommandIndex += 1;
+          gameRef.commandTimeout = undefined;
           return gameRef.currentCommandIndex;
         });
         
@@ -1427,6 +1433,28 @@ export async function handleValidateGuess(data: {
       pastRegionId,
       clickedVoxelProp: voxelProp
     })
+    
+    // For classic challenges, automatically advance to the next region
+    if (gameRef.isClassicChallenge) {
+      // Atomically clear timeout and advance to prevent race conditions
+      const progressResult = await atomicGameUpdate(gameRef.sessionCode, async () => {
+        // Clear the existing timeout inside atomic section
+        if (gameRef.commandTimeout) {
+          clearTimeout(gameRef.commandTimeout);
+          gameRef.commandTimeout = undefined;
+        }
+        
+        gameRef.currentCommandIndex += 1;
+        return gameRef.currentCommandIndex;
+      });
+      
+      if (progressResult !== null) {
+        sendNextCommand(gameRef);
+      } else {
+        logger.warn(`Failed to progress command for classic challenge ${gameRef.sessionCode} due to concurrent access`);
+      }
+    }
+    
   } catch (error) {
       logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
