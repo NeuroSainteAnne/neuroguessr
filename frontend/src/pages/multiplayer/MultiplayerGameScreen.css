@@ -4,7 +4,7 @@
     gap: 20px;
 }
 
-.join-multiplayer-button{
+.join-multiplayer-button, .start-classic-challenge-button {
     background-color: rgb(63, 109, 159);
     color: white;
     font-size: 1.125rem;
@@ -13,7 +13,11 @@
     border: 1px solid #808588;
     border-radius: 1rem;
 }
-
+.start-classic-challenge-warning{
+    margin-top: 15px;
+    font-size: 0.875rem;
+    color: #ffcc00;
+}
 .multiplayer-suggest-login{
     margin-top: 25px;
 }

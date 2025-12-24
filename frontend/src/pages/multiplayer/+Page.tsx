@@ -131,6 +131,12 @@ const MultiPlayer = ({
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [anonUsername, setAnonUsername] = useState<string>("");
   const anonUsernameRef = useRef(anonUsername);
+  const classicChallengeValidated = useRef<boolean>(false);
+
+  const handleClassicChallengeStart = () => {
+    classicChallengeValidated.current = true;
+    tryLaunchGame();
+  }
 
   const cleanHeader = () => {
     setHeaderText("");  
@@ -259,8 +265,6 @@ const MultiPlayer = ({
       if(data.userSessionToken) {
         implicitTokenRef.current = data.userSessionToken
       }
-      // For classic challenges, start the game immediately since it's single-player
-      tryLaunchGame()
     });
     socket.on('player-joined', (data: any) => {
       setLobbyUsers(prev => [...prev, data.userName]);
@@ -510,6 +514,7 @@ const MultiPlayer = ({
       const sessionCode = isClassicChallenge ? implicitCodeRef.current : askedSessionCode;
       if (sessionCode) {
         if (isClassicChallenge) {
+          if(!classicChallengeValidated.current){ return ; } // Wait until classic challenge is validated
           // For classic challenges, emit launch-game without session token
           socket.emit('launch-game', {
             sessionCode: sessionCode,
@@ -768,62 +773,74 @@ const MultiPlayer = ({
       </div>)
     }
 
-    if (isConnected && !isGameRunning) {
+    if (isConnected && !isGameRunning && isClassicChallenge && !classicChallengeValidated.current) {
       return (
         <div className="waiting-content">
-          {countdownRemaining !== null ? (
-            <div className="countdown-display">
-              <h3>{t("game_starting_in") || "Game starting in..."}</h3>
-              <div className="countdown-number" style={{ 
-                fontSize: '48px', 
-                fontWeight: 'bold', 
-                color: '#ff6b6b',
-                textAlign: 'center',
-                margin: '20px 0'
-              }}>
-                {formatTime({ms:countdownRemaining*1000})}
-              </div>
-              {!isClassicChallenge && <div>
-                <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
-                <ul>
-                    {lobbyUsers.map((user, index) => (
-                      <li key={`waiting-user-${index}`}>
-                        {user}
-                      </li>
-                    ))}
-                </ul>
-              </div>}
-            </div>
-          ) : (
-            <>
-              <h3>{t("waiting_game_start") || "Waiting for game to start..."}</h3>
-              <div className="waiting-display">
-                <div>
+          <button className="start-classic-challenge-button"  data-umami-event="multiplayer start-classic button" onClick={handleClassicChallengeStart}>{t("start_classic_button")}</button>
+          <div className='start-classic-challenge-warning'>{t("classic_challenge_start_warning")}</div>
+        </div>
+      );
+    }
+
+    if (isConnected && !isGameRunning) {
+      if(countdownRemaining !== null && countdownRemaining >= 0){
+        return (
+          <div className="waiting-content">
+              <div className="countdown-display">
+                <h3>{t("game_starting_in") || "Game starting in..."}</h3>
+                <div className="countdown-number" style={{ 
+                  fontSize: '48px', 
+                  fontWeight: 'bold', 
+                  color: '#ff6b6b',
+                  textAlign: 'center',
+                  margin: '20px 0'
+                }}>
+                  {formatTime({ms:countdownRemaining*1000})}
+                </div>
+                {!isClassicChallenge && <div>
                   <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
-                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <ul>
                       {lobbyUsers.map((user, index) => (
-                        <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
+                        <li key={`waiting-user-${index}`}>
                           {user}
                         </li>
                       ))}
                   </ul>
-                </div>
-                {parameters && <div>
-                  <h4>{t("parameters")}</h4>
-                  {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
-                  {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
-                  {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
-                  {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
-                  {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
-                  {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
-                  {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
                 </div>}
               </div>
-            </>
-          )}
-          {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
-        </div>
-      );
+            {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+          </div>
+        );
+      } else if (!isClassicChallenge) {
+        return (
+          <div className="waiting-content">
+            <h3>{t("waiting_game_start") || "Waiting for game to start..."}</h3>
+            <div className="waiting-display">
+              <div>
+                <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {lobbyUsers.map((user, index) => (
+                      <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
+                        {user}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+              {parameters && <div>
+                <h4>{t("parameters")}</h4>
+                {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
+                {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
+                {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+                {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
+                {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
+                {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
+                {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
+              </div>}
+            </div>
+            {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+          </div>
+        );
+      }
     }
     
     return null;

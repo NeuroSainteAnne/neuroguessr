@@ -638,7 +638,6 @@ export function handleDisconnect(socketId: string) {
         if(gameRef.isClassicChallenge){
           if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
             // should destroy the classic challenge and store the results to finished sessions
-            console.log("SHOULD DESTROY CLASSIC")
             return { shouldDestroyGame: true, player };
           } else {
             if(gameRef.hasStarted){
@@ -710,7 +709,6 @@ export async function handleExplicitUserLeave(sessionCode: string, userName: str
     if(gameRef.isClassicChallenge){
       if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
         // should destroy the classic challenge and store the results to finished sessions
-        console.log("SHOULD DESTROY CLASSIC")
         return { shouldDestroyGame: true, player };
       } else {
         if(gameRef.hasStarted){
@@ -776,11 +774,9 @@ export function emitToUser(sessionCode: string, userName: string, event: string,
 
 // Helper to broadcast to all users in a session (one message per user, to avoid duplicates for multi-tab users)
 export function broadcastToSession(sessionCode: string, event: string, data: any) {
-  console.log("broadcasting", event)
   for (const playerKey in socketClients) {
     if (playerKey.startsWith(`${sessionCode}:`)) {
       const socketIds = socketClients[playerKey];
-      console.log(playerKey, socketIds)
       if (socketIds.length > 0) {
         const socket = getIO().sockets.sockets.get(socketIds[0]);
         if (socket) {

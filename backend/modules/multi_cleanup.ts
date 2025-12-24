@@ -129,6 +129,7 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
     for (const username in gameRef.individualScores || {}) {
       // Skip anonymous users
       if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
+      if (!gameRef.hasStarted) continue; // avoid saving non-started games
       logger.info(`Saving scores from finished session`,{
         sessionCode: gameRef.sessionCode,
         username: username, playerKey: `${gameRef.sessionCode}:${username}`
@@ -188,7 +189,6 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
       }
 
       if (!shouldInsert) continue;
-
       savePromises.push(
         sql`
           INSERT INTO finished_sessions (
