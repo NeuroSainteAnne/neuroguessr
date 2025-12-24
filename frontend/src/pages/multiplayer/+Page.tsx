@@ -165,7 +165,11 @@ const MultiPlayer = ({
   useEffect(() => {
     const replayMultiId = pageContext?.urlParsed.search["replay_multi"]
     
-    if (replayMultiId && isLoggedIn && authToken) {
+    if (replayMultiId) {
+      if(!isLoggedIn || !authToken){
+        setShowAuthRequired(true);
+        return;
+      } 
       // Fetch replay data from backend
       fetch(`/api/multi/replay-challenge/${replayMultiId}`, {
         headers: {

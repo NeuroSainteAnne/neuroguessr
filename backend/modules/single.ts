@@ -478,7 +478,8 @@ export async function validateSingleGuess(socket: Socket, data: {
         time_taken,
         is_correct,
         score_increment,
-        attempts
+        attempts,
+        has_clicked
       ) VALUES (
         ${gameState.userId !== null},
         ${gameState.userId},
@@ -503,7 +504,8 @@ export async function validateSingleGuess(socket: Socket, data: {
         ${duration},
         ${isCorrect},
         ${Math.round(scoreIncrement)},
-        ${gameState.attempts}
+        ${gameState.attempts},
+        ${true}
       )
     `;
 

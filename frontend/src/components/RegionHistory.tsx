@@ -101,6 +101,7 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
     const { t } = useApp();
     return <div className="region-summary">
       <h3>{t("answers_summary")}</h3>
+      <div className="answers-info" dangerouslySetInnerHTML={{__html: t("answers_info")}}></div>
       <div className="region-list">
         {pastRegions.map((region, index) => (
           <div 

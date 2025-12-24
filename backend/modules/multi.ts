@@ -1022,6 +1022,76 @@ export async function handleLaunchGame(data: {
   }
 }
 
+// Record missing clicks for players who didn't answer
+async function recordMissingClicks(gameRef: MultiplayerGame, commandIndex: number) {
+  try {
+    // Get all players in this game
+    const playersInGame = Object.keys(socketClients)
+      .filter(key => key.startsWith(`${gameRef.sessionCode}:`))
+      .map(key => key.split(':')[1]);
+
+    // Find players who haven't answered this question
+    for (const userName of playersInGame) {
+      const hasUserAnswered = gameRef.hasAnswered?.[userName]?.[commandIndex];
+      
+      if (!hasUserAnswered) {
+        // This player didn't click - record a missing click
+        const playerKey = `${gameRef.sessionCode}:${userName}`;
+        const player = playerInfo[playerKey];
+        
+        // Get the command to know which region was asked
+        const command = gameRef.commands?.[commandIndex];
+        if (!command || command.action !== 'guess') continue;
+
+        const timeTaken: number = command.duration || 0;
+        const atlasName: string = command.atlas || gameRef.currentAtlas;
+        const isBlind: boolean = command.blindMode || false;
+        const regionId: number | null = command.regionId ?? null;
+
+        await sql`
+          INSERT INTO individual_clicks (
+            is_authenticated,
+            user_id,
+            multiplayer_session_id,
+            multiplayer_is_challenge,
+            multiplayer_is_classic_challenge,
+            multiplayer_classic_challenge_id,
+            command_index,
+            atlas,
+            blind_mode,
+            region_id,
+            time_taken,
+            is_correct,
+            score_increment,
+            attempts,
+            has_clicked
+          ) VALUES (
+            ${player?.userId !== undefined},
+            ${player?.userId || null},
+            ${gameRef.id},
+            ${gameRef.isChallenge || false},
+            ${gameRef.isClassicChallenge || false},
+            ${gameRef.classicChallengeId || null},
+            ${commandIndex},
+            ${atlasName},
+            ${isBlind},
+            ${regionId},
+            ${timeTaken},
+            ${false},
+            ${0},
+            ${(gameRef.individualAttempts[userName] || 0) + 1},
+            ${false}
+          )
+        `;
+        
+        logger.info(`Recorded missing click for player ${userName} on command ${commandIndex}`);
+      }
+    }
+  } catch (error) {
+    logger.error("Error recording missing clicks:", error);
+  }
+}
+
 export async function sendNextCommand(gameRef: MultiplayerGame) {
   try {
     if (!gameRef.commands) return;
@@ -1090,7 +1160,10 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
           if (gameRef.commandTimeout === undefined) {
             return null; // Timeout was cancelled, skip progression
           }
-          
+
+          // Record missing clicks before progressing
+          await recordMissingClicks(gameRef, gameRef.currentCommandIndex);
+        
           gameRef.currentCommandIndex += 1;
           gameRef.commandTimeout = undefined;
           return gameRef.currentCommandIndex;
@@ -1361,7 +1434,8 @@ export async function handleValidateGuess(data: {
             time_taken,
             is_correct,
             score_increment,
-            attempts
+            attempts,
+            has_clicked
         ) VALUES (
             ${player?.userId !== undefined},
             ${player?.userId || null},
@@ -1389,7 +1463,8 @@ export async function handleValidateGuess(data: {
             ${elapsed},
             ${isCorrect},
             ${scoreIncrement},
-            ${(gameRef.individualAttempts[userName] || 0) + 1}
+            ${(gameRef.individualAttempts[userName] || 0) + 1},
+            ${true}
         )
     `;
     
@@ -1484,7 +1559,8 @@ export async function replayMultiSession (req: Request, res: Response) {
             distance_to_target,
             is_correct,
             score_increment,
-            time_taken
+            time_taken,
+            has_clicked
         FROM individual_clicks
         WHERE user_id = ${userId}
         AND multiplayer_classic_challenge_id = ${challengeId}
@@ -1501,16 +1577,16 @@ export async function replayMultiSession (req: Request, res: Response) {
         regionId: click.region_id,
         atlas: click.atlas,
         target: click.region_id,
-        clickedVoxelProp: {
+        clickedPosition: click.has_clicked ? {
             mm: [click.clicked_x_mm, click.clicked_y_mm, click.clicked_z_mm],
             vox: [click.clicked_x, click.clicked_y, click.clicked_z]
-        },
-        nearestCenter: click.nearest_center_x_mm !== null ? [
+        } : undefined,
+        regionCenter: click.nearest_center_x_mm !== null ? [
             click.nearest_center_x_mm,
             click.nearest_center_y_mm,
             click.nearest_center_z_mm
         ] : undefined,
-        nearestBoundary: click.boundary_point_x_mm !== null ? [
+        regionBoundary: click.boundary_point_x_mm !== null ? [
             click.boundary_point_x_mm,
             click.boundary_point_y_mm,
             click.boundary_point_z_mm

@@ -84,6 +84,7 @@
   "time_attack_ended_time" : "Temps : ",
   "time_attack_ended_score" : "Score : ",
   "answers_summary": "Résumé des Réponses",
+  "answers_info": "Cliquez sur l'icône <i class='fas fa-crosshairs'></i> pour voir la région demandée et votre réponse",
   "streak_incorrect": "Incorrect ({{consecutiveErrors}}/{{maxErrors}})",
   "streak_ended_generic": "Mauvaise réponse !",
   "streak_ended_too_far": "Réponse trop distante ! ({{distance}}mm)",

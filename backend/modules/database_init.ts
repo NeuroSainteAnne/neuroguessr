@@ -121,7 +121,8 @@ export const database_init = async () => {
                     time_taken INTEGER NOT NULL,
                     is_correct BOOLEAN NOT NULL DEFAULT FALSE,
                     score_increment INTEGER NOT NULL DEFAULT 0,
-                    attempts INTEGER NOT NULL DEFAULT 0
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    has_clicked BOOLEAN NOT NULL DEFAULT TRUE
                 );
             `;
 
@@ -235,6 +236,11 @@ export const database_init = async () => {
             await sql`
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
+
+            await sql`
+                ALTER TABLE individual_clicks 
+                ADD COLUMN IF NOT EXISTS has_clicked BOOLEAN NOT NULL DEFAULT TRUE;
             `;
 
         // Update old versions of the database schema
