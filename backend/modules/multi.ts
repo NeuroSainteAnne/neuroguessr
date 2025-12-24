@@ -22,6 +22,7 @@ import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame,
 import { logoString } from "./email.ts";
 import { atomicGameUpdate, generateCode, isReservedSessionCode } from "./socket.ts";
 import { handleClassicChallengeEnd, joinClassicChallenge } from "./multi_classic_challenge.ts";
+import type { PastRegion } from "../../frontend/src/types/types.tsx";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -1459,6 +1460,80 @@ export async function handleValidateGuess(data: {
       logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
   }
+}
+
+export async function replayMultiSession (req: Request, res: Response) {
+    const { challengeId } = req.params;
+    const userId = (req as any).user.id;
+
+    // Get individual clicks for this user and challenge, ordered by command_index
+    const clicks = await sql`
+        SELECT 
+            command_index,
+            atlas,
+            blind_mode,
+            region_id,
+            clicked_x,
+            clicked_y,
+            clicked_z,
+            clicked_x_mm,
+            clicked_y_mm,
+            clicked_z_mm,
+            nearest_center_x_mm,
+            nearest_center_y_mm,
+            nearest_center_z_mm,
+            boundary_point_x_mm,
+            boundary_point_y_mm,
+            boundary_point_z_mm,
+            distance_to_target,
+            is_correct,
+            score_increment,
+            time_taken
+        FROM individual_clicks
+        WHERE user_id = ${userId}
+        AND multiplayer_classic_challenge_id = ${challengeId}
+        ORDER BY command_index ASC
+    `;
+
+    if (clicks.length === 0) {
+        return res.status(404).json({ error: 'No replay data found' });
+    }
+
+    // Transform clicks into pastRegions format
+    const pastRegions : PastRegion[] = clicks.map((click: any, index: number) => ({
+        id: index,
+        regionId: click.region_id,
+        atlas: click.atlas,
+        target: click.region_id,
+        clickedVoxelProp: {
+            mm: [click.clicked_x_mm, click.clicked_y_mm, click.clicked_z_mm],
+            vox: [click.clicked_x, click.clicked_y, click.clicked_z]
+        },
+        nearestCenter: click.nearest_center_x_mm !== null ? [
+            click.nearest_center_x_mm,
+            click.nearest_center_y_mm,
+            click.nearest_center_z_mm
+        ] : undefined,
+        nearestBoundary: click.boundary_point_x_mm !== null ? [
+            click.boundary_point_x_mm,
+            click.boundary_point_y_mm,
+            click.boundary_point_z_mm
+        ] : undefined,
+        distance: click.distance_to_target,
+        isCorrect: click.is_correct,
+        score: click.score_increment,
+        scoreIncrement: click.score_increment
+    }));
+
+    // Get atlas and blind mode from first click
+    const atlas = clicks[0].atlas;
+    const blindMode = clicks[0].blind_mode;
+
+    res.json({
+        pastRegions,
+        atlas,
+        blindMode
+    });
 }
 
 // Get multiplayer session info for meta tag generation

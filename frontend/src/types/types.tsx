@@ -61,7 +61,6 @@ export interface CustomTokenPayload {
 export type PastRegion = {
   id: number;
   regionId: number;
-  regionName: string;
   isCorrect: boolean;
   score: number;
   distance: number;

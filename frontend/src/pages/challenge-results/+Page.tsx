@@ -52,12 +52,14 @@ export function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<string>('');
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
   // email opt-in is handled by reusable component
 
   useEffect(() => {
     if (!challengeId) {
       setError(t("no_challenge_id"));
       setLoading(false);
+      setIsCompleted(false);
       return;
     }
 
@@ -79,6 +81,32 @@ export function Page() {
         setError(err.message || t("failed_to_load_results"));
         setLoading(false);
     });
+
+    if (!isLoggedIn || !authToken) {
+      setIsCompleted(false);
+      return;
+    }
+    
+    const checkCompletion = async () => {
+      try {
+        const response = await fetch(`/api/classic-challenges/${challengeId}/completion`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsCompleted(data.completed);
+        }
+      } catch (err) {
+        console.error('Error checking challenge completion:', err);
+      }
+    };
+    checkCompletion();
+    
   }, [challengeId, authToken, isLoggedIn, t]);
 
   
@@ -291,9 +319,15 @@ export function Page() {
         </div>
 
         <div className="actions">
-            {state !== 'finished' && sessionCode && !currentUserParticipation && (
+            {state !== 'finished' && sessionCode && !currentUserParticipation && !isCompleted && (
             <a href={`/multiplayer/${sessionCode}`} className="join-button">
                 {state === 'pending' ? t("view_challenge") : t("join_challenge")}
+            </a>
+            )}
+            
+            {isCompleted && (
+            <a href={`/multiplayer/?replay_multi=${challenge.id}`} className="review-button">
+                {t("see_your_results") || "See Your Results"}
             </a>
             )}
         </div>

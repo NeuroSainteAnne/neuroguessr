@@ -286,7 +286,8 @@
 }
 
 .back-button,
-.join-button {
+.join-button,
+.review-button {
   display: inline-block;
   padding: 12px 24px;
   border-radius: 6px;
@@ -311,6 +312,15 @@
 
 .join-button:hover {
   background: #0056b3;
+}
+
+.review-button {
+  background: #28a745;
+  color: white;
+}
+
+.review-button:hover {
+  background: #218838;
 }
 
 .loading,

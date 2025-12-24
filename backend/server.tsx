@@ -16,7 +16,7 @@ import configJson from './config.json' with { type: "json" };
 import type {  GetStatsRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate, replayMultiSession } from "./modules/multi.ts";
 import { checkIfClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getClassicChallengeResults } from "modules/multi_classic_challenge.ts";
 import { classicChallengeEmailOptIn } from "modules/multi_classic_challenge.ts";
@@ -128,7 +128,7 @@ app.get('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, ne
 app.post('/api/multi/can-join-classic-challenge', authenticateToken, (req, res, next) => {
     Promise.resolve(canJoinClassicChallenge(req, res)).catch(next);
 })
-app.get('/api/classic-challenges/:sessionCode/completion', authenticateToken, (req, res, next) => {
+app.get('/api/classic-challenges/:challengeId/completion', authenticateToken, (req, res, next) => {
     Promise.resolve(checkClassicChallengeCompletion(req, res)).catch(next);
 })
 app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
@@ -136,6 +136,9 @@ app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
 })
 app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
     Promise.resolve(deleteClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/replay-challenge/:challengeId', authenticateToken, (req, res, next) => {
+    Promise.resolve(replayMultiSession(req, res)).catch(next);
 })
 
 // advanced_game.ts

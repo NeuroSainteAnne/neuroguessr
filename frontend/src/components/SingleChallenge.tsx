@@ -29,7 +29,7 @@ export function SingleChallenge({
       }
 
       try {
-        const response = await fetch(`/api/classic-challenges/${challenge.sessionCode}/completion`, {
+        const response = await fetch(`/api/classic-challenges/${challenge.id}/completion`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

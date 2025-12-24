@@ -626,30 +626,12 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
 
 export const checkClassicChallengeCompletion = async (req: Request, res: Response) => {
   try {
-    const { sessionCode } = req.params;
+    const { challengeId } = req.params;
     const userId = (req as AuthenticatedRequest).user.id;
 
-    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+    if (!challengeId || !/^\d+$/.test(challengeId)) {
       return res.status(400).json({ error: 'Invalid session code format' });
     }
-
-    // Get the challenge ID
-    const challengeResult = await sql`
-      SELECT ms.id
-      FROM multi_sessions ms
-      WHERE ms.session_code = ${sessionCode}
-      AND ms.is_classic_challenge = TRUE
-      AND ms.is_classic_challenge_original_entry = TRUE
-    ` as Array<{
-      id: number;
-    }>;
-
-    if (challengeResult.length === 0) {
-      return res.status(404).json({ error: 'Classic challenge not found' });
-    }
-
-    const challengeId = challengeResult[0].id;
-
     // Check if user has completed this challenge
     const completedResult = await sql`
       SELECT id FROM finished_sessions
@@ -763,7 +745,6 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
   const userSessionCode = await getMultiUniqueCode();
   const userSessionToken = crypto.randomBytes(32).toString('hex');
 
-  console.log("challenge", challenge);
   const newSessionConfig = JSON.parse(challenge.persistent_config || "");
   newSessionConfig.sessionCode = userSessionCode;
 
@@ -813,7 +794,9 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
 
   // Store socketInfo 
   socketInfo[socket.id] = { sessionCode: userSessionCode, userName };
-};export const getPastClassicChallenges = async (req: Request, res: Response) => {
+};
+
+export const getPastClassicChallenges = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.id;
     const isAdmin = (req as AuthenticatedRequest).user?.admin;

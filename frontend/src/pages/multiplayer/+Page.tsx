@@ -92,6 +92,7 @@ const MultiPlayer = ({
   const joiningInProgressRef = useRef<boolean>(false);
   const pastRegionIdCounter = useRef<number>(0);
   const currentPastRegionId = useRef<number | null>(null);
+  const isReplayMode = useState<boolean>(!askedSessionCode && !!pageContext?.urlParsed.search["replay_multi"]);
 
   const handleConnect = () => {
     setError(null);
@@ -153,6 +154,41 @@ const MultiPlayer = ({
   useEffect(()=>{
     anonUsernameRef.current = anonUsername;
   }, [anonUsername])
+
+  // Handle replay_multi URL parameter
+  useEffect(() => {
+    const replayMultiId = pageContext?.urlParsed.search["replay_multi"]
+    
+    if (replayMultiId && isLoggedIn && authToken) {
+      // Fetch replay data from backend
+      fetch(`/api/multi/replay-challenge/${replayMultiId}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch replay data: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        const { pastRegions, atlas, blindMode } = data;
+        
+        // Set up the game for replay mode
+        setPastRegions(pastRegions);
+        setAskedAtlas({atlas, blindMode});
+        setHasEnded(true);
+        
+        // Start the game directly in replay mode
+        consoleLog('verbose', `Starting replay mode for challenge ${replayMultiId} with ${pastRegions.length} regions`);
+      })
+      .catch(err => {
+        console.error('Error loading replay data:', err);
+        setError(err.message || 'Failed to load replay data');
+      });
+    }
+  }, [isLoggedIn, authToken, setPastRegions, setAskedAtlas]);
 
   const joinLobby = async (inputCode: string) => {
     if (isConnected || joiningInProgressRef.current) return;
@@ -297,11 +333,9 @@ const MultiPlayer = ({
       } else if (data.command.action === 'guess') {
         // Create empty pastRegion entry for the new region
         const pastRegionId = pastRegionIdCounter.current++;
-        const regionName = atlasRef.current?.labels?.[data.command.regionId] || t('unknown_region');
         setPastRegions(prev => [...prev, {
           id: pastRegionId,
           regionId: data.command.regionId,
-          regionName,
           atlas: atlasRef.current?.atlas || "",
           isCorrect: false,
           score: 0,
@@ -701,7 +735,7 @@ const MultiPlayer = ({
       );
     }
 
-    if ((isLoggedIn && !askedSessionCode) || 
+    if ((isLoggedIn && !askedSessionCode && !isReplayMode) || 
         (!isLoggedIn && config.activateAnonymousMode && 
           !isConnected && !askedSessionToken && isClassicChallengeFromCheck !== true && !isCheckingClassicChallenge)) {
       return (<div className="waiting-content">
