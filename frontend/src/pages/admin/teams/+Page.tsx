@@ -307,7 +307,6 @@ export function Page() {
       
       setAllUsers(data.users);
       // Initially show only users not in this team
-      console.log(data.users.filter((user: User) => user.teamId !== teamId))
       setFilteredUsers(data.users.filter((user: User) => user.teamId !== teamId));
     } catch (err) {
       console.error('Error fetching users:', err);

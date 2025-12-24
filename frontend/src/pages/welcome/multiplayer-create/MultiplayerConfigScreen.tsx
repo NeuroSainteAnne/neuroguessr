@@ -1629,7 +1629,6 @@ const MultiplayerConfigScreen = () => {
                                             onChange={(e) => {
                                                 const localValue = e.target.value;
                                                 const isoString = new Date(localValue).toISOString();
-                                                console.log("upd", localValue)
                                                 setCountdownStartTime(localValue);
                                                 updateCountdownStartTime(isoString);
                                             }}
