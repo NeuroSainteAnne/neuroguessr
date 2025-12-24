@@ -155,7 +155,6 @@ export const configUser = async (req: Request, res: Response): Promise<void> => 
         `;
         const updatedUser = updatedUsers[0] as User;
         const updatedToken = getUserToken(updatedUser);
-        console.log("USER", updatedUser)
 
         res.status(200).send({ message: "User updated successfully", token: updatedToken });
     } catch (error: unknown) {
