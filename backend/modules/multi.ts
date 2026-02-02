@@ -864,6 +864,11 @@ export function generateGameCommands(params: MultiplayerParametersType): GameCom
   try {
     const commands : GameCommands[] = [];
     if(!params.atlas) return;
+
+    if (params.commands && params.commands.length > 0) {
+      // Use predefined commands if provided
+      return params.commands;
+    }
     // 0. Game countdown
     commands.push({
       action: "countdown",
