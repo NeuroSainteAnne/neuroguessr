@@ -124,6 +124,9 @@ export default function ClinicalTrialBox({clinicalTrialData, setClinicalTrialDat
                         <option value="neurosurgeon">{t("clinical_trial_occupation_neurosurgeon")}</option>
                         <option value="medical_student">{t("clinical_trial_occupation_medical_student")}</option>
                         <option value="researcher">{t("clinical_trial_occupation_researcher")}</option>
+                        <option value="psychiatrist">{t("clinical_trial_occupation_psychiatrist")}</option>
+                        <option value="engineer">{t("clinical_trial_occupation_engineer")}</option>
+                        <option value="psychologist">{t("clinical_trial_occupation_psychologist")}</option>
                         <option value="other">{t("clinical_trial_occupation_other")}</option>
                     </select>
                 </td>

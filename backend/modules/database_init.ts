@@ -43,6 +43,16 @@ export const database_init = async () => {
         // Create tables with optimized indexes
         await sql.begin(async sql => {
             await sql`
+                CREATE TABLE IF NOT EXISTS teams (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT DEFAULT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_name ON teams(name);`;
+
+            await sql`
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     username TEXT NOT NULL,
@@ -60,7 +70,8 @@ export const database_init = async () => {
                     clinical_trial_country TEXT DEFAULT NULL,
                     clinical_trial_occupation TEXT DEFAULT NULL,
                     clinical_trial_consent TEXT DEFAULT NULL,
-                    clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                    clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL
                 );
             `;
             await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);`
@@ -110,7 +121,8 @@ export const database_init = async () => {
                     time_taken INTEGER NOT NULL,
                     is_correct BOOLEAN NOT NULL DEFAULT FALSE,
                     score_increment INTEGER NOT NULL DEFAULT 0,
-                    attempts INTEGER NOT NULL DEFAULT 0
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    has_clicked BOOLEAN NOT NULL DEFAULT TRUE
                 );
             `;
 
@@ -139,7 +151,7 @@ export const database_init = async () => {
                     classic_challenge_id INTEGER,
                     classic_challenge_start_date TIMESTAMP WITH TIME ZONE,
                     classic_challenge_end_date TIMESTAMP WITH TIME ZONE,
-                    theoretical_maximum_score DECIMAL(5,2),
+                    theoretical_maximum_score DECIMAL(8,2),
                     score_percentage DECIMAL(5,2),
                     send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE
                 );
@@ -162,6 +174,7 @@ export const database_init = async () => {
                     public BOOLEAN NOT NULL DEFAULT FALSE,
                     is_challenge BOOLEAN NOT NULL DEFAULT FALSE,
                     is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE,
+                    is_classic_challenge_original_entry BOOLEAN NOT NULL DEFAULT FALSE,
                     persistent_config TEXT DEFAULT NULL,
                     name TEXT DEFAULT NULL,
                     start_date TIMESTAMP WITH TIME ZONE,
@@ -225,6 +238,11 @@ export const database_init = async () => {
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
             `;
 
+            await sql`
+                ALTER TABLE individual_clicks 
+                ADD COLUMN IF NOT EXISTS has_clicked BOOLEAN NOT NULL DEFAULT TRUE;
+            `;
+
         // Update old versions of the database schema
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS admin BOOLEAN NOT NULL default FALSE;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
@@ -233,11 +251,13 @@ export const database_init = async () => {
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_occupation TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent TEXT DEFAULT NULL;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_consent_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;`
+            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL;`
 
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_gender ON users(clinical_trial_gender);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_country ON users(clinical_trial_country);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_occupation ON users(clinical_trial_occupation);`;
             await sql`CREATE INDEX IF NOT EXISTS idx_users_clinical_trial_consent ON users(clinical_trial_consent);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);`;
 
             await sql`
                 CREATE TABLE IF NOT EXISTS advanced_game_settings (
@@ -268,7 +288,12 @@ export const database_init = async () => {
                 ALTER TABLE multi_sessions 
                 ADD COLUMN IF NOT EXISTS is_classic_challenge BOOLEAN NOT NULL DEFAULT FALSE;
             `;
+            await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS is_classic_challenge_original_entry BOOLEAN NOT NULL DEFAULT FALSE;
+            `;
             await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_classic_challenge ON multi_sessions(is_classic_challenge);`;
+            await sql`CREATE INDEX IF NOT EXISTS idx_multi_sessions_is_classic_challenge_original_entry ON multi_sessions(is_classic_challenge_original_entry);`;
 
             await sql`
                 ALTER TABLE multi_sessions 
@@ -297,7 +322,7 @@ export const database_init = async () => {
 
             await sql`
                 ALTER TABLE finished_sessions 
-                ADD COLUMN IF NOT EXISTS theoretical_maximum_score DECIMAL(5,2);
+                ADD COLUMN IF NOT EXISTS theoretical_maximum_score DECIMAL(8,2);
             `;
 
             await sql`
@@ -358,6 +383,24 @@ export const cleanExpiredTokens = async () => {
 export const cleanOldGameSessions = async () => {
     try {
         // Handle finished classic challenges: send emails and preserve challenge records
+        const finishedChallengesUser = await sql`
+            SELECT 
+                ms.id, 
+                ms.name, 
+                ms.start_date, 
+                ms.end_date, 
+                ms.atlas,
+                ms.creator_id,
+                COUNT(fs.id) as participant_count
+            FROM multi_sessions ms
+            LEFT JOIN finished_sessions fs ON fs.classic_challenge_id = ms.id
+            WHERE ms.is_classic_challenge = TRUE AND ms.is_classic_challenge_original_entry = FALSE
+            AND ms.end_date < NOW()
+            GROUP BY ms.id, ms.name, ms.start_date, ms.end_date, ms.atlas, ms.creator_id
+        `;
+
+        
+
         const finishedChallenges = await sql`
             SELECT 
                 ms.id, 
@@ -369,7 +412,7 @@ export const cleanOldGameSessions = async () => {
                 COUNT(fs.id) as participant_count
             FROM multi_sessions ms
             LEFT JOIN finished_sessions fs ON fs.classic_challenge_id = ms.id
-            WHERE ms.is_classic_challenge = TRUE
+            WHERE ms.is_classic_challenge = TRUE AND ms.is_classic_challenge_original_entry = TRUE
             AND ms.end_date < NOW()
             GROUP BY ms.id, ms.name, ms.start_date, ms.end_date, ms.atlas, ms.creator_id
         `;
@@ -433,6 +476,7 @@ export const cleanOldGameSessions = async () => {
             WHERE created_at <= NOW() - INTERVAL '1 hour'
             AND is_challenge = FALSE
             AND is_classic_challenge = FALSE
+            AND is_classic_challenge_original_entry = FALSE
         `;
         if (resultMultiSessions.count !== 0) {
             logger.info(`Cleaned up ${resultMultiSessions.count} old multi_sessions.`);

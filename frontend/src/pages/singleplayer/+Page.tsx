@@ -169,11 +169,9 @@ function SinglePlayer({
         if (currentRegion && gameMode !== "navigation") {
             // Prepopulate pastRegions with empty entry in time attack mode
             if (gameMode === "time-attack" && currentRegion.askedId !== undefined && atlasRef.current) {
-                const regionName = atlasRef.current.labels?.[currentRegion.regionId] || t('unknown_region');
                 setPastRegions(prev => [...prev, {
                     id: currentRegion.askedId!,
                     regionId: currentRegion.regionId,
-                    regionName,
                     atlas: atlasRef.current!.atlas,
                     isCorrect: false,
                     clickedPosition: undefined,

@@ -10,6 +10,7 @@ export interface User {
     admin: boolean;
     publish_to_leaderboard: boolean | null;
     language: string;
+    team_id: number | null;
     clinical_trial_gender: "male" | "female" | "other" | null;
     clinical_trial_age: number | null;
     clinical_trial_country: string | null;
@@ -109,6 +110,7 @@ export interface MultiSession {
   name?: string | null;
   classic_challenge_id?: number | null;
   is_classic_challenge?: boolean;
+  is_classic_challenge_original_entry?: boolean;
   start_date?: string | null;
   end_date?: string | null;
   classic_challenge_referral?: number;
@@ -121,4 +123,11 @@ export interface AdvancedGameSettings {
   created_at: Date;
   public: boolean;
   settings: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string; // ISO date string
 }

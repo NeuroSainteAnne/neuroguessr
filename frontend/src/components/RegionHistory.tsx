@@ -5,8 +5,14 @@ import { useGame } from "./BrainViewer";
 
 const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
         {pastRegions:PastRegion[], niivue: any, highlightPastRegion:(regionId:number, moveToCenter:boolean, allowFibers?:boolean)=>void}) => {
-    const { setAskedAtlas } = useApp();
+    const { setAskedAtlas, atlasRegions } = useApp();
     const { currentlyLoadedAtlas, startGameCallbackRef } = useGame();
+    
+    // Helper function to get region name from atlas and regionId
+    const getRegionName = (atlas: string, regionId: number): string => {
+        const region = atlasRegions.find(r => r.atlas === atlas && r.id === regionId);
+        return region?.name || `Region ${regionId}`;
+    };
     function removeOpenMeshes() {
         if (niivue.meshes.length > 0) {
         let mesh = niivue.meshes[0]
@@ -95,6 +101,7 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
     const { t } = useApp();
     return <div className="region-summary">
       <h3>{t("answers_summary")}</h3>
+      <div className="answers-info" dangerouslySetInnerHTML={{__html: t("answers_info")}}></div>
       <div className="region-list">
         {pastRegions.map((region, index) => (
           <div 
@@ -102,7 +109,7 @@ const RegionHistory = ({pastRegions, niivue, highlightPastRegion}:
             className={`region-item ${region.isCorrect ? 'correct' : 'incorrect'}`}
           >
             <span className="region-number">{index + 1}.</span>
-            <span className="region-name">{region.regionName}</span>
+            <span className="region-name">{getRegionName(region.atlas, region.regionId)}</span>
             <span className="region-score">{region.distance == -1 ?t("no_guess"):(region.distance?`${Math.round(region.distance)}mm`:``)}</span>
             <button 
               className="highlight-region-button"

@@ -25,6 +25,16 @@ interface Participant {
   attempts: number;
   completionDate: string;
   ranking: number;
+  teamId: number | null;
+  teamName: string | null;
+}
+
+interface TeamRanking {
+  teamId: number | null;
+  teamName: string;
+  playerCount: number;
+  avgScore: number;
+  avgTimePerRegion: number;
 }
 
 interface ChallengeResultsData {
@@ -32,6 +42,7 @@ interface ChallengeResultsData {
   sessionCode: string | null;
   state: 'pending' | 'started' | 'finished';
   participants: Participant[];
+  teamRankings?: TeamRanking[];
 }
 
 export function Page() {
@@ -41,12 +52,14 @@ export function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<string>('');
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
   // email opt-in is handled by reusable component
 
   useEffect(() => {
     if (!challengeId) {
       setError(t("no_challenge_id"));
       setLoading(false);
+      setIsCompleted(false);
       return;
     }
 
@@ -68,6 +81,32 @@ export function Page() {
         setError(err.message || t("failed_to_load_results"));
         setLoading(false);
     });
+
+    if (!isLoggedIn || !authToken) {
+      setIsCompleted(false);
+      return;
+    }
+    
+    const checkCompletion = async () => {
+      try {
+        const response = await fetch(`/api/classic-challenges/${challengeId}/completion`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsCompleted(data.completed);
+        }
+      } catch (err) {
+        console.error('Error checking challenge completion:', err);
+      }
+    };
+    checkCompletion();
+    
   }, [challengeId, authToken, isLoggedIn, t]);
 
   
@@ -148,7 +187,10 @@ export function Page() {
     );
   }
 
-  const { challenge, sessionCode, state, participants } = data;
+  const { challenge, sessionCode, state, participants, teamRankings } = data;
+
+  // Use backend-calculated team rankings (includes all users, even those who didn't publish)
+  const hasTeams = teamRankings && teamRankings.length > 0;
 
   // Find current user's participation from participants array
   const currentUserParticipation = participants.find(p => p.username === userUsername) || null;
@@ -212,6 +254,35 @@ export function Page() {
             </div>
         )}
 
+        {hasTeams && teamRankings.length > 0 && (
+            <div className="teams-section">
+            <h2>Teams Results</h2>
+            <div className="teams-table">
+                <div className="table-header">
+                <div className="col-rank">#</div>
+                <div className="col-team-name">Team</div>
+                <div className="col-players">Players</div>
+                <div className="col-score">Avg Score</div>
+                <div className="col-tpr">Avg Time/Region</div>
+                </div>
+                {teamRankings.map((team, index) => (
+                <div 
+                    key={team.teamId ?? 'no-team'} 
+                    className={`table-row ${team.teamId === currentUserParticipation?.teamId ? 'current-user-team' : ''}`}
+                >
+                    <div className="col-rank">#{index + 1}</div>
+                    <div className="col-team-name">
+                    {team.teamName}
+                    </div>
+                    <div className="col-players">{team.playerCount}</div>
+                    <div className="col-score">{Math.round(team.avgScore * 10) / 10}</div>
+                    <div className="col-tpr">{Math.round(team.avgTimePerRegion / 100) / 10}</div>
+                </div>
+                ))}
+            </div>
+            </div>
+        )}
+
         <div className="participants-section">
             <h2>{t("participants")} ({participants.length})</h2>
             {participants.length === 0 ? (
@@ -225,6 +296,7 @@ export function Page() {
                 <div className="table-header">
                 <div className="col-rank">#</div>
                 <div className="col-name">{t("name_header")}</div>
+                {hasTeams && <div className="col-team">Team</div>}
                 <div className="col-score">{t("score")}</div>
                 <div className="col-tpr">{t("time_per_region")}</div>
                 </div>
@@ -237,6 +309,7 @@ export function Page() {
                     <div className="col-name">
                     {participant.username}
                     </div>
+                    {hasTeams && <div className="col-team">{participant.teamName || '-'}</div>}
                     <div className="col-score">{participant.score}</div>
                     <div className="col-tpr">{Math.round(participant.avgTimePerRegion/100)/10}</div>
                 </div>
@@ -246,9 +319,15 @@ export function Page() {
         </div>
 
         <div className="actions">
-            {state !== 'finished' && sessionCode && !currentUserParticipation && (
+            {state !== 'finished' && sessionCode && !currentUserParticipation && !isCompleted && (
             <a href={`/multiplayer/${sessionCode}`} className="join-button">
                 {state === 'pending' ? t("view_challenge") : t("join_challenge")}
+            </a>
+            )}
+            
+            {isCompleted && (
+            <a href={`/multiplayer/?replay_multi=${challenge.id}`} className="review-button">
+                {t("see_your_results") || "See Your Results"}
             </a>
             )}
         </div>

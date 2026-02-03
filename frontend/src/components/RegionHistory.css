@@ -36,6 +36,13 @@
   gap: 8px;
 }
 
+.answers-info{
+  font-size: 0.85em;
+  color: #ccc;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
 .region-item {
   display: flex;
   align-items: center;
@@ -79,7 +86,7 @@
 .highlight-region-button {
   background: none;
   border: none;
-  color: #555;
+  color: #888;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;

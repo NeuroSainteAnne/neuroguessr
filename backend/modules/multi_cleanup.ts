@@ -49,7 +49,7 @@ export function cleanupGame(sessionCode: string, skipDatabaseDeletion: boolean =
 
   // Delete from database if it exists (unless we're keeping it for recurrence)
   if (!skipDatabaseDeletion) {
-    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode}`.catch(e => {
+    sql`DELETE FROM multi_sessions WHERE session_code = ${sessionCode} AND is_classic_challenge_original_entry = FALSE`.catch(e => {
       logger.error(`Error deleting session ${sessionCode}:`, e);
     });
     // Notify watchers that lobbies list may have changed
@@ -80,13 +80,13 @@ export async function clotureMultiplayerGame(gameRef: MultiplayerGame) {
     if (isOriginalClassicChallenge) {
       // This is a temporary session created for a user-specific classic challenge
       // Delete the temporary entry, but keep the original challenge intact
-      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode} AND is_classic_challenge_original_entry = FALSE`
         .catch(e => {
           logger.error(`Error deleting temporary classic challenge session ${sessionCode}:`, e);
         });
     } else if (gameRef.isChallenge && !hasRecurrence) {
       // Delete the session from database only if no recurrence and not a temporary classic challenge
-      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode}`
+      await sql`DELETE FROM multi_sessions WHERE session_code = ${gameRef.sessionCode} AND is_classic_challenge_original_entry = FALSE`
         .catch(e => {
           logger.error(`Error deleting session ${sessionCode}:`, e);
         });
@@ -121,16 +121,30 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
     const gameDuration = gameRef.duration ? (Date.now() - gameRef.duration) : 0;
     const allScores = Object.values(gameRef.individualScores || {});
     const maxScore = allScores.length ? Math.max(...allScores) : 0;
+    logger.info(`Saving finished session`,{
+      sessionCode: gameRef.sessionCode
+    });
 
     const savePromises: Promise<any>[] = [];
     for (const username in gameRef.individualScores || {}) {
       // Skip anonymous users
       if (gameRef.anonymousUsernames && gameRef.anonymousUsernames.includes(username)) continue;
+      if (!gameRef.hasStarted) continue; // avoid saving non-started games
+      logger.info(`Saving scores from finished session`,{
+        sessionCode: gameRef.sessionCode,
+        username: username, playerKey: `${gameRef.sessionCode}:${username}`
+      });
       const playerKey = `${gameRef.sessionCode}:${username}`;
       const player = playerInfo[playerKey];
       if (!player) continue;
       const userId = player.userId;
       if (!userId) continue; // If no userId, do not store anything for this user
+
+      logger.info(`Saving scores from finished session for user`,{
+        sessionCode: gameRef.sessionCode,
+        username: username, playerKey: `${gameRef.sessionCode}:${username}`,
+        userId
+      });
 
       const mode = 'multiplayer';
       const atlas = gameRef.currentAtlas;
@@ -175,7 +189,6 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
       }
 
       if (!shouldInsert) continue;
-
       savePromises.push(
         sql`
           INSERT INTO finished_sessions (

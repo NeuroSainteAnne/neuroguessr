@@ -16,7 +16,7 @@ import configJson from './config.json' with { type: "json" };
 import type {  GetStatsRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate } from "./modules/multi.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate, replayMultiSession } from "./modules/multi.ts";
 import { checkIfClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getClassicChallengeResults } from "modules/multi_classic_challenge.ts";
 import { classicChallengeEmailOptIn } from "modules/multi_classic_challenge.ts";
@@ -30,6 +30,18 @@ import { getNextClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getPublicLobbies } from "modules/multi_public.ts";
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
 import { generateChallenge } from 'modules/altcha.ts';
+import { 
+    getAllTeams, 
+    getTeamById, 
+    getTeamMembers, 
+    createTeam, 
+    updateTeam, 
+    deleteTeam,
+    assignUserToTeam,
+    unassignUserFromTeam,
+    getAllUsers,
+    requireAdmin
+} from 'modules/teams.ts';
 import rateLimit from 'express-rate-limit';
 import { logger } from './modules/logging.ts';
 
@@ -57,11 +69,12 @@ if(config.server.globalAuthentication.enabled){
 
 // login.ts
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: 'Too many authentication attempts',
+  windowMs: 5 * 60 * 1000, // 15 minutes
+  max: 15, // limit each IP to 5 failed requests per windowMs
+  message: 'Too many failed authentication attempts',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed requests
 });
 app.post('/api/login', authLimiter, login);
 app.post('/api/refresh-token', refreshToken);
@@ -115,7 +128,7 @@ app.get('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, ne
 app.post('/api/multi/can-join-classic-challenge', authenticateToken, (req, res, next) => {
     Promise.resolve(canJoinClassicChallenge(req, res)).catch(next);
 })
-app.get('/api/classic-challenges/:sessionCode/completion', authenticateToken, (req, res, next) => {
+app.get('/api/classic-challenges/:challengeId/completion', authenticateToken, (req, res, next) => {
     Promise.resolve(checkClassicChallengeCompletion(req, res)).catch(next);
 })
 app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
@@ -123,6 +136,9 @@ app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
 })
 app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
     Promise.resolve(deleteClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/replay-challenge/:challengeId', authenticateToken, (req, res, next) => {
+    Promise.resolve(replayMultiSession(req, res)).catch(next);
 })
 
 // advanced_game.ts
@@ -142,6 +158,17 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 
 // altcha.ts
 app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
+
+// teams.ts - Admin only routes
+app.get('/api/teams', authenticateToken, requireAdmin, getAllTeams);
+app.get('/api/teams/:id', authenticateToken, requireAdmin, getTeamById);
+app.get('/api/teams/:id/members', authenticateToken, requireAdmin, getTeamMembers);
+app.post('/api/teams', authenticateToken, requireAdmin, createTeam);
+app.put('/api/teams/:id', authenticateToken, requireAdmin, updateTeam);
+app.delete('/api/teams/:id', authenticateToken, requireAdmin, deleteTeam);
+app.put('/api/teams/:teamId/assign/:userId', authenticateToken, requireAdmin, assignUserToTeam);
+app.delete('/api/teams/:teamId/unassign/:userId', authenticateToken, requireAdmin, unassignUserFromTeam);
+app.get('/api/admin/users', authenticateToken, requireAdmin, getAllUsers);
 
 
 import i18next from 'i18next';

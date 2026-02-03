@@ -18,10 +18,11 @@ import { getDistance } from "./utils_compute.ts";
 import { extractPersistentState } from "./multi_challenge.ts";
 import { emitPublicLobbiesUpdate } from "./multi_public.ts";
 import { cleanupExternalCommands, cleanupGame, clotureMultiplayerGame, 
-  handleDestroySession, setupInactiveGameCheck} from "./multi_cleanup.ts";
+  handleDestroySession, saveFinishedSessions, setupInactiveGameCheck} from "./multi_cleanup.ts";
 import { logoString } from "./email.ts";
 import { atomicGameUpdate, generateCode, isReservedSessionCode } from "./socket.ts";
 import { handleClassicChallengeEnd, joinClassicChallenge } from "./multi_classic_challenge.ts";
+import type { PastRegion } from "../../frontend/src/types/types.tsx";
 
 const DEFAULT_REGION_NUMBER = 15;
 const DEFAULT_DURATION_PER_REGION = 15;
@@ -102,7 +103,7 @@ export const multiJoinLobby = async (socket: Socket, data: JoinLobbyData) => {
     }
 
     const sessionData = sessionResult[0];
-    const isClassicChallenge = sessionData.is_classic_challenge || false;
+    const isClassicChallenge = (sessionData.is_classic_challenge === true && sessionData.is_classic_challenge_original_entry === true) ? true : false;
 
     if (isClassicChallenge) {
       await joinClassicChallenge(socket, sessionData, data);
@@ -637,8 +638,12 @@ export function handleDisconnect(socketId: string) {
         if(gameRef.isClassicChallenge){
           if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
             // should destroy the classic challenge and store the results to finished sessions
-            console.log("SHOULD DESTROY CLASSIC")
             return { shouldDestroyGame: true, player };
+          } else {
+            if(gameRef.hasStarted){
+              // save session as finished if it is a started classic challenge 
+              saveFinishedSessions(gameRef)
+            }
           }
           // not a classic instance: we don't destroy it
         } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId) {
@@ -702,12 +707,16 @@ export async function handleExplicitUserLeave(sessionCode: string, userName: str
     
     // Handle creator leaving before game starts
     if(gameRef.isClassicChallenge){
-          if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
-            // should destroy the classic challenge and store the results to finished sessions
-            console.log("SHOULD DESTROY CLASSIC")
-            return { shouldDestroyGame: true, player };
-          }
-          // not a classic instance: we don't destroy it
+      if(gameRef.classicChallengeId && gameRef && gameRef.creatorId && player?.userId && gameRef.creatorId == player.userId){
+        // should destroy the classic challenge and store the results to finished sessions
+        return { shouldDestroyGame: true, player };
+      } else {
+        if(gameRef.hasStarted){
+          // save session as finished if it is a started classic challenge 
+          saveFinishedSessions(gameRef)
+        }
+      }
+      // not a classic instance: we don't destroy it
     } else if (gameRef && !gameRef.hasStarted && gameRef.creatorId && player.userId && gameRef.creatorId == player.userId) {
       return { shouldDestroyGame: true, player };
     }
@@ -765,11 +774,9 @@ export function emitToUser(sessionCode: string, userName: string, event: string,
 
 // Helper to broadcast to all users in a session (one message per user, to avoid duplicates for multi-tab users)
 export function broadcastToSession(sessionCode: string, event: string, data: any) {
-  console.log("broadcasting", event)
   for (const playerKey in socketClients) {
     if (playerKey.startsWith(`${sessionCode}:`)) {
       const socketIds = socketClients[playerKey];
-      console.log(playerKey, socketIds)
       if (socketIds.length > 0) {
         const socket = getIO().sockets.sockets.get(socketIds[0]);
         if (socket) {
@@ -857,6 +864,11 @@ export function generateGameCommands(params: MultiplayerParametersType): GameCom
   try {
     const commands : GameCommands[] = [];
     if(!params.atlas) return;
+
+    if (params.commands && params.commands.length > 0) {
+      // Use predefined commands if provided
+      return params.commands;
+    }
     // 0. Game countdown
     commands.push({
       action: "countdown",
@@ -1015,6 +1027,76 @@ export async function handleLaunchGame(data: {
   }
 }
 
+// Record missing clicks for players who didn't answer
+async function recordMissingClicks(gameRef: MultiplayerGame, commandIndex: number) {
+  try {
+    // Get all players in this game
+    const playersInGame = Object.keys(socketClients)
+      .filter(key => key.startsWith(`${gameRef.sessionCode}:`))
+      .map(key => key.split(':')[1]);
+
+    // Find players who haven't answered this question
+    for (const userName of playersInGame) {
+      const hasUserAnswered = gameRef.hasAnswered?.[userName]?.[commandIndex];
+      
+      if (!hasUserAnswered) {
+        // This player didn't click - record a missing click
+        const playerKey = `${gameRef.sessionCode}:${userName}`;
+        const player = playerInfo[playerKey];
+        
+        // Get the command to know which region was asked
+        const command = gameRef.commands?.[commandIndex];
+        if (!command || command.action !== 'guess') continue;
+
+        const timeTaken: number = command.duration || 0;
+        const atlasName: string = command.atlas || gameRef.currentAtlas;
+        const isBlind: boolean = command.blindMode || false;
+        const regionId: number | null = command.regionId ?? null;
+
+        await sql`
+          INSERT INTO individual_clicks (
+            is_authenticated,
+            user_id,
+            multiplayer_session_id,
+            multiplayer_is_challenge,
+            multiplayer_is_classic_challenge,
+            multiplayer_classic_challenge_id,
+            command_index,
+            atlas,
+            blind_mode,
+            region_id,
+            time_taken,
+            is_correct,
+            score_increment,
+            attempts,
+            has_clicked
+          ) VALUES (
+            ${player?.userId !== undefined},
+            ${player?.userId || null},
+            ${gameRef.id},
+            ${gameRef.isChallenge || false},
+            ${gameRef.isClassicChallenge || false},
+            ${gameRef.classicChallengeId || null},
+            ${commandIndex},
+            ${atlasName},
+            ${isBlind},
+            ${regionId},
+            ${timeTaken},
+            ${false},
+            ${0},
+            ${(gameRef.individualAttempts[userName] || 0) + 1},
+            ${false}
+          )
+        `;
+        
+        logger.info(`Recorded missing click for player ${userName} on command ${commandIndex}`);
+      }
+    }
+  } catch (error) {
+    logger.error("Error recording missing clicks:", error);
+  }
+}
+
 export async function sendNextCommand(gameRef: MultiplayerGame) {
   try {
     if (!gameRef.commands) return;
@@ -1079,7 +1161,16 @@ export async function sendNextCommand(gameRef: MultiplayerGame) {
       gameRef.commandTimeout = setTimeout(async () => { 
         // Atomic command progression to prevent race conditions
         const progressResult = await atomicGameUpdate(gameRef.sessionCode, async () => {
+          // Check if timeout was already cleared (e.g., by classic challenge auto-advance)
+          if (gameRef.commandTimeout === undefined) {
+            return null; // Timeout was cancelled, skip progression
+          }
+
+          // Record missing clicks before progressing
+          await recordMissingClicks(gameRef, gameRef.currentCommandIndex);
+        
           gameRef.currentCommandIndex += 1;
+          gameRef.commandTimeout = undefined;
           return gameRef.currentCommandIndex;
         });
         
@@ -1348,7 +1439,8 @@ export async function handleValidateGuess(data: {
             time_taken,
             is_correct,
             score_increment,
-            attempts
+            attempts,
+            has_clicked
         ) VALUES (
             ${player?.userId !== undefined},
             ${player?.userId || null},
@@ -1376,7 +1468,8 @@ export async function handleValidateGuess(data: {
             ${elapsed},
             ${isCorrect},
             ${scoreIncrement},
-            ${(gameRef.individualAttempts[userName] || 0) + 1}
+            ${(gameRef.individualAttempts[userName] || 0) + 1},
+            ${true}
         )
     `;
     
@@ -1417,10 +1510,107 @@ export async function handleValidateGuess(data: {
       pastRegionId,
       clickedVoxelProp: voxelProp
     })
+    
+    // For classic challenges, automatically advance to the next region
+    if (gameRef.isClassicChallenge) {
+      // Atomically clear timeout and advance to prevent race conditions
+      const progressResult = await atomicGameUpdate(gameRef.sessionCode, async () => {
+        // Clear the existing timeout inside atomic section
+        if (gameRef.commandTimeout) {
+          clearTimeout(gameRef.commandTimeout);
+          gameRef.commandTimeout = undefined;
+        }
+        
+        gameRef.currentCommandIndex += 1;
+        return gameRef.currentCommandIndex;
+      });
+      
+      if (progressResult !== null) {
+        sendNextCommand(gameRef);
+      } else {
+        logger.warn(`Failed to progress command for classic challenge ${gameRef.sessionCode} due to concurrent access`);
+      }
+    }
+    
   } catch (error) {
       logger.error("Error validating guess:", error);
       emitToUser(data.sessionCode, data.userName, "error", {message: error instanceof Error ? error.message : String(error) })
   }
+}
+
+export async function replayMultiSession (req: Request, res: Response) {
+    const { challengeId } = req.params;
+    const userId = (req as any).user.id;
+
+    // Get individual clicks for this user and challenge, ordered by command_index
+    const clicks = await sql`
+        SELECT 
+            command_index,
+            atlas,
+            blind_mode,
+            region_id,
+            clicked_x,
+            clicked_y,
+            clicked_z,
+            clicked_x_mm,
+            clicked_y_mm,
+            clicked_z_mm,
+            nearest_center_x_mm,
+            nearest_center_y_mm,
+            nearest_center_z_mm,
+            boundary_point_x_mm,
+            boundary_point_y_mm,
+            boundary_point_z_mm,
+            distance_to_target,
+            is_correct,
+            score_increment,
+            time_taken,
+            has_clicked
+        FROM individual_clicks
+        WHERE user_id = ${userId}
+        AND multiplayer_classic_challenge_id = ${challengeId}
+        ORDER BY command_index ASC
+    `;
+
+    if (clicks.length === 0) {
+        return res.status(404).json({ error: 'No replay data found' });
+    }
+
+    // Transform clicks into pastRegions format
+    const pastRegions : PastRegion[] = clicks.map((click: any, index: number) => ({
+        id: index,
+        regionId: click.region_id,
+        atlas: click.atlas,
+        target: click.region_id,
+        clickedPosition: click.has_clicked ? {
+            mm: [click.clicked_x_mm, click.clicked_y_mm, click.clicked_z_mm],
+            vox: [click.clicked_x, click.clicked_y, click.clicked_z]
+        } : undefined,
+        regionCenter: click.nearest_center_x_mm !== null ? [
+            click.nearest_center_x_mm,
+            click.nearest_center_y_mm,
+            click.nearest_center_z_mm
+        ] : undefined,
+        regionBoundary: click.boundary_point_x_mm !== null ? [
+            click.boundary_point_x_mm,
+            click.boundary_point_y_mm,
+            click.boundary_point_z_mm
+        ] : undefined,
+        distance: click.distance_to_target,
+        isCorrect: click.is_correct,
+        score: click.score_increment,
+        scoreIncrement: click.score_increment
+    }));
+
+    // Get atlas and blind mode from first click
+    const atlas = clicks[0].atlas;
+    const blindMode = clicks[0].blind_mode;
+
+    res.json({
+        pastRegions,
+        atlas,
+        blindMode
+    });
 }
 
 // Get multiplayer session info for meta tag generation

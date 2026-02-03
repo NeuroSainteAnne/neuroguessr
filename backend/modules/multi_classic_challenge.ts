@@ -34,7 +34,7 @@ export const deactivateClassicChallenge = async (socket: Socket, data: {
       const result = await sql`
         UPDATE multi_sessions
         SET end_date = NOW()
-        WHERE id = ${challengeId} AND is_classic_challenge = true
+        WHERE id = ${challengeId} AND is_classic_challenge = TRUE AND is_classic_challenge_original_entry = TRUE
       `;
 
       const success = result.count > 0;
@@ -101,6 +101,7 @@ export const handleCreateClassicChallenge = async (socket: Socket, data: {
     await sql`
       UPDATE multi_sessions 
       SET is_classic_challenge = TRUE,
+          is_classic_challenge_original_entry = TRUE,
           start_date = ${start_date},
           end_date = ${end_date},
           name = ${name},
@@ -167,7 +168,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                 ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
-        WHERE ms.is_classic_challenge = TRUE
+        WHERE ms.is_classic_challenge = TRUE AND is_classic_challenge_original_entry = TRUE
         AND ms.start_date <= ${currentTime}
         AND ms.end_date > ${currentTime}
         AND ms.id NOT IN (
@@ -184,7 +185,8 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                  ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
           FROM multi_sessions ms
           LEFT JOIN users u ON u.id = ms.creator_id
-          WHERE ms.is_classic_challenge = TRUE
+          WHERE ms.is_classic_challenge = TRUE 
+          AND is_classic_challenge_original_entry = TRUE
           AND ms.public = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
@@ -200,7 +202,8 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
                  ms.atlas, ms.public, u.username AS creator_name, ms.total_duration
           FROM multi_sessions ms
           LEFT JOIN users u ON u.id = ms.creator_id
-          WHERE ms.is_classic_challenge = TRUE
+          WHERE ms.is_classic_challenge = TRUE 
+          AND is_classic_challenge_original_entry = TRUE
           AND ms.public = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
@@ -282,8 +285,10 @@ export const deleteClassicChallenge = async (req: Request, res: Response) => {
     const result = await sql`
       DELETE FROM multi_sessions
       WHERE session_code = ${sessionCode}
-      AND is_classic_challenge = TRUE
+      AND is_classic_challenge = TRUE 
+      AND is_classic_challenge_original_entry = TRUE
     `;
+    logger.info(`Deleted active classic challenge session ${sessionCode} from database`);
 
     if (result.count === 0) {
       res.status(404).json({ error: 'Classic challenge not found' });
@@ -315,6 +320,7 @@ export const getActiveClassicChallengesRaw = async () => {
           FROM multi_sessions ms
           JOIN users u ON ms.creator_id = u.id
           WHERE ms.is_classic_challenge = true
+          AND ms.is_classic_challenge_original_entry = true
           AND ms.start_date <= NOW()
           AND ms.end_date >= NOW()
           ORDER BY ms.start_date ASC
@@ -332,6 +338,7 @@ export const getAllClassicChallengesRaw = async () => {
             FROM multi_sessions ms
             JOIN users u ON ms.creator_id = u.id
             WHERE ms.is_classic_challenge = true
+            AND ms.is_classic_challenge_original_entry = true
             ORDER BY ms.created_at DESC
           `;
 }
@@ -345,7 +352,7 @@ export const getClassicChallengesByIdRaw = async (challengeId: number) => {
       u.lastname as creator_lastname
     FROM multi_sessions ms
     JOIN users u ON ms.creator_id = u.id
-    WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+    WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND ms.is_classic_challenge_original_entry = true
   `;
 };
 
@@ -390,7 +397,9 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_classic_challenge = TRUE
+        AND ms.is_classic_challenge_original_entry = TRUE
         AND ms.end_date > ${currentTime}
+        AND ms.classic_challenge_referral IS NULL
         ORDER BY ms.start_date ASC
       `;
     } else {
@@ -401,8 +410,10 @@ export const getActiveClassicChallenges = async (req: Request, res: Response) =>
         FROM multi_sessions ms
         LEFT JOIN users u ON u.id = ms.creator_id
         WHERE ms.is_classic_challenge = TRUE
+        AND ms.is_classic_challenge_original_entry = TRUE
         AND ms.public = TRUE
         AND ms.end_date > ${currentTime}
+        AND ms.classic_challenge_referral IS NULL
         ORDER BY ms.start_date ASC
       `;
     }
@@ -479,6 +490,7 @@ export const getClassicChallenge = async (req: Request, res: Response) => {
       LEFT JOIN users u ON u.id = ms.creator_id
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
+      AND ms.is_classic_challenge_original_entry = TURE
       AND ms.start_date <= ${currentTime}
       AND ms.end_date > ${currentTime}
     ` as Array<{
@@ -539,7 +551,7 @@ export const canJoinClassicChallengeSocket = async (data: {
 
   const challenge = await sql`
     SELECT * FROM multi_sessions
-    WHERE id = ${challengeId} AND is_classic_challenge = true
+    WHERE id = ${challengeId} AND is_classic_challenge = true AND is_classic_challenge_original_entry = TRUE
   `;
 
   if (challenge.length === 0) {
@@ -577,6 +589,7 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
       FROM multi_sessions ms
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
+      AND ms.is_classic_challenge_original_entry = TRUE
       AND ms.start_date <= ${currentTime}
       AND ms.end_date > ${currentTime}
     ` as Array<{
@@ -613,29 +626,12 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
 
 export const checkClassicChallengeCompletion = async (req: Request, res: Response) => {
   try {
-    const { sessionCode } = req.params;
+    const { challengeId } = req.params;
     const userId = (req as AuthenticatedRequest).user.id;
 
-    if (!sessionCode || !/^\d{8}$/.test(sessionCode)) {
+    if (!challengeId || !/^\d+$/.test(challengeId)) {
       return res.status(400).json({ error: 'Invalid session code format' });
     }
-
-    // Get the challenge ID
-    const challengeResult = await sql`
-      SELECT ms.id
-      FROM multi_sessions ms
-      WHERE ms.session_code = ${sessionCode}
-      AND ms.is_classic_challenge = TRUE
-    ` as Array<{
-      id: number;
-    }>;
-
-    if (challengeResult.length === 0) {
-      return res.status(404).json({ error: 'Classic challenge not found' });
-    }
-
-    const challengeId = challengeResult[0].id;
-
     // Check if user has completed this challenge
     const completedResult = await sql`
       SELECT id FROM finished_sessions
@@ -736,6 +732,7 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
     const activeSessionResult = await sql`
       SELECT id FROM multi_sessions
       WHERE classic_challenge_referral = ${sessionCode}
+      AND creator_id = ${userId}
     `;
 
     if (activeSessionResult.length > 0) {
@@ -748,7 +745,6 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
   const userSessionCode = await getMultiUniqueCode();
   const userSessionToken = crypto.randomBytes(32).toString('hex');
 
-  console.log("challenge", challenge);
   const newSessionConfig = JSON.parse(challenge.persistent_config || "");
   newSessionConfig.sessionCode = userSessionCode;
 
@@ -756,11 +752,11 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
   await sql`
     INSERT INTO multi_sessions (
       session_code, session_token, creator_id, 
-      is_classic_challenge, start_date, end_date, name,
+      is_classic_challenge, is_classic_challenge_original_entry, start_date, end_date, name,
       persistent_config, created_at, classic_challenge_referral
     ) VALUES (
       ${userSessionCode}, ${userSessionToken}, ${userId!},
-      true, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
+      true, false, ${new Date(challenge.start_date!)}, ${new Date(challenge.end_date!)}, ${challenge.name || 'Classic Challenge'},
       ${JSON.stringify(newSessionConfig)}, NOW(), ${sessionCode}
     )
   `;
@@ -798,7 +794,9 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
 
   // Store socketInfo 
   socketInfo[socket.id] = { sessionCode: userSessionCode, userName };
-};export const getPastClassicChallenges = async (req: Request, res: Response) => {
+};
+
+export const getPastClassicChallenges = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.id;
     const isAdmin = (req as AuthenticatedRequest).user?.admin;
@@ -828,11 +826,12 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
         ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
-            classic_challenge_id,
-            COUNT(DISTINCT user_id) as participant_count
-          FROM finished_sessions
-          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
-          GROUP BY classic_challenge_id
+            fs.classic_challenge_id,
+            COUNT(DISTINCT fs.user_id) as participant_count
+          FROM finished_sessions fs
+          JOIN users u ON fs.user_id = u.id
+          WHERE fs.classic_challenge_id IS NOT NULL AND fs.user_id IS NOT NULL AND u.publish_to_leaderboard = true
+          GROUP BY fs.classic_challenge_id
         ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
         WHERE fs.classic_challenge_id IS NOT NULL
         GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
@@ -862,11 +861,12 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
         ) user_participation ON user_participation.classic_challenge_id = fs.classic_challenge_id AND user_participation.user_id = ${userId}
         LEFT JOIN (
           SELECT
-            classic_challenge_id,
-            COUNT(DISTINCT user_id) as participant_count
-          FROM finished_sessions
-          WHERE classic_challenge_id IS NOT NULL AND user_id IS NOT NULL
-          GROUP BY classic_challenge_id
+            fs.classic_challenge_id,
+            COUNT(DISTINCT fs.user_id) as participant_count
+          FROM finished_sessions fs
+          JOIN users u ON fs.user_id = u.id
+          WHERE fs.classic_challenge_id IS NOT NULL AND fs.user_id IS NOT NULL AND u.publish_to_leaderboard = true
+          GROUP BY fs.classic_challenge_id
         ) participant_counts ON participant_counts.classic_challenge_id = fs.classic_challenge_id
         WHERE fs.user_id = ${userId} AND fs.classic_challenge_id IS NOT NULL
         GROUP BY fs.classic_challenge_id, fs.name, fs.classic_challenge_start_date, fs.classic_challenge_end_date, user_participation.score, user_participation.ranking, participant_counts.participant_count
@@ -979,7 +979,7 @@ export const sendClassicChallengeResultsEmails = async (challengeId: number) => 
         u.username as creator_username
       FROM multi_sessions ms
       JOIN users u ON ms.creator_id = u.id
-      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND is_classic_challenge_original_entry = true
     `;
 
     if (!challengeResult.length) {
@@ -1119,7 +1119,7 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         u.username as creator_username
       FROM multi_sessions ms
       JOIN users u ON ms.creator_id = u.id
-      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true
+      WHERE ms.id = ${challengeId} AND ms.is_classic_challenge = true AND ms.is_classic_challenge_original_entry = true
     `;
 
     let sessionCode = null;
@@ -1173,13 +1173,74 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         fs.avg_time_per_region,
         fs.created_at as completion_date,
         u.username,
+        u.team_id,
+        t.name as team_name,
         ROW_NUMBER() OVER (ORDER BY fs.score DESC, fs.avg_time_per_region ASC) as ranking
       FROM finished_sessions fs
       JOIN users u ON fs.user_id = u.id
+      LEFT JOIN teams t ON u.team_id = t.id
       WHERE fs.classic_challenge_id = ${challengeId}
         AND u.publish_to_leaderboard = true
       ORDER BY fs.score DESC, fs.duration ASC
     `;
+
+    // Calculate team rankings including ALL users (even those who didn't publish)
+    const allParticipantsForTeams = await sql`
+      SELECT
+        fs.score,
+        fs.avg_time_per_region,
+        u.team_id,
+        t.name as team_name
+      FROM finished_sessions fs
+      JOIN users u ON fs.user_id = u.id
+      LEFT JOIN teams t ON u.team_id = t.id
+      WHERE fs.classic_challenge_id = ${challengeId}
+    `;
+
+    // Group by team and calculate averages
+    const teamStatsMap = new Map<number | null, {
+      teamId: number | null;
+      teamName: string;
+      playerCount: number;
+      totalScore: number;
+      totalAvgTimePerRegion: number;
+    }>();
+
+    allParticipantsForTeams.forEach((p: any) => {
+      const key = p.team_id;
+      const teamName = p.team_name || 'No Team';
+      
+      if (!teamStatsMap.has(key)) {
+        teamStatsMap.set(key, {
+          teamId: key,
+          teamName,
+          playerCount: 0,
+          totalScore: 0,
+          totalAvgTimePerRegion: 0
+        });
+      }
+      
+      const team = teamStatsMap.get(key)!;
+      team.playerCount++;
+      team.totalScore += p.score;
+      team.totalAvgTimePerRegion += p.avg_time_per_region;
+    });
+
+    // Calculate averages and sort
+    const teamRankings = Array.from(teamStatsMap.values())
+      .map(team => ({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        playerCount: team.playerCount,
+        avgScore: team.totalScore / team.playerCount,
+        avgTimePerRegion: team.totalAvgTimePerRegion / team.playerCount
+      }))
+      .sort((a, b) => {
+        if (b.avgScore !== a.avgScore) {
+          return b.avgScore - a.avgScore;
+        }
+        return a.avgTimePerRegion - b.avgTimePerRegion;
+      });
 
     res.status(200).send({
       challenge: {
@@ -1191,6 +1252,7 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
       },
       sessionCode,
       state,
+      teamRankings: teamRankings.length > 0 ? teamRankings : undefined,
       participants: participantsResult.map(p => ({
         userId: p.user_id,
         username: p.username,
@@ -1201,7 +1263,9 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
         attempts: p.attempts,
         avgTimePerRegion: p.avg_time_per_region,
         completionDate: p.completion_date,
-        ranking: p.ranking
+        ranking: p.ranking,
+        teamId: p.team_id,
+        teamName: p.team_name
       }))
     });
 
@@ -1214,12 +1278,12 @@ export const checkIfClassicChallenge = async (req: Request, res: Response) => {
   try {
     const { sessionCode } = req.params;
     const sessions = await sql`
-      SELECT id, is_classic_challenge FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
-    ` as { id: number; is_classic_challenge: boolean | null; }[];
+      SELECT id, is_classic_challenge, is_classic_challenge_original_entry FROM multi_sessions WHERE session_code = ${sessionCode} LIMIT 1
+    ` as { id: number; is_classic_challenge: boolean | null; is_classic_challenge_original_entry: boolean | null }[];
     if (!sessions.length) {
       return res.status(404).send({ isClassicChallenge: false });
     }
-    const isClassic = sessions[0].is_classic_challenge === true ? true : false;
+    const isClassic = (sessions[0].is_classic_challenge === true && sessions[0].is_classic_challenge_original_entry === true) ? true : false;
     res.status(200).send({ isClassicChallenge: isClassic, challengeId: isClassic ? sessions[0].id : null });
   } catch (error) {
     logger.error("Error checking if classic challenge:", error);

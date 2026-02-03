@@ -11,39 +11,9 @@ interface LeaderboardEntry {
     blind_mode?: boolean | null;
 }
 
-function getSummedLeaderboard(leaderboard: LeaderboardEntry[]) {
-    const summed: Record<string, LeaderboardEntry> = {};
-
-    leaderboard.forEach(entry => {
-        const key = `${entry.username}||${entry.mode}||${String(entry.blind_mode) || "null"}`;
-        if (!summed[key]) {
-            summed[key] = { 
-                username: entry.username, 
-                mode: entry.mode, 
-                blind_mode: entry.blind_mode, 
-                best_score: 0, // Initialize differently for multiplayer
-                atlas: "total" 
-            };
-        }
-        
-        if (entry.mode === 'multiplayer') {
-            // For multiplayer, take the maximum percentage (best_score contains percentage)
-            if (entry.best_score > summed[key].best_score) {
-                summed[key].best_score = entry.best_score;
-            }
-        } else {
-            // For other modes, sum the scores
-            summed[key].best_score += Number(entry.best_score);
-        }
-    });
-
-    // Convert to array and sort by best_score descending
-    return Object.values(summed).sort((a, b) => b.best_score - a.best_score);
-}
-
 export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response): Promise<void> => {
     try {
-        const { mode, atlas, appendTotal = true, numberLimit = 10, timeLimit = 7, blindMode = null } = req.body;
+        const { mode, atlas, numberLimit = 10, timeLimit = 7, blindMode = null } = req.body;
         
         const innerQuery = sql`
             SELECT
@@ -58,6 +28,7 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
             FROM finished_sessions
             WHERE 1=1
                 ${mode ? sql` AND mode = ${mode}` : sql``}
+                ${atlas ? sql` AND atlas = ${atlas}` : sql``}
                 ${timeLimit ? sql` AND NOW() - created_at <= ${`'${timeLimit} days'`}` : sql``}
                 ${blindMode !== null ? sql` AND blind_mode = ${blindMode}` : sql``}
                 AND (mode != 'multiplayer' OR (theoretical_maximum_score IS NOT NULL AND theoretical_maximum_score > 0))
@@ -65,7 +36,7 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
         `;
 
         // Execute query to get leaderboard
-        let leaderboard = await sql`
+        const leaderboard = await sql`
             SELECT
                 u.username,
                 fs.mode AS mode,
@@ -79,13 +50,6 @@ export const getLeaderboard = async (req: GetLeaderboardRequest, res: Response):
             LIMIT ${numberLimit}
         ` as LeaderboardEntry[];
 
-        const summedLeaderboard = (appendTotal || atlas == "total") ? getSummedLeaderboard(leaderboard) : [];
-        if (atlas == "total") {
-            leaderboard = [];
-        } else if (atlas) {
-            leaderboard = leaderboard.filter(entry => entry.atlas === atlas);
-        }
-        leaderboard = leaderboard.concat(summedLeaderboard);
         res.status(200).json({ leaderboard });
     }  catch (error) {
         logger.error("Error getting leaderboard:", error);
@@ -120,14 +84,9 @@ export const getMostUsedAtlases = async (req: GetMostUsedAtlasRequest, res: Resp
             count: row.count
         }));
         
-        // Add 'total' atlas as first option (for combined scores)
-        const result = [
-            ...atlases
-        ];
-        
         res.status(200).json({
             success: true,
-            atlases: result
+            atlases
         });
     } catch (error) {
         logger.error('Error fetching most used atlases:', error);
