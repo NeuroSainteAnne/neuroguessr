@@ -101,7 +101,7 @@ function SfnrScreen() {
                 </button>
               </span>
               <span className="sfnr-element sfnr-element3">
-                <span className="sfnr-element-title">Vendredi 13 mars</span>
+                <span className="sfnr-element-title">Vendredi 13 mars<br />Avant 16h +++</span>
                 <span className="sfnr-element-subtitle">Challenge 3: Tout l'encéphale !</span>
                 <span className="sfnr-element-subtitle">Durée: 4 minutes</span>
                 <button className='sfnr-element-button' disabled={!enabledChallenges.challenge3}
