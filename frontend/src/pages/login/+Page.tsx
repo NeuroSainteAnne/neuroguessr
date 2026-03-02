@@ -8,7 +8,7 @@ import Altcha from '../../components/Altcha';
 import { consoleLog } from '../../utils/logging';
 
 function LoginScreen() {
-    const { t, currentLanguage, updateToken } = useApp();
+    const { t, currentLanguage, updateToken, refreshNextChallenge } = useApp();
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const recoveryEmailInput = useRef<HTMLInputElement>(null);
@@ -63,7 +63,7 @@ function LoginScreen() {
             const urlParams = new URLSearchParams(window.location.search);
             const redirectParam = urlParams.get('redirect');
             const returnUrl = urlParams.get('returnURL');
-            
+            refreshNextChallenge(); // Refresh next challenge on login to update any authentication-dependent data
             consoleLog("verbose", `Login successful, processing redirect: ${redirectParam || returnUrl || 'default'}`);
             
             if (redirectParam) {

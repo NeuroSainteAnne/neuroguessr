@@ -8,12 +8,8 @@ export function NextChallenge() {
     nextChallengeError 
   } = useApp();
 
-  if (nextChallengeLoading || nextChallengeError || !nextChallenge) {
-    return (<></>);
-  }
-
   return (
-    <SingleChallenge 
+    (nextChallenge && !nextChallengeError && !nextChallengeLoading) && <SingleChallenge 
       challenge={{
         isNext: true,
         ...nextChallenge
