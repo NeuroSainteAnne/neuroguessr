@@ -63,7 +63,7 @@ function LoginScreen() {
             const urlParams = new URLSearchParams(window.location.search);
             const redirectParam = urlParams.get('redirect');
             const returnUrl = urlParams.get('returnURL');
-            refreshNextChallenge(); // Refresh next challenge on login to update any authentication-dependent data
+            refreshNextChallenge(result.token); // Refresh next challenge on login to update any authentication-dependent data
             consoleLog("verbose", `Login successful, processing redirect: ${redirectParam || returnUrl || 'default'}`);
             
             if (redirectParam) {

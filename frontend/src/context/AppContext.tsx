@@ -84,7 +84,7 @@ type AppContextType = {
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
   setIsMobileView: (isMobile: boolean) => void;
-  refreshNextChallenge: () => void;
+  refreshNextChallenge: (token?: string | null) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
   copyToClipboard: (text: string) => Promise<boolean>;
   
@@ -349,6 +349,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if(typeof window !== 'undefined' && window.localStorage) localStorage.removeItem('authToken');
     setAuthToken("");
     setIsLoggedIn(false);
+    refreshNextChallenge(null);
   };
   
   const activateGuestMode = () => {
@@ -357,7 +358,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   };
 
   // Next Challenge functions
-  const fetchNextChallenge = async () => {
+  const fetchNextChallenge = async (token?: string | null) => {
     // Avoid fetching too frequently (cache for 30 seconds)
     const now = Date.now();
     if (now - lastChallengeFetch < 30000 && nextChallenge) {
@@ -367,13 +368,14 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     try {
       setNextChallengeLoading(true);
       // Fetch both next realtime and next classic challenge
+      consoleLog("verbose", "Fetching next challenges from server...", {tokenProvided: !!token});
       const [rtResponse, ccResponse] = await Promise.all([
         fetch('/api/multi/next-realtime-challenge'),
         fetch('/api/multi/next-classic-challenge', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(isLoggedIn && authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            ...(token || (token !== null && isLoggedIn && authToken) ? { 'Authorization': `Bearer ${token || authToken}` } : {})
           }
         })
       ]);
@@ -403,7 +405,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       } else if (ccChallenge) {
         chosenChallenge = ccChallenge;
       }
-
       setNextChallenge(chosenChallenge);
       setNextChallengeError(null);
       setLastChallengeFetch(now);
@@ -415,10 +416,10 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     }
   };
 
-  const refreshNextChallenge = () => {
+  const refreshNextChallenge = (token?: string | null) => {
     setLastChallengeFetch(0); // Reset cache
     setNextChallenge(null); // Clear existing challenge to force refresh
-    fetchNextChallenge();
+    fetchNextChallenge(token);
   };
    
   // Viewer option handler
