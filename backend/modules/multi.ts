@@ -643,6 +643,15 @@ export function handleDisconnect(socketId: string) {
             if(gameRef.hasStarted){
               // save session as finished if it is a started classic challenge 
               saveFinishedSessions(gameRef)
+            } else {
+              // No active game, remove the session from multi_sessions if it exists 
+              // (cleanup for users who started a single game but never got to the point of having an active game state)
+              await sql`
+                DELETE FROM multi_sessions
+                WHERE session_code = ${gameRef.sessionCode}
+                AND is_challenge = false
+                AND is_classic_challenge_original_entry = false
+              `;
             }
           }
           // not a classic instance: we don't destroy it
