@@ -86,6 +86,7 @@ function RegisterScreen() {
       }
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
     let formData: {
         username: string;
         email: string;
@@ -99,6 +100,7 @@ function RegisterScreen() {
         clinical_trial_country?: string | null;
         clinical_trial_occupation?: string | null;
         clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
+        returnUrl: string | null;
     } = {
         username: username.trim(),
         email: email.trim(),
@@ -110,7 +112,8 @@ function RegisterScreen() {
         clinical_trial_age: clinicalTrialData.clinicalTrialAge,
         clinical_trial_country: clinicalTrialData.clinicalTrialCountry,
         clinical_trial_occupation: clinicalTrialData.clinicalTrialOccupation,
-        clinical_trial_consent: clinicalTrialData.clinicalTrialConsent
+        clinical_trial_consent: clinicalTrialData.clinicalTrialConsent,
+        returnUrl: urlParams.get('returnURL') || null
     };
     if(activateCaptcha){
       formData.captcha_token = captchaToken;

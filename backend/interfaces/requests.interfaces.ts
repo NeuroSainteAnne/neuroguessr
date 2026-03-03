@@ -30,6 +30,7 @@ export interface RegisterBody {
     clinical_trial_occupation?: string | null;
     clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
     clinical_trial_consent_date?: string | null; 
+    returnUrl?: string | null;
 }
 
 export interface RegisterRequest extends Request {

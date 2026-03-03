@@ -66,6 +66,7 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                     .iso()
                     .allow(null)
                     .label("clinical_trial_consent_date"),
+                returnUrl: Joi.string().allow(null).label("returnUrl")
             });
             return schema.validate(data);
         };
@@ -205,7 +206,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             VALUES (${lastID}, ${tokenValue})
         `;
 
-        const url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
+        let url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
+        if(req.body.returnUrl){
+            const urlObj = new URL(url);
+            urlObj.searchParams.append('returnUrl', req.body.returnUrl);
+            url = urlObj.toString();
+        }
         const subject = backendI18n.t('register_email_subject', { lng: language });
         const message = `
         <head>
