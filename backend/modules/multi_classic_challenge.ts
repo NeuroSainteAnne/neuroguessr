@@ -1113,7 +1113,7 @@ export const sendClassicChallengeResultsEmails = async (challengeId: number) => 
 };
 export const getClassicChallengeResults = async (req: Request, res: Response) => {
   try {
-    const { challengeId } = req.params;
+    const { challengeId, fullResults } = req.params;
 
     // Try to get challenge details from multi_sessions first (for ongoing challenges)
     let challengeResult = await sql`
@@ -1169,6 +1169,9 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
     }
 
     // Get participants (users who have finished sessions for this challenge)
+    const isAdmin = (req as AuthenticatedRequest).user?.admin;
+    console.log("Admin status:", isAdmin, "Full results param:", fullResults, "req params:", req.params);
+    const loadFullResults = (isAdmin && fullResults === 'true');
     const participantsResult = await sql`
       SELECT
         fs.user_id,
@@ -1187,7 +1190,7 @@ export const getClassicChallengeResults = async (req: Request, res: Response) =>
       JOIN users u ON fs.user_id = u.id
       LEFT JOIN teams t ON u.team_id = t.id
       WHERE fs.classic_challenge_id = ${challengeId}
-        AND u.publish_to_leaderboard = true
+        ${loadFullResults ? sql`` : sql`AND u.publish_to_leaderboard = TRUE`}
       ORDER BY fs.score DESC, fs.duration ASC
     `;
 

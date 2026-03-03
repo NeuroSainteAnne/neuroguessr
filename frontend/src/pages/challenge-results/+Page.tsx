@@ -46,13 +46,14 @@ interface ChallengeResultsData {
 }
 
 export function Page() {
-  const { authToken, isLoggedIn, userUsername, pageContext, t } = useApp();
+  const { authToken, isLoggedIn, userUsername, pageContext, t, userIsAdmin } = useApp();
   const { challengeId } = pageContext.routeParams;
   const [data, setData] = useState<ChallengeResultsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<string>('');
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [fullResults, setFullResults] = useState<boolean>(false);
   // email opt-in is handled by reusable component
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export function Page() {
       return;
     }
 
-    fetch(`/api/multi/challenge-results/${challengeId}`, {
+    fetch(`/api/multi/challenge-results/${challengeId}${fullResults ? '/full' : ''}`, {
       headers: isLoggedIn ? { 'Authorization': `Bearer ${authToken}` } : {}
     })
     .then(res => {
@@ -107,7 +108,7 @@ export function Page() {
     };
     checkCompletion();
     
-  }, [challengeId, authToken, isLoggedIn, t]);
+  }, [challengeId, authToken, isLoggedIn, t, fullResults]);
 
   
 
@@ -222,6 +223,18 @@ export function Page() {
                 <strong>{t("end")}:</strong> {formatDate(challenge.endDate)}
             </div>
             </div>
+            {userIsAdmin && (
+              <div className="admin-controls">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    checked={fullResults} 
+                    onChange={(e) => setFullResults(e.target.checked)}
+                  />
+                  {" "}{t("show_full_results") || "Show Full Results"}
+                </label>
+              </div>
+            )}
         </div>
 
         {currentUserParticipation && (

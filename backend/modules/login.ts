@@ -209,21 +209,38 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-export const authenticateToken = (
+export const optionalAuthenticateToken = (
     req: Request,
     res: Response,
     next: NextFunction
+): void => {
+    return authenticateToken(req, res, next, true);
+}
+
+export const authenticateToken = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    optional: boolean = false
 ): void => {
     const authHeader: string | undefined = req.headers['authorization'] as string | undefined;
     const token: string | undefined = authHeader && authHeader.split(' ')[1];
     try {
         if (!token) {
+            if (optional) {
+                next();
+                return;
+            }
             res.status(401).send({ message: "No token provided" });
             return;
         }
 
         jwt.verify(token, config.jwt_secret, (err: any, decoded: unknown) => {
             if (err) {
+                if (optional) {
+                    next();
+                    return;
+                }
                 return res.status(403).send({ message: "Invalid or expired token" });
             }
 

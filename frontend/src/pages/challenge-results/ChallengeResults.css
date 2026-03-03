@@ -373,3 +373,8 @@
     align-items: center;
   }
 }
+
+.admin-controls{
+  background-color: rgba(66, 24, 24, 0.731);
+  margin: 15px;
+}

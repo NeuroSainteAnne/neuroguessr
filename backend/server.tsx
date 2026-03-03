@@ -7,7 +7,7 @@ import https from 'https';
 import http from 'http';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
 import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
-import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
+import { login, refreshToken, authenticateToken, getUserInfo, optionalAuthenticateToken } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
@@ -104,6 +104,10 @@ app.post('/api/multi/destroy-session', authenticateToken, destroyMultiplayerSess
 app.get('/api/multi/public-lobbies', getPublicLobbies)
 app.get('/api/multi/check-classic/:sessionCode', (req, res, next) => {
     Promise.resolve(checkIfClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/challenge-results/:challengeId/full', optionalAuthenticateToken, (req, res, next) => {
+    req.params.fullResults = 'true';
+    Promise.resolve(getClassicChallengeResults(req, res)).catch(next);
 })
 app.get('/api/multi/challenge-results/:challengeId', (req, res, next) => {
     Promise.resolve(getClassicChallengeResults(req, res)).catch(next);
