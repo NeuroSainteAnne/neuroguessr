@@ -585,7 +585,7 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
 
     // Check if challenge exists and is active
     const challengeResult = await sql`
-      SELECT ms.id, ms.start_date, ms.end_date
+      SELECT ms.id, ms.start_date, ms.end_date, ms.name
       FROM multi_sessions ms
       WHERE ms.session_code = ${sessionCode}
       AND ms.is_classic_challenge = TRUE
@@ -596,6 +596,7 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
       id: number;
       start_date: string;
       end_date: string;
+      name: string | null;
     }>;
 
     if (challengeResult.length === 0) {
@@ -612,7 +613,10 @@ export const canJoinClassicChallenge = async (req: Request, res: Response) => {
     `;
 
     if (completedResult.length > 0) {
-      return res.status(409).json({ error: 'You have already completed this classic challenge' });
+      return res.status(409).json({ 
+        error: 'You have already completed this classic challenge',
+        challengeName: challenge.name || null
+      });
     }
 
     res.status(200).json({ canJoin: true });
@@ -722,9 +726,12 @@ export const joinClassicChallenge = async (socket: Socket, challenge: MultiSessi
       WHERE user_id = ${userId}
       AND classic_challenge_id = ${challenge.id}
     `;
-
     if (completedResult.length > 0) {
-      socket.emit('error', { message: 'You have already completed this classic challenge' });
+      socket.emit('error', { 
+        message: 'You have already completed this classic challenge',
+        challengeName: challenge.name || null,
+        challengeId: challenge.id
+      });
       return;
     }
 

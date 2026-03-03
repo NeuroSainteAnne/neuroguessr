@@ -298,6 +298,7 @@
   "your_temp_ranking": "Your temporary ranking",
   "total_participants": "Total participants",
   "publish_results_for_rank": "Publish your results to see your rank?",
+  "error_already_completed_challenge": "You have already completed this classic challenge. You can only do it once. Try another game mode or check the <a href='/challenge-results/{{challengeId}}'>results</a> !",
 
   "*****LEADERBOARD*****":"",
 

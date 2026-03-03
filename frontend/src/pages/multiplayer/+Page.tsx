@@ -132,6 +132,7 @@ const MultiPlayer = ({
   const [anonUsername, setAnonUsername] = useState<string>("");
   const anonUsernameRef = useRef(anonUsername);
   const classicChallengeValidated = useRef<boolean>(false);
+  const [challengeTitle, setChallengeTitle] = useState<string>("");
 
   const handleClassicChallengeStart = () => {
     classicChallengeValidated.current = true;
@@ -233,7 +234,13 @@ const MultiPlayer = ({
       cleanupSocket();
     });
     socket.on('error', (data: any) => {
-      setError(data.message);
+      if(data.challengeName) setChallengeTitle(data.challengeName)
+      const thisClassicChallengeId = data.challengeId || classicChallengeId;
+      let message = data.message || 'An error occurred';
+      if(message == "You have already completed this classic challenge"){
+        message = t("error_already_completed_challenge", {challengeId: thisClassicChallengeId})  
+      }
+      setError(message);
       joiningInProgressRef.current = false;
     });
     socket.on('fatal-error', (data: any) => {
@@ -260,6 +267,7 @@ const MultiPlayer = ({
       setClassicChallengeId(data.challengeId); // Store the challenge ID
       setLobbyUsers([isLoggedIn ? userUsername : anonUsername]); // Single user for classic challenges
       setIsConnected(true);
+      setChallengeTitle(data.challengeName || ""); // Set the challenge title
       joiningInProgressRef.current = false;
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
       // Store the user-specific session code for classic challenges
@@ -738,7 +746,8 @@ const MultiPlayer = ({
         <div className="waiting-content">
           <div className="join-multiplayer-box">
             <h2>{t("join_multiplayer_lobby")}</h2>
-            <div style={{ color: 'red', marginTop: 16, fontSize: 18 }}>{error}</div>
+            {challengeTitle && <h2>{challengeTitle}</h2>}
+            <div style={{ color: 'red', marginTop: 16, fontSize: 18 }} dangerouslySetInnerHTML={{__html:error}}></div>
           </div>
         </div>
       );
@@ -780,6 +789,7 @@ const MultiPlayer = ({
     if (isConnected && !isGameRunning && isClassicChallenge && !classicChallengeValidated.current) {
       return (
         <div className="waiting-content">
+          {challengeTitle && <h2>{challengeTitle}</h2>}
           <button className="start-classic-challenge-button"  data-umami-event="multiplayer start-classic button" onClick={handleClassicChallengeStart}>{t("start_classic_button")}</button>
           <div className='start-classic-challenge-warning'>{t("classic_challenge_start_warning")}</div>
         </div>

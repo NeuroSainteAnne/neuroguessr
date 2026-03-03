@@ -297,6 +297,7 @@
   "your_temp_ranking": "Votre classement temporaire",
   "total_participants": "Nombre de participants",
   "publish_results_for_rank": "Publier vos résultats afin de voir votre rang ?",
+  "error_already_completed_challenge": "Vous avez déjà complété ce défi classique. Vous ne pouvez le faire qu'une seule fois. Essayez un autre mode de jeu ou consultez les <a href='/challenge-results/{{challengeId}}'>résultats</a> !",
 
   
   "*****LEADERBOARD*****":"",
