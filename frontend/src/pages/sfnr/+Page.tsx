@@ -85,16 +85,16 @@ function SfnrScreen() {
               <span className="sfnr-element sfnr-element1">
                 <span className="sfnr-element-title">Mercredi 11 mars</span>
                 <span className="sfnr-element-subtitle">Challenge 1: Gyrus et noyaux gris</span>
-                <span className="sfnr-element-subtitle">Durée: 2 minutes</span>
+                <span className="sfnr-element-subtitle">Durée: 4 minutes</span>
                 <button className='sfnr-element-button' disabled={!enabledChallenges.challenge1}
                    onClick={()=>{enabledChallenges.challenge1 && navigate('/multiplayer/20260311')}}>
                   {enabledChallenges.challenge1 ? 'Participer' : 'Disponible le 11 mars'}
                 </button>
               </span>
               <span className="sfnr-element sfnr-element2">
-                <span className="sfnr-element-title">Jeudi 12 mars</span>
+                <span className="sfnr-element-title">Jeudi 12 mars<br />Avant 15h +++</span>
                 <span className="sfnr-element-subtitle">Challenge 2: Sillons et substance blanche</span>
-                <span className="sfnr-element-subtitle">Durée: 3 minutes</span>
+                <span className="sfnr-element-subtitle">Durée: 4 minutes</span>
                 <button className='sfnr-element-button' disabled={!enabledChallenges.challenge2}
                    onClick={()=>{enabledChallenges.challenge2 && navigate('/multiplayer/20260312')}}>
                   {enabledChallenges.challenge2 ? 'Participer' : 'Disponible le 12 mars'}
