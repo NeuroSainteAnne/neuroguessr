@@ -100,7 +100,7 @@ function SfnrScreen() {
                   {enabledChallenges.challenge2 ? 'Participer' : 'Disponible le 12 mars'}
                 </button>
               </span>
-              <span className="sfnr-element sfnr-element3">
+              {/*<span className="sfnr-element sfnr-element3">
                 <span className="sfnr-element-title">Vendredi 13 mars<br />Avant 16h +++</span>
                 <span className="sfnr-element-subtitle">Challenge 3: Tout l'encéphale !</span>
                 <span className="sfnr-element-subtitle">Durée: 4 minutes</span>
@@ -108,7 +108,7 @@ function SfnrScreen() {
                    onClick={()=>{enabledChallenges.challenge3 && navigate('/multiplayer/20260313')}}>
                   {enabledChallenges.challenge3 ? 'Participer' : 'Disponible le 13 mars'}
                 </button>
-              </span>
+              </span>*/}
             </span>
           </div>
       </>
