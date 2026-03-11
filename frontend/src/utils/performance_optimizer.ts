@@ -75,7 +75,6 @@ function estimateAtlasSize(atlasKey: string): number {
     'thalamus': 0.6,         // Thalamic nuclei
     'HippoAmyg': 0.6,        // Hippocampus/Amygdala
     'xtract': 0.6,          // White matter tracts
-    'JHU': 0.6,             // JHU atlas
     'territories': 0.6       // Arterial territories
   };
 

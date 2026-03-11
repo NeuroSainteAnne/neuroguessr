@@ -68,11 +68,6 @@ atlas_files = {
         "json": "xtract_labels.json",
         "bilateral": False
     },
-    "JHU": {
-        "nii": "JHU_web.nii.gz",
-        "json": "JHU_labels.json",
-        "bilateral": False
-    },
     "territories": {
         "nii": "ArterialAtlas_stride_round.nii.gz",
         "json": "artery_territories.json",

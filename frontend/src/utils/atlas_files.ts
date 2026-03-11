@@ -92,13 +92,6 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         name: 'White Matter',
         difficulty: 2
     },
-    'JHU': {
-        atlas_category: 'white_matter_tracts',
-        nii: 'JHU_web.nii.gz',
-        json: 'JHU_labels.json',
-        name: 'JHU',
-        difficulty: 2
-    },
     'territories': {
         atlas_category: 'cerebral_arteries',
         nii: 'ArterialAtlas_stride_round.nii.gz',

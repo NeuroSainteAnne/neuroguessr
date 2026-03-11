@@ -31,7 +31,6 @@ NeuroGuessr Web is an interactive web application designed to help learning brai
     - Hippocampus & amygdala subfields
     - Resting state functional networks : (Thomas Yeo, 7 and 17 networks)
     - White matter tracts (Xtract, FSL)
-    - White matter (JHU) : "Tract probability maps in stereotaxic spaces: Analyses of white matter anatomy and tract-specific quantification". DOI https://doi.org/10.1016/j.neuroimage.2007.07.053
     - Arterial Atlas : "an atlas of brain arterial territories based on lesion distributions in 1,298 acute stroke patients. The atlas covers supra- and infra-tentorial regions and contains hierarchical segmentation levels created by a fusion of vascular and classical anatomical criteria. This deformable 3D digital atlas can be readily used by the clinical and research communities, enabling automatic and highly reproducible exploration of large-scaled data.". https://www.nature.com/articles/s41597-0
   - **JSON Files**: Label mappings for each atlas, used for region identification and display.
 
