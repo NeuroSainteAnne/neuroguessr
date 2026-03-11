@@ -12,6 +12,7 @@ import i18nInstance from '../context/i18n'
 import { PageContextProvider } from 'vike-react/usePageContext'
 import logoSvg from "../../public/interface/neuroguessr.svg?raw";
 import config from "../../config.json"  
+import backendConfig from "../../../backend/config.json"
 
 const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   // Initialize i18n with language given from the server if available
@@ -32,23 +33,73 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
     </PageContextProvider>
   )
 
- const { t } = i18nInstance
+ const { t, language:languageNew } = i18nInstance
+ 
+ // Check if this is a multiplayer game URL and fetch session startTime
+ // NB INCOMPATIBLE WITH SSG
+ let dynamicDescription = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language });
+ const urlPathname = pageContext.urlPathname || '';
+ const multiplayerMatch = urlPathname.match(/^\/multiplayer\/([0-9]{8})(?:\/.*)?$/);
+
+ if (multiplayerMatch) {
+   const sessionCode = multiplayerMatch[1];
+   try {
+     // Make internal API call to get session data
+     const baseUrl = backendConfig.server.external_address
+     const response = await fetch(`${baseUrl}/api/advanced-game/getstartdate/${sessionCode}`, {
+       method: 'GET',
+       headers: {
+         'Content-Type': 'application/json',
+       },
+     });
+     if (response.ok) {
+       const sessionData = await response.json();
+       if (sessionData.startTime) {
+          const startTime = new Date(sessionData.startTime);
+          const name = sessionData.name;
+          const now = new Date();
+          
+          if (startTime > now) {
+            // Format the start time nicely
+            const dateFormatter = new Intl.DateTimeFormat(languageNew, {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZoneName: 'short'
+            });
+            
+            const formattedTime = dateFormatter.format(startTime);
+            dynamicDescription = t(name?'multiplayer_scheduled_description_withname':'multiplayer_scheduled_description', {
+              time: formattedTime,
+              name
+            });
+          }
+       }
+     }
+   } catch (error) {
+     console.error('Failed to fetch multiplayer session data:', error);
+     // Fall back to default description
+   }
+ }
+
  const title = t((pageContext.config as any).title || 'NeuroGuessr', { lng: language })
- const description = t((pageContext.config as any).description || 'neuroguessr_short_description', { lng: language })
+ const description = dynamicDescription
  const image = (pageContext.config as any).image || neuroGuessrImage
 
 const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.customHeaderScript) : escapeInject``;
 
  // Create the complete HTML document
   return escapeInject`<!DOCTYPE html>
-<html lang="${language}">
-
+<html lang="${languageNew}">
 <head>
   <meta charset="UTF-8" />
   ${customHeader}
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title}</title>
   <meta name="description" content="${description}" />
+  <meta property="og:description" content="${description}" />
   <meta property="og:image" content="https://neuroguessr.org${image}" />
   <meta property="og:url" content="https://neuroguessr.org${pageContext.urlPathname || ""}" />
   <meta property="og:type" content="website" />
@@ -225,6 +276,8 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       window.__NEEDS_LANGUAGE_SWITCH__ = storedLang && storedLang !== "fr";
     })();
   </script>
+  <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha@main/dist/altcha.min.js" type="module"></script>
+  <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist_i18n/fr-fr.min.js" type="module"></script>
 </head>
 
 <body>
@@ -245,6 +298,7 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       </div>
     </div>
   </div>
+  <div id="blur-root"></div>
   <div id="root" class="i18n-content-hidden">${dangerouslySkipEscape(pageHtml)}</div>
 </body>
 

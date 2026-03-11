@@ -1,0 +1,319 @@
+.advanced-settings-show {
+    padding: 5px 10px;
+    margin-top: 10px;
+    background-color: #21669f;
+    color: #fff;
+}
+
+.advanced-settings-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+.advanced-settings-header h3, .advanced-settings-header select {
+    margin: 15px 0 15px 0;
+}
+
+.advanced-settings-overall{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.advanced-settings-container{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+}
+.advanced-settings-buttons{
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+}
+.advanced-settings-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.advanced-settings-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.advanced-settings-textarea{
+    height: 150px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    font-family: monospace,
+}
+
+.advanced-settings-validation{
+    padding: 10px 20px;
+    color: #fff;
+    flex: 1;
+}
+
+.region-picker-ui {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    flex-direction: row;
+    margin-top: 10px;
+    gap: 10px;
+    margin-left: 25px;
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.atlas-picker,
+.region-picker,
+.duration-picker {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.region-duration-input{
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.advanced-settings-ui {
+    margin-top: 20px;
+}
+.atlas-header{
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    align-items: baseline;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+    background-color: #0b0b0bcc;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    gap: 30px;
+}
+.atlas-header:hover {
+    background-color: #2f2f2fcc;
+}
+.atlas-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.atlas-header-right {
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.header-label {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 14px;
+    color: #666;
+}
+
+.header-input {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.atlas-block {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    background-color: #3f3f3fcc;
+    justify-content: space-between;
+}
+.atlas-block-left {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+.atlas-block-right {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.region-block {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 5px;
+    gap: 10px;
+    padding-bottom: 10px;
+    padding-left: 25px;
+    padding-right: 25px;
+    flex-wrap: wrap;
+}
+.region-block:nth-child(odd) {
+    background-color: #4b5b75;
+}
+
+.region-block:nth-child(even) {
+    background-color: #222c3c;
+}
+
+.region-blocks{
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+}
+.toggle-button {
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.arrow {
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.arrow.collapsed {
+    transform: rotate(0deg); /* Default state for collapsed */
+}
+
+.arrow.expanded {
+    transform: rotate(90deg); /* Rotated state for expanded */
+}
+
+.remove-atlas-button, .remove-block-button {
+    padding: 0;
+    background: none;
+    border: none;
+    color: #ff4d4f;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.remove-atlas-button:hover, .remove-block-button:hover {
+    color: #d9363e;
+}
+
+.atlas-picker-ui {
+    background-color: #0b0b0bcc;
+    display: flex;
+    align-items: baseline;
+    flex-direction: row;
+    padding-top: 10px;
+    padding-left: 15px;
+    padding-bottom: 10px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.total-duration {
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: flex;
+    align-items: baseline;
+}
+
+.lobby-and-buttons-container{
+    display: flex;
+    flex-direction: column;
+}
+
+/* Recurrence Settings */
+.recurrence-settings {
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.recurrence-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.recurrence-checkbox-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.recurrence-checkbox-container input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.recurrence-checkbox-container label {
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+}
+
+.recurrence-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 20px;
+}
+
+.recurrence-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.recurrence-label {
+    font-size: 14px;
+    color: #666;
+    min-width: 80px;
+}
+
+.recurrence-input {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 80px;
+}
+
+.recurrence-select {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 100px;
+}
+
+.recurrence-description {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+    margin-top: 5px;
+    margin-left: 20px;
+}
+
+.qr-code-container {
+    text-align: center;
+}

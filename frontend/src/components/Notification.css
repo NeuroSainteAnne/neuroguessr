@@ -1,19 +1,43 @@
-#notification {
+.notification-container {
     position: fixed;
-    top: 2vh;
+    top: 50%;
     left: 50%;
     transform: translateX(-50%);
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    z-index: 1000;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1500;
+    display: flex;
+  flex-direction: column;
+    gap: 10px;
 }
-#notification.success {
-    background: #4ade80;
+.notification {
+  padding: 15px;
+  border-radius: 0.5rem;
+  font-size: 2rem;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease; /* Fade-in animation */
+  transition: opacity 0.5s ease, transform 0.5s ease, top 0.5s ease; /* Smooth fade-out and movement */
+}
+.notification.success {
+    background: #4ade80CC;
     color: #1a3c1f;
 }
-#notification.error {
-    background: #f87171;
+.notification.error {
+    background: #f87171CC;
     color: #3c1a1a;
+}
+.notification.removing {
+  opacity: 0;
+  transform: translateY(-20px); /* Move up slightly while fading out */
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px); /* Start slightly below */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0); /* Move to its position */
+  }
 }

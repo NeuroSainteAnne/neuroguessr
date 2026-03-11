@@ -5,7 +5,6 @@ import { navigate } from 'vike/client/router'
 
 function ValidateEmailScreen() {
     const { t, pageContext, updateToken } = useApp();
-    const [isValidatedEmail, setIsValidatedEmail] = useState<boolean>(false);
     const [validatedErrorText, setValidatedErrorText] = useState<string>("");
     const [validatedSuccessText, setValidatedSuccessText] = useState<string>("");
     const {userId, token} = pageContext.routeParams;
@@ -19,6 +18,8 @@ function ValidateEmailScreen() {
           setValidatedErrorText(t('error_invalid_token'));
         }  
         try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const returnUrl = urlParams.get('returnUrl');
           const response = await fetch('/api/verify-email', {
             method: 'POST',
             headers: {
@@ -35,7 +36,7 @@ function ValidateEmailScreen() {
             setValidatedSuccessText(t('success_email_verified'));
             updateToken(result.token);
             setTimeout( () => {
-              navigate("/welcome");
+              navigate(returnUrl ? returnUrl : "/welcome");
             }, 1000);
           }
         } catch (error) {

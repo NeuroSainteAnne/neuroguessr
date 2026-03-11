@@ -11,6 +11,7 @@ export interface LoginRequestBody {
 
 export interface AuthenticatedRequest extends Request {
     user: User;
+    userToken: string;
 }
 
 /* REGISTER interfaces */
@@ -23,6 +24,13 @@ export interface RegisterBody {
     password: string;
     language?: string;
     captcha_token?: string;
+    clinical_trial_gender?: "male" | "female" | "other" | null;
+    clinical_trial_age?: number | null;
+    clinical_trial_country?: string | null;
+    clinical_trial_occupation?: string | null;
+    clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
+    clinical_trial_consent_date?: string | null; 
+    returnUrl?: string | null;
 }
 
 export interface RegisterRequest extends Request {
@@ -67,80 +75,6 @@ export interface ValidateResetTokenRequest extends Request {
     body: ValidateResetTokenBody;
 }
 
-/* GAME INTERFACES */
-
-export interface StartGameSessionBody {
-    mode: string;
-    atlas: string;
-}
-
-export interface StartGameSessionRequest extends Request {
-    body: StartGameSessionBody;
-    user: User;
-}
-
-export interface GetNextRegionRequest extends Request {
-    body: GetNextRegionRequestBody;
-    user: User;
-}
-
-export interface GetNextRegionRequestBody {
-    sessionId: number;
-    sessionToken: string;
-}
-
-interface ValidateRegionRequestBody {
-    sessionId: number;
-    sessionToken: string;
-    coordinates: {mm:any, vox:number[], idx: number};
-}
-
-export interface ValidateRegionRequest extends Request {
-    body: ValidateRegionRequestBody;
-}
-
-interface ClotureGameSessionBody {
-    sessionId: number;
-    sessionToken: string;
-}
-
-export interface ClotureGameSessionRequest extends Request {
-    body: ClotureGameSessionBody;
-}
-
-interface LaunchMultiGameBody {
-    sessionCode: string;
-    sessionToken: string;
-}
-
-export interface LaunchMultiGameRequest extends Request {
-    body: LaunchMultiGameBody;
-    user: User;
-}
-
-interface UpdateMultiGameBody {
-  sessionCode: string,
-  sessionToken: string,
-  parameters: Partial<MultiplayerParametersType>
-}
-
-export interface UpdateMultiGameRequest extends Request {
-    body: UpdateMultiGameBody;
-    user: User;
-}
-
-interface MultiValidateGuessBody {
-    sessionCode: string;
-    userName: string;
-    voxelProp: {mm: number[], vox: number[], idx: number};
-    userToken?: string;
-    anonToken?: string;
-}
-
-export interface MultiValidateGuessRequest extends Request {
-    body: MultiValidateGuessBody
-}
-
 /* CONFIG USER INTERFACES */
 
 export interface ConfigUserBody {
@@ -149,6 +83,11 @@ export interface ConfigUserBody {
     password?: string;
     publishToLeaderboard?: boolean | null;
     language?: string;
+    clinical_trial_gender?: "male" | "female" | "other" | null;
+    clinical_trial_age?: number | null;
+    clinical_trial_country?: string | null;
+    clinical_trial_occupation?: string | null;
+    clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
 }
 
 /* LEADERBOARD INTERFACES */
@@ -159,6 +98,7 @@ interface GetLeaderboardBody {
     numberLimit?: number;
     timeLimit?: number;
     appendTotal?: boolean;
+    blindMode?: boolean | null;
 }
 
 export interface GetLeaderboardRequest {

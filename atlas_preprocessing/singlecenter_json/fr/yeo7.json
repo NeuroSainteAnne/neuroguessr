@@ -1,0 +1,6 @@
+{
+	"R" : [0, 206, 79, 175, 227, 50, 86, 5],
+	"G" : [0, 46, 127, 207, 229, 192, 18, 105],
+	"B" : [0, 177, 103, 36, 70, 97, 77, 9],
+	"labels" : ["Indéfini", "Réseau-Visuel","Réseau-Somatomoteur","Réseau-Dorsal","Réseau-Ventral","Réseau-Limbique","Réseau-Frontoparietal","Réseau-Mode-par-Défaut"]
+}

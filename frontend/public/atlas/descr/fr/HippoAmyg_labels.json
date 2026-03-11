@@ -1,46 +1,378 @@
 {
   "R": [
-    0, 255, 255, 0, 0, 220, 240, 178, 46, 199, 124, 218, 65, 255, 50,
-    240, 255, 189, 138, 0, 233, 30, 205, 34, 255, 255, 0, 106, 72, 180
+    0,
+    255,
+    255,
+    0,
+    0,
+    220,
+    240,
+    178,
+    46,
+    199,
+    124,
+    218,
+    65,
+    255,
+    50,
+    240,
+    255,
+    189,
+    138,
+    0,
+    233,
+    30,
+    205,
+    34,
+    255,
+    255,
+    0,
+    106,
+    72,
+    180
   ],
   "G": [
-    0, 0, 215, 200, 105, 20, 230, 34, 139, 21, 252, 165, 105, 99, 205,
-    128, 165, 183, 43, 255, 150, 144, 92, 139, 20, 255, 191, 90, 61, 70
+    0,
+    0,
+    215,
+    200,
+    105,
+    20,
+    230,
+    34,
+    139,
+    21,
+    252,
+    165,
+    105,
+    99,
+    205,
+    128,
+    165,
+    183,
+    43,
+    255,
+    150,
+    144,
+    92,
+    139,
+    20,
+    255,
+    191,
+    90,
+    61,
+    70
   ],
   "B": [
-    0, 0, 0, 80, 255, 60, 140, 34, 87, 133, 0, 32, 225, 71, 50, 128, 0,
-    107, 226, 127, 122, 255, 92, 34, 147, 0, 255, 205, 139, 200
+    0,
+    0,
+    0,
+    80,
+    255,
+    60,
+    140,
+    34,
+    87,
+    133,
+    0,
+    32,
+    225,
+    71,
+    50,
+    128,
+    0,
+    107,
+    226,
+    127,
+    122,
+    255,
+    92,
+    34,
+    147,
+    0,
+    255,
+    205,
+    139,
+    200
   ],
   "labels": [
-    "Arrière-plan",
-    "Queue de l’hippocampe",
+    "Arri\u00e8re-plan",
+    "Queue de l\u2019hippocampe",
     "Subiculum (corps)",
     "Cornu Ammonis 1 (corps)",
-    "Subiculum (tête)",
+    "Subiculum (t\u00eate)",
     "Fissure hippocampique",
-    "Présubiculum (tête)",
+    "Pr\u00e9subiculum (t\u00eate)",
     "Alveus",
-    "Cornu Ammonis 1 (tête)",
-    "Présubiculum (corps)",
+    "Cornu Ammonis 1 (t\u00eate)",
+    "Pr\u00e9subiculum (corps)",
     "Parasubiculum",
-    "Couche moléculaire de l’hippocampe (tête)",
-    "Couche moléculaire de l’hippocampe (corps)",
-    "Couche granulaire et moléculaire du gyrus denté (tête)",
+    "Couche mol\u00e9culaire de l\u2019hippocampe (t\u00eate)",
+    "Couche mol\u00e9culaire de l\u2019hippocampe (corps)",
+    "Couche granulaire et mol\u00e9culaire du gyrus dent\u00e9 (t\u00eate)",
     "Cornu Ammonis 3 (corps)",
-    "Couche granulaire et moléculaire du gyrus denté (corps)",
-    "Cornu Ammonis 4 (tête)",
+    "Couche granulaire et mol\u00e9culaire du gyrus dent\u00e9 (corps)",
+    "Cornu Ammonis 4 (t\u00eate)",
     "Cornu Ammonis 4 (corps)",
     "Fimbria",
-    "Cornu Ammonis 3 (tête)",
+    "Cornu Ammonis 3 (t\u00eate)",
     "Zone de transition hippocampo-amygdalienne (HATA)",
-    "Noyau latéral",
+    "Noyau lat\u00e9ral",
     "Noyau basal",
     "Noyau baso-accessoire",
-    "Aire antérieure de l’amygdale (AAA)",
+    "Aire ant\u00e9rieure de l\u2019amygdale (AAA)",
     "Noyau central",
-    "Noyau médian",
+    "Noyau m\u00e9dian",
     "Noyau cortical",
     "Zone de transition cortico-amygdalienne",
     "Noyau paralaminaire"
+  ],
+  "centers": [
+    [
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    [
+      [
+        0,
+        -17,
+        19
+      ]
+    ],
+    [
+      [
+        -22,
+        -39,
+        1
+      ]
+    ],
+    [
+      [
+        -28,
+        -30,
+        -13
+      ]
+    ],
+    [
+      [
+        -34,
+        -28,
+        -13
+      ]
+    ],
+    [
+      [
+        -26,
+        -13,
+        -25
+      ]
+    ],
+    [
+      [
+        -26,
+        -20,
+        -17
+      ]
+    ],
+    [
+      [
+        -22,
+        -15,
+        -23
+      ]
+    ],
+    [
+      [
+        -26,
+        -7,
+        -24
+      ],
+      [
+        -19,
+        -12,
+        -18
+      ]
+    ],
+    [
+      [
+        -25,
+        -12,
+        -21
+      ]
+    ],
+    [
+      [
+        -21,
+        -29,
+        -11
+      ]
+    ],
+    [
+      [
+        -17,
+        -13,
+        -23
+      ]
+    ],
+    [
+      [
+        -26,
+        -13,
+        -23
+      ],
+      [
+        -24,
+        -17,
+        -17
+      ],
+      [
+        -23,
+        -14,
+        -19
+      ]
+    ],
+    [
+      [
+        -33,
+        -28,
+        -11
+      ],
+      [
+        -30,
+        -23,
+        -16
+      ]
+    ],
+    [
+      [
+        -31,
+        -19,
+        -18
+      ],
+      [
+        -24,
+        -15,
+        -20
+      ]
+    ],
+    [
+      [
+        -32,
+        -25,
+        -11
+      ],
+      [
+        -31,
+        -33,
+        -5
+      ]
+    ],
+    [
+      [
+        -27,
+        -30,
+        -8
+      ],
+      [
+        -32,
+        -26,
+        -13
+      ]
+    ],
+    [
+      [
+        -27,
+        -17,
+        -19
+      ]
+    ],
+    [
+      [
+        -29,
+        -29,
+        -10
+      ]
+    ],
+    [
+      [
+        -27,
+        -28,
+        -7
+      ]
+    ],
+    [
+      [
+        -26,
+        -17,
+        -16
+      ]
+    ],
+    [
+      [
+        -17,
+        -11,
+        -15
+      ]
+    ],
+    [
+      [
+        -27,
+        -3,
+        -24
+      ]
+    ],
+    [
+      [
+        -22,
+        -4,
+        -20
+      ]
+    ],
+    [
+      [
+        -21,
+        -6,
+        -15
+      ]
+    ],
+    [
+      [
+        -25,
+        3,
+        -20
+      ]
+    ],
+    [
+      [
+        -26,
+        -7,
+        -12
+      ]
+    ],
+    [],
+    [
+      [
+        -21,
+        -6,
+        -12
+      ]
+    ],
+    [
+      [
+        -17,
+        -6,
+        -16
+      ]
+    ],
+    [
+      [
+        -18,
+        -4,
+        -25
+      ]
+    ]
   ]
 }

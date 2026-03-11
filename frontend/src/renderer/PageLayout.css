@@ -39,7 +39,7 @@ body {
 
 
 /* Add a pseudo-element for background opacity and blur */
-#root::before {
+#blur-root {
   content: '';
   position: fixed;
   top: 0;
@@ -47,14 +47,7 @@ body {
   right: 0;
   bottom: 0;
   background-color: rgba(54, 54, 54, 0.8);
-  /* Opacity 0.8 */
-  z-index: -1;
-  /* Place behind content */
-  /* If backdrop-filter on buttons doesn't work, you could try blurring this pseudo-element,
-       but that would blur the entire background, not just behind the buttons.
-       backdrop-filter: blur(10px);
-       -webkit-backdrop-filter: blur(10px);
-    */
+  backdrop-filter: blur(1px);
 }
 
 .grecaptcha-badge {
@@ -185,7 +178,6 @@ label {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  height: 200px;
   flex-grow: 1;
   padding: 0 2vw 0 2vw;
   /* Adjusted padding top */

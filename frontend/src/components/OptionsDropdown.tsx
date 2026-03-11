@@ -1,4 +1,4 @@
-import { DisplayOptions } from '../types';
+import { DisplayOptions } from '../types/types';
 import { useApp } from '../context/AppContext';
 import "./OptionsDropdown.css";
 

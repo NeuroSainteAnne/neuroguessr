@@ -5,10 +5,20 @@ import type { AuthenticatedRequest, GetStatsRequest } from '../interfaces/reques
 import type { Request, Response } from "express";
 import { FinishedSession, FinishedSessionCamelCase } from 'interfaces/database.interfaces.ts';
 import { transformKeysSnakeToCamel } from "../middlewares/case-transformer.ts";
+import { logger } from './logging.ts';
 
 export const getUserStats = async (req: GetStatsRequest, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = (req as any).ip || (req as any).connection?.remoteAddress || 'unknown';
+    const userId: number = (req as AuthenticatedRequest).user.id;
+    
+    logger.info('User stats request', {
+        userId,
+        clientIP,
+        timestamp: new Date().toISOString()
+    });
+
     try {
-        const userId: number = (req as AuthenticatedRequest).user.id;
         const statsResult = await sql`
             SELECT 
                 MIN(created_at) as first_game,
@@ -135,6 +145,13 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
             };
         }
 
+        const duration = Date.now() - startTime;
+        logger.info('User stats retrieved successfully', {
+            userId,
+            clientIP,
+            duration: `${duration}ms`,
+        });
+
         res.status(200).send({
             totalGames,
             avgScore,
@@ -157,7 +174,14 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
             sessions
         });
     } catch (error) {
-        console.error("Error getting stats:", error);
+        const duration = Date.now() - startTime;
+        logger.error('User stats error', {
+            userId,
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 }

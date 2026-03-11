@@ -12,7 +12,7 @@ export const globalAuthentication = (req: Request, res: Response, next: NextFunc
   }
   const authheader: string | undefined = req.headers.authorization;
   if (!authheader) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="mon site à moi", charset="UTF-8"');
+    res.setHeader('WWW-Authenticate', 'Basic realm="NeuroGuessr", charset="UTF-8"');
     res.status(401).end();
   }
   else {
@@ -28,7 +28,7 @@ export const globalAuthentication = (req: Request, res: Response, next: NextFunc
       next();
     } else {
       // mauvais user name ou password
-      res.setHeader('WWW-Authenticate', 'Basic realm="mon site à moi", charset="UTF-8"');
+      res.setHeader('WWW-Authenticate', 'Basic realm="NeuroGuessr", charset="UTF-8"');
       res.status(401).end();
     }
   }

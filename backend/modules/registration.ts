@@ -5,7 +5,7 @@ import Joi from "joi";
 import { sql } from "./database_init.ts";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { __dirname, getUserToken, verifyCaptcha } from "./utils.ts";
+import { __dirname, getUserToken } from "./utils.ts";
 import type { Response } from "express";
 import type { Token, User } from "../interfaces/database.interfaces.ts";
 import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, RegisterBody, 
@@ -15,9 +15,25 @@ import type { VerifyEmailRequest, PasswordLinkBody, PasswordLinkRequest, Registe
 import type { Config } from "../interfaces/config.interfaces.ts";
 import configJson from '../config.json' with { type: "json" };
 import backendI18n from "./backend-i18n.ts";
+import { verifyAltcha } from "./altcha.ts";
+import { logger } from "./logging.ts";
 const config: Config = configJson;
 
 export const register = async (req: RegisterRequest, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    logger.info('Registration attempt started', {
+        username: req.body?.username,
+        email: req.body?.email ? req.body.email.toLowerCase() : 'unknown',
+        language: req.body?.language || 'fr',
+        clientIP,
+        userAgent,
+        timestamp: new Date().toISOString(),
+        captchaProvided: !!req.body?.captcha_token
+    });
+
     try {
         const validate = (data: RegisterBody) => {
             const schema = Joi.object({
@@ -28,13 +44,44 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
                 language: Joi.string().label("language").valid("fr", "en"),
                 // @ts-ignore
                 password: passwordComplexity().required().label("password"),
-                captcha_token: Joi.string().label("captcha_token")
+                captcha_token: Joi.string().label("captcha_token"),
+                clinical_trial_gender: Joi.string()
+                    .valid("male", "female", "other", null)
+                    .label("clinical_trial_gender"),
+                clinical_trial_age: Joi.number()
+                    .integer()
+                    .min(0)
+                    .allow(null)
+                    .label("clinical_trial_age"),
+                clinical_trial_country: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_country"),
+                clinical_trial_occupation: Joi.string()
+                    .allow(null)
+                    .label("clinical_trial_occupation"),
+                clinical_trial_consent: Joi.string()
+                    .valid("data_usage", "acknowledgement", "none", null)
+                    .label("clinical_trial_consent"),
+                clinical_trial_consent_date: Joi.date()
+                    .iso()
+                    .allow(null)
+                    .label("clinical_trial_consent_date"),
+                returnUrl: Joi.string().allow(null).label("returnUrl")
             });
             return schema.validate(data);
         };
 
         const { error } = validate(req.body);
         if (error){
+            const duration = Date.now() - startTime;
+            logger.warn('Registration validation failed', {
+                username: req.body?.username,
+                email: req.body?.email?.toLowerCase(),
+                clientIP,
+                error: error.details[0].message,
+                duration: `${duration}ms`,
+                reason: 'validation_error'
+            });
             res.status(400).send({ message: error.details[0].message });
             return;
         }
@@ -44,6 +91,13 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             SELECT * FROM users WHERE username = ${req.body.username} LIMIT 1
         `;
         if (usersByUsername.length > 0){
+            const duration = Date.now() - startTime;
+            logger.warn('Registration failed - username exists', {
+                username: req.body.username,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'username_exists'
+            });
             res
                 .status(409)
                 .send({ message: "User with given username already exists" });
@@ -57,6 +111,14 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             SELECT * FROM users WHERE email = ${email} LIMIT 1
         `;
         if (users.length > 0){
+            const duration = Date.now() - startTime;
+            logger.warn('Registration failed - email exists', {
+                username: req.body.username,
+                email,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'email_exists'
+            });
             res
                 .status(409)
                 .send({ message: "User with given email already exists" });
@@ -67,11 +129,27 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
         if (config.captcha && config.captcha.activate) {
             const captchaToken = req.body.captcha_token;
             if (!captchaToken) {
+                const duration = Date.now() - startTime;
+                logger.warn('Registration failed - missing captcha', {
+                    username: req.body.username,
+                    email,
+                    clientIP,
+                    duration: `${duration}ms`,
+                    reason: 'captcha_missing'
+                });
                 res.status(400).send({ message: "Captcha token missing" });
                 return;
             }
-            const captchaOk = await verifyCaptcha(captchaToken, config.captcha.secretKey);
+            const captchaOk = await verifyAltcha(captchaToken);
             if (!captchaOk) {
+                const duration = Date.now() - startTime;
+                logger.warn('Registration failed - captcha verification failed', {
+                    username: req.body.username,
+                    email,
+                    clientIP,
+                    duration: `${duration}ms`,
+                    reason: 'captcha_failed'
+                });
                 res.status(400).send({ message: "Captcha verification failed" });
                 return;
             }
@@ -88,14 +166,27 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
 
         // Insérer le nouvel utilisateur
         const result = await sql`
-            INSERT INTO users (username, firstname, lastname, email, password, language, verified)
-            VALUES (${req.body.username}, ${req.body.firstname}, ${req.body.lastname}, ${email}, ${hashPassword}, ${language}, ${preVerify})
+            INSERT INTO users (username, firstname, lastname, email, password, language, verified,
+                clinical_trial_gender, clinical_trial_age, clinical_trial_country,
+                clinical_trial_occupation, clinical_trial_consent, clinical_trial_consent_date)
+            VALUES (${req.body.username}, ${req.body.firstname}, ${req.body.lastname}, ${email}, ${hashPassword}, ${language}, ${preVerify},
+                ${req.body.clinical_trial_gender || null}, ${req.body.clinical_trial_age || null}, ${req.body.clinical_trial_country || null},
+                ${req.body.clinical_trial_occupation || null}, ${req.body.clinical_trial_consent || null}, ${req.body.clinical_trial_consent_date || null})
             RETURNING id
         `;
         const lastID = result[0].id as number;
 
         // Mode debug : pas d'envoi d'email
         if(config.email.type == "none"){
+            const duration = Date.now() - startTime;
+            logger.info('Registration successful - debug mode (no email)', {
+                username: req.body.username,
+                userId: lastID,
+                clientIP,
+                duration: `${duration}ms`,
+                preverified: true,
+                emailType: config.email.type
+            });
             res
                 .status(201)
                 .send({ preverified: true, message: "Vous avez été enregistré avec succès" });
@@ -115,7 +206,12 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
             VALUES (${lastID}, ${tokenValue})
         `;
 
-        const url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
+        let url = `${config.server.external_address}/validate/${lastID}/${tokenValue}`;
+        if(req.body.returnUrl){
+            const urlObj = new URL(url);
+            urlObj.searchParams.append('returnUrl', req.body.returnUrl);
+            url = urlObj.toString();
+        }
         const subject = backendI18n.t('register_email_subject', { lng: language });
         const message = `
         <head>
@@ -145,16 +241,46 @@ export const register = async (req: RegisterRequest, res: Response): Promise<voi
       `;
 
         await sendEmail(email, subject, message);
+        
+        const duration = Date.now() - startTime;
+        logger.info('Registration successful - email sent', {
+            username: req.body.username,
+            userId: lastID,
+            email,
+            clientIP,
+            duration: `${duration}ms`,
+            preverified: false,
+            emailSent: true,
+            verificationTokenGenerated: true
+        });
+        
         res
             .status(201)
             .send({ preverified: false, message: "An Email sent to your account please verify" });
     } catch (error) {
-        console.log(error);
+        const duration = Date.now() - startTime;
+        logger.error('Registration error - internal server error', {
+            username: req.body?.username,
+            email: req.body?.email?.toLowerCase(),
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "Internal Server Error" });
     }
 };
 
 export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promise<void> => {
+    const startTime = Date.now();
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    logger.info('Email verification attempt', {
+        userId: req.body?.id,
+        clientIP,
+        timestamp: new Date().toISOString()
+    });
+
     try {
         const validate = (data: VerifyEmailBody) => {
             const schema = Joi.object({
@@ -166,6 +292,14 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
 
         const { error } = validate(req.body);
         if (error){
+            const duration = Date.now() - startTime;
+            logger.warn('Email verification failed - validation error', {
+                userId: req.body?.id,
+                clientIP,
+                duration: `${duration}ms`,
+                error: error.details[0].message,
+                reason: 'validation_error'
+            });
             res.status(400).send({ message: "error_invalid_token" });
             return;
         }
@@ -174,6 +308,13 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
             SELECT * FROM users WHERE id = ${req.body.id} LIMIT 1
         `;
         if (!users.length) {
+            const duration = Date.now() - startTime;
+            logger.warn('Email verification failed - user not found', {
+                userId: req.body.id,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'user_not_found'
+            });
             res.status(400).send({ message: "error_invalid_token" });
             return;
         }
@@ -185,6 +326,14 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
             LIMIT 1
         `;
         if (!tokens.length) {
+            const duration = Date.now() - startTime;
+            logger.warn('Email verification failed - invalid token', {
+                userId: user.id,
+                username: user.username,
+                clientIP,
+                duration: `${duration}ms`,
+                reason: 'invalid_token'
+            });
             res.status(400).send({ message: "error_invalid_token" });
             return;
         }
@@ -199,11 +348,31 @@ export const verifyEmail = async (req: VerifyEmailRequest, res: Response): Promi
         `;
 
         const token = getUserToken(user);
+        const duration = Date.now() - startTime;
+        
+        logger.info('Email verification successful', {
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            clientIP,
+            duration: `${duration}ms`,
+            userVerified: true,
+            tokenGenerated: true
+        });
+        
         res.status(200).send({ 
             token: token, 
             message: "success_email_verified" 
         });
     } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.error('Email verification error', {
+            userId: req.body?.id,
+            clientIP,
+            duration: `${duration}ms`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         res.status(500).send({ message: "server_error" });
     }    
 }
@@ -248,7 +417,7 @@ export const passwordLink = async (
                 res.status(400).send({ message: "Captcha token missing" });
                 return;
             }
-            const captchaOk = await verifyCaptcha(captchaToken, config.captcha.secretKey);
+            const captchaOk = await verifyAltcha(captchaToken);
             if (!captchaOk) {
                 res.status(400).send({ message: "Captcha verification failed" });
                 return;

@@ -1,4 +1,5 @@
 import { jwtDecode } from "jwt-decode"
+import { consoleLog } from "./logging";
 
 export async function refreshToken(): Promise<string|null> {
     const token = localStorage.getItem('authToken');
@@ -22,7 +23,7 @@ export async function refreshToken(): Promise<string|null> {
         if (response.ok) {
             const result = await response.json();
             localStorage.setItem('authToken', result.token); // Save the new token
-            //console.log('Token refreshed successfully');
+            consoleLog('verbose', 'Token refreshed successfully');
             return result.token;
         } else {
             console.error('Failed to refresh token:', response.status);

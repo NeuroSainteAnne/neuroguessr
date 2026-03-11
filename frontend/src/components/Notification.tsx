@@ -2,11 +2,18 @@ import './Notification.css';
 import { useApp } from '../context/AppContext';
 
 export function Notification() {
-  const { notificationMessage, notificationStatus } = useApp();
+  const { notifications } = useApp();
 
   return (
-    <>
-      {notificationMessage && <div id="notification" className={notificationStatus}>{notificationMessage}</div>}
-    </>
+    <div className="notification-container">
+      {notifications.map((notification, _index) => (
+        <div
+          key={notification.id}
+          className={`notification ${notification.isSuccess ? "success" : "error"} ${notification.removing ? "removing" : ""}`}
+        >
+          {notification.message}
+        </div>
+      ))}
+    </div>
   );
 }

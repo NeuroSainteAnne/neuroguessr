@@ -5,6 +5,7 @@ backend/database.db
 backend/config.json
 backend/*.crt
 backend/*.key
+backend/*.log
 
 frontend/config.json
 

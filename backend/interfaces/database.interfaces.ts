@@ -7,8 +7,16 @@ export interface User {
     password: string;
     created_at: string; // ISO date string
     verified: boolean;
+    admin: boolean;
     publish_to_leaderboard: boolean | null;
     language: string;
+    team_id: number | null;
+    clinical_trial_gender: "male" | "female" | "other" | null;
+    clinical_trial_age: number | null;
+    clinical_trial_country: string | null;
+    clinical_trial_occupation: string | null;
+    clinical_trial_consent: "data_usage" | "acknowledgement" | "none" | null;
+    clinical_trial_consent_date: string | null; // ISO date string
 }
 
 export interface Token {
@@ -24,8 +32,11 @@ export interface GameSession {
     token: string;
     mode: string;
     atlas: string;
+    blind_mode: boolean;
     created_at: number; // Unix ms timestamp
     current_score: number;
+    current_streak: number;
+    consecutive_errors: number;
 }
 
 export interface GameProgress {
@@ -47,6 +58,7 @@ export interface FinishedSession {
     mode: string;
     atlas: string;
     score: number;
+    blind_mode: boolean;
     attempts?: number;
     correct?: number;
     incorrect?: number;
@@ -60,6 +72,7 @@ export interface FinishedSession {
     multiplayer_games_won?: number;
     duration: number; // In milliseconds
     created_at: number; // Unix ms timestamp
+    classic_challenge_id?: number | null;
 }
 
 export interface FinishedSessionCamelCase {
@@ -68,6 +81,7 @@ export interface FinishedSessionCamelCase {
     mode: string;
     atlas: string;
     score: number;
+    blindMode: boolean;
     attempts?: number;
     correct?: number;
     incorrect?: number;
@@ -81,6 +95,7 @@ export interface FinishedSessionCamelCase {
     multiplayerGamesWon?: number;
     duration: number; // In milliseconds
     createdAt: number; // Unix ms timestamp
+    classicChallengeId?: number | null;
 }
 
 export interface MultiSession {
@@ -89,4 +104,30 @@ export interface MultiSession {
   session_token: string;
   creator_id: number | null;
   created_at: Date;
+  public?: boolean;
+  is_challenge?: boolean;
+  persistent_config?: string | null;
+  name?: string | null;
+  classic_challenge_id?: number | null;
+  is_classic_challenge?: boolean;
+  is_classic_challenge_original_entry?: boolean;
+  start_date?: string | null;
+  end_date?: string | null;
+  classic_challenge_referral?: number;
+}
+
+export interface AdvancedGameSettings {
+  id: number;
+  name: string;
+  user_id: number;
+  created_at: Date;
+  public: boolean;
+  settings: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string; // ISO date string
 }

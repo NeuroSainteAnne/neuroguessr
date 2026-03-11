@@ -54,6 +54,7 @@ export default {
   ],
   server: {
     port: 9876,
+    host: true,
     proxy: {
       '/api': {
         target: "http://localhost:3000",
@@ -65,6 +66,13 @@ export default {
         changeOrigin: true,
         secure: false,
         ws: true
+      },
+      '/socket.io': {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path  // Don't rewrite the path
       }
     },
     watch: {
@@ -74,7 +82,8 @@ export default {
     }
   },
   preview: {
-    port: 9876
+    port: 9876,
+    host: true,
   },
   build: {
     sourcemap: false

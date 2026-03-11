@@ -18,9 +18,7 @@ export function Help() {
     
     // Define page type variables based on URL pathname
     const isWelcome = parts[1] === 'welcome';
-    const isNeurotheka = parts[1] === 'neurotheka';
     const isSinglePlayerGame = parts[1] === 'singleplayer';
-    const isMultiplayerGame = parts[1] === 'multiplayer-game';
     
     // Extract game mode from URL when on a game page
     const gameMode = isSinglePlayerGame && parts.length > 2 ? parts[3] || 'practice' : '';
@@ -62,7 +60,7 @@ export function Help() {
     }, [showLegalOverlay])
     
     return(<>
-         {(isWelcome || isNeurotheka || isSinglePlayerGame) && <>
+         {(isWelcome || isSinglePlayerGame) && <>
             {showHelpOverlay && <div id="help-overlay" className="help-overlay">
                 <div className="help-content" ref={helpContentRef}>
                   <button id="close-help" className="close-button" onClick={() => setShowHelpOverlay(false)}>&times;</button>
@@ -78,21 +76,6 @@ export function Help() {
                         <p dangerouslySetInnerHTML={{ __html: t("help_modes_practice") }}></p>
                         <p dangerouslySetInnerHTML={{ __html: t("help_modes_streak") }}></p>
                         <p dangerouslySetInnerHTML={{ __html: t("help_modes_time_attack") }}></p>
-                    </section>
-                  </>}
-                  {isNeurotheka && <>
-                    <h2>{t("help_title")}</h2>
-                    <section>
-                        <h3>{t("neurotheka_principle_title")}</h3>
-                        <p>{t("neurotheka_principle_text")}</p>
-                    </section>
-                    <section>
-                        <h3>{t("neurotheka_navigation_title")}</h3>
-                        <p>{t("neurotheka_navigation_text")}</p>
-                    </section>
-                    <section>
-                        <h3>{t("viewer_controls_title")}</h3>
-                        <p>{t("viewer_controls_text")}</p>
                     </section>
                   </>}
                   {isSinglePlayerGame && <>

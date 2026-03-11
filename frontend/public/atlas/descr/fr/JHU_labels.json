@@ -1,54 +1,189 @@
 {
-	"R": [
-		0, 255, 255, 255, 255, 255, 191, 128, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-		64, 128, 191, 255, 255, 255, 255, 255, 255, 255, 255, 230, 170,
-		110, 50, 10, 10, 10, 10, 10, 10, 10, 10, 230, 170, 110, 50, 230,
-		170, 110, 50
-	],
-	"G": [
-		0, 0, 64, 128, 191, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-		191, 128, 64, 0, 0, 0, 0, 0, 0, 0, 0, 20, 80, 140, 200, 230, 170,
-		110, 50, 230, 170, 110, 50, 10, 10, 10, 10, 10, 10, 10, 10, 230,
-		170, 110, 50
-	],
-	"B": [
-		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 128, 191, 255, 255, 255, 255,
-		255, 255, 255, 255, 255, 191, 128, 64, 20, 80, 140, 200, 10, 10,
-		10, 10, 10, 10, 10, 10, 230, 170, 110, 50, 230, 170, 110, 50,
-		230, 170, 110, 50
-	],
-	"labels" : [
-    "Indéfini",
-    "Pédoncule cérébelleux moyen",
-    "Faisceau pontique croisé",
+  "R": [
+    0,
+    255,
+    255,
+    255,
+    255,
+    255,
+    191,
+    128,
+    64,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    64,
+    128,
+    191,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    230,
+    170,
+    110,
+    50,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    230,
+    170,
+    110,
+    50,
+    230,
+    170,
+    110,
+    50
+  ],
+  "G": [
+    0,
+    0,
+    64,
+    128,
+    191,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    191,
+    128,
+    64,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    20,
+    80,
+    140,
+    200,
+    230,
+    170,
+    110,
+    50,
+    230,
+    170,
+    110,
+    50,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    230,
+    170,
+    110,
+    50
+  ],
+  "B": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    64,
+    128,
+    191,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    191,
+    128,
+    64,
+    20,
+    80,
+    140,
+    200,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    10,
+    230,
+    170,
+    110,
+    50,
+    230,
+    170,
+    110,
+    50,
+    230,
+    170,
+    110,
+    50
+  ],
+  "labels": [
+    "Ind\u00e9fini",
+    "P\u00e9doncule c\u00e9r\u00e9belleux moyen",
+    "Faisceau pontique crois\u00e9",
     "Genou du corps calleux",
     "Corps du corps calleux",
-    "Splénium du corps calleux",
+    "Spl\u00e9nium du corps calleux",
     "Fornix (colonne et corps)",
     "Faisceau corticospinal gauche",
     "Faisceau corticospinal droit",
-    "Lemniscus médian gauche",
-    "Lemniscus médian droit",
-    "Pédoncule cérébelleux inférieur gauche",
-    "Pédoncule cérébelleux inférieur droit",
-    "Pédoncule cérébelleux supérieur gauche",
-    "Pédoncule cérébelleux supérieur droit",
-    "Pédoncule cérébral gauche",
-    "Pédoncule cérébral droit",
-    "Bras antérieur de la capsule interne gauche",
-    "Bras antérieur de la capsule interne droit",
-    "Bras postérieur de la capsule interne gauche",
-    "Bras postérieur de la capsule interne droit",
-    "Partie rétrolenticulaire de la capsule interne gauche",
-    "Partie rétrolenticulaire de la capsule interne droite",
-    "Corona radiata antérieure gauche",
-    "Corona radiata antérieure droite",
-    "Corona radiata supérieure gauche",
-    "Corona radiata supérieure droite",
-    "Corona radiata postérieure gauche",
-    "Corona radiata postérieure droite",
-    "Radiation thalamique postérieure gauche",
-    "Radiation thalamique postérieure droite",
+    "Lemniscus m\u00e9dian gauche",
+    "Lemniscus m\u00e9dian droit",
+    "P\u00e9doncule c\u00e9r\u00e9belleux inf\u00e9rieur gauche",
+    "P\u00e9doncule c\u00e9r\u00e9belleux inf\u00e9rieur droit",
+    "P\u00e9doncule c\u00e9r\u00e9belleux sup\u00e9rieur gauche",
+    "P\u00e9doncule c\u00e9r\u00e9belleux sup\u00e9rieur droit",
+    "P\u00e9doncule c\u00e9r\u00e9bral gauche",
+    "P\u00e9doncule c\u00e9r\u00e9bral droit",
+    "Bras ant\u00e9rieur de la capsule interne gauche",
+    "Bras ant\u00e9rieur de la capsule interne droit",
+    "Bras post\u00e9rieur de la capsule interne gauche",
+    "Bras post\u00e9rieur de la capsule interne droit",
+    "Partie r\u00e9trolenticulaire de la capsule interne gauche",
+    "Partie r\u00e9trolenticulaire de la capsule interne droite",
+    "Corona radiata ant\u00e9rieure gauche",
+    "Corona radiata ant\u00e9rieure droite",
+    "Corona radiata sup\u00e9rieure gauche",
+    "Corona radiata sup\u00e9rieure droite",
+    "Corona radiata post\u00e9rieure gauche",
+    "Corona radiata post\u00e9rieure droite",
+    "Radiation thalamique post\u00e9rieure gauche",
+    "Radiation thalamique post\u00e9rieure droite",
     "Stratum sagittal gauche",
     "Stratum sagittal droit",
     "Capsule externe gauche",
@@ -59,14 +194,358 @@
     "Cingulum (hippocampe) droit",
     "Fornix (crus)/Strie terminale gauche",
     "Fornix (crus)/Strie terminale droite",
-    "Faisceau longitudinal supérieur gauche",
-    "Faisceau longitudinal supérieur droit",
-    "Faisceau fronto-occipital supérieur gauche",
-    "Faisceau fronto-occipital supérieur droit",
-    "Faisceau unciné gauche",
-    "Faisceau unciné droit",
+    "Faisceau longitudinal sup\u00e9rieur gauche",
+    "Faisceau longitudinal sup\u00e9rieur droit",
+    "Faisceau fronto-occipital sup\u00e9rieur gauche",
+    "Faisceau fronto-occipital sup\u00e9rieur droit",
+    "Faisceau uncin\u00e9 gauche",
+    "Faisceau uncin\u00e9 droit",
     "Tapetum gauche",
     "Tapetum droit"
+  ],
+  "centers": [
+    [
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    [
+      [
+        -2,
+        -40,
+        -35
+      ]
+    ],
+    [
+      [
+        -2,
+        -29,
+        -31
+      ]
+    ],
+    [
+      [
+        -1,
+        26,
+        7
+      ]
+    ],
+    [
+      [
+        -2,
+        -5,
+        27
+      ]
+    ],
+    [
+      [
+        -2,
+        -42,
+        18
+      ]
+    ],
+    [
+      [
+        -2,
+        -6,
+        13
+      ]
+    ],
+    [
+      [
+        -8,
+        -25,
+        -33
+      ]
+    ],
+    [
+      [
+        5,
+        -25,
+        -33
+      ]
+    ],
+    [
+      [
+        -7,
+        -37,
+        -33
+      ]
+    ],
+    [
+      [
+        4,
+        -37,
+        -33
+      ]
+    ],
+    [
+      [
+        -10,
+        -44,
+        -37
+      ]
+    ],
+    [
+      [
+        7,
+        -44,
+        -37
+      ]
+    ],
+    [
+      [
+        -8,
+        -42,
+        -25
+      ]
+    ],
+    [
+      [
+        5,
+        -42,
+        -25
+      ]
+    ],
+    [
+      [
+        -14,
+        -18,
+        -12
+      ]
+    ],
+    [
+      [
+        11,
+        -18,
+        -12
+      ]
+    ],
+    [
+      [
+        -19,
+        8,
+        8
+      ]
+    ],
+    [
+      [
+        16,
+        7,
+        8
+      ]
+    ],
+    [
+      [
+        -21,
+        -13,
+        8
+      ]
+    ],
+    [
+      [
+        18,
+        -13,
+        8
+      ]
+    ],
+    [
+      [
+        -33,
+        -29,
+        6
+      ]
+    ],
+    [
+      [
+        29,
+        -29,
+        6
+      ]
+    ],
+    [
+      [
+        -23,
+        28,
+        10
+      ]
+    ],
+    [
+      [
+        20,
+        28,
+        10
+      ]
+    ],
+    [
+      [
+        -25,
+        -8,
+        30
+      ]
+    ],
+    [
+      [
+        22,
+        -8,
+        30
+      ]
+    ],
+    [
+      [
+        -26,
+        -38,
+        28
+      ]
+    ],
+    [
+      [
+        23,
+        -38,
+        28
+      ]
+    ],
+    [
+      [
+        -35,
+        -55,
+        7
+      ]
+    ],
+    [
+      [
+        32,
+        -55,
+        7
+      ]
+    ],
+    [
+      [
+        -41,
+        -32,
+        -9
+      ]
+    ],
+    [
+      [
+        38,
+        -31,
+        -9
+      ]
+    ],
+    [
+      [
+        -32,
+        0,
+        1
+      ]
+    ],
+    [
+      [
+        29,
+        0,
+        1
+      ]
+    ],
+    [
+      [
+        -9,
+        -11,
+        30
+      ]
+    ],
+    [
+      [
+        6,
+        -10,
+        30
+      ]
+    ],
+    [
+      [
+        -23,
+        -29,
+        -14
+      ]
+    ],
+    [
+      [
+        19,
+        -32,
+        -13
+      ]
+    ],
+    [
+      [
+        -30,
+        -24,
+        -6
+      ]
+    ],
+    [
+      [
+        27,
+        -24,
+        -6
+      ]
+    ],
+    [
+      [
+        -37,
+        -26,
+        26
+      ]
+    ],
+    [
+      [
+        34,
+        -26,
+        26
+      ]
+    ],
+    [
+      [
+        -22,
+        2,
+        21
+      ]
+    ],
+    [
+      [
+        19,
+        2,
+        21
+      ]
+    ],
+    [
+      [
+        -35,
+        1,
+        -16
+      ]
+    ],
+    [
+      [
+        32,
+        -1,
+        -16
+      ]
+    ],
+    [
+      [
+        -31,
+        -45,
+        14
+      ]
+    ],
+    [
+      [
+        26,
+        -47,
+        14
+      ]
+    ]
   ]
-	
 }

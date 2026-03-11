@@ -1,8 +1,21 @@
 {
     "register_email_subject": "Veuillez valider votre adresse e-mail",
     "register_email_greeting": "Bonjour",
-    "register_email_thanks": "Merci de vous être inscrit à Neuroguessr.",
-    "register_email_validate": "Cliquez sur <a style=\"color: #A2B9F0\" href=\"{{url}}\">ce lien</a> pour valider votre adresse e-mail",
+    "register_email_thanks": "Merci de vous être inscrit à NeuroGuessr.",
+    "register_email_validate": "Cliquez sur <a style=\"color: #A2B9F0\" href=\"{{url}}\">ce lien</a> pour valider votre adresse e-mail.<br/>Si le lien ne fonctionne pas, vous pouvez copier cette adresse afin d'y accéder: {{url}}",
     "reset_password_subject": "Réinitialisation de mot de passe",
-    "reset_password_link": "Cliquez sur <a style=\"color: #A2B9F0\" href=\"{{url}}\">ce lien</a> pour réinitialiser votre mot de passe"
+    "reset_password_link": "Cliquez sur <a style=\"color: #A2B9F0\" href=\"{{url}}\">ce lien</a> pour réinitialiser votre mot de passe.<br/>Si le lien ne fonctionne pas, vous pouvez copier cette adresse afin d'y accéder: {{url}}",
+    "email_subject": "Résultats du défi NeuroGuessr : {{challengeName}}",
+    "classic_challenge": "Défi Classique",
+    "email_challenge_results": "Résultats du défi",
+    "email_challenge_name": "Nom du défi",
+    "created_by": "Créé par",
+    "email_start_date": "Date de début",
+    "email_end_date": "Date de fin",
+    "email_your_participation": "Votre participation",
+    "email_your_score": "Votre score",
+    "email_your_ranking": "Votre classement",
+    "email_time_per_region": "Temps par région",
+    "email_completed_at": "Terminé le",
+    "email_footer": "Merci d'avoir participé à NeuroGuessr ! Continuez à apprendre la neuroanatomie."
 }

@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
-import { useCallback, useRef, useState } from 'react';
-import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import { useRef, useState } from 'react';
 import config from '../../../config.json';
 import { useApp } from '../../context/AppContext';
 import './LoginScreen.css';
 import { navigate } from 'vike/client/router'
+import Altcha from '../../components/Altcha';
+import { consoleLog } from '../../utils/logging';
 
 function LoginScreen() {
-    const { t, currentLanguage, updateToken } = useApp();
+    const { t, currentLanguage, updateToken, refreshNextChallenge } = useApp();
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const recoveryEmailInput = useRef<HTMLInputElement>(null);
@@ -16,15 +17,10 @@ function LoginScreen() {
     const [loginSuccessText, setLoginSuccessText] = useState<string>("");
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
     const [recoverySuccessText, setRecoverySuccessText] = useState<string>("");
-    const [showRecoveryButton, setShowRecoveryButton] = useState<boolean>(true);
     const [captchaLoad, setCaptchaLoad] = useState(false);
     const activateCaptcha = config.recaptcha.activate || false;
-    const captchaKey = config.recaptcha.siteKey || '';
     const [captchaToken, setCaptchaToken] = useState<string>("");
 
-    const onCaptchaVerify = useCallback((token: string) => {
-      setCaptchaToken(token);
-    }, []);
 
     useEffect(() => {
       setCaptchaLoad(true)
@@ -34,15 +30,19 @@ function LoginScreen() {
         event.preventDefault();
         const username = usernameInput.current?.value.trim();
         const password = passwordInput.current?.value.trim();
+        
+        consoleLog("verbose", `Login attempt for user: ${username}`);
 
         // Clear previous error messages
         setLoginErrorText('');
 
         if (!username || !password) {
+          consoleLog("verbose", "Login failed: empty username or password");
           setLoginErrorText(t('error_empty_fields'));
           return;
         }
 
+        consoleLog("verbose", "Sending login request to server");
         try {
           // Send login request to the server
           const response = await fetch('/api/login', {
@@ -54,56 +54,73 @@ function LoginScreen() {
           });
 
           const result = await response.json();
+          consoleLog("verbose", `Login response received: ${response.ok ? 'success' : 'failure'}`);
 
-          if (response.ok) {
-            // Handle successful login
+          if (response.ok) {            // Handle successful login
             setLoginErrorText('');
             setLoginSuccessText(t('login_success'));
             updateToken(result.token);
             const urlParams = new URLSearchParams(window.location.search);
             const redirectParam = urlParams.get('redirect');
+            const returnUrl = urlParams.get('returnURL');
+            refreshNextChallenge(result.token); // Refresh next challenge on login to update any authentication-dependent data
+            consoleLog("verbose", `Login successful, processing redirect: ${redirectParam || returnUrl || 'default'}`);
+            
             if (redirectParam) {
               window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
               if(redirectParam == "multiplayer-game"){
                 const askedSC = urlParams.get('redirect_asked_session_code') || "";
                 const askedST = urlParams.get('redirect_asked_session_token') || undefined;
+                consoleLog("verbose", `Redirecting to multiplayer game: ${askedSC}`);
                 navigate(`multiplayer-game/${askedSC}${askedST?"/"+askedST:""}`);
               } else if(redirectParam == "welcome"){
                 const askedSubpage = urlParams.get('redirect_subpage') || "";
+                consoleLog("verbose", `Redirecting to welcome subpage: ${askedSubpage}`);
                 navigate(`/welcome/${askedSubpage}`);
               } else {
+                consoleLog("verbose", `Redirecting to: ${redirectParam}`);
                 navigate(`/${redirectParam}`);
               }
+            } else if (returnUrl) {
+              window.history.replaceState({}, document.title, window.location.pathname); // Clean the URL
+              consoleLog("verbose", `Redirecting to return URL: ${returnUrl}`);
+              navigate(returnUrl);
             } else {
+              consoleLog("verbose", "No redirect specified, going to welcome page");
               navigate("/welcome");
             }
           } else {
             // Handle login failure
+            consoleLog("verbose", `Login failed: ${result.message || 'unknown error'}`);
             setLoginErrorText(result.message || t('login_failed'));
           }
         } catch (error) {
           // Handle network or server errors
           console.error('Error during login:', error);
+          consoleLog("verbose", `Login network error: ${error}`);
           setLoginErrorText(t('server_error'));
         }
     }
 
     const handleRecovery = async () => {
         const email = recoveryEmailInput.current?.value.trim();
-        const recoveryMessage = document.getElementById('recovery-message');
+        
+        consoleLog("verbose", `Password recovery attempt for email: ${email?.substring(0, 3)}***`);
 
         // Clear previous messages
         setRecoveryErrorText("");
 
         if (!email) {
+          consoleLog("verbose", "Password recovery failed: empty email");
           setRecoveryErrorText(t('error_empty_email'));
           return;
         } else if(activateCaptcha && !captchaToken){
+          consoleLog("verbose", "Password recovery failed: captcha not verified");
           setRecoveryErrorText(t('error_captcha'));
           return;
         } 
 
-        setShowRecoveryButton(false)
+        consoleLog("verbose", "Sending password recovery request");
         
         try {
           let formData: {
@@ -127,28 +144,51 @@ function LoginScreen() {
           });
 
           const result = await response.json();
+          consoleLog("verbose", `Password recovery response: ${response.ok ? 'success' : 'failure'}`);
 
           if (response.ok) {
             if(result.preverified){
+                consoleLog("verbose", `Pre-verified recovery, redirecting to: ${result.redirect_url}`);
                 navigate(result.redirect_url);
             } else {
+              consoleLog("verbose", "Recovery email sent successfully");
               setRecoverySuccessText(t('recovery_email_sent'));
               setTimeout(()=>{
                 setRecoveryModalDisplay(false)
               }, 1000)
             }
           } else {
+            consoleLog("verbose", `Password recovery failed: ${result.message}`);
             setRecoveryErrorText(result.message || t('recovery_failed'));
           }
         } catch (error) {
           console.error('Error during password recovery:', error);
+          consoleLog("verbose", `Password recovery network error: ${error}`);
           setRecoveryErrorText(t('server_error'));
         }
 
     }
 
-    const formContent = (
-        <>
+    const handleAltchaChange = (ev: Event | CustomEvent<any>) => {
+      const altchaEvent = ev as CustomEvent;
+      if (altchaEvent.detail) {
+        if(altchaEvent.detail.state && altchaEvent.detail.state === "verified"){
+          setCaptchaToken(altchaEvent.detail.payload);
+          setRecoveryErrorText("");
+        } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
+          // continue
+        } else {
+          console.warn("Altcha error:", altchaEvent.detail);
+          setRecoveryErrorText(t('error_captcha'));
+        }
+      } else {
+        console.warn("No Altcha");
+        setCaptchaToken("");
+        setRecoveryErrorText(t('error_captcha'));
+      }
+    }
+    
+    return <>
             <title>NeuroGuessr - Login</title>
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
@@ -193,7 +233,7 @@ function LoginScreen() {
                         {t("registration_link")}
                     </a></div>
                     <div>
-                      <a id="forgot_password_link" onClick={()=>{setShowRecoveryButton(true); setRecoveryModalDisplay(true)}}>
+                      <a id="forgot_password_link" onClick={()=>{setRecoveryModalDisplay(true)}}>
                         {t("forgot_password_link")}</a>
                     </div>
                 </div>
@@ -207,12 +247,21 @@ function LoginScreen() {
 
                         <input type="email" id="recovery-email" className="form-field" 
                             placeholder={t("enter_your_email")} required ref={recoveryEmailInput} />
-                        {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
-
-                        {showRecoveryButton && 
-                          <button id="send-recovery-email" className="form-button" 
-                            data-umami-event="send recovery email"
-                            onClick={()=>handleRecovery()}>{t("send_recovery_email")}</button>}
+                                          
+                        { recoverySuccessText == "" && activateCaptcha && captchaLoad && <div className="altcha-container">
+                            <Altcha onStateChange={handleAltchaChange}/>
+                          </div> }
+                        { recoverySuccessText == "" && (
+                          <button 
+                            id="send-recovery-email"
+                            data-umami-event="send recovery email" 
+                            onClick={()=>handleRecovery()}
+                            disabled={activateCaptcha && !captchaToken}
+                            className={activateCaptcha && !captchaToken ? "button-disabled form-button" : "form-button"}
+                          >
+                            {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("send_recovery_email")}
+                          </button>
+                        )}
 
                         {recoveryErrorText && <p id="recovery_error" className="recovery-message">{recoveryErrorText}</p>}
                         {recoverySuccessText && <p id="recovery_success" className="recovery-message">{recoverySuccessText}</p>}
@@ -220,17 +269,6 @@ function LoginScreen() {
                 </div>
             }
         </>
-    )
-    return (activateCaptcha && captchaLoad) ? (
-      <GoogleReCaptchaProvider
-        reCaptchaKey={captchaKey}
-        language={currentLanguage}
-      >
-        {formContent}
-      </GoogleReCaptchaProvider>
-    ) : (
-      formContent
-    );
 }
 
 export default LoginScreen

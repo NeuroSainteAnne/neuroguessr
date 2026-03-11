@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
-import type { AtlasRegion, DisplayOptions, CustomTokenPayload } from '../types';
+import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap, Challenge } from '../types/types';
 import i18nInstance from './i18n';
 import type { PageContext } from 'vike/types'
 import atlasFiles from '../utils/atlas_files';
 import { useTranslation } from 'react-i18next';
 import type { NVImage } from '@niivue/niivue';
+import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas } from '../utils/nifti_cache';
+import { consoleLog } from '../utils/logging';
 
 type NVImageConstructor = {
   new (): NVImage;
@@ -25,12 +27,12 @@ type AppContextType = {
   userUsername: string;
   userFirstName: string;
   userLastName: string;
+  userIsAdmin: boolean;
   userPublishToLeaderboard: boolean | null;
   
   // UI state
   currentLanguage: string;
-  notificationMessage: string | null;
-  notificationStatus: "error" | "success";
+  notifications: { id: string; message: string; isSuccess: boolean, removing: boolean }[];
   
   // Header state
   headerText: string;
@@ -49,13 +51,19 @@ type AppContextType = {
 
   // Atlas data
   atlasRegions: AtlasRegion[];
-  askedAtlas: string | null;
+  askedAtlas: {atlas: string, lut?: ColorMap, mapping? : Record<number,number>, inverseMapping? : Record<number,number>, blindMode?: boolean} | undefined;
   askedRegion: number | null;
+  
+  // Next Challenge data
+  nextChallenge: Challenge | null;
+  nextChallengeLoading: boolean;
+  nextChallengeError: string | null;
   
   // Niivue module
   nvimageModule: NVImageConstructor | null;
   preloadedBackgroundMNI: NVImage | null;
   preloadedAtlas: NVImage | null;
+  isMobileView: boolean;
   
   // Functions
   activateGuestMode: () => void;
@@ -63,7 +71,7 @@ type AppContextType = {
   updateToken: (token: string | null) => void;
   logout: () => void;
   handleChangeLanguage: (lang: string) => void;
-  showNotification: (message: string, isSuccess: boolean, i18params?: object) => void;
+  showNotification: (message: string, isSuccess: boolean, i18params?: object, duration?: number) => void;
   setHeaderText: (text: string) => void;
   setHeaderTextMode: (mode: string) => void;
   setHeaderScore: (score: string) => void;
@@ -71,11 +79,19 @@ type AppContextType = {
   setHeaderStreak: (streak: string) => void;
   setHeaderTime: (time: string) => void;
   setViewerOption: (options: DisplayOptions) => void;
-  setAskedAtlas: (atlas: string | null) => void;
+  setAskedAtlas: (atlas: {atlas: string, lut?: ColorMap, mapping? : Record<number,number>, inverseMapping? : Record<number,number>, blindMode?: boolean} | undefined) => void;
   setAskedRegion: (region: number | null) => void;
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
+  setIsMobileView: (isMobile: boolean) => void;
+  refreshNextChallenge: (token?: string | null) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
+  copyToClipboard: (text: string) => Promise<boolean>;
+  
+  // Cache management
+  getCacheStats: () => ReturnType<typeof getCacheStats>;
+  preloadAtlas: (atlasKey: string) => Promise<void>;
+  clearCache: () => void;
 };
 
 // Create the context
@@ -88,26 +104,31 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [preloadedBackgroundMNI, setPreloadedBackgroundMNI] = useState<NVImage|null>(null);
   const [preloadedAtlas, setPreloadedAtlas] = useState<NVImage|null>(null);
   
+  let initToken : string | any = null;
+  if(typeof localStorage !== 'undefined'){
+      initToken = localStorage?.getItem('authToken');
+  }
+  if(initToken && !isTokenValid(initToken)) {
+    initToken = null;
+  }
+  const initPayload = initToken ? jwtDecode<CustomTokenPayload>(initToken) : null;
+
   // Authentication state
-  const isClientSide = typeof document !== 'undefined';
   const [isGuest, setIsGuest] = useState<boolean>(
     typeof localStorage !== 'undefined' && 
     localStorage && 
     localStorage.getItem('guestMode') === "true" || false
   );
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [authToken, setAuthToken] = useState<string>(
-    typeof localStorage !== 'undefined' ? localStorage?.getItem('authToken') || "" : ""
-  );
-  const [userUsername, setUserUsername] = useState<string>("");
-  const [userFirstName, setUserFirstName] = useState<string>("");
-  const [userLastName, setUserLastName] = useState<string>("");
-  const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean | null>(null);
-  
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(initToken ? true : false);
+  const [authToken, setAuthToken] = useState<string>(initToken || "");
+  const [userUsername, setUserUsername] = useState<string>(initPayload?.username || "");
+  const [userFirstName, setUserFirstName] = useState<string>(initPayload?.firstname || "");
+  const [userLastName, setUserLastName] = useState<string>(initPayload?.lastname || "");
+  const [userIsAdmin, setUserIsAdmin] = useState<boolean>(initPayload?.admin || false);
+  const [userPublishToLeaderboard, setUserPublishToLeaderboard] = useState<boolean | null>(initPayload?.publishToLeaderboard || null);
+
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
-  const [notificationStatus, setNotificationStatus] = useState<"error" | "success">("success");
   
   // Header state
   const [headerText, setHeaderText] = useState<string>("");
@@ -127,8 +148,17 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Atlas data
   const [atlasRegions, setAtlasRegions] = useState<AtlasRegion[]>([]);
-  const [askedAtlas, setAskedAtlas] = useState<string | null>(null);
+  const [askedAtlas, setAskedAtlas] = useState<{atlas: string, lut?: ColorMap, mapping?: Record<number,number>, inverseMapping?: Record<number,number>, blindMode?:boolean}|undefined>(undefined);
   const [askedRegion, setAskedRegion] = useState<number | null>(null);
+
+  // Next Challenge data
+  const [nextChallenge, setNextChallenge] = useState<Challenge | null>(null);
+  const [nextChallengeLoading, setNextChallengeLoading] = useState<boolean>(true);
+  const [nextChallengeError, setNextChallengeError] = useState<string | null>(null);
+  const [lastChallengeFetch, setLastChallengeFetch] = useState<number>(0);
+
+  // Mobile view state
+  const [isMobileView, setIsMobileView] = useState<boolean>(false);
   
   // Load Niivue module
   useEffect(() => {
@@ -136,6 +166,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     import('@niivue/niivue').then((mod) => {
       if (isMounted) {
         setnvimageModule(() => mod.NVImage);
+        // Initialize the cache with the NVImage module
+        niftiCache.initialize(mod.NVImage);
       }
     });
     return () => { isMounted = false; };
@@ -155,8 +187,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   useEffect(() => {
     if (nvimageModule) {
       const niiFile = "/atlas/mni152_downsampled.nii.gz";
-      nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
+      loadNIfTIFromCache(niiFile).then((nvImage) => {
         setPreloadedBackgroundMNI(nvImage);
+        consoleLog('normal', `🧠 MNI background loaded from cache`);
       }).catch((error: any) => {
         console.error("Error loading NIfTI file:", error);
         showNotification('error_loading_atlas', false, { atlas: 'MNI152' });
@@ -168,14 +201,15 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // Load requested atlas when it changes
   useEffect(() => {
     if (askedAtlas && nvimageModule) {
-      const atlas = atlasFiles[askedAtlas];
-      if (atlas) {
+      const atlas = atlasFiles[askedAtlas.atlas];
+      if (atlas) {        
         const niiFile = "/atlas/nii/" + atlas.nii;
-        nvimageModule.loadFromUrl({url: niiFile}).then((nvImage) => {
+        loadNIfTIFromCache(niiFile).then((nvImage) => {
           setPreloadedAtlas(nvImage);
+          consoleLog('normal', `🗺️ Atlas ${askedAtlas.atlas} loaded from cache`);
         }).catch((error: any) => {
           console.error("Error loading NIfTI file:", error);
-          showNotification('error_loading_atlas', false, { atlas: askedAtlas });
+          showNotification('error_loading_atlas', false, { atlas: askedAtlas.atlas });
           setPreloadedAtlas(null);
         });
       }
@@ -187,7 +221,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     loadAtlasLabels()
   }, [currentLanguage])
 
-    // Load labels for all atlases
+  // Load labels for all atlases
   async function loadAtlasLabels() {
     const loadingAtlasRegions : AtlasRegion[] = [];
     for (const [atlas, { json, name }] of Object.entries(atlasFiles)) {
@@ -205,13 +239,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
                 atlasName: name
                 }));
             loadingAtlasRegions.push(...regions);
-            //console.log(`Loaded ${regions.length} regions for ${atlas} (${name})`);
+            consoleLog('verbose', `Loaded ${regions.length} regions for ${atlas} (${name})`);
         } catch (error) {
             console.error(`Failed to load labels for ${atlas}:`, error);
             showNotification('error_loading_atlas', false, { atlas: name });
         }
     }
-    //console.log('Total regions loaded:', atlasRegions.length);
+    consoleLog('verbose', 'Total regions loaded:', atlasRegions.length);
     if (loadingAtlasRegions.length === 0) {
         showNotification('no_regions_loaded', false);
         setAtlasRegions([])
@@ -221,10 +255,30 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   }
   
   // Notification system
-  const showNotification = (message: string, isSuccess: boolean, i18params = {}) => {
-    setNotificationStatus(isSuccess ? 'success' : 'error');
-    setNotificationMessage(t(message, i18params));
-    setTimeout(() => { setNotificationMessage(null) }, 3000);
+  const [notifications, setNotifications] = useState<
+    { id: string; message: string; isSuccess: boolean, removing: boolean }[]
+  >([]);
+  const showNotification = (message: string, isSuccess: boolean, i18params = {}, duration=3000) => {
+    const id = Date.now() + "-" + Math.floor(Math.random() * 10000); // Unique ID for each notification
+    const newNotification = {
+      id,
+      message: t(message, i18params),
+      isSuccess,
+      removing: false, 
+    };
+    // Add the new notification to the queue
+    setNotifications((prev) => [...prev, newNotification]);
+    // Automatically remove the notification after 3 seconds
+    setTimeout(() => {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === id ? { ...notification, removing: true } : notification
+        )
+      );
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((notification) => notification.id !== id));
+      }, 500);
+    }, duration);
   };
 
   // Overlay system
@@ -233,10 +287,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Language handler
   const handleChangeLanguage = async (lang: string) => {
+    consoleLog("verbose", `Changing language from ${currentLanguage} to ${lang}`);
     setCurrentLanguage(lang);
     i18n.changeLanguage(lang);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('language', lang);
     if(isLoggedIn && authToken) {
+        consoleLog("verbose", `Syncing language preference ${lang} to server for logged-in user`);
         try {
             // Send the data to the server
             const response = await fetch('/api/config-user', {
@@ -248,23 +304,44 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
                 body: JSON.stringify({"language": lang}),
             });
             await response.json();
+            consoleLog("verbose", `Language preference ${lang} synced to server successfully`);
         } catch (error) {
             // Handle network or other errors
             console.error('Error updating language config:', error);
+            consoleLog("verbose", `Failed to sync language preference to server: ${error}`);
         }
     }
   };
   
   // Authentication handlers
   const updateToken = (token: string | null) => {
+    consoleLog("verbose", `Updating authentication token: ${token ? 'token provided' : 'token cleared'}`);
     if (token) {
+      try {
+        // Decode token to get expiration info - use generic payload type for exp
+        const payload = jwtDecode<CustomTokenPayload & { exp?: number }>(token);
+        if (payload.exp) {
+          const expirationDate = new Date(payload.exp * 1000); // Convert from seconds to milliseconds
+          const timeUntilExpiry = expirationDate.getTime() - Date.now();
+          const minutesUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60));
+          
+          consoleLog("verbose", `Token expires at: ${expirationDate.toISOString()} (in ${minutesUntilExpiry} minutes)`);
+        } else {
+          consoleLog("verbose", "Token has no expiration date");
+        }
+      } catch (error) {
+        consoleLog("verbose", "Could not decode token for expiration info");
+      }
+      
       if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('authToken', token);
       setAuthToken(token);
       setIsLoggedIn(true);
+      consoleLog("verbose", "User logged in successfully, token stored");
     } else {
       if(typeof window !== 'undefined' && window.localStorage) localStorage.removeItem('authToken');
       setAuthToken("");
       setIsLoggedIn(false);
+      consoleLog("verbose", "User logged out, token removed");
     }
   };
   
@@ -272,17 +349,77 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if(typeof window !== 'undefined' && window.localStorage) localStorage.removeItem('authToken');
     setAuthToken("");
     setIsLoggedIn(false);
+    refreshNextChallenge(null);
   };
   
   const activateGuestMode = () => {
     setIsGuest(true);
     if(typeof window !== 'undefined' && window.localStorage) localStorage.setItem('guestMode', 'true');
   };
-  
-  // Application features
-  const launchNeurotheka = async (region: Partial<AtlasRegion>) => {
-    updateToken(await refreshToken());
-    if (region.atlas) setAskedAtlas(region.atlas);
+
+  // Next Challenge functions
+  const fetchNextChallenge = async (token?: string | null) => {
+    // Avoid fetching too frequently (cache for 30 seconds)
+    const now = Date.now();
+    if (now - lastChallengeFetch < 30000 && nextChallenge) {
+      return;
+    }
+
+    try {
+      setNextChallengeLoading(true);
+      // Fetch both next realtime and next classic challenge
+      consoleLog("verbose", "Fetching next challenges from server...", {tokenProvided: !!token});
+      const [rtResponse, ccResponse] = await Promise.all([
+        fetch('/api/multi/next-realtime-challenge'),
+        fetch('/api/multi/next-classic-challenge', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token || (token !== null && isLoggedIn && authToken) ? { 'Authorization': `Bearer ${token || authToken}` } : {})
+          }
+        })
+      ]);
+
+      let rtChallenge = null;
+      let ccChallenge = null;
+
+      if (rtResponse.ok) {
+        const rtData = await rtResponse.json();
+        rtChallenge = rtData.challenge ? {type:"realtime", ...rtData.challenge} : null;
+      }
+
+      if (ccResponse.ok) {
+        const ccData = await ccResponse.json();
+        ccChallenge = ccData.challenge ? {type:"classic", ...ccData.challenge} : null;
+      }
+
+      // Decide which challenge is earlier
+      let chosenChallenge = null;
+      if (rtChallenge && ccChallenge) {
+        // Compare startTime (realtime) and startDate (classic)
+        const rtTime = new Date(rtChallenge.startTime).getTime();
+        const ccTime = new Date(ccChallenge.startDate).getTime();
+        chosenChallenge = rtTime <= ccTime ? rtChallenge : ccChallenge;
+      } else if (rtChallenge) {
+        chosenChallenge = rtChallenge;
+      } else if (ccChallenge) {
+        chosenChallenge = ccChallenge;
+      }
+      setNextChallenge(chosenChallenge);
+      setNextChallengeError(null);
+      setLastChallengeFetch(now);
+    } catch (err) {
+      console.error('Error fetching next challenge:', err);
+      setNextChallengeError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setNextChallengeLoading(false);
+    }
+  };
+
+  const refreshNextChallenge = (token?: string | null) => {
+    setLastChallengeFetch(0); // Reset cache
+    setNextChallenge(null); // Clear existing challenge to force refresh
+    fetchNextChallenge(token);
   };
    
   // Viewer option handler
@@ -295,33 +432,137 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     if (authToken && isTokenValid(authToken)) {
       setIsGuest(false);
       setIsLoggedIn(true);
+      refreshToken().then((newToken) => {
+          consoleLog("verbose", "Token refreshed successfully");
+          updateToken(newToken);
+      });       
     }
   }, []);
+
+  // Fetch next challenge on mount and periodically
+  useEffect(() => {
+    fetchNextChallenge();
+    
+    // Refresh every minute to update countdown
+    const interval = setInterval(fetchNextChallenge, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Automatic token refresh for logged-in users
+  useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | null = null;
+
+    if (isLoggedIn && authToken) {
+      // Log current token expiration when starting refresh interval
+      try {
+        const payload = jwtDecode<CustomTokenPayload & { exp?: number }>(authToken);
+        if (payload.exp) {
+          const expirationDate = new Date(payload.exp * 1000);
+          const timeUntilExpiry = expirationDate.getTime() - Date.now();
+          const minutesUntilExpiry = Math.floor(timeUntilExpiry / (1000 * 60));
+          consoleLog("verbose", `Starting automatic token refresh - current token expires at: ${expirationDate.toISOString()} (in ${minutesUntilExpiry} minutes)`);
+        }
+      } catch (error) {
+        consoleLog("verbose", "Starting automatic token refresh - could not decode current token expiration");
+      }
+      
+      refreshInterval = setInterval(async () => {
+        try {
+          consoleLog("verbose", "Attempting automatic token refresh");
+          const newToken = await refreshToken();
+          
+          if (newToken) {
+            consoleLog("verbose", "Token refreshed successfully");
+            updateToken(newToken);
+          } else {
+            consoleLog("verbose", "Token refresh failed - logging out user");
+            logout();
+            showNotification('session_expired', false);
+          }
+        } catch (error) {
+          console.error('Token refresh error:', error);
+          consoleLog("verbose", `Token refresh error: ${error}`);
+          logout();
+          showNotification('session_expired', false);
+        }
+      }, 5*60000); // Refresh 5 minute (5*60,000 ms)
+    }
+
+    // Cleanup function
+    return () => {
+      if (refreshInterval) {
+        consoleLog("verbose", "Stopping automatic token refresh");
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [isLoggedIn, authToken]);
   
   // Effect to update user info when logged in
   useEffect(() => {
     if (isLoggedIn && authToken) {
       setIsGuest(false);
       if(localStorage !== undefined) localStorage.setItem('guestMode', 'false');
+      consoleLog("verbose", "Processing user authentication token for user info extraction");
 
       
       try {
         const payload = jwtDecode<CustomTokenPayload>(authToken);
+        consoleLog("verbose", `Decoded JWT payload for user: ${payload.username}, id: ${payload.id}`);
         setUserUsername(payload.username ? payload.username.normalize('NFC') : t('default_user'));
         setUserFirstName(payload.firstname ? payload.firstname.normalize('NFC') : t('default_user'));
         setUserLastName(payload.lastname || "");
+        setUserIsAdmin(payload.admin || false);
         setUserPublishToLeaderboard(
           payload.publishToLeaderboard === undefined ? null : payload.publishToLeaderboard
         );
         if (typeof window !== 'undefined' && (window as any).umami && payload.id) {
+          consoleLog("verbose", `Identifying user ${payload.id} to analytics`);
           (window as any).umami.identify(payload.id, {username: payload.username || ""})
         }
+        consoleLog("verbose", `User info loaded: ${payload.username}, leaderboard: ${payload.publishToLeaderboard}`);
       } catch (error) {
         console.error("Error decoding token:", error);
+        consoleLog("verbose", `Token decode failed, logging out user: ${error}`);
         logout();
       }
     }
   }, [isLoggedIn, authToken, t]);
+
+  const copyToClipboard = async (text: string) : Promise<boolean> => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      // Modern approach (Chrome, Edge, etc.)
+      return navigator.clipboard.writeText(text)
+        .then(() => true)
+        .catch(() => {
+          // Fall back to execCommand if Clipboard API fails
+          return fallbackCopyToClipboard(text);
+        });
+    } else {
+      // Fallback for Firefox and older browsers
+      return fallbackCopyToClipboard(text);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text: string): boolean => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      // Make the textarea out of viewport
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-999999px';
+      textarea.style.top = '-999999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return success;
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      return false;
+    }
+  };
   
   return (
     <AppContext.Provider value={{
@@ -335,12 +576,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       userUsername,
       userFirstName,
       userLastName,
+      userIsAdmin,
       userPublishToLeaderboard,
       
       // UI state
       currentLanguage,
-      notificationMessage,
-      notificationStatus,
+      notifications,
       
       // Header state
       headerText,
@@ -358,10 +599,16 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       askedAtlas,
       askedRegion,
       
+      // Next Challenge data
+      nextChallenge,
+      nextChallengeLoading,
+      nextChallengeError,
+      
       // Niivue module
       nvimageModule,
       preloadedBackgroundMNI,
       preloadedAtlas,
+      isMobileView,
 
       // Overlay state
       showHelpOverlay,
@@ -385,9 +632,17 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setAskedRegion,
       setShowHelpOverlay,
       setShowLegalOverlay,
+      setIsMobileView,
+      refreshNextChallenge,
+      copyToClipboard,
 
       // language functions
-      t
+      t,
+      
+      // Cache management functions
+      getCacheStats,
+      preloadAtlas,
+      clearCache: niftiCache.clearCache
     }}>
       {children}
     </AppContext.Provider>

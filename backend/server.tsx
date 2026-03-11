@@ -4,27 +4,58 @@ import express from "express";
 import path from "path";
 import fs from "fs"
 import https from 'https';
+import http from 'http';
 import { __dirname, htmlRoot, reactRoot } from "./modules/utils.ts";
 import { sql, database_init, cleanExpiredTokens, cleanOldGameSessions } from "./modules/database_init.ts";
-import { login, refreshToken, authenticateToken, getUserInfo } from "./modules/login.ts";
+import { login, refreshToken, authenticateToken, getUserInfo, optionalAuthenticateToken } from "./modules/login.ts";
 import { register, verifyEmail, passwordLink, resetPassword, validateResetToken } from "./modules/registration.ts";
 import { configUser } from "./modules/config_user.ts";
-import { getNextRegion, manualClotureGameSession, startGameSession, validateRegion } from "./modules/game.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
-import type { ClotureGameSessionRequest, GetNextRegionRequest, GetStatsRequest, LaunchMultiGameRequest, MultiValidateGuessRequest, StartGameSessionRequest, UpdateMultiGameRequest } from "./interfaces/requests.interfaces.ts";
+import type {  GetStatsRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
 import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, createSSEClient, launchGame, updateParameters, validateGuess } from "./modules/multi.ts";
-import { createProxyMiddleware } from "http-proxy-middleware";
-import { renderPage } from 'vike/server';
+import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate, replayMultiSession } from "./modules/multi.ts";
+import { checkIfClassicChallenge } from "modules/multi_classic_challenge.ts";
+import { getClassicChallengeResults } from "modules/multi_classic_challenge.ts";
+import { classicChallengeEmailOptIn } from "modules/multi_classic_challenge.ts";
+import { getPastClassicChallenges } from "modules/multi_classic_challenge.ts";
+import { initSocketHandlers } from "modules/socket.ts";
+import { restorePersistentRealTimeChallengeSessions } from "modules/multi_challenge.ts";
+import { getNextRealtimeChallenge, getAllRealtimeChallenges, deleteRealtimeChallenge } from "modules/multi_challenge.ts";
+import { getActiveClassicChallenges, getClassicChallenge, canJoinClassicChallenge, checkClassicChallengeCompletion } from "modules/multi_classic_challenge.ts";
+import { deleteClassicChallenge } from "modules/multi_classic_challenge.ts";
+import { getNextClassicChallenge } from "modules/multi_classic_challenge.ts";
+import { getPublicLobbies } from "modules/multi_public.ts";
 import { transformResponseToCamelCase } from './middlewares/case-transformer.ts';
+import { generateChallenge } from 'modules/altcha.ts';
+import { 
+    getAllTeams, 
+    getTeamById, 
+    getTeamMembers, 
+    createTeam, 
+    updateTeam, 
+    deleteTeam,
+    assignUserToTeam,
+    unassignUserFromTeam,
+    getAllUsers,
+    requireAdmin
+} from 'modules/teams.ts';
+import rateLimit from 'express-rate-limit';
+import { logger } from './modules/logging.ts';
 
 const config: Config = configJson;
 
 const app = express();
 const PORT = config.server.port;
+
+logger.info('Starting NeuroGuessr server', {
+  port: PORT,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  configLoaded: !!config,
+  timestamp: new Date().toISOString()
+});
 
 await database_init()
 
@@ -32,16 +63,25 @@ app.use(express.json());
 app.use(transformResponseToCamelCase);
 
 if(config.server.globalAuthentication.enabled){
+    logger.info('Global authentication enabled');
     app.use(globalAuthentication);
 }
 
 // login.ts
-app.post('/api/login', login);
+const authLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 failed requests per windowMs
+  message: 'Too many failed authentication attempts',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed requests
+});
+app.post('/api/login', authLimiter, login);
 app.post('/api/refresh-token', refreshToken);
 app.get('/api/user-info', authenticateToken, getUserInfo);
 
 // register.ts
-app.post('/api/register', register);
+app.post('/api/register', authLimiter, register);
 app.post("/api/password-recovery", passwordLink)
 app.post("/api/validate-reset-token", validateResetToken)
 app.post("/api/reset-password", resetPassword)
@@ -58,32 +98,87 @@ app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
 
-// game.ts
-app.post('/api/start-game-session', authenticateToken, 
-    (req, res) => startGameSession(req as StartGameSessionRequest, res));
-app.post('/api/get-next-region', authenticateToken, 
-    (req, res) => getNextRegion(req as GetNextRegionRequest, res));
-app.post('/api/validate-region', authenticateToken, validateRegion);
-app.post('/api/cloture-game-session', authenticateToken,
-    (req, res) => manualClotureGameSession(req as ClotureGameSessionRequest, res))
-
 // multi.ts
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
-app.get('/sse/:sessionCode/:userName', createSSEClient)
-app.post('/api/multi/launch-game', authenticateToken, 
-    (req, res) => launchGame(req as LaunchMultiGameRequest, res))
-app.post('/api/multi/update-parameters', authenticateToken, 
-    (req, res) => updateParameters(req as UpdateMultiGameRequest, res))
-app.post('/api/multi/validate-guess', 
-    (req, res) => validateGuess(req as MultiValidateGuessRequest, res))
+app.post('/api/multi/destroy-session', authenticateToken, destroyMultiplayerSession)
+app.get('/api/multi/public-lobbies', getPublicLobbies)
+app.get('/api/multi/check-classic/:sessionCode', (req, res, next) => {
+    Promise.resolve(checkIfClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/challenge-results/:challengeId/full', optionalAuthenticateToken, (req, res, next) => {
+    req.params.fullResults = 'true';
+    Promise.resolve(getClassicChallengeResults(req, res)).catch(next);
+})
+app.get('/api/multi/challenge-results/:challengeId', (req, res, next) => {
+    Promise.resolve(getClassicChallengeResults(req, res)).catch(next);
+})
+app.post('/api/multi/challenge-email-optin/:challengeId', authenticateToken, (req, res, next) => {
+    Promise.resolve(classicChallengeEmailOptIn(req, res)).catch(next);
+})
+app.get('/api/multi/next-realtime-challenge', (req, res, next) => {
+    Promise.resolve(getNextRealtimeChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/next-classic-challenge', (req, res, next) => {
+    Promise.resolve(getNextClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/realtime-challenges', (req, res, next) => {
+    Promise.resolve(getAllRealtimeChallenges(req, res)).catch(next);
+})
+app.delete('/api/realtime-challenges/:sessionCode', authenticateToken, deleteRealtimeChallenge)
+app.get('/api/classic-challenges', getActiveClassicChallenges);
+app.get('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
+    Promise.resolve(getClassicChallenge(req, res)).catch(next);
+})
+app.post('/api/multi/can-join-classic-challenge', authenticateToken, (req, res, next) => {
+    Promise.resolve(canJoinClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/classic-challenges/:challengeId/completion', authenticateToken, (req, res, next) => {
+    Promise.resolve(checkClassicChallengeCompletion(req, res)).catch(next);
+})
+app.get('/api/past-challenges', authenticateToken, (req, res, next) => {
+    Promise.resolve(getPastClassicChallenges(req, res)).catch(next);
+})
+app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res, next) => {
+    Promise.resolve(deleteClassicChallenge(req, res)).catch(next);
+})
+app.get('/api/multi/replay-challenge/:challengeId', authenticateToken, (req, res, next) => {
+    Promise.resolve(replayMultiSession(req, res)).catch(next);
+})
+
+// advanced_game.ts
+app.post('/api/advanced-game/save', authenticateToken, saveAdvancedSettings);
+app.post('/api/advanced-game/settings-by-id', authenticateToken, getAdvancedSettingsById);
+app.post('/api/advanced-game/settings-list', authenticateToken, getAdvancedSettingsList);
+app.post('/api/advanced-game/update', authenticateToken, updateAdvancedSettings);
+app.post('/api/advanced-game/delete', authenticateToken, deleteAdvancedSettings);
+app.get('/api/advanced-game/check-name', authenticateToken, checkAdvancedSettingsName);
+app.get('/api/advanced-game/getstartdate/:sessionCode', (req, res, next) => {
+    Promise.resolve(getMultiplayerSessionStartDate(req, res)).catch(next);
+})
 
 app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
-    console.log(path.join(reactRoot, "assets", "favicon"))
     res.sendFile("favicon.ico", { root: path.join(reactRoot, "client", "favicon") });
 });
 
+// altcha.ts
+app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
+
+// teams.ts - Admin only routes
+app.get('/api/teams', authenticateToken, requireAdmin, getAllTeams);
+app.get('/api/teams/:id', authenticateToken, requireAdmin, getTeamById);
+app.get('/api/teams/:id/members', authenticateToken, requireAdmin, getTeamMembers);
+app.post('/api/teams', authenticateToken, requireAdmin, createTeam);
+app.put('/api/teams/:id', authenticateToken, requireAdmin, updateTeam);
+app.delete('/api/teams/:id', authenticateToken, requireAdmin, deleteTeam);
+app.put('/api/teams/:teamId/assign/:userId', authenticateToken, requireAdmin, assignUserToTeam);
+app.delete('/api/teams/:teamId/unassign/:userId', authenticateToken, requireAdmin, unassignUserFromTeam);
+app.get('/api/admin/users', authenticateToken, requireAdmin, getAllUsers);
+
+
 import i18next from 'i18next';
 import FsBackend from 'i18next-fs-backend'
+import { initSocketIO } from 'modules/socket.io.ts';
+import { checkAdvancedSettingsName, deleteAdvancedSettings, getAdvancedSettingsById, getAdvancedSettingsList, saveAdvancedSettings, updateAdvancedSettings } from 'modules/advanced_game.ts';
 
 if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg"){
     app.use('/assets', express.static(path.join(reactRoot, 'client', 'assets')));
@@ -120,7 +215,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
             const preferredLang = acceptLanguage.includes('fr') ? 'fr' : 'en';
             i18next.changeLanguage(preferredLang)
 
-            console.log("Rendering page for URL:", req.originalUrl);
+            logger.info("Rendering page for URL:", req.originalUrl);
 
             const pageContextInit = {
                 urlOriginal: req.originalUrl,
@@ -137,7 +232,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 }
                 
                 const { body, statusCode, headers } = httpResponse;
-                //console.log(body)
+
                 // Add i18n configuration script to the HTML
                 const htmlWithI18n = body.replace(
                     '</head>',
@@ -156,7 +251,7 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 
                 res.status(statusCode).send(htmlWithI18n);
             } catch (error) {
-                console.error("Error rendering page:", error);
+                logger.error("Error rendering page:", error);
                 res.status(500).send('Internal Server Error');
             }
         })
@@ -176,25 +271,21 @@ if(config.server.renderingMode == "ssr" || config.server.renderingMode == "ssg")
                 // For parameterized routes, we need to check the base route first
                 // Extract the first segment of the path
                 const segments = url.split('/').filter(Boolean);
-                const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/harvard-oxford/navigation"
+                const baseRoute = segments[0]; // e.g., "singleplayer" from "/singleplayer/navigation/harvard-oxford"
                 
                 // Define a list of routes that should load their index.html
-                const clientRoutedPaths = ['singleplayer', 'neurotheka', 'multiplayer', 'validate', 'resetpwd'];
+                const clientRoutedPaths = ['singleplayer', 'multiplayer', 'validate', 'resetpwd'];
                 if (clientRoutedPaths.includes(baseRoute)) {
                     // This is a client-routed path, serve the base route's index.html
                     fsPath = path.join(reactRoot, 'client', baseRoute, 'index.html');
-                    console.log(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
+                    logger.info(`Identified as client-routed path: ${baseRoute}, serving:`, fsPath);
                     if (segments.length > 1) {
                         const baseRoute = segments[0];
-                        if (baseRoute === 'neurotheka') {
+                        if (baseRoute === 'singleplayer') {
                             routeParams = {
-                                atlas: segments[1] || "",
-                                region: segments[2] || ""
-                            };
-                        } else if (baseRoute === 'singleplayer') {
-                            routeParams = {
-                                atlas: segments[1] || "",
-                                mode: segments[2] || ""
+                                mode: segments[1] || "",
+                                atlas: segments[2] || "",
+                                region: segments[3] || ""
                             };
                         } else if (baseRoute === 'multiplayer') {
                             routeParams = {
@@ -278,6 +369,8 @@ setInterval(() => {
     cleanOldGameSessions();
 }, 10*60*1000); // each 10 minute
 
+let server;
+
 if(config.server.mode == "https"){
     var key = fs.readFileSync(path.join(__dirname, config.server.serverKey));
     var cert = fs.readFileSync(path.join(__dirname, config.server.serverCert));
@@ -286,15 +379,23 @@ if(config.server.mode == "https"){
       cert: cert
     };
     
-    var server = https.createServer(httpOptions, app);
+    server = https.createServer(httpOptions, app);
     server.listen(PORT, () => {
-        console.log(`Server is running on https://localhost:${PORT}`);
+        logger.info(`Server is running on https://localhost:${PORT}`);
     });
 } else {
-    app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`);
+    server = http.createServer(app);
+    server.listen(PORT, () => {
+        logger.info(`Server is running on http://localhost:${PORT}`);
     });
 }
+
+// Initialize Socket.io
+initSocketIO(server);
+initSocketHandlers()
+
+// Restore persistent challenge sessions on server startup
+restorePersistentRealTimeChallengeSessions();
 
 process.on('SIGINT', async () => {
   await sql.end();

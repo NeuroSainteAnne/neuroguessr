@@ -7,10 +7,17 @@ function route(pageContext: PageContext) {
   if (parts[1] !== 'singleplayer') {
     return false
   } else {
+    // Extract URL query parameters
+    const url = pageContext.urlOriginal
+    const queryString = url.includes('?') ? url.split('?')[1] : ''
+    const queryParams = new URLSearchParams(queryString)
+    
     return {
       routeParams: {
-        atlas: parts[2] || "",
-        mode: parts[3] || ""
+        mode: parts[2] || "",
+        atlas: parts[3] || "",
+        region: parts[4] || "",
+        blind: queryParams.get('blind') || "false"
       }
     }
   }

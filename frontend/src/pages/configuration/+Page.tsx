@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import "./UserConfig.css";
 import "../register/RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
+import ClinicalTrialBox, { ClinicalTrialProps } from '../../components/ClinicalTrialBox';
 
 function UserConfig() {
-    const { t, updateToken } = useApp();
+    const { t, updateToken, isLoggedIn } = useApp();
     const usernameInput = useRef<HTMLInputElement>(null);
     const emailInput = useRef<HTMLInputElement>(null);
     const firstnameInput = useRef<HTMLInputElement>(null);
@@ -12,6 +13,13 @@ function UserConfig() {
     const passwordInput = useRef<HTMLInputElement>(null);
     const publishToLeaderboardInput = useRef<HTMLInputElement>(null);
     const confirmPasswordInput = useRef<HTMLInputElement>(null);
+    const [clinicalTrialData, setClinicalTrialData] = useState<ClinicalTrialProps>({
+        clinicalTrialGender: null,
+        clinicalTrialAge: null,
+        clinicalTrialCountry: null,
+        clinicalTrialOccupation: null,
+        clinicalTrialConsent: "data_usage",
+    })
     const [reconfigureErrorText, setReconfigureErrorText] = useState<string>("");
     const [reconfigureSuccessText, setReconfigureSuccessText] = useState<string>("");
 
@@ -44,6 +52,13 @@ function UserConfig() {
                 else
                     publishToLeaderboardInput.current.checked = result.user.publishToLeaderboard;
             } 
+            setClinicalTrialData({
+                clinicalTrialGender: result.user.clinicalTrialGender || null,
+                clinicalTrialAge: result.user.clinicalTrialAge || null,
+                clinicalTrialCountry: result.user.clinicalTrialCountry || null,
+                clinicalTrialOccupation: result.user.clinicalTrialOccupation || null,
+                clinicalTrialConsent: result.user.clinicalTrialConsent || null,
+            })
           } else {
             // Handle errors (e.g., unauthorized or user not found)
             setReconfigureErrorText(result.message || t('error_loading_user_info'));
@@ -99,15 +114,20 @@ function UserConfig() {
         }
 
         // Prepare the data to send
-        let formData : Record<string,string|boolean|null> = {
-            firstname: firstname.trim(),
-            lastname: lastname.trim(),
+        let formData : Record<string,string|boolean|null|number> = {
+            'firstname': firstname.trim(),
+            'lastname': lastname.trim(),
+            'clinical_trial_gender': clinicalTrialData.clinicalTrialGender,
+            'clinical_trial_age': clinicalTrialData.clinicalTrialAge,
+            'clinical_trial_country': clinicalTrialData.clinicalTrialCountry,
+            'clinical_trial_occupation': clinicalTrialData.clinicalTrialOccupation,
+            'clinical_trial_consent': clinicalTrialData.clinicalTrialConsent
         };
         if (publishToLeaderboard !== null) {
-            formData.publishToLeaderboard = publishToLeaderboard;
+            formData['publishToLeaderboard'] = publishToLeaderboard;
         }
         if (password) {
-            formData.password = password.trim();
+            formData['password'] = password.trim();
         }
 
         try {
@@ -135,6 +155,10 @@ function UserConfig() {
             setReconfigureErrorText(t('server_error'));
         }
     }
+
+    if (!isLoggedIn) {
+        return <div className="config-please-connect" dangerouslySetInnerHTML={{__html:t('config_unavailable_login')}}></div>;
+    }
     
     return(
     <>
@@ -142,87 +166,85 @@ function UserConfig() {
         <form id="reconfigure_form" onSubmit={handleReconfigure}>
             <div className="register-box">
                 <h2>{t("reconfigure_mode")}</h2>
-                <table className="login-element">
-                    <tbody>
-                    <tr>
-                        <td>
-                            <label id="username-label" htmlFor="username">{t("login_username")}</label>
-                        </td>
-                        <td>
-                            <input type="text" id="username" name="username" ref={usernameInput} disabled />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="email-label" htmlFor="email">{t("login_email")}</label>
-                        </td>
-                        <td>
-                            <input type="email" id="email" name="email" ref={emailInput} disabled />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="firstname-label" htmlFor="firstname">{t("login_firstname")}</label>
-                        </td>
-                        <td>
-                            <input type="text" id="firstname" name="firstname" required ref={firstnameInput} />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="lastname-label" htmlFor="email">{t("login_lastname")}</label>
-                        </td>
-                        <td>
-                            <input type="text" id="lastname" name="lastname" required ref={lastnameInput} />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="password-label" htmlFor="password">{t("login_password")}</label>
-                        </td>
-                        <td>
-                            <input type="password" id="password" name="password" ref={passwordInput} />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colSpan={2} className="password-helper">
-                            {t("password-helper-leaveempty")}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colSpan={2} id="password-helper" className="password-helper">
-                            {t("password_helper")}
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="confirm_password-label" htmlFor="confirm_password">{t("login_confirm_password")}</label>
-                        </td>
-                        <td>
-                            <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label id="publish-to-leaderboard-label" htmlFor="publish-to-leaderboard">{t("config_publish_to_leaderboard")}</label>
-                        </td>
-                        <td>
-                            <input type="checkbox" id="publish-to-leaderboard" name="publish-to-leaderboard" ref={publishToLeaderboardInput} />
-                        </td>
-                    </tr>
-                    {reconfigureErrorText && <tr>
-                        <td colSpan={2} id="reconfigure_error">
-                            {reconfigureErrorText}
-                        </td>
-                    </tr>}
-                    {reconfigureSuccessText && <tr>
-                        <td colSpan={2} id="reconfigure_success">
-                            {reconfigureSuccessText}
-                        </td>
-                    </tr>}
-                    </tbody>
-                </table>
-
+                <div className="register-content">
+                    <table className="login-element">
+                        <tbody>
+                        <tr>
+                            <td>
+                                <label id="username-label" htmlFor="username">{t("login_username")}</label>
+                            </td>
+                            <td>
+                                <input type="text" id="username" name="username" ref={usernameInput} disabled />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="email-label" htmlFor="email">{t("login_email")}</label>
+                            </td>
+                            <td>
+                                <input type="email" id="email" name="email" ref={emailInput} disabled />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="firstname-label" htmlFor="firstname">{t("login_firstname")}</label>
+                            </td>
+                            <td>
+                                <input type="text" id="firstname" name="firstname" required ref={firstnameInput} />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="lastname-label" htmlFor="email">{t("login_lastname")}</label>
+                            </td>
+                            <td>
+                                <input type="text" id="lastname" name="lastname" required ref={lastnameInput} />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="password-label" htmlFor="password">{t("login_password")}</label>
+                            </td>
+                            <td>
+                                <input type="password" id="password" name="password" ref={passwordInput} />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colSpan={2} className="password-helper">
+                                {t("password-helper-leaveempty")}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colSpan={2} id="password-helper" className="password-helper">
+                                {t("password_helper")}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="confirm_password-label" htmlFor="confirm_password">{t("login_confirm_password")}</label>
+                            </td>
+                            <td>
+                                <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label id="publish-to-leaderboard-label" htmlFor="publish-to-leaderboard">{t("config_publish_to_leaderboard")}</label>
+                            </td>
+                            <td>
+                                <input type="checkbox" id="publish-to-leaderboard" name="publish-to-leaderboard" ref={publishToLeaderboardInput} />
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <ClinicalTrialBox clinicalTrialData={clinicalTrialData} setClinicalTrialData={setClinicalTrialData} />
+                </div>
+                {reconfigureErrorText && <div id="reconfigure_error">
+                        {reconfigureErrorText}
+                    </div>}
+                {reconfigureSuccessText && <div id="reconfigure_success">
+                        {reconfigureSuccessText}
+                    </div>}
                 <button type="submit" data-umami-event="configure button">{t("reconfigure_button")}</button>
             </div>
         </form>

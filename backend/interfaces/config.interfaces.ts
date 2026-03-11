@@ -7,6 +7,7 @@ export interface EmailConfig {
     proxy?: string;
     clientId?: string;
     clientSecret?: string;
+    refreshToken?: string;
     redirectPath?: string;
     scope?: string;
 }
@@ -44,4 +45,5 @@ export interface Config {
     salt: string;
     jwt_secret: string;
     pgConnectionString: string;
+    altcha_secret: string;
 }

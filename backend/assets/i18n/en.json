@@ -1,8 +1,21 @@
 {
     "register_email_subject": "Please Validate Email",
     "register_email_greeting": "Hello",
-    "register_email_thanks": "Thanks for registering to Neuroguessr.",
-    "register_email_validate": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to validate your email",
+    "register_email_thanks": "Thanks for registering to NeuroGuessr.",
+    "register_email_validate": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to validate your email.<br/>If the link doesn't work, please copy paste this URL in your browser: {{url}}",
     "reset_password_subject": "Password Reset",
-    "reset_password_link": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to reset your password"
+    "reset_password_link": "Click this link <a style=\"color: #A2B9F0\" href=\"{{url}}\">here</a> to reset your password.<br/>If the link doesn't work, please copy paste this URL in your browser: {{url}}",
+    "email_subject": "NeuroGuessr Challenge Results: {{challengeName}}",
+    "classic_challenge": "Classic Challenge",
+    "email_challenge_results": "Challenge Results",
+    "email_challenge_name": "Challenge Name",
+    "created_by": "Created by",
+    "email_start_date": "Start Date",
+    "email_end_date": "End Date",
+    "email_your_participation": "Your Participation",
+    "email_your_score": "Your Score",
+    "email_your_ranking": "Your Ranking",
+    "email_time_per_region": "Time per region",
+    "email_completed_at": "Completed at",
+    "email_footer": "Thank you for participating in NeuroGuessr! Keep learning neuroanatomy."
 }

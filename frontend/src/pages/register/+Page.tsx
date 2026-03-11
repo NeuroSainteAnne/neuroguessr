@@ -1,9 +1,11 @@
-import React, { use, useCallback, useEffect, useRef, useState } from 'react';
-import { GoogleReCaptcha, GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
+import React, { useEffect, useRef, useState } from 'react';
 import config from '../../../config.json';
 import "./RegisterScreen.css";
 import { useApp } from '../../context/AppContext';
 import { navigate } from 'vike/client/router';
+import Altcha from '../../components/Altcha';
+import ClinicalTrialBox, { ClinicalTrialProps } from '../../components/ClinicalTrialBox';
+import { consoleLog } from '../../utils/logging';
 
 function RegisterScreen() {
   const { t, currentLanguage } = useApp();
@@ -17,17 +19,20 @@ function RegisterScreen() {
   const [registerSuccessText, setRegisterSuccessText] = useState<string>("");
   const [captchaLoad, setCaptchaLoad] = useState(false);
   const activateCaptcha = config.recaptcha.activate || false;
-  const captchaKey = config.recaptcha.siteKey || '';
   const [captchaToken, setCaptchaToken] = useState<string>("");
-
-  const onCaptchaVerify = useCallback((token: string) => {
-    setCaptchaToken(token);
-  }, []);
-
+  const [sentRequest, setSentRequest] = useState<boolean>(false);
+  const [clinicalTrialData, setClinicalTrialData] = useState<ClinicalTrialProps>({
+      clinicalTrialGender: null,
+      clinicalTrialAge: null,
+      clinicalTrialCountry: null,
+      clinicalTrialOccupation: null,
+      clinicalTrialConsent: "data_usage",
+  })
+  
   useEffect(() => {
     setCaptchaLoad(true)
   }, []);
-  
+
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const username = usernameInput.current?.value;
@@ -36,6 +41,9 @@ function RegisterScreen() {
     const lastname = lastnameInput.current?.value;
     const password = passwordInput.current?.value;
     const confirmPassword = confirmPasswordInput.current?.value;
+    
+    consoleLog("verbose", `Registration attempt for user: ${username}, email: ${email?.substring(0, 3)}***`);
+    
     // Email format validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     // Validate password complexity
@@ -71,13 +79,14 @@ function RegisterScreen() {
       }
       if (!complexityRegex.test(password)) {
         setRegisterErrorText(t('error_password_complexity'))
-        return;
+        //return;
       } else if (password !== confirmPassword) {
         setRegisterErrorText(t('error_password_mismatch'));
         return;
       }
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
     let formData: {
         username: string;
         email: string;
@@ -86,20 +95,35 @@ function RegisterScreen() {
         password: string;
         captcha_token?: string;
         language?: string;
+        clinical_trial_gender?: "male" | "female" | "other" | null;
+        clinical_trial_age?: number | null;
+        clinical_trial_country?: string | null;
+        clinical_trial_occupation?: string | null;
+        clinical_trial_consent?: "data_usage" | "acknowledgement" | "none" | null;
+        returnUrl: string | null;
     } = {
         username: username.trim(),
         email: email.trim(),
         firstname: firstname.trim(),
         lastname: lastname.trim(),
         password: password.trim(),
-        language: currentLanguage
+        language: currentLanguage,
+        clinical_trial_gender: clinicalTrialData.clinicalTrialGender,
+        clinical_trial_age: clinicalTrialData.clinicalTrialAge,
+        clinical_trial_country: clinicalTrialData.clinicalTrialCountry,
+        clinical_trial_occupation: clinicalTrialData.clinicalTrialOccupation,
+        clinical_trial_consent: clinicalTrialData.clinicalTrialConsent,
+        returnUrl: urlParams.get('returnURL') || null
     };
     if(activateCaptcha){
       formData.captcha_token = captchaToken;
     }
+    
+    consoleLog("verbose", "Sending registration request to server");
 
     try {
         // Send the data to the server
+        setSentRequest(true);
         const response = await fetch('/api/register', {
             method: 'POST',
             headers: {
@@ -108,128 +132,144 @@ function RegisterScreen() {
             body: JSON.stringify(formData),
         });
         const result = await response.json();
+        consoleLog("verbose", `Registration response: ${response.ok ? 'success' : 'failure'}`);
         if (response.ok) {
             if(result.preverified){
+                consoleLog("verbose", "Registration successful (pre-verified), redirecting to login");
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success_no_verification'));
                 setTimeout(() => {
                     navigate("/login");
                 }, 1000);
             } else {
+                consoleLog("verbose", "Registration successful, email verification required");
                 setRegisterErrorText("");
                 setRegisterSuccessText(t('register_success'));
             }
         } else {
+            consoleLog("verbose", `Registration failed: ${result.message}`);
             setRegisterErrorText(result.message || t('register_failed')); 
+            setSentRequest(false);
         }
     } catch (error) {
         // Handle network or other errors
         console.error('Error submitting the form:', error);
         setRegisterErrorText(t('server_error'));
+        setSentRequest(false);
     }
 
   }
 
-  const formContent =     
-  (<>
+  const handleAltchaChange = (ev: Event | CustomEvent<any>) => {
+    const altchaEvent = ev as CustomEvent;
+    if (altchaEvent.detail) {
+      if(altchaEvent.detail.state && altchaEvent.detail.state === "verified"){
+        setCaptchaToken(altchaEvent.detail.payload);
+        setRegisterErrorText("");
+      } else if(altchaEvent.detail.state && altchaEvent.detail.state === "verifying"){
+        // continue
+      } else {
+        console.warn("Altcha error:", altchaEvent.detail);
+        setRegisterErrorText(t('error_captcha'));
+      }
+    } else {
+      console.warn("No Altcha");
+      setCaptchaToken("");
+      setRegisterErrorText(t('error_captcha'));
+    }
+  }
+
+  return <>
       <title>{t("neuroguessr_register_title")}</title>
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
           <h2>{t("register_mode")}</h2>
-          <table className="login-element">
-            <tbody>
-            <tr>
-                <td colSpan={2} id="login_error">
-                    {t("beta_version_login_message")}
+          <div className="beta-info">
+            {t("beta_version_login_message")}
+          </div>
+          <div className="register-content">
+            <table className="login-element">
+              <tbody>
+              <tr>
+                <td>
+                  <label id="username-label" htmlFor="username">{t("login_username")}</label>
                 </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="username-label" htmlFor="username">{t("login_username")}</label>
-              </td>
-              <td>
-                <input type="text" id="username" name="username" ref={usernameInput} required />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="email-label" htmlFor="email">{t("login_email")}</label>
-              </td>
-              <td>
-                <input type="email" id="email" name="email" ref={emailInput} required />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="firstname-label" htmlFor="firstname">{t("login_firstname")}</label>
-              </td>
-              <td>
-                <input type="text" id="firstname" name="firstname" ref={firstnameInput} required />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="lastname-label" htmlFor="lastname">{t("login_lastname")}</label>
-              </td>
-              <td>
-                <input type="text" id="lastname" name="lastname" ref={lastnameInput} required />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="password-label" htmlFor="password">{t("login_password")}</label>
-              </td>
-              <td>
-                <input type="password" id="password" name="password" ref={passwordInput} required />
-              </td>
-            </tr>
-            <tr>
-              <td colSpan={2} id="password-helper" className="password-helper">
-                {t("password_helper")}
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label id="confirm_password-label" htmlFor="confirm_password">{t("login_confirm_password")}</label>
-              </td>
-              <td>
-                <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} required />
-              </td>
-            </tr>
-            {registerErrorText != "" && <tr>
-              <td colSpan={2} id="register_error">
-                {registerErrorText}
-              </td>
-            </tr>}
-            {registerSuccessText != "" && <tr>
-              <td colSpan={2} id="register_success">
-                {registerSuccessText}
-              </td>
-            </tr>}
-            </tbody>
-          </table>
-          {(activateCaptcha && captchaLoad) && <GoogleReCaptcha onVerify={onCaptchaVerify} />}
-          {registerSuccessText == "" && <button  data-umami-event="register button" type="submit">{t("register_button")}</button>}
+                <td>
+                  <input type="text" id="username" name="username" ref={usernameInput} required />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label id="email-label" htmlFor="email">{t("login_email")}</label>
+                </td>
+                <td>
+                  <input type="email" id="email" name="email" ref={emailInput} required />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label id="firstname-label" htmlFor="firstname">{t("login_firstname")}</label>
+                </td>
+                <td>
+                  <input type="text" id="firstname" name="firstname" ref={firstnameInput} required />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label id="lastname-label" htmlFor="lastname">{t("login_lastname")}</label>
+                </td>
+                <td>
+                  <input type="text" id="lastname" name="lastname" ref={lastnameInput} required />
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label id="password-label" htmlFor="password">{t("login_password")}</label>
+                </td>
+                <td>
+                  <input type="password" id="password" name="password" ref={passwordInput} required />
+                </td>
+              </tr>
+              <tr>
+                <td colSpan={2} id="password-helper" className="password-helper">
+                  {t("password_helper")}
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <label id="confirm_password-label" htmlFor="confirm_password">{t("login_confirm_password")}</label>
+                </td>
+                <td>
+                  <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} required />
+                </td>
+              </tr>
+              </tbody>
+            </table>
+            <ClinicalTrialBox clinicalTrialData={clinicalTrialData} setClinicalTrialData={setClinicalTrialData} />
+          </div>
+          
+          {registerErrorText != "" && <div id="register_error">
+              {registerErrorText}
+            </div>}
+          {registerSuccessText != "" && <div id="register_success">
+              {registerSuccessText}
+            </div>}
+          { registerSuccessText == "" && activateCaptcha && captchaLoad && <div className="altcha-container">
+              <Altcha onStateChange={handleAltchaChange}/>
+            </div> }
+          {registerSuccessText == "" && (
+            <button 
+              data-umami-event="register button" 
+              type="submit" 
+              disabled={activateCaptcha && (!captchaToken || sentRequest)}
+              className={activateCaptcha && (!captchaToken || sentRequest) ? "button-disabled" : ""}
+            >
+              {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("register_button")}
+            </button>
+          )}        
         </div>
       </form>
-    </>)
-
-  return (activateCaptcha && captchaLoad) ? (
-    <GoogleReCaptchaProvider
-      reCaptchaKey={captchaKey}
-      language={currentLanguage}
-      scriptProps={{
-        async: true, // Load script asynchronously
-        defer: true, // Defer script execution
-        appendTo: 'body', // Append to body
-        nonce: undefined // Add nonce if you use CSP
-      }}
-    >
-      {formContent}
-    </GoogleReCaptchaProvider>
-  ) : (
-    formContent
-  );
+    </>
 }
 
 export default RegisterScreen

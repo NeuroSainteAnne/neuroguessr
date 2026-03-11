@@ -34,5 +34,6 @@
     "addTestUser": true, // adds a user with name "test" and password "test" for testing purposes
     "salt": "xxx",
     "jwt_secret": "xxx",
+    "altcha_secret": "xxx",
     "pgConnectionString": "postgres://user:pass@localhost:5432/dbname"
 }

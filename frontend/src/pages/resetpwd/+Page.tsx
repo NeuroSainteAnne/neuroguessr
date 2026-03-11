@@ -7,7 +7,6 @@ import { navigate } from 'vike/client/router';
 function ResetPasswordScreen() {
     const { t, updateToken, pageContext } = useApp();
     const [isCheckedToken, setIsCheckedToken] = useState<boolean>(false);
-    const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const confirmPasswordInput = useRef<HTMLInputElement>(null);
     const [recoveryErrorText, setRecoveryErrorText] = useState<string>("");
@@ -33,8 +32,6 @@ function ResetPasswordScreen() {
             body: JSON.stringify({ id: userId, token }),
           });
 
-          const result = await response.json();
-
           if (!response.ok) {
             setRecoveryErrorText(t('error_invalid_token'));
           } else {
@@ -51,7 +48,6 @@ function ResetPasswordScreen() {
         event.preventDefault();
         const newPassword = passwordInput.current?.value;
         const confirmPassword = confirmPasswordInput.current?.value;
-        console.log(newPassword, confirmPassword)
         // Validate password complexity
           const complexityOptions = {
               min: 8,

@@ -29,6 +29,7 @@ const getInitialState = () => {
 const onRenderClient: OnRenderClientAsync = async (pageContext): ReturnType<OnRenderClientAsync> => {
   const initialState = pageContext.isHydration ? getInitialState() : null;
   if (initialState) {
+    // @ts-ignore
     pageContext = {
       ...pageContext,
       urlOriginal: initialState.originalUrl || pageContext.urlOriginal,
