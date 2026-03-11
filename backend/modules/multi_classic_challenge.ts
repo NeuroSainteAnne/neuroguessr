@@ -174,6 +174,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
         AND ms.id NOT IN (
           SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
         )
+        AND ms.show_as_next = TRUE
         ORDER BY ms.start_date ASC
         LIMIT 1
       `;

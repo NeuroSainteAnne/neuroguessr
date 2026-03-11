@@ -219,6 +219,11 @@ export const database_init = async () => {
             `;
 
             await sql`
+                ALTER TABLE multi_sessions 
+                ADD COLUMN IF NOT EXISTS show_as_next BOOLEAN NOT NULL DEFAULT TRUE;
+            `;
+
+            await sql`
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS blind_mode BOOLEAN NOT NULL DEFAULT FALSE;
             `;

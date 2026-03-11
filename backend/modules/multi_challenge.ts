@@ -21,6 +21,7 @@ export const getNextRealtimeChallenge = async (req: Request, res: Response) => {
       WHERE ms.is_challenge = TRUE
       AND ms.public = TRUE
       AND ms.persistent_config IS NOT NULL
+      AND ms.show_as_next = TRUE
       AND (ms.persistent_config::jsonb->'commands'->0->>'startTime') > ${currentTime}
       ORDER BY (ms.persistent_config::jsonb->'commands'->0->>'startTime') ASC
       LIMIT 1
