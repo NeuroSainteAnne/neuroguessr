@@ -57,10 +57,8 @@ npm run start-backend
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE] file for details.
+This project is licensed under the GPLv3 License - see the [LICENSE] file for details.
 
 ## Authors 
-François Ramon
-francois.ramon@ghu-paris.fr 
-Joseph Benzakoun 
-j.benzakoun@ghu-paris.fr
+[Francois Ramon](https://github.com/FRramon)
+[Joseph Benzakoun](https://github.com/jbenzakoun)
