@@ -171,10 +171,10 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
         WHERE ms.is_classic_challenge = TRUE AND is_classic_challenge_original_entry = TRUE
         AND ms.start_date <= ${currentTime}
         AND ms.end_date > ${currentTime}
+        AND ms.show_as_next = TRUE
         AND ms.id NOT IN (
           SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
         )
-        AND ms.show_as_next = TRUE
         ORDER BY ms.start_date ASC
         LIMIT 1
       `;
@@ -191,6 +191,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
           AND ms.public = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
+          AND ms.show_as_next = TRUE
           AND ms.id NOT IN (
             SELECT classic_challenge_id FROM finished_sessions WHERE user_id = ${userId} AND classic_challenge_id IS NOT NULL
           )
@@ -206,6 +207,7 @@ export const getNextClassicChallenge = async (req: Request, res: Response) => {
           WHERE ms.is_classic_challenge = TRUE 
           AND is_classic_challenge_original_entry = TRUE
           AND ms.public = TRUE
+          AND ms.show_as_next = TRUE
           AND ms.start_date <= ${currentTime}
           AND ms.end_date > ${currentTime}
           ORDER BY ms.start_date ASC
