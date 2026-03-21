@@ -528,7 +528,7 @@ function SinglePlayer({
     const updateGameHeader = () => {
         let mainText = '';
         if (gameMode === 'navigation') {
-            mainText = highlightedRegion
+            mainText = highlightedRegion !== null && highlightedRegion !== undefined
                 ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
                 : t('click_to_identify');
         } else if (currentTarget.current !== undefined && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
@@ -546,7 +546,6 @@ function SinglePlayer({
 
         // Update header with combined messages
         if (mainText) {
-            console.log("adding", mainText)
             addHeaderMessage({ text: mainText, minDuration: 500 });
         }
     }
@@ -559,7 +558,7 @@ function SinglePlayer({
         currentAskedId, currentTotalNumRegions]);
     useEffect(() => {
         updateGameHeader();
-    }, [currentTarget.current]);
+    }, [currentTarget.current, atlasRef.current]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;

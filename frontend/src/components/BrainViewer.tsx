@@ -142,11 +142,11 @@ export function GameProvider({
     const atlasRef = useRef<AtlasImageProxy | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const currentlyLoadedAtlas = useRef<any>(null);
-    const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
+    const [highlightedRegion, setHighlightedRegion] = useState<number | null>(gameMode === "navigation" ? routedRegion || null : null);
     const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
     const guessButtonRef = useRef<HTMLButtonElement>(null);
     const selectedVoxelProp = useRef<{ mm: number[], vox: number[], idx: number | undefined } | null>(null);
-    const currentTarget = useRef<number | undefined>(undefined);
+    const currentTarget = useRef<number | undefined>(gameMode === "navigation" ? routedRegion : undefined);
 
     // dragging states
     const lastTouchEvent = useRef<React.Touch | undefined>(undefined);
@@ -390,6 +390,7 @@ export function GameProvider({
                     niivue,
                     nvImage: niivue.volumes[1],
                     labels: jsonData.labels,
+                    info: jsonData.info ? jsonData.info : undefined,
                     centers: jsonData.centers ? jsonData.centers : undefined,
                     blindMode: askedAtlas?.blindMode || false,
                     viewerOptions,
