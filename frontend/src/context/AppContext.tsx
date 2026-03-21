@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import type { NVImage } from '@niivue/niivue';
 import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas } from '../utils/nifti_cache';
 import { consoleLog } from '../utils/logging';
+import './AppContext.css';
 
 type NVImageConstructor = {
   new (): NVImage;
@@ -36,6 +37,14 @@ export type AddHeaderMessageOptions = {
   minDuration?: number; // in milliseconds, default 5000
   colorDuration?: number; // in milliseconds, duration after which color fades out
   forceClear?: boolean; // if true, clears all existing messages before adding
+};
+
+// Tooltip type
+export type TooltipState = {
+  visible: boolean;
+  text: string;
+  x: number;
+  y: number;
 };
 
 // Define the shape of our context
@@ -122,6 +131,11 @@ type AppContextType = {
   getCacheStats: () => ReturnType<typeof getCacheStats>;
   preloadAtlas: (atlasKey: string) => Promise<void>;
   clearCache: () => void;
+  
+  // Tooltip system
+  tooltip: TooltipState;
+  showTooltip: (text: string, x: number, y: number) => void;
+  hideTooltip: () => void;
 };
 
 // Create the context
@@ -159,6 +173,14 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
 
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  
+  // Tooltip state
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    visible: false,
+    text: '',
+    x: 0,
+    y: 0
+  });
   
   // Header state - New unified message system
   const [headerMessages, setHeaderMessages] = useState<HeaderMessage[]>([]);
@@ -712,6 +734,15 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     }
   };
   
+  // Tooltip functions
+  const showTooltip = (text: string, x: number, y: number) => {
+    setTooltip({ visible: true, text, x, y });
+  };
+  
+  const hideTooltip = () => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+  };
+  
   return (
     <AppContext.Provider value={{
       // Page context
@@ -796,9 +827,26 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       // Cache management functions
       getCacheStats,
       preloadAtlas,
-      clearCache: niftiCache.clearCache
+      clearCache: niftiCache.clearCache,
+      
+      // Tooltip functions
+      tooltip,
+      showTooltip,
+      hideTooltip
     }}>
       {children}
+      {/* Global tooltip component */}
+      {tooltip.visible && (
+        <div 
+          className="info-tooltip-fixed"
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </AppContext.Provider>
   );
 }
