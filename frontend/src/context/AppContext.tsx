@@ -98,9 +98,7 @@ type AppContextType = {
   clearHeaderMessages: () => void;
   setAllHeaderMessagesColor: (color: string | undefined, colorDuration?: number) => void;
   
-  // Legacy header functions (for backward compatibility, deprecated)
-  setHeaderText: (text: string) => void;
-  setHeaderTextMode: (mode: string) => void;
+  // Header functions 
   setHeaderScore: (score: string) => void;
   setHeaderErrors: (errors: string) => void;
   setHeaderStreak: (streak: string) => void;
@@ -415,18 +413,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     return () => clearInterval(interval);
   }, [headerMessages]);
   
-  // Legacy header functions for backward compatibility
-  const setHeaderText = (text: string) => {
-    // Default mode is normal (no special color)
-    addHeaderMessage({ text, color: undefined, minDuration: 5000, forceClear: true });
-  };
-  
-  const setHeaderTextMode = (mode: string) => {
-    // This is a legacy function that modifies the color of the last message
-    // For now, we'll just ignore it as the new system uses color directly
-    // If needed, we can implement it to update the last message's color
-  };
-    
   // Language handler
   const handleChangeLanguage = async (lang: string) => {
     consoleLog("verbose", `Changing language from ${currentLanguage} to ${lang}`);
@@ -771,8 +757,6 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setAllHeaderMessagesColor,
       
       // Legacy header functions
-      setHeaderText,
-      setHeaderTextMode,
       setHeaderScore,
       setHeaderErrors,
       setHeaderStreak,

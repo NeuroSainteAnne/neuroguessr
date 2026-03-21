@@ -131,7 +131,7 @@ export function GameProvider({
         preloadedBackgroundMNI, viewerOptions,
         isMobileView, setIsMobileView,
         setAskedAtlas, setAskedRegion,
-        showNotification, setHeaderText } = useApp();
+        showNotification, addHeaderMessage } = useApp();
 
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [hasEnded, setHasEnded] = useState<boolean>(false);
@@ -404,14 +404,14 @@ export function GameProvider({
             }
         } catch (error) {
             console.error(`Failed to load atlas data for ${askedAtlas?.atlas}:`, error);
-            setHeaderText(t('error_loading_data', { atlas: askedAtlas?.atlas }));
+            addHeaderMessage({ text: t('error_loading_data', { atlas: askedAtlas?.atlas }), color: 'failure' });
         }
     }
 
     const handleRecolorization = () => {
         if (isGameRunning && gameMode === 'navigation' && niivue) {
             atlasRef.current?.showShuffledRegions()
-            setHeaderText(t('click_to_identify'));
+            addHeaderMessage({ text: t('click_to_identify'), color: 'info' });
             selectedVoxelProp.current = null;
             setHighlightedRegion(null);
             unHighlight();
