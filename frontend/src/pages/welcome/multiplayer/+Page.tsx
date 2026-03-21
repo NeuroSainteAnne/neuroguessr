@@ -4,6 +4,7 @@ import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { MultiBox } from './MultiBox';
 import { NextChallenge } from '../../../components/NextChallenge';
+import News from '../../../components/News';
 
 export function Page() {
    const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();
@@ -14,6 +15,7 @@ export function Page() {
   return (
     <>
       <title>NeuroGuessr</title>
+      <News />
       {atlasRegions.length > 0 && <SearchBar />}
       <NextChallenge />
       <GameSelector />

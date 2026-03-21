@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
+import News from '../../../components/News';
 import { GameSelectorProvider } from '../../../context/GameSelectorContext';
 import { SingleSelector } from './SingleSelector';
 import { NextChallenge } from '../../../components/NextChallenge';
@@ -15,6 +16,7 @@ export function Page() {
   return (
     <>
       <title>NeuroGuessr</title>
+      <News />
       {atlasRegions.length > 0 && <SearchBar />}
       <NextChallenge />
       <GameSelectorProvider>
