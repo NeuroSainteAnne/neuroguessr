@@ -55,8 +55,9 @@ function Header() {
                                 <p key={msg.id} className="header-message">
                                     <span className="target-text" style={{
                                         color: resolvedColor,
-                                        fontWeight: 'bold',
-                                        transition: 'color 0.2s ease-in-out'
+                                        fontSize: msg.fontSize || 'inherit',
+                                        fontWeight: msg.fontWeight || 'bold',
+                                        transition: 'color 0.2s ease-in-out, font-size 0.2s ease-in-out'
                                     }}>
                                         {msg.text}
                                     </span>

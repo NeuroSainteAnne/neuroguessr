@@ -20,6 +20,8 @@ export type HeaderMessage = {
   id: string;
   text: string;
   color?: string | undefined;
+  fontSize?: string | undefined; // CSS font-size value (e.g., '1rem', '16px')
+  fontWeight?: string | undefined; // CSS font-weight value (e.g., 'bold', 'normal', '500')
   minDuration?: number | undefined; // in milliseconds
   addedAt: number;
   colorDuration?: number | undefined; // in milliseconds
@@ -29,6 +31,8 @@ export type HeaderMessage = {
 export type AddHeaderMessageOptions = {
   text: string;
   color?: string | undefined;
+  fontSize?: string; // CSS font-size value (e.g., '1rem', '16px')
+  fontWeight?: string | undefined; // CSS font-weight value (e.g., 'bold', 'normal', '500')
   minDuration?: number; // in milliseconds, default 5000
   colorDuration?: number; // in milliseconds, duration after which color fades out
   forceClear?: boolean; // if true, clears all existing messages before adding
@@ -329,11 +333,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       
       // Create all new messages
       const newMessages: HeaderMessage[] = optionsArray.map((options, index) => {
-        const { text, color, minDuration = undefined, colorDuration = undefined } = options;
+        const { text, color, fontSize = undefined, fontWeight = undefined, minDuration = undefined, colorDuration = undefined } = options;
         return {
           id: `${now}-${index}-${Math.random()}`,
           text,
           color,
+          fontSize,
+          fontWeight,
           minDuration,
           addedAt: now,
           colorDuration,
@@ -341,11 +347,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         };
       });
       
-      // Filter out duplicate consecutive messages
+      // Filter out all duplicate messages
       const result = [...base];
       for (const newMsg of newMessages) {
-        const lastMessage = result[result.length - 1];
-        if (!lastMessage || lastMessage.text !== newMsg.text) {
+        // Check if this message text already exists in the result
+        const isDuplicate = result.some(msg => msg.text === newMsg.text);
+        if (!isDuplicate) {
           result.push(newMsg);
         }
       }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { defineNiiOptions } from '../../utils/helper_nii';
-import { useApp } from '../../context/AppContext';
+import { AddHeaderMessageOptions, useApp } from '../../context/AppContext';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { navigate } from 'vike/client/router';
 import { consoleLog } from '../../utils/logging';
@@ -429,14 +429,14 @@ function SinglePlayer({
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-                    let messages = [{ 
+                    let messages : AddHeaderMessageOptions[] = [{ 
                         text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
                         minDuration: 500
                     }]
                     if(atlasRef.current.info){
                         const atlasInfo = atlasRef.current.info[clickedRegionLocation.idx];
                         if(atlasInfo){
-                            messages.push({ text: atlasInfo, minDuration: 500 });
+                            messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal' });
                         }
                     }
                     addHeaderMessages(messages);
@@ -551,17 +551,22 @@ function SinglePlayer({
             }
         }
 
-        let messages = []
+        let messages : AddHeaderMessageOptions[] = []
 
         // Update header with combined messages
         if (mainText) {
             messages.push({ text: mainText, minDuration: 500 });
         }
 
-        if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && currentTarget.current !== undefined){
-            const atlasInfo = atlasRef.current.info[currentTarget.current];
-            if(atlasInfo){
-                messages.push({ text: atlasInfo, minDuration: 500 });
+        if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && (highlightedRegion !== null || currentTarget.current !== undefined)){
+            let atlasInfo = "";
+            if(highlightedRegion !== null){
+                atlasInfo = atlasRef.current.info[highlightedRegion] || "";
+            } else if(currentTarget.current !== undefined){
+                atlasInfo = atlasRef.current.info[currentTarget.current] || "";
+            }
+            if(atlasInfo !== ""){
+                messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal' });
             }
         }
         
@@ -577,7 +582,7 @@ function SinglePlayer({
         currentAskedId, currentTotalNumRegions]);
     useEffect(() => {
         updateGameHeader();
-    }, [currentTarget.current, atlasRef.current]);
+    }, [currentTarget.current, highlightedRegion, atlasRef.current]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;
