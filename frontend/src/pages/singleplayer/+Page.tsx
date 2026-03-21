@@ -56,7 +56,7 @@ function SinglePlayer({
     const { t, askedAtlas, viewerOptions,
         isLoggedIn, userPublishToLeaderboard,
         isMobileView,
-        addHeaderMessage, clearHeaderMessages,
+        addHeaderMessage, addHeaderMessages, clearHeaderMessages,
         setHeaderStreak, setHeaderScore, setHeaderErrors, setHeaderTime,
         setAllHeaderMessagesColor,
         setShowHelpOverlay, showNotification,
@@ -429,10 +429,17 @@ function SinglePlayer({
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-                    addHeaderMessage({ 
+                    let messages = [{ 
                         text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
                         minDuration: 500
-                    });
+                    }]
+                    if(atlasRef.current.info){
+                        const atlasInfo = atlasRef.current.info[clickedRegionLocation.idx];
+                        if(atlasInfo){
+                            messages.push({ text: atlasInfo, minDuration: 500 });
+                        }
+                    }
+                    addHeaderMessages(messages);
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
                     const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx];
@@ -544,10 +551,22 @@ function SinglePlayer({
             }
         }
 
+        let messages = []
+
         // Update header with combined messages
         if (mainText) {
-            addHeaderMessage({ text: mainText, minDuration: 500 });
+            messages.push({ text: mainText, minDuration: 500 });
         }
+
+        if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && currentTarget.current !== undefined){
+            const atlasInfo = atlasRef.current.info[currentTarget.current];
+            if(atlasInfo){
+                messages.push({ text: atlasInfo, minDuration: 500 });
+            }
+        }
+        
+        // Add all messages to the header
+        addHeaderMessages(messages);
     }
 
 

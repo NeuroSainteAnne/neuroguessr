@@ -108,6 +108,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 export class AtlasImageProxy {
     public labels: string[];
+    public info: string[] | undefined;
     public centers?: number[][][] | undefined;
     private data: Float32Array;
     private remappedData?: Float32Array;
@@ -127,14 +128,15 @@ export class AtlasImageProxy {
     public atlas: string;
     private cmap_en: ColorMap|null;
 
-    constructor({niivue, nvImage, labels, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en, atlas} :
-        {niivue: Niivue, nvImage: any, labels: string[], centers?: number[][][] | undefined,
+    constructor({niivue, nvImage, labels, info, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en, atlas} :
+        {niivue: Niivue, nvImage: any, labels: string[], info?: string[] | undefined, centers?: number[][][] | undefined,
         proposedLut?: ColorMap | undefined, proposedMapping?: Record<number, number> | undefined, 
         proposedInverseMapping?: Record<number, number> | undefined, blindMode: boolean, 
         viewerOptions: DisplayOptions, cmap_en: ColorMap|null, atlas: string}) {
         this.niivue = niivue;
         this.origVolume = nvImage;
         this.labels = labels;
+        this.info = info;
         this.centers = centers;
         this.blindMode = blindMode;
         this.shuffleMode = this.labels.length > 254 ? "data" : "lut";

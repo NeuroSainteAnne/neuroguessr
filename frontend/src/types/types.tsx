@@ -41,6 +41,7 @@ export type ColorMap = {
   min?: number;
   max?: number;
   labels: string[];
+  info?: string[];
   centers?: number[][][];
   autocenter?: {
     center?: number[],
