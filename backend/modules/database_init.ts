@@ -248,6 +248,17 @@ export const database_init = async () => {
                 ADD COLUMN IF NOT EXISTS has_clicked BOOLEAN NOT NULL DEFAULT TRUE;
             `;
 
+            await sql`
+                ALTER TABLE individual_clicks 
+                ADD COLUMN IF NOT EXISTS region_id INTEGER;
+            `;
+
+            // Ensure region_id is nullable (in case it was created as NOT NULL before)
+            await sql`
+                ALTER TABLE individual_clicks 
+                ALTER COLUMN region_id DROP NOT NULL;
+            `;
+
         // Update old versions of the database schema
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS admin BOOLEAN NOT NULL default FALSE;`
             await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS clinical_trial_gender TEXT DEFAULT NULL;`
