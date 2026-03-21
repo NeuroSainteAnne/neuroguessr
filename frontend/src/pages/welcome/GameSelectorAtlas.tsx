@@ -5,8 +5,10 @@ import { prefetchAtlasJSON } from "../../utils/nifti_cache";
 import './GameSelector.css';
 
 export const GameSelectorAtlas = () => {
-  const {t, preloadAtlas} = useApp();
+  const {t, preloadAtlas, showTooltip, hideTooltip, pageContext} = useApp();
   const { selectedAtlas, setSelectedAtlas, selectedCategory, setSelectedCategory } = useGameSelector();
+  const parts = pageContext.urlPathname.split('/')
+  const welcomeSubPage = parts[2] || 'singleplayer'
 
   const handleAtlasSelection = async (atlasKey: string) => {
     setSelectedAtlas(atlasKey);
@@ -19,6 +21,15 @@ export const GameSelectorAtlas = () => {
       console.error(`Failed to preload atlas ${atlasKey}:`, error);
       // Don't show user notification for preload failures - it's not critical
     }
+  };
+
+  const handleInfoHover = (e: React.MouseEvent<HTMLSpanElement>, infoText: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    showTooltip(infoText, rect.left + rect.width / 2, rect.top - 8);
+  };
+
+  const handleInfoLeave = () => {
+    hideTooltip();
   };
 
   return (<>
@@ -48,6 +59,15 @@ export const GameSelectorAtlas = () => {
                   {[...Array(atlas.difficulty)].map((_, index) => (
                     <img key={index} src="/interface/star.png" alt="Star" className="star-icon" />
                   ))}
+                </span>
+              )}
+              {atlas.info && welcomeSubPage == "singleplayer" && (
+                <span 
+                  className="info-icon-wrapper"
+                  onMouseEnter={(e) => handleInfoHover(e, t("info_info"))}
+                  onMouseLeave={handleInfoLeave}
+                >
+                  <span className="info-icon">ℹ️</span>
                 </span>
               )}
             </button>

@@ -112,6 +112,7 @@
   "territories_info" :"Territoires <span class='atlas-description'>Territoires des artères cérébrales</span>",
   "xtract_info": "Matière Blanche <span class='atlas-description'><Faisceaux de matière blanche (FSL)</span>",
   "bsa_info" : "Brainvisa Sulci Atlas <span class='atlas-description'>Atlas des sillons</span>",
+  "info_info" : "Cet atlas vous donnera des informations sur chaque région en mode Navigation",
   "select_language": "Sélectionner la Langue",
   "help_title": "Aide et Informations",
   "help_presentation_title": "À Propos de NeuroGuessr",
@@ -519,5 +520,8 @@
   "email_end_date": "Date de fin : {{endDate}}",
   "email_atlas": "Atlas : {{atlas}}",
   "email_footer": "Merci d'avoir participé à NeuroGuessr ! Continuez à apprendre la neuroanatomie.",
-  "email_error_sending": "Échec de l'envoi de l'email des résultats du défi"
+  "email_error_sending": "Échec de l'envoi de l'email des résultats du défi",
+
+  "*****NEWS*****":"",
+  "news_1_added_info": "Nouveauté mars 2026: les atlas ℹ️ donnent des informations sur chaque région en mode Navigation !"
 }

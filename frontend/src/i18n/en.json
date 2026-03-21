@@ -112,6 +112,7 @@
   "territories_info" :"Territories <span class='atlas-description'>Cerebral Arteries Territories</span>",
   "xtract_info": "White Matter <span class='atlas-description'>FSL's White matter tracts</span>",
   "bsa_info" : "Brainvisa Sulci Atlas <span class='atlas-description'>Sulci Atlas</span>",
+  "info_info" : "This atlas will provide information about each region in Navigation mode",
   "select_language": "Select Language",
   "help_title": "Help & Information",
   "help_presentation_title": "About NeuroGuessr",
