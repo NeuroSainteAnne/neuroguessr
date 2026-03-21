@@ -58,6 +58,7 @@ function SinglePlayer({
         isMobileView,
         addHeaderMessage, clearHeaderMessages,
         setHeaderStreak, setHeaderScore, setHeaderErrors, setHeaderTime,
+        setAllHeaderMessagesColor,
         setShowHelpOverlay, showNotification,
         pageContext } = useApp();
     const { routeParams } = pageContext;
@@ -223,9 +224,14 @@ function SinglePlayer({
             }
 
             // Update UI based on guess result
-            if (lastGuessResult.isCorrect) {
+            if (atlasRef.current && currentTarget.current && lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
                 // Display success with green color for 500ms
+                let mainText = atlasRef.current.labels[currentTarget.current] || "";
+                if (gameMode === 'time-attack') {
+                    mainText = `${currentAskedId}/${currentTotalNumRegions} - ${atlasRef.current.labels[currentTarget.current]}`;
+                }
+                addHeaderMessage({ text: mainText, minDuration: 1000, color: 'success' });
                 // The message will be updated by updateGameDisplay shortly after
                 if(gameMode === "practice"){
                     setHighlightedRegion(null);
@@ -233,7 +239,8 @@ function SinglePlayer({
                 }
             } else {
                 setCurrentErrors(prev => prev + 1);
-                // Display failure with red color
+                // Display failure with red color for 800ms
+                setAllHeaderMessagesColor('failure', 800);
                 if(gameMode === "streak"){ 
                     showNotification(`${t("incorrect")} ${lastGuessResult.consecutiveErrors}/${lastGuessResult.maxErrorsStreak}`, false);
                 }
@@ -343,6 +350,7 @@ function SinglePlayer({
                 forceClear: true 
             });
             if (gameMode === 'navigation') {
+                setHeaderScore(``);
                 setHeaderStreak("");
                 setHeaderErrors("");
             } else if (gameMode === 'practice') {
@@ -352,6 +360,7 @@ function SinglePlayer({
             } else if (gameMode === 'streak') {
                 addHeaderMessage({ text: t('correct_label') + ": 0", forceClear: true });
                 setHeaderErrors("0");
+                setHeaderScore(`0`);
                 setHeaderStreak("0");
             } else if (gameMode === 'time-attack') {
                 addHeaderMessage({ text: t('score_label') + ": 0", forceClear: true });
@@ -422,7 +431,7 @@ function SinglePlayer({
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
                     addHeaderMessage({ 
                         text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
-                        minDuration: 5000
+                        minDuration: 500
                     });
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
@@ -502,17 +511,21 @@ function SinglePlayer({
         }
     }, [validateGuessCallbackRef, isGameRunning, gameMode, currentRegion, currentTarget, atlasRef, t]);
 
-    const updateGameDisplay = () => {
+    const updateGameScores = () => {
         // Update labels based on mode
-        setHeaderScore(`${currentScore}`);
 
         if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
             setHeaderErrors(`${currentErrors}`);
+            setHeaderScore(`${currentScore}`);
+        } else {
+            setHeaderErrors(``);
+            setHeaderScore(``);
         }
         if (gameMode === 'streak') {
             setHeaderStreak(`${currentStreak}`);
         }
-
+    }
+    const updateGameHeader = () => {
         let mainText = '';
         if (gameMode === 'navigation') {
             mainText = highlightedRegion
@@ -533,16 +546,20 @@ function SinglePlayer({
 
         // Update header with combined messages
         if (mainText) {
-            addHeaderMessage({ text: mainText, minDuration: 1000 });
+            console.log("adding", mainText)
+            addHeaderMessage({ text: mainText, minDuration: 500 });
         }
     }
 
 
     useEffect(() => {
-        updateGameDisplay();
+        updateGameScores();
     }, [currentScore, currentCorrects, currentErrors, currentStreak, 
         gameMode, currentTarget.current, highlightedRegion, 
         currentAskedId, currentTotalNumRegions]);
+    useEffect(() => {
+        updateGameHeader();
+    }, [currentTarget.current]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;

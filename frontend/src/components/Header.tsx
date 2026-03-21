@@ -42,17 +42,27 @@ function Header() {
                 </a>
                 <div className="navbar-middle">
                     {headerMessages.length > 0 && <div className="target-label-container">
-                        {headerMessages.map(msg => (
-                            <p key={msg.id} className="header-message">
-                                <span className="target-text" style={{
-                                    color: msg.color || 'inherit',
-                                    fontWeight: 'bold',
-                                    transition: 'all 0.1s ease-in-out'
-                                }}>
-                                    {msg.text}
-                                </span>
-                            </p>
-                        ))}
+                        {headerMessages.map(msg => {
+                            const colorMap: Record<string, string> = {
+                                'success': '#4ade80',
+                                'failure': '#f87171'
+                            };
+                            const resolvedColor = msg.color 
+                                ? (colorMap[msg.color] || msg.color)
+                                : 'inherit';
+                            
+                            return (
+                                <p key={msg.id} className="header-message">
+                                    <span className="target-text" style={{
+                                        color: resolvedColor,
+                                        fontWeight: 'bold',
+                                        transition: 'color 0.2s ease-in-out'
+                                    }}>
+                                        {msg.text}
+                                    </span>
+                                </p>
+                            );
+                        })}
                     </div>}
                     {isSingleplayer && <div className="score-error-container">
                             {headerScore && <p id="score-label">

@@ -46,7 +46,7 @@ const MultiPlayer = ({
       t, authToken, isLoggedIn, userUsername, 
       pageContext,
       userPublishToLeaderboard,
-      addHeaderMessage, clearHeaderMessages, setHeaderTime,
+      addHeaderMessage, clearHeaderMessages, setHeaderTime, setHeaderScore, setAllHeaderMessagesColor,
       showNotification, setAskedAtlas
    } = useApp();
 
@@ -141,6 +141,7 @@ const MultiPlayer = ({
 
   const cleanHeader = () => {
     clearHeaderMessages();
+    setHeaderScore("")
     setHeaderTime("")
   }
   
@@ -427,9 +428,9 @@ const MultiPlayer = ({
           ));
         }
         if (data.isCorrect) {
-          // Success feedback handled by notification
+          setAllHeaderMessagesColor('success');
         } else {
-          // Failure feedback handled by notification
+          setAllHeaderMessagesColor('failure');
         }
     });
     
@@ -587,7 +588,7 @@ const MultiPlayer = ({
       addHeaderMessage({ 
         text: `${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`,
         forceClear: true,
-        minDuration: 100
+        minDuration: 1000
       });
     } else {
       clearHeaderMessages();

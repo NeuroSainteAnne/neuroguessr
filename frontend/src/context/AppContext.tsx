@@ -22,12 +22,15 @@ export type HeaderMessage = {
   color?: string | undefined;
   minDuration?: number | undefined; // in milliseconds
   addedAt: number;
+  colorDuration?: number | undefined; // in milliseconds
+  colorAddedAt?: number | undefined;
 };
 
 export type AddHeaderMessageOptions = {
   text: string;
   color?: string | undefined;
   minDuration?: number; // in milliseconds, default 5000
+  colorDuration?: number; // in milliseconds, duration after which color fades out
   forceClear?: boolean; // if true, clears all existing messages before adding
 };
 
@@ -93,6 +96,7 @@ type AppContextType = {
   // New header message functions
   addHeaderMessage: (options: AddHeaderMessageOptions) => void;
   clearHeaderMessages: () => void;
+  setAllHeaderMessagesColor: (color: string | undefined, colorDuration?: number) => void;
   
   // Legacy header functions (for backward compatibility, deprecated)
   setHeaderText: (text: string) => void;
@@ -311,22 +315,26 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   
   // Header message system
   const addHeaderMessage = (options: AddHeaderMessageOptions) => {
-    const { text, color, minDuration = undefined, forceClear = false } = options;
-    const newMessage: HeaderMessage = {
-      id: `${Date.now()}-${Math.random()}`,
-      text,
-      color,
-      minDuration,
-      addedAt: Date.now()
-    };
+    const { text, color, minDuration = undefined, colorDuration = undefined, forceClear = false } = options;
     
     setHeaderMessages(prev => {
+      // Create the message inside the updater to avoid race conditions
+      const now = Date.now();
+      const newMessage: HeaderMessage = {
+        id: `${now}-${Math.random()}`,
+        text,
+        color,
+        minDuration,
+        addedAt: now,
+        colorDuration,
+        colorAddedAt: color ? now : undefined
+      };
+      
       if (forceClear) {
         return [newMessage];
       }
       
       // Auto-cleanup expired messages before adding new one
-      const now = Date.now();
       const nonExpired = prev.filter(msg => !isHeaderMessageExpired(msg, now));
       
       // Prevent duplicate consecutive messages
@@ -334,13 +342,25 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       if (lastMessage && lastMessage.text === text) {
         return nonExpired;
       }
-      
       return [...nonExpired, newMessage];
     });
   };
   
   const clearHeaderMessages = () => {
     setHeaderMessages([]);
+  };
+  
+  const setAllHeaderMessagesColor = (color: string | undefined, colorDuration?: number) => {
+    setHeaderMessages(prev => {
+      const now = Date.now();
+      return prev.map(msg => ({ 
+        ...msg, 
+        color,
+        addedAt: now, // Reset addedAt to now to prevent immediate expiration after color change
+        colorDuration: colorDuration !== undefined ? colorDuration : msg.colorDuration,
+        colorAddedAt: color ? now : undefined
+      }));
+    });
   };
 
   const isHeaderMessageExpired = (msg: HeaderMessage, now: number) => {
@@ -352,19 +372,33 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     return elapsed >= minDuration;
   };
   
-  // Auto-cleanup expired messages
+  // Auto-cleanup expired messages and colors
   useEffect(() => {
     if (headerMessages.length === 0) return;
     
     const checkExpiredMessages = () => {
       const now = Date.now();
       setHeaderMessages(prev => {
-        const nonExpired = prev.filter(msg => !isHeaderMessageExpired(msg, now));
-        const expired = prev.filter(msg => isHeaderMessageExpired(msg, now));
+        let updated = [...prev];
+        
+        // First, expire colors if colorDuration has passed
+        updated = updated.map(msg => {
+          if (msg.color && msg.colorDuration !== undefined && msg.colorAddedAt !== undefined) {
+            const colorElapsed = now - msg.colorAddedAt;
+            if (colorElapsed >= msg.colorDuration) {
+              return { ...msg, color: undefined, colorAddedAt: undefined };
+            }
+          }
+          return msg;
+        });
+        
+        // Then, handle message expiration
+        const nonExpired = updated.filter(msg => !isHeaderMessageExpired(msg, now));
+        const expired = updated.filter(msg => isHeaderMessageExpired(msg, now));
 
         // Only cleanup if there are more than one non-expired message
         if (nonExpired.length < 1 && expired.length === 0) {
-          return prev;
+          return updated;
         }
 
         // Find the latest expired message (highest addedAt)
@@ -373,7 +407,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
           : null;
 
         // Keep non-expired messages AND the latest expired message, in original order
-        return prev.filter(msg => !isHeaderMessageExpired(msg, now) || (latestExpired && msg.id === latestExpired.id));
+        return updated.filter(msg => !isHeaderMessageExpired(msg, now) || (latestExpired && msg.id === latestExpired.id));
       });
     };
     
@@ -734,6 +768,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       // New header message functions
       addHeaderMessage,
       clearHeaderMessages,
+      setAllHeaderMessagesColor,
       
       // Legacy header functions
       setHeaderText,
