@@ -56,8 +56,8 @@ function SinglePlayer({
     const { t, askedAtlas, viewerOptions,
         isLoggedIn, userPublishToLeaderboard,
         isMobileView,
-        setHeaderText, setHeaderTextMode, setHeaderScore,
-        setHeaderStreak, setHeaderErrors, setHeaderTime,
+        addHeaderMessage, clearHeaderMessages,
+        setHeaderStreak, setHeaderScore, setHeaderErrors, setHeaderTime,
         setShowHelpOverlay, showNotification,
         pageContext } = useApp();
     const { routeParams } = pageContext;
@@ -121,8 +121,8 @@ function SinglePlayer({
                 setMaxScore(gameState.maxScore);
             }
             
-            // Display score
-            setHeaderScore(`${t("score")}: ${Math.round(gameState.score)}`);
+            // Display score using new header message system
+            setHeaderScore(`${Math.round(gameState.score)}`);
             
             if(gameMode === "streak"){
                 setHeaderStreak(`${gameState.streak}`);
@@ -225,18 +225,15 @@ function SinglePlayer({
             // Update UI based on guess result
             if (lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
-                // DIsplay success
-                setHeaderTextMode("success");
-                setTimeout(() => {
-                    setHeaderTextMode("normal");
-                }, 500);
+                // Display success with green color for 500ms
+                // The message will be updated by updateGameDisplay shortly after
                 if(gameMode === "practice"){
                     setHighlightedRegion(null);
                     unHighlight()
                 }
             } else {
                 setCurrentErrors(prev => prev + 1);
-                setHeaderTextMode("failure");
+                // Display failure with red color
                 if(gameMode === "streak"){ 
                     showNotification(`${t("incorrect")} ${lastGuessResult.consecutiveErrors}/${lastGuessResult.maxErrorsStreak}`, false);
                 }
@@ -303,8 +300,7 @@ function SinglePlayer({
     }, [currentAttempts])
 
     const cleanHeader = () => {
-        setHeaderText("");
-        setHeaderScore("");
+        clearHeaderMessages();
         setHeaderStreak("");
         setHeaderErrors("");
         setHeaderTime("")
@@ -338,25 +334,27 @@ function SinglePlayer({
             setCurrentAskedId(0); // Reset asked ID for time-attack
             setMaxScore(null); // Reset max score
             usedRegions.current = []; // Reset used regions for time attack
-            setHeaderTextMode("normal"); // Reset header text mode
+            clearHeaderMessages(); // Clear all header messages
             setHasEnded(false);
             hasEndedRef.current = false; // Reset the ref value
             setPastRegions([]);
-            setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
+            addHeaderMessage({ 
+                text: gameMode === 'navigation' ? t('click_to_identify') : t('not_started'),
+                forceClear: true 
+            });
             if (gameMode === 'navigation') {
-                setHeaderScore("");
                 setHeaderStreak("");
                 setHeaderErrors("");
             } else if (gameMode === 'practice') {
-                setHeaderScore(t('correct_label') + ": 0");
+                setHeaderScore(`0`);
                 setHeaderErrors("0");
                 setHeaderStreak("");
             } else if (gameMode === 'streak') {
-                setHeaderScore(t('correct_label') + ": 0");
+                addHeaderMessage({ text: t('correct_label') + ": 0", forceClear: true });
                 setHeaderErrors("0");
                 setHeaderStreak("0");
             } else if (gameMode === 'time-attack') {
-                setHeaderScore(t('score_label') + ": 0");
+                addHeaderMessage({ text: t('score_label') + ": 0", forceClear: true });
                 setHeaderErrors("0");
                 setHeaderStreak("");
             }
@@ -422,7 +420,10 @@ function SinglePlayer({
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-                    setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
+                    addHeaderMessage({ 
+                        text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
+                        minDuration: 5000
+                    });
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
                     const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx];
@@ -447,7 +448,11 @@ function SinglePlayer({
                 selectedVoxelProp.current = null;
                 if (gameMode === 'navigation') {
                     window.history.pushState(null, '', `/singleplayer/navigation/${atlasRef.current.atlas}`);
-                    setHeaderText(t('no_region_selected'));
+                    addHeaderMessage({ 
+                        text: t('no_region_selected'),
+                        forceClear: true,
+                        minDuration: 100
+                    });
                     setHighlightedRegion(null);
                     unHighlight();
                 } else {
@@ -499,11 +504,7 @@ function SinglePlayer({
 
     const updateGameDisplay = () => {
         // Update labels based on mode
-        if (gameMode === 'time-attack' || gameMode === 'streak') {
-            setHeaderScore(t('score_label') + `: ${Math.round(currentScore)}`); // Display rounded score for Time Attack
-        } else if (gameMode === 'practice') {
-            setHeaderScore(t('correct_label') + `: ${currentCorrects}`); // Display correct count for other modes
-        }
+        setHeaderScore(`${currentScore}`);
 
         if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
             setHeaderErrors(`${currentErrors}`);
@@ -512,23 +513,27 @@ function SinglePlayer({
             setHeaderStreak(`${currentStreak}`);
         }
 
+        let mainText = '';
         if (gameMode === 'navigation') {
-            setHeaderText(highlightedRegion
+            mainText = highlightedRegion
                 ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
-                : t('click_to_identify'));
+                : t('click_to_identify');
         } else if (currentTarget.current !== undefined && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
             // Use 'find' translation key directly
             const prefix = t('find') || 'Find: ';
             // For time attack, display the current question number
             if (gameMode === 'time-attack') {
-                setHeaderText(`${currentAskedId}/${currentTotalNumRegions} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+                mainText = `${currentAskedId}/${currentTotalNumRegions} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`;
             } else {
                 if(currentTarget.current !== undefined){
-                    setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
+                    mainText = prefix + atlasRef.current.labels[currentTarget.current];
                 }
             }
-        } else {
-            setHeaderText(''); // No region : cleanup
+        }
+
+        // Update header with combined messages
+        if (mainText) {
+            addHeaderMessage({ text: mainText, minDuration: 1000 });
         }
     }
 

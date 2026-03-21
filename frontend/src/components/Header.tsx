@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 function Header() {
     const {currentLanguage, t, handleChangeLanguage,
     isLoggedIn, isMobileView,
-    headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
+    headerMessages, headerStreak, headerTime, headerErrors, headerScore,
     pageContext } = useApp();
 
     // Use local state to track if we're hydrated to prevent hydration mismatch
@@ -41,23 +41,24 @@ function Header() {
                     </div>
                 </a>
                 <div className="navbar-middle">
-                    { headerText != "" && <div className="target-label-container">
-                        <p id="target-label">
-                            <span className="target-text" style={
-                                ((mode)=>{
-                                    switch(mode) {
-                                        case "success":
-                                            return { color: '#4ade80', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
-                                        case "failure":
-                                            return { color: '#f87171', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
-                                    }
-                                    return {};
-                                })(headerTextMode)
-                            }>{headerText}</span>
-                        </p>
+                    {headerMessages.length > 0 && <div className="target-label-container">
+                        {headerMessages.map(msg => (
+                            <p key={msg.id} className="header-message">
+                                <span className="target-text" style={{
+                                    color: msg.color || 'inherit',
+                                    fontWeight: 'bold',
+                                    transition: 'all 0.1s ease-in-out'
+                                }}>
+                                    {msg.text}
+                                </span>
+                            </p>
+                        ))}
                     </div>}
                     {isSingleplayer && <div className="score-error-container">
-                            {headerScore && <p id="score-label">{headerScore}</p>}
+                            {headerScore && <p id="score-label">
+                                <span>{t ? t("score_label") : 'Score'}: </span>
+                                <span id="score-value">{headerScore}</span>
+                            </p>}
                             {headerErrors && <p id="error-label">{t ? t('errors_label') : 'Errors'}: {headerErrors}</p>}
                             {headerStreak && <p id="streak-label">
                                 <span>{t ? t("streak_label") : 'Streak'}: </span>
@@ -67,7 +68,6 @@ function Header() {
                             {headerTime && <p id="time-label">{headerTime}</p>}
                         </div>}
                     {isMultiplayer && <div className="score-error-container">
-                            {headerScore && <p id="score-label">{headerScore}</p>}
                             {headerErrors && <p id="error-label">{t ? t('errors_label') : 'Errors'}: {headerErrors}</p>}
                             {headerTime && <p id="time-label">{headerTime}</p>}
                         </div>}

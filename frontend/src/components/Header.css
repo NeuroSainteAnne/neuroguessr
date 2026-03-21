@@ -227,6 +227,12 @@
     /* Align text to the left */
 }
 
+.header-message {
+    margin: 0.25rem 0;
+    /* Small margin between multiple messages */
+    text-align: left;
+}
+
 .target-label-container .target-text {
     font-style: italic;
     /* Make the region text italic */

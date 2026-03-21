@@ -15,6 +15,22 @@ type NVImageConstructor = {
   loadFromUrl(options: { url: string }): Promise<NVImage>;
 }
 
+// Header message type
+export type HeaderMessage = {
+  id: string;
+  text: string;
+  color?: string | undefined;
+  minDuration?: number | undefined; // in milliseconds
+  addedAt: number;
+};
+
+export type AddHeaderMessageOptions = {
+  text: string;
+  color?: string | undefined;
+  minDuration?: number; // in milliseconds, default 5000
+  forceClear?: boolean; // if true, clears all existing messages before adding
+};
+
 // Define the shape of our context
 type AppContextType = {
   // page context
@@ -34,12 +50,13 @@ type AppContextType = {
   currentLanguage: string;
   notifications: { id: string; message: string; isSuccess: boolean, removing: boolean }[];
   
-  // Header state
-  headerText: string;
-  headerTextMode: string;
-  headerScore: string;
+  // Header state - New unified message system
+  headerMessages: HeaderMessage[];
+  
+  // Legacy header state (kept for backward compatibility with headerErrors, headerStreak, headerTime)
   headerErrors: string;
   headerStreak: string;
+  headerScore: string;
   headerTime: string;
   
   // Viewer options
@@ -72,6 +89,12 @@ type AppContextType = {
   logout: () => void;
   handleChangeLanguage: (lang: string) => void;
   showNotification: (message: string, isSuccess: boolean, i18params?: object, duration?: number) => void;
+  
+  // New header message functions
+  addHeaderMessage: (options: AddHeaderMessageOptions) => void;
+  clearHeaderMessages: () => void;
+  
+  // Legacy header functions (for backward compatibility, deprecated)
   setHeaderText: (text: string) => void;
   setHeaderTextMode: (mode: string) => void;
   setHeaderScore: (score: string) => void;
@@ -130,12 +153,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   
-  // Header state
-  const [headerText, setHeaderText] = useState<string>("");
-  const [headerTextMode, setHeaderTextMode] = useState<string>("");
-  const [headerScore, setHeaderScore] = useState<string>("");
+  // Header state - New unified message system
+  const [headerMessages, setHeaderMessages] = useState<HeaderMessage[]>([]);
+  
+  // Legacy header state (kept for backward compatibility)
   const [headerErrors, setHeaderErrors] = useState<string>("");
   const [headerStreak, setHeaderStreak] = useState<string>("");
+  const [headerScore, setHeaderScore] = useState<string>("");
   const [headerTime, setHeaderTime] = useState<string>("");
   
   // Viewer options
@@ -285,6 +309,90 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const [showLegalOverlay, setShowLegalOverlay] = useState<boolean>(false);
   
+  // Header message system
+  const addHeaderMessage = (options: AddHeaderMessageOptions) => {
+    const { text, color, minDuration = undefined, forceClear = false } = options;
+    const newMessage: HeaderMessage = {
+      id: `${Date.now()}-${Math.random()}`,
+      text,
+      color,
+      minDuration,
+      addedAt: Date.now()
+    };
+    
+    setHeaderMessages(prev => {
+      if (forceClear) {
+        return [newMessage];
+      }
+      
+      // Auto-cleanup expired messages before adding new one
+      const now = Date.now();
+      const nonExpired = prev.filter(msg => !isHeaderMessageExpired(msg, now));
+      
+      // Prevent duplicate consecutive messages
+      const lastMessage = nonExpired[nonExpired.length - 1];
+      if (lastMessage && lastMessage.text === text) {
+        return nonExpired;
+      }
+      
+      return [...nonExpired, newMessage];
+    });
+  };
+  
+  const clearHeaderMessages = () => {
+    setHeaderMessages([]);
+  };
+
+  const isHeaderMessageExpired = (msg: HeaderMessage, now: number) => {
+    if (msg.minDuration === undefined){
+      return true
+    }
+    const elapsed = now - msg.addedAt;
+    const minDuration = msg.minDuration;
+    return elapsed >= minDuration;
+  };
+  
+  // Auto-cleanup expired messages
+  useEffect(() => {
+    if (headerMessages.length === 0) return;
+    
+    const checkExpiredMessages = () => {
+      const now = Date.now();
+      setHeaderMessages(prev => {
+        const nonExpired = prev.filter(msg => !isHeaderMessageExpired(msg, now));
+        const expired = prev.filter(msg => isHeaderMessageExpired(msg, now));
+
+        // Only cleanup if there are more than one non-expired message
+        if (nonExpired.length < 1 && expired.length === 0) {
+          return prev;
+        }
+
+        // Find the latest expired message (highest addedAt)
+        const latestExpired = expired.length > 0
+          ? expired.reduce((latest, current) => current.addedAt > latest.addedAt ? current : latest)
+          : null;
+
+        // Keep non-expired messages AND the latest expired message, in original order
+        return prev.filter(msg => !isHeaderMessageExpired(msg, now) || (latestExpired && msg.id === latestExpired.id));
+      });
+    };
+    
+    const interval = setInterval(checkExpiredMessages, 100);
+    return () => clearInterval(interval);
+  }, [headerMessages]);
+  
+  // Legacy header functions for backward compatibility
+  const setHeaderText = (text: string) => {
+    // Default mode is normal (no special color)
+    addHeaderMessage({ text, color: undefined, minDuration: 5000, forceClear: true });
+  };
+  
+  const setHeaderTextMode = (mode: string) => {
+    // This is a legacy function that modifies the color of the last message
+    // For now, we'll just ignore it as the new system uses color directly
+    // If needed, we can implement it to update the last message's color
+  };
+    
   // Language handler
   const handleChangeLanguage = async (lang: string) => {
     consoleLog("verbose", `Changing language from ${currentLanguage} to ${lang}`);
@@ -583,12 +691,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       currentLanguage,
       notifications,
       
-      // Header state
-      headerText,
-      headerTextMode,
-      headerScore,
+      // Header state - New unified message system
+      headerMessages,
+      
+      // Legacy header state
       headerErrors,
       headerStreak,
+      headerScore,
       headerTime,
       
       // Viewer options
@@ -621,6 +730,12 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       logout,
       handleChangeLanguage,
       showNotification,
+      
+      // New header message functions
+      addHeaderMessage,
+      clearHeaderMessages,
+      
+      // Legacy header functions
       setHeaderText,
       setHeaderTextMode,
       setHeaderScore,
