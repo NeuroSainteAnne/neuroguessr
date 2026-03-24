@@ -102,7 +102,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         json: 'xtract_labels.json',
         name: 'White Matter',
         difficulty: 2,
-        info: false
+        info: true
     },
     'territories': {
         atlas_category: 'cerebral_arteries',
