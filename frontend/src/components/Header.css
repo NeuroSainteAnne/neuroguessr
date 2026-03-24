@@ -234,6 +234,13 @@
     text-align: left;
 }
 
+.header-info-icon{
+    margin-left: 5px;
+    font-size: 0.9em;
+    color: #4a90e2;
+    cursor: pointer;
+}
+
 .target-label-container .target-text {
     font-style: italic;
     /* Make the region text italic */

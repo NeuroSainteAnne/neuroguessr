@@ -435,8 +435,11 @@ function SinglePlayer({
                     }]
                     if(atlasRef.current.info){
                         const atlasInfo = atlasRef.current.info[clickedRegionLocation.idx];
+                        const infoContent = atlasRef.current.infoDetail?.[clickedRegionLocation.idx] || undefined;
+                        const infoSource = atlasRef.current.infoSource?.[clickedRegionLocation.idx] || undefined;
                         if(atlasInfo){
-                            messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal' });
+                            messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal',
+                            infoContent: infoContent, infoSource: infoSource });
                         }
                     }
                     addHeaderMessages(messages);
@@ -560,13 +563,20 @@ function SinglePlayer({
 
         if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && (highlightedRegion !== null || currentTarget.current !== undefined)){
             let atlasInfo = "";
+            let infoContent = undefined;
+            let infoSource = undefined;
             if(highlightedRegion !== null){
                 atlasInfo = atlasRef.current.info[highlightedRegion] || "";
+                infoContent = atlasRef.current.infoDetail?.[highlightedRegion] || undefined;
+                infoSource = atlasRef.current.infoSource?.[highlightedRegion] || undefined;
             } else if(currentTarget.current !== undefined){
                 atlasInfo = atlasRef.current.info[currentTarget.current] || "";
+                infoContent = atlasRef.current.infoDetail?.[currentTarget.current] || undefined;
+                infoSource = atlasRef.current.infoSource?.[currentTarget.current] || undefined;
             }
             if(atlasInfo !== ""){
-                messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal' });
+                messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal',
+                    infoContent: infoContent, infoSource: infoSource });
             }
         }
         

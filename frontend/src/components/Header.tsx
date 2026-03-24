@@ -8,7 +8,7 @@ function Header() {
     const {currentLanguage, t, handleChangeLanguage,
     isLoggedIn, isMobileView,
     headerMessages, headerStreak, headerTime, headerErrors, headerScore,
-    pageContext } = useApp();
+    pageContext, showTooltip, hideTooltip } = useApp();
 
     // Use local state to track if we're hydrated to prevent hydration mismatch
     const [isHydrated, setIsHydrated] = useState(false);
@@ -16,6 +16,17 @@ function Header() {
     useEffect(() => {
         setIsHydrated(true);
     }, []);
+
+    const handleInfoHover = (e: React.MouseEvent<HTMLSpanElement>, infoText: string | undefined) => {
+        if(infoText){
+            const rect = e.currentTarget.getBoundingClientRect();
+            showTooltip(infoText, rect.left + rect.width / 2, rect.top - 8);
+        }
+    };
+
+    const handleInfoLeave = () => {
+        hideTooltip();
+    };
 
     // Get the current path from pageContext
     const currentPath = pageContext?.urlPathname || '';
@@ -61,6 +72,20 @@ function Header() {
                                     }}>
                                         {msg.text}
                                     </span>
+                                    {msg.infoContent && (
+                                        <span className="header-info-icon"
+                                            onMouseEnter={(e) => handleInfoHover(e, msg.infoContent)}
+                                            onMouseLeave={handleInfoLeave}>
+                                            ℹ️
+                                        </span>
+                                    )}
+                                    {msg.infoSource && (
+                                        <span className="header-info-icon"
+                                            onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
+                                            onMouseLeave={handleInfoLeave}>
+                                            📖
+                                        </span>
+                                    )}
                                 </p>
                             );
                         })}

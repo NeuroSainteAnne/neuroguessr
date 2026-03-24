@@ -27,6 +27,8 @@ export type HeaderMessage = {
   addedAt: number;
   colorDuration?: number | undefined; // in milliseconds
   colorAddedAt?: number | undefined;
+  infoContent?: string | undefined; // Optional additional info content for tooltips or details
+  infoSource?: string | undefined; // Optional source or reference for the message content
 };
 
 export type AddHeaderMessageOptions = {
@@ -37,6 +39,8 @@ export type AddHeaderMessageOptions = {
   minDuration?: number; // in milliseconds, default 5000
   colorDuration?: number; // in milliseconds, duration after which color fades out
   forceClear?: boolean; // if true, clears all existing messages before adding
+  infoContent?: string | undefined; // Optional additional info content for tooltips or details
+  infoSource?: string | undefined; // Optional source or reference for the message content
 };
 
 // Tooltip type
@@ -45,6 +49,7 @@ export type TooltipState = {
   text: string;
   x: number;
   y: number;
+  direction: string;
 };
 
 // Define the shape of our context
@@ -134,7 +139,7 @@ type AppContextType = {
   
   // Tooltip system
   tooltip: TooltipState;
-  showTooltip: (text: string, x: number, y: number) => void;
+  showTooltip: (text: string, x: number, y: number, direction?: string) => void;
   hideTooltip: () => void;
 };
 
@@ -179,7 +184,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     visible: false,
     text: '',
     x: 0,
-    y: 0
+    y: 0,
+    direction: "down"
   });
   
   // Header state - New unified message system
@@ -355,7 +361,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       
       // Create all new messages
       const newMessages: HeaderMessage[] = optionsArray.map((options, index) => {
-        const { text, color, fontSize = undefined, fontWeight = undefined, minDuration = undefined, colorDuration = undefined } = options;
+        const { text, color, fontSize = undefined, fontWeight = undefined, minDuration = undefined, colorDuration = undefined, infoContent = undefined, infoSource = undefined } = options;
         return {
           id: `${now}-${index}-${Math.random()}`,
           text,
@@ -365,7 +371,9 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
           minDuration,
           addedAt: now,
           colorDuration,
-          colorAddedAt: color ? now : undefined
+          colorAddedAt: color ? now : undefined,
+          infoContent: infoContent,
+          infoSource: infoSource
         };
       });
       
@@ -735,8 +743,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   };
   
   // Tooltip functions
-  const showTooltip = (text: string, x: number, y: number) => {
-    setTooltip({ visible: true, text, x, y });
+  const showTooltip = (text: string, x: number, y: number, direction: string = "down") => {
+    setTooltip({ visible: true, text, x, y, direction });
   };
   
   const hideTooltip = () => {
@@ -838,7 +846,7 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       {/* Global tooltip component */}
       {tooltip.visible && (
         <div 
-          className="info-tooltip-fixed"
+          className={`info-tooltip-fixed-${tooltip.direction}`}
           style={{
             left: `${tooltip.x}px`,
             top: `${tooltip.y}px`

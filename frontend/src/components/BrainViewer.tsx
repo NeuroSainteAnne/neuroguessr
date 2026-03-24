@@ -391,6 +391,8 @@ export function GameProvider({
                     nvImage: niivue.volumes[1],
                     labels: jsonData.labels,
                     info: jsonData.info ? jsonData.info : undefined,
+                    infoDetail: jsonData.info_detail ? jsonData.info_detail : undefined,
+                    infoSource: jsonData.info_source ? jsonData.info_source : undefined,
                     centers: jsonData.centers ? jsonData.centers : undefined,
                     blindMode: askedAtlas?.blindMode || false,
                     viewerOptions,
