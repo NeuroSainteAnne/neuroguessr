@@ -80,11 +80,24 @@ function Header() {
                                         </span>
                                     )}
                                     {msg.infoSource && (
-                                        <span className="header-info-icon"
-                                            onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
-                                            onMouseLeave={handleInfoLeave}>
-                                            📖
-                                        </span>
+                                        msg.infoSource.includes('https://doi.org') ? (
+                                            <a 
+                                                href={msg.infoSource}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="header-info-icon"
+                                                style={{ cursor: 'pointer', textDecoration: 'none' }}
+                                                onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
+                                                onMouseLeave={handleInfoLeave}>
+                                                📖
+                                            </a>
+                                        ) : (
+                                            <span className="header-info-icon"
+                                                onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
+                                                onMouseLeave={handleInfoLeave}>
+                                                📖
+                                            </span>
+                                        )
                                     )}
                                 </p>
                             );

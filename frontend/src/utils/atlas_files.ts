@@ -70,7 +70,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         json: 'subcortical.json',
         name: 'Subcortical',
         difficulty: 2,
-        info: false
+        info: true
     },
     'cerebellum': {
         atlas_category: 'subcortical_regions',
