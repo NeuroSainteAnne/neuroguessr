@@ -652,7 +652,7 @@ export async function endSingleGame(socketId: string, reason: string = 'complete
     // Calculate score percentage for time-attack mode
     let scorePercentage: number | null = null;
     if (theoreticalMaxScore !== null && theoreticalMaxScore > 0) {
-      scorePercentage = (gameState.score / theoreticalMaxScore) * 100;
+      scorePercentage = Math.round((gameState.score / theoreticalMaxScore) * 10000) / 100;
     }
 
     await sql`

@@ -196,6 +196,7 @@
     flex-grow: 1;
     min-width: 200px;
     max-width: 600px;
+    min-height: 6em;
     /* Allow it to grow and take available space */
 }
 
@@ -225,6 +226,19 @@
     /* Remove extra margin */
     text-align: left;
     /* Align text to the left */
+}
+
+.header-message {
+    margin: 0.25rem 0;
+    /* Small margin between multiple messages */
+    text-align: left;
+}
+
+.header-info-icon{
+    margin-left: 5px;
+    font-size: 0.9em;
+    color: #4a90e2;
+    cursor: pointer;
 }
 
 .target-label-container .target-text {

@@ -131,7 +131,7 @@ export function GameProvider({
         preloadedBackgroundMNI, viewerOptions,
         isMobileView, setIsMobileView,
         setAskedAtlas, setAskedRegion,
-        showNotification, setHeaderText } = useApp();
+        showNotification, addHeaderMessage } = useApp();
 
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [hasEnded, setHasEnded] = useState<boolean>(false);
@@ -142,11 +142,11 @@ export function GameProvider({
     const atlasRef = useRef<AtlasImageProxy | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const currentlyLoadedAtlas = useRef<any>(null);
-    const [highlightedRegion, setHighlightedRegion] = useState<number | null>(null);
+    const [highlightedRegion, setHighlightedRegion] = useState<number | null>(gameMode === "navigation" ? routedRegion || null : null);
     const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
     const guessButtonRef = useRef<HTMLButtonElement>(null);
     const selectedVoxelProp = useRef<{ mm: number[], vox: number[], idx: number | undefined } | null>(null);
-    const currentTarget = useRef<number | undefined>(undefined);
+    const currentTarget = useRef<number | undefined>(gameMode === "navigation" ? routedRegion : undefined);
 
     // dragging states
     const lastTouchEvent = useRef<React.Touch | undefined>(undefined);
@@ -390,6 +390,9 @@ export function GameProvider({
                     niivue,
                     nvImage: niivue.volumes[1],
                     labels: jsonData.labels,
+                    info: jsonData.info ? jsonData.info : undefined,
+                    infoDetail: jsonData.info_detail ? jsonData.info_detail : undefined,
+                    infoSource: jsonData.info_source ? jsonData.info_source : undefined,
                     centers: jsonData.centers ? jsonData.centers : undefined,
                     blindMode: askedAtlas?.blindMode || false,
                     viewerOptions,
@@ -404,14 +407,14 @@ export function GameProvider({
             }
         } catch (error) {
             console.error(`Failed to load atlas data for ${askedAtlas?.atlas}:`, error);
-            setHeaderText(t('error_loading_data', { atlas: askedAtlas?.atlas }));
+            addHeaderMessage({ text: t('error_loading_data', { atlas: askedAtlas?.atlas }), color: 'failure' });
         }
     }
 
     const handleRecolorization = () => {
         if (isGameRunning && gameMode === 'navigation' && niivue) {
             atlasRef.current?.showShuffledRegions()
-            setHeaderText(t('click_to_identify'));
+            addHeaderMessage({ text: t('click_to_identify'), color: 'info' });
             selectedVoxelProp.current = null;
             setHighlightedRegion(null);
             unHighlight();

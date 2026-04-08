@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { defineNiiOptions } from '../../utils/helper_nii';
-import { useApp } from '../../context/AppContext';
+import { AddHeaderMessageOptions, useApp } from '../../context/AppContext';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { navigate } from 'vike/client/router';
 import { consoleLog } from '../../utils/logging';
@@ -56,8 +56,9 @@ function SinglePlayer({
     const { t, askedAtlas, viewerOptions,
         isLoggedIn, userPublishToLeaderboard,
         isMobileView,
-        setHeaderText, setHeaderTextMode, setHeaderScore,
-        setHeaderStreak, setHeaderErrors, setHeaderTime,
+        addHeaderMessage, addHeaderMessages, clearHeaderMessages,
+        setHeaderStreak, setHeaderScore, setHeaderErrors, setHeaderTime,
+        setAllHeaderMessagesColor,
         setShowHelpOverlay, showNotification,
         pageContext } = useApp();
     const { routeParams } = pageContext;
@@ -121,8 +122,8 @@ function SinglePlayer({
                 setMaxScore(gameState.maxScore);
             }
             
-            // Display score
-            setHeaderScore(`${t("score")}: ${Math.round(gameState.score)}`);
+            // Display score using new header message system
+            setHeaderScore(`${Math.round(gameState.score)}`);
             
             if(gameMode === "streak"){
                 setHeaderStreak(`${gameState.streak}`);
@@ -223,20 +224,23 @@ function SinglePlayer({
             }
 
             // Update UI based on guess result
-            if (lastGuessResult.isCorrect) {
+            if (atlasRef.current && currentTarget.current && lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
-                // DIsplay success
-                setHeaderTextMode("success");
-                setTimeout(() => {
-                    setHeaderTextMode("normal");
-                }, 500);
+                // Display success with green color for 500ms
+                let mainText = atlasRef.current.labels[currentTarget.current] || "";
+                if (gameMode === 'time-attack') {
+                    mainText = `${currentAskedId}/${currentTotalNumRegions} - ${atlasRef.current.labels[currentTarget.current]}`;
+                }
+                addHeaderMessage({ text: mainText, minDuration: 1000, color: 'success' });
+                // The message will be updated by updateGameDisplay shortly after
                 if(gameMode === "practice"){
                     setHighlightedRegion(null);
                     unHighlight()
                 }
             } else {
                 setCurrentErrors(prev => prev + 1);
-                setHeaderTextMode("failure");
+                // Display failure with red color for 800ms
+                setAllHeaderMessagesColor('failure', 800);
                 if(gameMode === "streak"){ 
                     showNotification(`${t("incorrect")} ${lastGuessResult.consecutiveErrors}/${lastGuessResult.maxErrorsStreak}`, false);
                 }
@@ -303,8 +307,7 @@ function SinglePlayer({
     }, [currentAttempts])
 
     const cleanHeader = () => {
-        setHeaderText("");
-        setHeaderScore("");
+        clearHeaderMessages();
         setHeaderStreak("");
         setHeaderErrors("");
         setHeaderTime("")
@@ -338,25 +341,29 @@ function SinglePlayer({
             setCurrentAskedId(0); // Reset asked ID for time-attack
             setMaxScore(null); // Reset max score
             usedRegions.current = []; // Reset used regions for time attack
-            setHeaderTextMode("normal"); // Reset header text mode
+            clearHeaderMessages(); // Clear all header messages
             setHasEnded(false);
             hasEndedRef.current = false; // Reset the ref value
             setPastRegions([]);
-            setHeaderText(gameMode === 'navigation' ? t('click_to_identify') : t('not_started'));
+            addHeaderMessage({ 
+                text: gameMode === 'navigation' ? t('click_to_identify') : t('not_started'),
+                forceClear: true 
+            });
             if (gameMode === 'navigation') {
-                setHeaderScore("");
+                setHeaderScore(``);
                 setHeaderStreak("");
                 setHeaderErrors("");
             } else if (gameMode === 'practice') {
-                setHeaderScore(t('correct_label') + ": 0");
+                setHeaderScore(`0`);
                 setHeaderErrors("0");
                 setHeaderStreak("");
             } else if (gameMode === 'streak') {
-                setHeaderScore(t('correct_label') + ": 0");
+                addHeaderMessage({ text: t('correct_label') + ": 0", forceClear: true });
                 setHeaderErrors("0");
+                setHeaderScore(`0`);
                 setHeaderStreak("0");
             } else if (gameMode === 'time-attack') {
-                setHeaderScore(t('score_label') + ": 0");
+                addHeaderMessage({ text: t('score_label') + ": 0", forceClear: true });
                 setHeaderErrors("0");
                 setHeaderStreak("");
             }
@@ -422,7 +429,20 @@ function SinglePlayer({
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-                    setHeaderText(atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'));
+                    let messages : AddHeaderMessageOptions[] = [{ 
+                        text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
+                        minDuration: 500
+                    }]
+                    if(atlasRef.current.info){
+                        const atlasInfo = atlasRef.current.info[clickedRegionLocation.idx];
+                        const infoContent = atlasRef.current.infoDetail?.[clickedRegionLocation.idx] || undefined;
+                        const infoSource = atlasRef.current.infoSource?.[clickedRegionLocation.idx] || undefined;
+                        if(atlasInfo){
+                            messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal',
+                            infoContent: infoContent, infoSource: infoSource });
+                        }
+                    }
+                    addHeaderMessages(messages);
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
                     const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx];
@@ -447,7 +467,11 @@ function SinglePlayer({
                 selectedVoxelProp.current = null;
                 if (gameMode === 'navigation') {
                     window.history.pushState(null, '', `/singleplayer/navigation/${atlasRef.current.atlas}`);
-                    setHeaderText(t('no_region_selected'));
+                    addHeaderMessage({ 
+                        text: t('no_region_selected'),
+                        forceClear: true,
+                        minDuration: 100
+                    });
                     setHighlightedRegion(null);
                     unHighlight();
                 } else {
@@ -497,47 +521,78 @@ function SinglePlayer({
         }
     }, [validateGuessCallbackRef, isGameRunning, gameMode, currentRegion, currentTarget, atlasRef, t]);
 
-    const updateGameDisplay = () => {
+    const updateGameScores = () => {
         // Update labels based on mode
-        if (gameMode === 'time-attack' || gameMode === 'streak') {
-            setHeaderScore(t('score_label') + `: ${Math.round(currentScore)}`); // Display rounded score for Time Attack
-        } else if (gameMode === 'practice') {
-            setHeaderScore(t('correct_label') + `: ${currentCorrects}`); // Display correct count for other modes
-        }
 
         if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
             setHeaderErrors(`${currentErrors}`);
+            setHeaderScore(`${currentScore}`);
+        } else {
+            setHeaderErrors(``);
+            setHeaderScore(``);
         }
         if (gameMode === 'streak') {
             setHeaderStreak(`${currentStreak}`);
         }
-
+    }
+    const updateGameHeader = () => {
+        let mainText = '';
         if (gameMode === 'navigation') {
-            setHeaderText(highlightedRegion
+            mainText = highlightedRegion !== null && highlightedRegion !== undefined
                 ? atlasRef.current?.labels?.[highlightedRegion] || t('no_region_selected')
-                : t('click_to_identify'));
+                : t('click_to_identify');
         } else if (currentTarget.current !== undefined && atlasRef.current && atlasRef.current.labels && atlasRef.current.labels[currentTarget.current]) {
             // Use 'find' translation key directly
             const prefix = t('find') || 'Find: ';
             // For time attack, display the current question number
             if (gameMode === 'time-attack') {
-                setHeaderText(`${currentAskedId}/${currentTotalNumRegions} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+                mainText = `${currentAskedId}/${currentTotalNumRegions} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`;
             } else {
                 if(currentTarget.current !== undefined){
-                    setHeaderText(prefix + atlasRef.current.labels[currentTarget.current]);
+                    mainText = prefix + atlasRef.current.labels[currentTarget.current];
                 }
             }
-        } else {
-            setHeaderText(''); // No region : cleanup
         }
+
+        let messages : AddHeaderMessageOptions[] = []
+
+        // Update header with combined messages
+        if (mainText) {
+            messages.push({ text: mainText, minDuration: 500 });
+        }
+
+        if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && (highlightedRegion !== null || currentTarget.current !== undefined)){
+            let atlasInfo = "";
+            let infoContent = undefined;
+            let infoSource = undefined;
+            if(highlightedRegion !== null){
+                atlasInfo = atlasRef.current.info[highlightedRegion] || "";
+                infoContent = atlasRef.current.infoDetail?.[highlightedRegion] || undefined;
+                infoSource = atlasRef.current.infoSource?.[highlightedRegion] || undefined;
+            } else if(currentTarget.current !== undefined){
+                atlasInfo = atlasRef.current.info[currentTarget.current] || "";
+                infoContent = atlasRef.current.infoDetail?.[currentTarget.current] || undefined;
+                infoSource = atlasRef.current.infoSource?.[currentTarget.current] || undefined;
+            }
+            if(atlasInfo !== ""){
+                messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal',
+                    infoContent: infoContent, infoSource: infoSource });
+            }
+        }
+        
+        // Add all messages to the header
+        addHeaderMessages(messages);
     }
 
 
     useEffect(() => {
-        updateGameDisplay();
+        updateGameScores();
     }, [currentScore, currentCorrects, currentErrors, currentStreak, 
         gameMode, currentTarget.current, highlightedRegion, 
         currentAskedId, currentTotalNumRegions]);
+    useEffect(() => {
+        updateGameHeader();
+    }, [currentTarget.current, highlightedRegion, atlasRef.current]);
 
     useEffect(() => {
         if (!showStreakOverlay && !showTimeattackOverlay) return;

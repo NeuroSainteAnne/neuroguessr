@@ -7,8 +7,8 @@ import { useState, useEffect } from 'react';
 function Header() {
     const {currentLanguage, t, handleChangeLanguage,
     isLoggedIn, isMobileView,
-    headerText, headerTextMode, headerStreak, headerTime, headerScore, headerErrors,
-    pageContext } = useApp();
+    headerMessages, headerStreak, headerTime, headerErrors, headerScore,
+    pageContext, showTooltip, hideTooltip } = useApp();
 
     // Use local state to track if we're hydrated to prevent hydration mismatch
     const [isHydrated, setIsHydrated] = useState(false);
@@ -16,6 +16,17 @@ function Header() {
     useEffect(() => {
         setIsHydrated(true);
     }, []);
+
+    const handleInfoHover = (e: React.MouseEvent<HTMLSpanElement>, infoText: string | undefined) => {
+        if(infoText){
+            const rect = e.currentTarget.getBoundingClientRect();
+            showTooltip(infoText, rect.left + rect.width / 2, rect.top - 8);
+        }
+    };
+
+    const handleInfoLeave = () => {
+        hideTooltip();
+    };
 
     // Get the current path from pageContext
     const currentPath = pageContext?.urlPathname || '';
@@ -41,23 +52,62 @@ function Header() {
                     </div>
                 </a>
                 <div className="navbar-middle">
-                    { headerText != "" && <div className="target-label-container">
-                        <p id="target-label">
-                            <span className="target-text" style={
-                                ((mode)=>{
-                                    switch(mode) {
-                                        case "success":
-                                            return { color: '#4ade80', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
-                                        case "failure":
-                                            return { color: '#f87171', fontWeight: 'bold', transition: 'all 0.1s ease-in-out' };
-                                    }
-                                    return {};
-                                })(headerTextMode)
-                            }>{headerText}</span>
-                        </p>
+                    {headerMessages.length > 0 && <div className="target-label-container">
+                        {headerMessages.map(msg => {
+                            const colorMap: Record<string, string> = {
+                                'success': '#4ade80',
+                                'failure': '#f87171'
+                            };
+                            const resolvedColor = msg.color 
+                                ? (colorMap[msg.color] || msg.color)
+                                : 'inherit';
+                            
+                            return (
+                                <p key={msg.id} className="header-message">
+                                    <span className="target-text" style={{
+                                        color: resolvedColor,
+                                        fontSize: msg.fontSize || 'inherit',
+                                        fontWeight: msg.fontWeight || 'bold',
+                                        transition: 'color 0.2s ease-in-out, font-size 0.2s ease-in-out'
+                                    }}>
+                                        {msg.text}
+                                    </span>
+                                    {msg.infoContent && (
+                                        <span className="header-info-icon"
+                                            onMouseEnter={(e) => handleInfoHover(e, msg.infoContent)}
+                                            onMouseLeave={handleInfoLeave}>
+                                            ℹ️
+                                        </span>
+                                    )}
+                                    {msg.infoSource && (
+                                        msg.infoSource.includes('https://doi.org') ? (
+                                            <a 
+                                                href={msg.infoSource}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="header-info-icon"
+                                                style={{ cursor: 'pointer', textDecoration: 'none' }}
+                                                onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
+                                                onMouseLeave={handleInfoLeave}>
+                                                📖
+                                            </a>
+                                        ) : (
+                                            <span className="header-info-icon"
+                                                onMouseEnter={(e) => handleInfoHover(e, msg.infoSource)}
+                                                onMouseLeave={handleInfoLeave}>
+                                                📖
+                                            </span>
+                                        )
+                                    )}
+                                </p>
+                            );
+                        })}
                     </div>}
                     {isSingleplayer && <div className="score-error-container">
-                            {headerScore && <p id="score-label">{headerScore}</p>}
+                            {headerScore && <p id="score-label">
+                                <span>{t ? t("score_label") : 'Score'}: </span>
+                                <span id="score-value">{headerScore}</span>
+                            </p>}
                             {headerErrors && <p id="error-label">{t ? t('errors_label') : 'Errors'}: {headerErrors}</p>}
                             {headerStreak && <p id="streak-label">
                                 <span>{t ? t("streak_label") : 'Streak'}: </span>
@@ -67,7 +117,6 @@ function Header() {
                             {headerTime && <p id="time-label">{headerTime}</p>}
                         </div>}
                     {isMultiplayer && <div className="score-error-container">
-                            {headerScore && <p id="score-label">{headerScore}</p>}
                             {headerErrors && <p id="error-label">{t ? t('errors_label') : 'Errors'}: {headerErrors}</p>}
                             {headerTime && <p id="time-label">{headerTime}</p>}
                         </div>}

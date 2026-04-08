@@ -46,7 +46,7 @@ const MultiPlayer = ({
       t, authToken, isLoggedIn, userUsername, 
       pageContext,
       userPublishToLeaderboard,
-      setHeaderText, setHeaderTextMode, setHeaderTime,
+      addHeaderMessage, clearHeaderMessages, setHeaderTime, setHeaderScore, setAllHeaderMessagesColor,
       showNotification, setAskedAtlas
    } = useApp();
 
@@ -140,8 +140,8 @@ const MultiPlayer = ({
   }
 
   const cleanHeader = () => {
-    setHeaderText("");  
-    setHeaderTextMode("")
+    clearHeaderMessages();
+    setHeaderScore("")
     setHeaderTime("")
   }
   
@@ -362,7 +362,7 @@ const MultiPlayer = ({
         hasAnswered.current = false;
         isGuessCooldownRef.current = true;
         currentTarget.current = data.command.regionId
-        setHeaderTextMode("")
+        clearHeaderMessages()
         if(atlasRef.current && atlasRef.current.labels && currentTarget.current){
           const regionName = atlasRef.current.labels[currentTarget.current];
           if(regionName !== undefined) showNotification(regionName, true)
@@ -428,9 +428,9 @@ const MultiPlayer = ({
           ));
         }
         if (data.isCorrect) {
-          setHeaderTextMode("success");
+          setAllHeaderMessagesColor('success');
         } else {
-          setHeaderTextMode("failure");
+          setAllHeaderMessagesColor('failure');
         }
     });
     
@@ -585,9 +585,13 @@ const MultiPlayer = ({
         atlasRef.current.labels && currentTarget.current !== undefined && 
         atlasRef.current.labels[currentTarget.current]) {
       const prefix = t('find') || 'Find: ';
-      setHeaderText(`${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`);
+      addHeaderMessage({ 
+        text: `${currentAttempts+1}/${parameters?.regionsNumber} - ${prefix}${atlasRef.current.labels[currentTarget.current]}`,
+        forceClear: true,
+        minDuration: 1000
+      });
     } else {
-      setHeaderText("");
+      clearHeaderMessages();
     }
   }
   useEffect(() => {
@@ -599,8 +603,7 @@ const MultiPlayer = ({
       setIsGameRunning(false)
       if(countdownInterval.current) clearInterval(countdownInterval.current);
       countdownInterval.current = null;
-      setHeaderTextMode("")
-      setHeaderText("")
+      clearHeaderMessages();
       setHeaderTime("")
   }
 
@@ -680,8 +683,7 @@ const MultiPlayer = ({
     return () => {
       cleanupSocket();
       if (countdownInterval.current) clearInterval(countdownInterval.current);
-      setHeaderTextMode("")
-      setHeaderText("")
+      clearHeaderMessages();
       setHeaderTime("")
     };
   }, [])
@@ -698,7 +700,6 @@ const MultiPlayer = ({
         console.warn('Cannot validate guess:', { selectedVoxelProp, isGameRunning, currentTarget });
         return;
       }
-      setHeaderTextMode("");
       if (guessButtonRef.current) guessButtonRef.current.disabled = true;
 
       hasAnswered.current = true;

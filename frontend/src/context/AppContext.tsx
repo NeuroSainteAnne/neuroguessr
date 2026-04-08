@@ -9,11 +9,48 @@ import { useTranslation } from 'react-i18next';
 import type { NVImage } from '@niivue/niivue';
 import { niftiCache, loadNIfTIFromCache, getCacheStats, preloadAtlas } from '../utils/nifti_cache';
 import { consoleLog } from '../utils/logging';
+import './AppContext.css';
 
 type NVImageConstructor = {
   new (): NVImage;
   loadFromUrl(options: { url: string }): Promise<NVImage>;
 }
+
+// Header message type
+export type HeaderMessage = {
+  id: string;
+  text: string;
+  color?: string | undefined;
+  fontSize?: string | undefined; // CSS font-size value (e.g., '1rem', '16px')
+  fontWeight?: string | undefined; // CSS font-weight value (e.g., 'bold', 'normal', '500')
+  minDuration?: number | undefined; // in milliseconds
+  addedAt: number;
+  colorDuration?: number | undefined; // in milliseconds
+  colorAddedAt?: number | undefined;
+  infoContent?: string | undefined; // Optional additional info content for tooltips or details
+  infoSource?: string | undefined; // Optional source or reference for the message content
+};
+
+export type AddHeaderMessageOptions = {
+  text: string;
+  color?: string | undefined;
+  fontSize?: string; // CSS font-size value (e.g., '1rem', '16px')
+  fontWeight?: string | undefined; // CSS font-weight value (e.g., 'bold', 'normal', '500')
+  minDuration?: number; // in milliseconds, default 5000
+  colorDuration?: number; // in milliseconds, duration after which color fades out
+  forceClear?: boolean; // if true, clears all existing messages before adding
+  infoContent?: string | undefined; // Optional additional info content for tooltips or details
+  infoSource?: string | undefined; // Optional source or reference for the message content
+};
+
+// Tooltip type
+export type TooltipState = {
+  visible: boolean;
+  text: string;
+  x: number;
+  y: number;
+  direction: string;
+};
 
 // Define the shape of our context
 type AppContextType = {
@@ -34,12 +71,13 @@ type AppContextType = {
   currentLanguage: string;
   notifications: { id: string; message: string; isSuccess: boolean, removing: boolean }[];
   
-  // Header state
-  headerText: string;
-  headerTextMode: string;
-  headerScore: string;
+  // Header state - New unified message system
+  headerMessages: HeaderMessage[];
+  
+  // Legacy header state (kept for backward compatibility with headerErrors, headerStreak, headerTime)
   headerErrors: string;
   headerStreak: string;
+  headerScore: string;
   headerTime: string;
   
   // Viewer options
@@ -72,8 +110,14 @@ type AppContextType = {
   logout: () => void;
   handleChangeLanguage: (lang: string) => void;
   showNotification: (message: string, isSuccess: boolean, i18params?: object, duration?: number) => void;
-  setHeaderText: (text: string) => void;
-  setHeaderTextMode: (mode: string) => void;
+  
+  // New header message functions
+  addHeaderMessage: (options: AddHeaderMessageOptions) => void;
+  addHeaderMessages: (options: AddHeaderMessageOptions[]) => void;
+  clearHeaderMessages: () => void;
+  setAllHeaderMessagesColor: (color: string | undefined, colorDuration?: number) => void;
+  
+  // Header functions 
   setHeaderScore: (score: string) => void;
   setHeaderErrors: (errors: string) => void;
   setHeaderStreak: (streak: string) => void;
@@ -92,6 +136,11 @@ type AppContextType = {
   getCacheStats: () => ReturnType<typeof getCacheStats>;
   preloadAtlas: (atlasKey: string) => Promise<void>;
   clearCache: () => void;
+  
+  // Tooltip system
+  tooltip: TooltipState;
+  showTooltip: (text: string, x: number, y: number, direction?: string) => void;
+  hideTooltip: () => void;
 };
 
 // Create the context
@@ -130,12 +179,22 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // UI state
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   
-  // Header state
-  const [headerText, setHeaderText] = useState<string>("");
-  const [headerTextMode, setHeaderTextMode] = useState<string>("");
-  const [headerScore, setHeaderScore] = useState<string>("");
+  // Tooltip state
+  const [tooltip, setTooltip] = useState<TooltipState>({
+    visible: false,
+    text: '',
+    x: 0,
+    y: 0,
+    direction: "down"
+  });
+  
+  // Header state - New unified message system
+  const [headerMessages, setHeaderMessages] = useState<HeaderMessage[]>([]);
+  
+  // Legacy header state (kept for backward compatibility)
   const [headerErrors, setHeaderErrors] = useState<string>("");
   const [headerStreak, setHeaderStreak] = useState<string>("");
+  const [headerScore, setHeaderScore] = useState<string>("");
   const [headerTime, setHeaderTime] = useState<string>("");
   
   // Viewer options
@@ -284,6 +343,125 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   // Overlay system
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const [showLegalOverlay, setShowLegalOverlay] = useState<boolean>(false);
+  
+  // Header message system
+  const addHeaderMessage = (options: AddHeaderMessageOptions) => {
+    addHeaderMessages([options]);
+  };
+
+  const addHeaderMessages = (optionsArray: AddHeaderMessageOptions[]) => {
+    setHeaderMessages(prev => {
+      const now = Date.now();
+      
+      // Check if any message has forceClear
+      const shouldClear = optionsArray.some(opt => opt.forceClear);
+      
+      // Auto-cleanup expired messages before adding new ones
+      let base = shouldClear ? [] : prev.filter(msg => !isHeaderMessageExpired(msg, now));
+      
+      // Create all new messages
+      const newMessages: HeaderMessage[] = optionsArray.map((options, index) => {
+        const { text, color, fontSize = undefined, fontWeight = undefined, minDuration = undefined, colorDuration = undefined, infoContent = undefined, infoSource = undefined } = options;
+        return {
+          id: `${now}-${index}-${Math.random()}`,
+          text,
+          color,
+          fontSize,
+          fontWeight,
+          minDuration,
+          addedAt: now,
+          colorDuration,
+          colorAddedAt: color ? now : undefined,
+          infoContent: infoContent,
+          infoSource: infoSource
+        };
+      });
+      
+      // Filter out all duplicate messages
+      const result = [...base];
+      for (const newMsg of newMessages) {
+        // Check if this message text already exists in the result
+        const isDuplicate = result.some(msg => msg.text === newMsg.text);
+        if (!isDuplicate) {
+          result.push(newMsg);
+        }
+      }
+      
+      return result;
+    });
+  };
+  
+  const clearHeaderMessages = () => {
+    setHeaderMessages([]);
+  };
+  
+  const setAllHeaderMessagesColor = (color: string | undefined, colorDuration?: number) => {
+    setHeaderMessages(prev => {
+      const now = Date.now();
+      return prev.map(msg => ({ 
+        ...msg, 
+        color,
+        addedAt: now, // Reset addedAt to now to prevent immediate expiration after color change
+        colorDuration: colorDuration !== undefined ? colorDuration : msg.colorDuration,
+        colorAddedAt: color ? now : undefined
+      }));
+    });
+  };
+
+  const isHeaderMessageExpired = (msg: HeaderMessage, now: number) => {
+    if (msg.minDuration === undefined){
+      return true
+    }
+    const elapsed = now - msg.addedAt;
+    const minDuration = msg.minDuration;
+    return elapsed >= minDuration;
+  };
+  
+  // Auto-cleanup expired messages and colors
+  useEffect(() => {
+    if (headerMessages.length === 0) return;
+    
+    const checkExpiredMessages = () => {
+      const now = Date.now();
+      setHeaderMessages(prev => {
+        let updated = [...prev];
+        
+        // First, expire colors if colorDuration has passed
+        updated = updated.map(msg => {
+          if (msg.color && msg.colorDuration !== undefined && msg.colorAddedAt !== undefined) {
+            const colorElapsed = now - msg.colorAddedAt;
+            if (colorElapsed >= msg.colorDuration) {
+              return { ...msg, color: undefined, colorAddedAt: undefined };
+            }
+          }
+          return msg;
+        });
+        
+        // Then, handle message expiration
+        const nonExpired = updated.filter(msg => !isHeaderMessageExpired(msg, now));
+        const expired = updated.filter(msg => isHeaderMessageExpired(msg, now));
+
+        // Only cleanup if there are more than one non-expired message
+        if (nonExpired.length < 1 && expired.length === 0) {
+          return updated;
+        }
+
+        // Find the latest expired message (highest addedAt)
+        const latestExpired = expired.length > 0
+          ? expired.reduce((latest, current) => current.addedAt > latest.addedAt ? current : latest)
+          : null;
+
+        // Keep non-expired messages AND all messages with the same addedAt as the latest expired message
+        return updated.filter(msg => 
+          !isHeaderMessageExpired(msg, now) || 
+          (latestExpired && msg.addedAt === latestExpired.addedAt)
+        );
+      });
+    };
+    
+    const interval = setInterval(checkExpiredMessages, 100);
+    return () => clearInterval(interval);
+  }, [headerMessages]);
   
   // Language handler
   const handleChangeLanguage = async (lang: string) => {
@@ -564,6 +742,15 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     }
   };
   
+  // Tooltip functions
+  const showTooltip = (text: string, x: number, y: number, direction: string = "down") => {
+    setTooltip({ visible: true, text, x, y, direction });
+  };
+  
+  const hideTooltip = () => {
+    setTooltip(prev => ({ ...prev, visible: false }));
+  };
+  
   return (
     <AppContext.Provider value={{
       // Page context
@@ -583,12 +770,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       currentLanguage,
       notifications,
       
-      // Header state
-      headerText,
-      headerTextMode,
-      headerScore,
+      // Header state - New unified message system
+      headerMessages,
+      
+      // Legacy header state
       headerErrors,
       headerStreak,
+      headerScore,
       headerTime,
       
       // Viewer options
@@ -621,8 +809,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       logout,
       handleChangeLanguage,
       showNotification,
-      setHeaderText,
-      setHeaderTextMode,
+      
+      // New header message functions
+      addHeaderMessage, addHeaderMessages,
+      clearHeaderMessages,
+      setAllHeaderMessagesColor,
+      
+      // Legacy header functions
       setHeaderScore,
       setHeaderErrors,
       setHeaderStreak,
@@ -642,9 +835,26 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       // Cache management functions
       getCacheStats,
       preloadAtlas,
-      clearCache: niftiCache.clearCache
+      clearCache: niftiCache.clearCache,
+      
+      // Tooltip functions
+      tooltip,
+      showTooltip,
+      hideTooltip
     }}>
       {children}
+      {/* Global tooltip component */}
+      {tooltip.visible && (
+        <div 
+          className={`info-tooltip-fixed-${tooltip.direction}`}
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </AppContext.Provider>
   );
 }

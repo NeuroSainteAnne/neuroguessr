@@ -6,6 +6,7 @@ import GameSelector from '../GameSelector';
 import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
 import { ClassicChallenge, RTChallenge } from '../../../types/types';
+import News from '../../../components/News';
 
 export function Page() {
   const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
@@ -104,6 +105,7 @@ export function Page() {
   return (
     <>
       <title>{title}</title>
+      <News />
       {atlasRegions.length > 0 && <SearchBar />}
       <GameSelector />
       <div className="challenges-page">

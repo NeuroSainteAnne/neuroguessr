@@ -1,0 +1,153 @@
+.news-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    border: 1px solid #808080;
+    border-radius: 8px;
+    padding: 0;
+    background-color: #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.news-header {
+    background-color: #3a3a3a;
+    padding: 15px 20px;
+    border-bottom: 1px solid #808080;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.news-icon {
+    font-size: 1.5em;
+}
+
+.news-header h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.3em;
+    font-weight: 500;
+}
+
+.news-items {
+    padding: 5px;
+}
+
+.news-item {
+    background-color: #333333;
+    border-left: 4px solid #4a90e2;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.news-item:last-child {
+    margin-bottom: 0;
+}
+
+.news-item:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.news-item-clickable:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    background-color: #3a3a3a;
+}
+
+.news-item-info {
+    border-left-color: #4a90e2;
+}
+
+.news-item-warning {
+    border-left-color: #f0ad4e;
+}
+
+.news-item-announcement {
+    border-left-color: #5cb85c;
+}
+
+.news-item-update {
+    border-left-color: #9b59b6;
+}
+
+.news-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.news-item-icon {
+    font-size: 1.2em;
+    padding-right: 5px;
+}
+
+.news-item-title {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1.1em;
+    flex: 1;
+}
+
+.news-item-date {
+    color: #979797;
+    font-size: 0.9em;
+}
+
+.news-item-content {
+    color: #cccccc;
+    line-height: 1.5;
+    padding-left: 5px;
+}
+
+.news-empty {
+    text-align: center;
+    padding: 30px;
+    color: #979797;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .news-container {
+        margin: 10px;
+        border-radius: 6px;
+    }
+    
+    .news-header {
+        padding: 12px 15px;
+    }
+    
+    .news-header h2 {
+        font-size: 1.1em;
+    }
+    
+    .news-item {
+        padding: 12px;
+    }
+    
+    .news-item-header {
+        flex-wrap: wrap;
+    }
+    
+    .news-item-title {
+        font-size: 1em;
+        flex-basis: 100%;
+        order: 1;
+    }
+    
+    .news-item-date {
+        order: 3;
+        margin-left: auto;
+    }
+    
+    .news-item-icon {
+        order: 2;
+    }
+    
+    .news-item-content {
+        padding-left: 0;
+        font-size: 0.95em;
+    }
+}
