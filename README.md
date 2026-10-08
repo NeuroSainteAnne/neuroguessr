@@ -4,6 +4,8 @@
 
 NeuroGuessr Web is an interactive web application designed to help learning brain anatomy. 
 
+[![DOI](https://zenodo.org/badge/975508341.svg)](https://doi.org/10.5281/zenodo.23238357)
+
 ## Features
 
 - **Atlas Selection**: Choose from multiple brain atlases (AAL, Harvard-Oxford, Brodmann, Subcortical, Cerebellum ...).
