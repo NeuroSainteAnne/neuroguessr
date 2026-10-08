@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useApp } from '../../../context/AppContext';
 import './Teams.css';
 import { consoleLog } from '../../../utils/logging';
@@ -30,7 +30,7 @@ interface User {
 }
 
 export function Page() {
-  const { authToken, isLoggedIn, userIsAdmin } = useApp();
+  const { authToken, isLoggedIn, userIsAdmin, t } = useApp();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +55,11 @@ export function Page() {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formLoading, setFormLoading] = useState(false);
+  const adminNavRef = useRef<HTMLDivElement>(null);
+  const [navSliderStyle, setNavSliderStyle] = useState<React.CSSProperties>({ opacity: 0 });
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => { setIsHydrated(true); }, []);
 
   // Check if user is admin
   if (!isLoggedIn || !userIsAdmin) {
@@ -423,6 +428,32 @@ export function Page() {
     }
   }, [authToken, isLoggedIn, userIsAdmin]);
 
+  useEffect(() => {
+    if (!adminNavRef.current) return;
+    const activeBtn = adminNavRef.current.querySelector('.admin-nav-btn.active') as HTMLElement;
+    const inactiveBtn = adminNavRef.current.querySelector('.admin-nav-btn:not(.active)') as HTMLElement;
+    if (!activeBtn || !inactiveBtn) return;
+    const containerRect = adminNavRef.current.getBoundingClientRect();
+    const activeBtnRect = activeBtn.getBoundingClientRect();
+    const inactiveBtnRect = inactiveBtn.getBoundingClientRect();
+    // Start from the inactive button position, then animate to active
+    setNavSliderStyle({
+      left: inactiveBtnRect.left - containerRect.left,
+      width: inactiveBtnRect.width,
+      opacity: 1,
+      transition: 'none',
+    });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setNavSliderStyle({
+          left: activeBtnRect.left - containerRect.left,
+          width: activeBtnRect.width,
+          opacity: 1,
+        });
+      });
+    });
+  }, [isHydrated, loading]);
+
   if (loading) {
     return (
       <div className="teams-page">
@@ -440,8 +471,12 @@ export function Page() {
     <div className="teams-page">
       <div className="teams-container">
         <div className="teams-header">
-          <h1>Teams Management</h1>
-          <p>Create and manage teams for your organization</p>
+          <h1>{t('admin_section_title') || 'Admin Section'}</h1>
+          <div className="admin-nav" ref={adminNavRef}>
+            <div className="admin-nav-slider" style={navSliderStyle}></div>
+            <a href="/admin/teams" className="admin-nav-btn active">Équipes</a>
+            <a href="/admin/news" className="admin-nav-btn">Actualités</a>
+          </div>
         </div>
 
         {error && (

@@ -197,14 +197,14 @@ export async function saveFinishedSessions(gameRef: MultiplayerGame) {
             min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
             quit_reason, multiplayer_games_won, duration, created_at,
             name, classic_challenge_start_date, classic_challenge_end_date, classic_challenge_id,
-            theoretical_maximum_score, score_percentage
+            theoretical_maximum_score, score_percentage, chat
           ) VALUES (
             ${userId}, ${mode}, ${atlas}, ${blindMode}, ${score}, ${attempts}, ${correct}, ${incorrect},
             ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
             ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
             ${quitReason}, ${multiplayerGamesWon}, ${gameDuration}, NOW(),
             ${name}, ${classicChallengeStartDate}, ${classicChallengeEndDate}, ${classicChallengeId},
-            ${theoreticalMaximumScore}, ${scorePercentage}
+            ${theoreticalMaximumScore}, ${scorePercentage}, ${gameRef.chatMessages?.length ? JSON.stringify(gameRef.chatMessages) : null}
           )
         `.catch(e => {
           logger.error('Error inserting finished_session for user ' + userId + ':', e);

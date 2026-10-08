@@ -7,6 +7,7 @@ import { logger } from "./logging.ts";
 import { broadcastToSession, config, emitToUser, games, sendNextCommand, updateGameActivity } from "./multi.ts";
 import { MultiplayerGame, PersistentGameState, Recurrence } from "interfaces/multi.interfaces.ts";
 import { calculateNextStartTime } from "./multi_recurrence.ts";
+import { scheduleBotJoinRealtime } from "./multi_bot.ts";
 
 // Get next upcoming public realtime challenge
 
@@ -306,6 +307,12 @@ export const handleSaveAsRealtimeChallenge = async ({ sessionCode, sessionToken,
     // Start the first command (countdown with startTime)
     sendNextCommand(gameRef);
 
+    // Schedule bot join just before game start (test environment)
+    const startTimeIso = gameRef.commands[0].startTime;
+    if (startTimeIso) {
+      scheduleBotJoinRealtime(sessionCode, startTimeIso);
+    }
+
     emitToUser(sessionCode, userName, "save-as-realtime-challenge", { message: "success" });
   } catch (error) {
     logger.error("saveRealtimeChallengeConfig error", error);
@@ -399,7 +406,8 @@ export async function restorePersistentRealTimeChallengeSessions() {
           individualCorrectDurations: {},
           anonymousUsernames: [],
           isCurrentlyBlind: false,
-          lastActivity: Date.now()
+          lastActivity: Date.now(),
+          chatMessages: []
         };
 
         // If the start time has passed

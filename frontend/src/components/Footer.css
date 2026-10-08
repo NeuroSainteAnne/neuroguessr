@@ -1,74 +1,133 @@
-
 .lower-bar {
-    background-color: #3a3a3a;
+    background-color: var(--bg-page);
+    border-top: 1px solid var(--border-color);
     width: 100%;
-    height: 40px;
-    padding: 5px;
-    bottom: 0px;
+    height: 52px;
+    padding: 0 24px;
+    bottom: 0;
     position: fixed;
     display: flex;
-    justify-content: space-evenly;
     align-items: center;
+    justify-content: center;
     z-index: 20;
+    box-sizing: border-box;
 }
 
-.lower-bar a {
+.footer-items {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.footer-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.5em;
-    text-decoration: none;
-    color: white;
-    font-weight: 500;
-    margin-top: 0;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
-.lower-logo-github, .lower-logo-ghu {
-    height: 32px;
+/* Links */
+.lower-bar a {
+    text-decoration: none;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: opacity 0.2s;
 }
-.lower-logo-ipnp{
-    height: 42px;
+
+.lower-bar a:hover {
+    opacity: 0.7;
 }
-.lower-logo-upc{
-    height: 38px;
+
+.footer-link-label {
+    font-size: 0.82rem;
+    color: var(--text-primary);
 }
-.main-container:has(.help-button-container) .lower-legal-link {
-    margin-right: 80px;
+
+/* Logos */
+.lower-logo-github {
+    color: var(--text-primary);
+    opacity: 0.85;
+    transition: opacity 0.2s;
 }
-@media (max-width: 650px) {
-    .lower-bar {
-        height: 28px;
+
+.lower-logo-ghu,
+.lower-logo-ipnp,
+.lower-logo-upc {
+    height: 36px !important;
+    width: auto !important;
+    max-width: 160px;
+    object-fit: contain;
+    filter: grayscale(30%);
+    opacity: 0.85;
+    transition: all 0.2s;
+}
+
+.lower-bar a:hover .lower-logo-github {
+    opacity: 1;
+}
+
+.lower-bar a:hover img {
+    filter: grayscale(0%);
+    opacity: 1;
+}
+
+/* Legal / Contributors buttons */
+.lower-legal-link {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.lower-legal-link:hover {
+    opacity: 0.7;
+}
+
+.lower-legal-logo {
+    opacity: 0.75;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+}
+
+.lower-legal-link:hover .lower-legal-logo {
+    opacity: 1;
+}
+
+.lower-logo-ghu-mobile,
+.lower-logo-ipnp-mobile,
+.lower-logo-upc-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .footer-items {
+        gap: 2px;
     }
-    .lower-logo-github {
-        height: 22px;
-    }
-    .lower-logo-ghu {
-        height: 22px;
-    }
-    .lower-logo-ipnp{
-        height: 24px;
-    }
-    .lower-logo-upc{
-        height: 22px;
-    }
-    .lower-legal-text{
+    .footer-link-label {
         display: none;
     }
-    .main-container:has(.help-button-container) .lower-legal-link {
-        margin-right: 60px;
-    }
-}
 
-.lower-legal-link {
-    color: white;
-    text-decoration: none;
-    background-color: transparent;
-    padding: 0;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: 500;
-    gap: 5px;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    border: 0;
+    .lower-legal-text {
+        display: none;
+    }
+
+        
+    .lower-logo-ghu-mobile,
+    .lower-logo-ipnp-mobile,
+    .lower-logo-upc-mobile {
+        display: block;
+        height: 28px;
+    }
+
+    .lower-logo-ghu,
+    .lower-logo-ipnp,
+    .lower-logo-upc {
+        display:none;
+    }
 }

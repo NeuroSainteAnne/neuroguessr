@@ -1,674 +1,503 @@
-.canvas-container{
+/* --- LAYOUT ORIGINAL (Taille & Position restaurées) --- */
+.canvas-container {
     width: 100%;
-    grid-column: 2 / span 2;
-    grid-row: 2;
-    min-height: 500px;
-    height: calc(100% - 110px);
-    overflow: hidden;
+    grid-column: 1 / span 2;
+    grid-row: 1;
+    height: 100%;
+    min-height: calc(100vh - 250px);
+
+    /* Thème Dark Pro */
+    background-color: #000; /* Noir pur pour le contraste avec le cerveau */
+    border: 1px solid var(--border-idle, #333);
+    border-radius: 12px;
+
+    /* IMPORTANT : Pas de transition sur la taille pour éviter l'effet de zoom */
+    position: relative;
     box-sizing: border-box;
+    /* overflow: hidden;  <-- REMOVED to let mobile controls show if needed, or handled specifically */
+    overflow: hidden;
+    transition: grid-column 0.3s ease;
+    outline: none;
+}
+
+.canvas-options-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 500;
+}
+
+.canvas-container:focus,
+.canvas-container:focus-within {
+    outline: none;
+}
+
+.canvas-container canvas:focus {
+    outline: none;
+}
+
+/* When RegionHistory is visible (review mode), canvas takes 3/4 width (columns 2-3) */
+.canvas-and-scroll-container.review-mode .canvas-container {
+    grid-column: 2 / span 2;
+}
+
+@media (max-width: 768px) {
+    .canvas-and-scroll-container.review-mode .canvas-container {
+        grid-column: 1 / span 2;
+        grid-row: 2;
+        width: 100%;
+        height: auto;
+        min-height: 300px;
+    }
+        
+    .canvas-and-scroll-container.review-mode .mobile-controls {
+        grid-row: 2;
+    }
+}
+
+/* On mobile, add margin-top for game info box space (navigation, practice, etc.) */
+.canvas-and-scroll-container.game-info-mobile {
+    margin-top: 100px;
 }
 
 .alternate-content-container {
-    grid-column: 2 / span 2;
-    grid-row: 2;
+    grid-column: 1 / span 2;
+    grid-row: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: calc(100% - 110px);
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 1fr;
+    
+    background: var(--bg-card, #1e1e1e);
+    border-radius: 12px;
+    border: 1px solid var(--border-idle, #333);
 }
 
 .canvas-and-scroll-container {
     display: grid;
-    align-content: center;
-    grid-template-columns: min-content 1fr 1fr;
-    grid-template-rows: min-content 1fr 60px;
-    align-items: center;
+    align-content: stretch;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: minmax(min-content, 1fr) 75px;
+    align-items: stretch;
     justify-content: center;
     width: 100%;
     height: 100%;
     position: relative;
 }
 
+.canvas-and-scroll-container.review-mode {
+    grid-template-columns: 280px 1fr auto;
+}
+
+.canvas-and-scroll-container.review-mode.sidebar-expanded {
+    grid-template-columns: 420px 1fr auto;
+}
+
+.canvas-and-scroll-container.review-mode.sidebar-normal {
+    grid-template-columns: 280px 1fr auto;
+}
+
+.region-info-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 90%;
+    max-width: 320px;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-sizing: border-box;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+    .region-info-overlay {
+        max-width: calc(100% - 32px);
+        max-height: 50vh;
+    }
+}
+
+.region-info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.region-info-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+    line-height: 1.3;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding-bottom: 8px;
+}
+
+.region-info-short {
+    font-size: 0.82rem;
+    color: #d1d5db;
+    margin: 0;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+.region-info-long {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin: 0;
+    line-height: 1.65;
+}
+
+.region-info-source {
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin: 0;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
 .button-container {
-    grid-column: 2 / span 2;
-    grid-row: 3;
-    max-height: 60px;
+    grid-column: 1 / span 2;
+    grid-row: 2;
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     z-index: 10;
     justify-content: center;
+    align-items: center;
+    padding: 16px 16px;
+    transition: grid-column 0.3s ease;
+    min-height: auto;
 }
-
-
-/* Force 1:1 aspect ratio on mobile devices */
-@media (min-width: 300px) and (max-width: 500px) {
-    .canvas-container {
-        height: 0;
-        width: 100%;
-        padding-bottom: 100%; /* Creates 1:1 aspect ratio */
-        position: relative;
-        margin: 0 auto; /* Center horizontally */
+@media (max-width: 768px) {
+    .button-container > button {
+        font-size: 0.65rem;
+        padding: 8px;
     }
-    
-    /* Ensure the canvas itself fills the container properly */
-    .canvas-container canvas,
-    .canvas-container > div {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: contain; /* Ensure content is fully visible */
-    }
-    
-    /* Adjust button container for mobile with square canvas */
-    .button-container {
-        margin-top: 20px; /* Add more space after the square canvas */
+
+    .guess-button {
+        font-size: 0.75rem;
+        padding: 9px 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
 }
-
 
 @media (max-width: 768px) {
     .canvas-and-scroll-container {
-        display: grid;
-        grid-template-columns: min-content 1fr 1fr 50px;
+        display: grid; /* Changed grid to flex for mobile stack */
+        grid-template-columns: minmax(min-content, 1fr) 50px;
+        grid-template-rows: 1fr;
+    }
+
+    .canvas-container {
+        flex: 1; /* Take available space */
+        width: 100%;
+        min-height: 300px; /* Minimum height for mobile canvas */
+        height: auto;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .mobile-controls {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    
+
+    .region-info-overlay {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 50%;
+        translate: 0 50%;
+        max-width: calc(100% - 32px);
+    }
+
+    .canvas-and-scroll-container {
+        position: relative;
+    }
+
+    .button-container {
+        /* float over the atlas instead of sitting below it */
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        grid-column: unset;
+        grid-row: unset;
+        padding: 0;
+        gap: 4px;
+        z-index: 50;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+
+    .canvas-and-scroll-container.review-mode .button-container {
+        /* in review mode keep the original grid placement */
+        position: static;
+        grid-column: 1 / span 2;
+        grid-row: 3;
+        justify-content: center;
+        padding: 4px;
     }
 }
 
-/* Guess and Return Button - Keep existing */
-.guess-button {
-    color: white;
-    font-size: 1.125rem;
-    font-weight: 600;
-    padding: 1rem 2rem;
-    border-radius: 1rem;
-    cursor: pointer;
-    transition: background 0.2s, border 0.2s, opacity 0.2s, color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    background-color: rgb(63, 109, 159);
-    /* Updated color */
-    border: 1px solid rgb(63, 109, 159);
-    opacity: 0.9;
-    /* Added opacity */
-}
-
-.guess-button:hover:not(:disabled) {
-    background-color: rgb(63, 109, 159);
-    border-color: #345a85;
-}
-
-.guess-button:active:not(:disabled) {
-    background-color: rgb(63, 109, 159);
-    border: 1.5px solid #345a85;
-}
-
-.guess-button:disabled {
-    background: #363636;
-    border: 1px solid #4a4a4a;
-    cursor: not-allowed;
-    opacity: 0.7;
-    color: #aaa;
-}
-
-.return-button {
-    background: #363636;
-    color: white;
-    font-size: 1.125rem;
-    font-weight: 600;
-    padding: 1rem 2rem;
-    border: 1px solid #808588;
-    border-radius: 1rem;
-    cursor: pointer;
-    transition: background 0.2s, border 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    opacity: 0.9;
-    /* Added opacity */
-}
-
-.return-button:not(:disabled) {
-    background-color: rgb(63, 109, 159);
-    border: 1.5px solid #345a85;
-}
-
-.return-button:hover {
-    background: #2a2a2a;
-}
-
-.return-button:active {
-    background: #2a2a2a;
-    border: 1.5px solid #e5e7eb;
-}
-
-@media (max-width: 768px) {
-
-    .guess-button,
-    .return-button {
-        font-size: 1rem;
-        padding: 0.8rem 1.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-
-    .guess-button,
-    .return-button {
-        font-size: 0.9rem;
-        padding: 0.7rem 1.2rem;
-    }
-}
-
-/* Styles for text inside Guess Button - Keep existing */
-
-.confirm-text {
-    font-weight: bold;
-    font-style: italic;
-    text-transform: uppercase;
-}
-
-.space-text {
-    font-size: 0.85em;
-    color: #c0c0c0;
-    font-weight: normal;
-    font-style: normal;
-    text-transform: lowercase;
-}
-
-@media (max-width: 768px) {
-    .confirm-text {
-        font-size: 0.9rem;
-    }
-
-    .space-text {
-        font-size: 0.8em;
-    }
-}
-
-@media (max-width: 480px) {
-    .confirm-text {
-        font-size: 0.9rem;
-    }
-
-    .space-text {
-        font-size: 0.8em;
-    }
-}
-
-
-/* Style for the oversized streak number */
-.streak-number {
-    font-size: 8em;
-    /* Doubled size */
-    font-weight: bold;
-    color: #eeeeee;
-    /* Example color, can be adjusted */
-    display: block;
-    /* Ensure it takes its own line */
-    margin: 10px 0;
-    /* Add some margin around the number */
-}
-
-.streak-flame-icon {
-    height: 4em;
-    /* Half the size of the parent font */
-    vertical-align: middle;
-    /* Align vertically with text */
-    margin-right: 0.2em;
-    /* Small space between icon and number */
-}
-
-@media (max-width: 600px) {
-    .streak-number {
-        font-size: 4em;
-        /* Adjust for smaller screens */
-    }
-}
-
-/* Basic styling for overlays */
-.streak-overlay,
-.time-attack-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    /* Increased transparency */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 1;
-    /* Start with opacity 1 */
-    transition: opacity 0.3s ease-in-out;
-    /* Smooth transition */
-    backdrop-filter: blur(10px);
-    /* Apply blur effect */
-    -webkit-backdrop-filter: blur(10px);
-    /* For Safari */
-}
-
-.large-time-display {
-    font-size: 8rem;
-    /* Apply a large font size */
-    font-weight: bold;
-    /* Make it bold */
-    color: #eeeeee;
-    /* Match the streak number color or choose another */
-    display: block;
-    /* Ensure it takes its own line */
-    margin: 20px 0;
-    /* Add some vertical margin */
-    /* You can add more styles here like text-shadow if desired */
-}
-
-.overlay-content {
-    background: rgba(54, 54, 54, 0.95);
-    color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    text-align: center;
-    /* Keep centered for streak and time attack */
-    max-width: 1000px;
-    position: relative;
-    /* Needed for close button positioning */
-    width: 70%;
-    /* Make content responsive */
-    box-sizing: border-box;
-    /* Include padding in width */
-}
-
-.overlay-content h2 {
-    margin-top: 0;
-    color: #d9dddc;
-    text-align: center;
-    /* Keep centered for streak and time attack */
-
-}
-
-.overlay-content p {
-    margin: 15px 0;
-    /* Increased vertical margin */
-    text-align: center;
-    /* Keep centered for streak and time attack */
-    font-size: 1rem;
-    /* Set font size to 1rem */
-
-}
-
-@media (max-width: 600px) {
-    .overlay-content {
-        padding: 15px;
-    }
-
-    .overlay-content h2 {
-        font-size: 1.2em;
-    }
-
-    .overlay-content p {
-        font-size: 0.9em;
-    }
-}
-
-/* Container for multiple buttons in overlays */
-.overlay-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    /* Space between buttons */
-    margin-top: 20px;
-}
-
-/* Shared button style for menu/home/restart */
-.menu-button,
-.home-button,
-.eye-button,
-.restart-button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    /* Default blue, will override for home button */
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    text-decoration: none;
-    /* Remove underline from anchor-like buttons */
-    display: inline-flex;
-    /* Use flexbox to center icon and text */
-    justify-content: center;
-    align-items: center;
-}
-
-.menu-button:hover,
-.home-button:hover,
-.eye-button:hover,
-.restart-button:hover {
-    background-color: #0056b3;
-}
-
-@media (max-width: 600px) {
-
-    .menu-button,
-    .home-button,
-    .eye-button,
-    .restart-button {
-        padding: 8px 15px;
-        font-size: 0.9em;
-    }
-
-    .home-button,
-    .eye-button,
-    .restart-button {
-        width: 40px;
-        height: 40px;
-        font-size: 1.2em;
-    }
-}
-
-/* Specific style for the round home button */
-.home-button {
-    width: 50px;
-    /* Adjust size as needed */
-    height: 50px;
-    /* Adjust size as needed */
-    border-radius: 50%;
-    /* Make it round */
-    padding: 0;
-    /* Remove padding */
-    font-size: 1.5em;
-    /* Adjust icon size */
-    background-color: rgb(63, 109, 159);
-    /* Match confirm guess button blue */
-}
-
-.home-button i {
-    /* Style for the Font Awesome icon inside the button */
-    color: white;
-}
-
-/* Specific style for the restart button */
-.restart-button {
-    width: 50px;
-    /* Adjust size as needed */
-    height: 50px;
-    /* Adjust size as needed */
-    border-radius: 50%;
-    /* Make it round */
-    padding: 0;
-    /* Remove padding */
-    font-size: 1.5em;
-    /* Adjust icon size */
-    background-color: #ffc107;
-    /* Example color: yellow */
-    color: #333;
-    /* Dark text color for contrast */
-}
-
-.restart-button:hover {
-    background-color: #e0a800;
-    /* Darker yellow on hover */
-}
-
-.restart-button i {
-    color: #333;
-    /* Dark icon color */
-}
-
-/* Specific style for the eye button */
-.eye-button {
-    width: 50px;
-    /* Adjust size as needed */
-    height: 50px;
-    /* Adjust size as needed */
-    border-radius: 50%;
-    /* Make it round */
-    padding: 0;
-    /* Remove padding */
-    font-size: 1.5em;
-    /* Adjust icon size */
-    background-color: #10c299;
-    /* Example color: yellow */
-    color: #333;
-    /* Dark text color for contrast */
-}
-
-.eye-button:hover {
-    background-color: #18bb0c;
-    /* Darker yellow on hover */
-}
-
-.eye-button i {
-    color: #333;
-    /* Dark icon color */
-}
-
-/* Progress Bar Styling */
-.score-progress-bar {
-    width: 90%;
-    margin: 15px auto;
-    height: 50px;
-    /* Increased height for a thicker bar */
-    background-color: #e0e0e0;
-    border-radius: 50px;
-    overflow: hidden;
-    position: relative;
-}
-
-/* Update the main progress bar container */
-.score-progress-bar {
-    width: 90%;
-    margin: 50px auto;
-    height: 50px;
-    /* Increased height for a thicker bar */
-    background-color: #e0e0e0;
-    /* Light grey background for the empty part */
-    border-radius: 8px;
-    overflow: visible;
-    position: relative;
-    /* Essential for positioning inner bar and labels */
-}
-
-/* Style for the filling progress bar itself */
-.score-progress-bar .w3-container {
-    height: 100%;
-    text-align: center;
-    line-height: 50px;
-    /* Match the new height to vertically center text */
-    color: white;
-    background-color: rgb(63, 109, 159);
-    /* Color same as return button */
-    border-radius: 8px;
-    transition: width 1s ease-out;
-    /* Smooth transition for filling animation */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0%;
-    /* Start with 0% width for animation */
-    font-size: 2em;
-    /* Increased text size */
-    font-weight: bold;
-    /* Made text bold */
-    display: flex;
-    /* Use flexbox to center content */
-    align-items: center;
-    /* Center vertically */
-    justify-content: center;
-    /* Center horizontally */
-}
-
-@media (max-width: 600px) {
-    .score-progress-bar {
-        width: 95%;
-    }
-
-    .score-progress-bar .w3-container {
-        line-height: 20px;
-    }
-}
-
-
-/* Styles for the new labels (750, 1000) */
-/* Styles for the new labels (750, 1000) */
-/* Styles for the new labels (750, 1000) */
-.progress-label {
-    position: absolute;
-    top: -25px;
-    /* Position above the bar */
-    color: white;
-    /* Changed to white for better visibility against a dark background */
-    font-size: 0.9em;
-    font-weight: bold;
-    transform: translateX(-50%);
-    /* Adjust to center the text above its position */
-    pointer-events: none;
-    /* Allow clicks to pass through to elements below */
-    z-index: 10000;
-    /* Ensure labels are above the bar and ticks */
-}
-
-.progress-label-inf {
-    left: 25%;
-}
-
-.progress-label-med {
-    left: 50%;
-}
-
-.progress-label-max {
-    left: 100%;
-}
-
-/* Add vertical ticks below the labels */
-/* Add vertical ticks that span the height of the bar */
-.score-progress-bar::before,
-.score-progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    /* Position at the top of the progress bar */
-    height: 100%;
-    /* Make ticks span the full height of the bar */
-    width: 2px;
-    /* Thickness of the tick */
-    background-color: rgba(0, 0, 0, 0.7);
-    /* Darker color for better visibility */
-    z-index: 1;
-    /* Below labels, above the bar content */
-}
-
-.score-progress-bar::before {
-    /* For 750 mark's tick */
-    left: 25%;
-    transform: translateX(-50%);
-    /* Centering the tick visually */
-}
-
-.score-progress-bar::before {
-    /* For 750 mark's tick */
-    left: 50%;
-    transform: translateX(-50%);
-    /* Centering the tick visually */
-}
-
-.score-progress-bar::after {
-    /* For 1000 mark's tick */
-    left: 100%;
-    transform: translateX(-50%);
-    /* Centering the tick visually */
-}
-
-/* Style for the text displaying the score value inside the progress bar container */
-/* Removed the ::after pseudo-element */
-
-/* Region Tooltip - Keep existing */
-.region-tooltip {
-    position: absolute;
-    background: rgba(42, 42, 42, 0.9);
-    /* Add opacity */
-    color: #d9dddc;
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid #808588;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
-    z-index: 2000;
-    pointer-events: none;
-    white-space: nowrap;
-}
-
-/* Mobile view styles */
+/* --- MOBILE CONTROLS (Scrollbar & Orientation) --- */
 .mobile-controls {
-    grid-column: 4;
-    grid-row: 2;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  right: 0;
-  top: 0;
-  z-index: 2000;
-  width: 50px;
-  height: 80%;
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    gap: 15px;
+    z-index: 100; /* Ensure on top of canvas */
+    height: 80%; /* Height relative to container */
 }
 
+/* Orientation Buttons (Axial, Sagittal, Coronal) */
 .orientation-buttons {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .orientation-button {
-  padding: 8px;
-  margin: 2px;
-  background-color: #444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 10px;
-  cursor: pointer;
+    background-color: rgba(30, 30, 30, 0.8);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+}
+
+.orientation-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
 .orientation-button.active {
-  background-color: #0078d4;
+    background-color: var(--accent, #4a90e2);
+    color: white;
+    border-color: var(--accent, #4a90e2);
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4);
 }
 
+@media (max-width: 768px) {
+    .orientation-button {
+        padding: 8px 2px;
+        font-size: 0.6rem;
+        font-weight: 600;
+        text-transform: none;
+    }
+}
+
+/* Mobile Scrollbar */
 .mobile-scroll-bar {
-  position: relative;
-  width: 30px;
-  height: 70%;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 15px;
-  margin-left: auto;
-  margin-right: 10px;
-  touch-action: none;
+    position: relative;
+    width: 8px; /* Thin modern scrollbar */
+    height: 70%;
+    background-color: rgba(255, 255, 255, 0.1); /* Translucent track */
+    border-radius: 4px;
+    overflow: visible;
 }
 
 .mobile-scroll-thumb {
-  position: absolute;
-  width: 30px;
-  height: 60px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 15px;
-  top: 0;
-  left: 0;
-  cursor: pointer;
-  transform: translateY(-50%);
-  touch-action: none;
+    position: absolute;
+    left: -4px; /* Center on track (16px width - 8px track / 2) */
+    width: 16px;
+    height: 16px;
+    background-color: white;
+    border-radius: 50%; /* Circular thumb */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    transform: translateY(-50%); /* Center vertically on point */
+    cursor: pointer;
 }
 
-.auth-buttons{
+/* --- BOUTONS ACTION (Desktop/General) --- */
+
+
+:root {
+    --bg-card: #262626; 
+    --bg-card-hover: #333333;
+}
+
+.guess-button {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    padding: 12px 30px;
+    border-radius: 9999px;
+    cursor: pointer;
+    border: none;
     display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 0.5rem;
+    transition: background-color 0.2s;
+}
+.guess-button:hover:not(:disabled) {
+    background-color: #d1d5db;
+    color: #1a1a1a;
+}
+.guess-button:disabled {
+    background-color: #4a4a4a;
+    color: #777777;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Colored guess button states */
+.guess-button.correct {
+    background-color: #66bb6a;
+    color: #ffffff;
+}
+.guess-button.correct:hover:not(:disabled) {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+.guess-button.incorrect {
+    background-color: #ef5350;
+    color: #ffffff;
+}
+.guess-button.incorrect:hover:not(:disabled) {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+.return-button {
+    background-color: var(--bg-card-hover, #3d3d3d);
+    color: var(--text-sub, #d1d5db);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+.return-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.return-button:not(:disabled):hover {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+}
+
+.lock-button {
+    background-color: var(--bg-card-hover, #3d3d3d);
+    color: var(--text-sub, #d1d5db);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+.lock-button:hover {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+}
+.lock-button.locked {
+    background-color: #e8a020;
+    color: #1a1a1a;
+    border-color: transparent;
+}
+.lock-button.locked:hover {
+    background-color: #ffb733;
+    color: #1a1a1a;
+}
+
+/* --- HUD (Flat & Contrasté) --- */
+.score-progress-bar {
+    width: 100%; height: 6px; 
+    background-color: #404040; /* Gris moyen pour la barre vide */
+    border-radius: 3px;
+    margin: 0 0 10px 0; position: relative;
+}
+.score-progress-bar .w3-container {
+    height: 100%; background-color: #27ae60; /* Vert vif */
+    border-radius: 3px; font-size: 0;
+}
+.score-progress-bar::before, .score-progress-bar::after { display: none; }
+
+.progress-label {
+    position: absolute; top: -25px; color: #d1d5db; font-size: 0.8rem; transform: translateX(-50%); font-weight: 600;
+}
+
+/* Boutons Pill (overlay end-of-game) */
+.home-button, .restart-button, .eye-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.home-button {
+    background-color: var(--bg-card-hover, #3d3d3d);
+    color: var(--text-sub, #d1d5db);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+}
+.home-button:hover {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+    text-decoration: none;
+}
+
+.restart-button {
+    background-color: var(--bg-card-hover, #3d3d3d);
+    color: var(--text-sub, #d1d5db);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+}
+.restart-button:hover {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+}
+
+.eye-button {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+    border: none;
+}
+.eye-button:hover {
+    background-color: var(--text-sub, #d1d5db);
+    color: var(--bg-page, #1a1a1a);
 }

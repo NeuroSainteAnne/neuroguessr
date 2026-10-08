@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import { useApp } from '../context/AppContext'
+import "altcha"
+import type {} from 'altcha/types/react' // Import types for altcha-react
 
 interface AltchaProps {
   onStateChange?: (ev: Event | CustomEvent) => void
@@ -38,14 +40,13 @@ const Altcha = forwardRef<{ value: string | null }, AltchaProps>(({ onStateChang
   }
 
   return (
-    // @ts-ignore
     <altcha-widget
       ref={widgetRef}
       language={currentLanguage}
       style={{
         '--altcha-max-width': '100%',
       }}
-      challengeurl="/api/altcha/challenge"
+      challenge="/api/altcha/challenge"
     />
   )
 })

@@ -54,7 +54,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         json: 'yeo7.json',
         name: 'Yeo7',
         difficulty: 1,
-        info: false
+        info: true
     },
     'yeo17': {
         atlas_category: 'functional_networks',
@@ -86,7 +86,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         json: 'thalamus7.json',
         name: 'Thalamus',
         difficulty: 3,
-        info: false
+        info: true
     },
     'HippoAmyg': {
         atlas_category: 'subcortical_regions',
@@ -112,6 +112,14 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         difficulty: 2,
         info: false
     },
+    'ghu': {
+        atlas_category: 'cortical_regions',
+        nii: 'ghu_atlas.nii.gz',
+        json: 'ghu_atlas.json',
+        name: 'GHU Atlas',
+        difficulty: 2,
+        info: false
+    },
     'bsa': {
         atlas_category: 'cortical_regions',
         nii: 'bsa_atlas.nii.gz',
@@ -119,7 +127,7 @@ const atlasFiles : Record<string, {nii: string, json: string, name: string, atla
         name: 'BSA Atlas',
         difficulty: 2,
         info: false
-    }
+    },
 };
 
 export default atlasFiles;

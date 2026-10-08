@@ -15,7 +15,7 @@ declare global {
 export function Page() {
   const { t } = useTranslation();
   const pageContext = usePageContext();
-  const { abortReason, abortStatusCode } = pageContext
+  const { abortReason, abortStatusCode } = pageContext || {}
 
   // Extract status code and error message
   const statusCode = abortStatusCode || 500;
@@ -25,7 +25,7 @@ export function Page() {
     : t('unknown_error'));
 
   // @ts-ignore
-  const isNotFound = statusCode === 404 || pageContext.is404;
+  const isNotFound = statusCode === 404 || pageContext?.is404;
 
   return (
     <div className="error-page">

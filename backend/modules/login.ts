@@ -26,7 +26,7 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
     try {
         const validate = (data: LoginRequestBody): Joi.ValidationResult<LoginRequestBody> => {
             const schema = Joi.object({
-                username: Joi.string().required().label("username"),
+                username: Joi.string().required().label("username or email"),
                 password: Joi.string().required().label("password")
             });
             return schema.validate(data);
@@ -46,7 +46,9 @@ export const login = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
         } 
 
         const users = await sql`
-            SELECT * FROM users WHERE username = ${req.body.username} LIMIT 1
+            SELECT * FROM users WHERE username = ${req.body.username} OR email = ${req.body.username}
+            ORDER BY CASE WHEN username = ${req.body.username} THEN 0 ELSE 1 END
+            LIMIT 1
         `;
         if (!users.length){
             const duration = Date.now() - startTime;

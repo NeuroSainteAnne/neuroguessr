@@ -8,7 +8,7 @@ import Altcha from '../../components/Altcha';
 import { consoleLog } from '../../utils/logging';
 
 function LoginScreen() {
-    const { t, currentLanguage, updateToken, refreshNextChallenge } = useApp();
+    const { t, currentLanguage, updateToken } = useApp();
     const usernameInput = useRef<HTMLInputElement>(null);
     const passwordInput = useRef<HTMLInputElement>(null);
     const recoveryEmailInput = useRef<HTMLInputElement>(null);
@@ -63,7 +63,7 @@ function LoginScreen() {
             const urlParams = new URLSearchParams(window.location.search);
             const redirectParam = urlParams.get('redirect');
             const returnUrl = urlParams.get('returnURL');
-            refreshNextChallenge(result.token); // Refresh next challenge on login to update any authentication-dependent data
+            
             consoleLog("verbose", `Login successful, processing redirect: ${redirectParam || returnUrl || 'default'}`);
             
             if (redirectParam) {
@@ -193,55 +193,30 @@ function LoginScreen() {
             <form id="login_form" onSubmit={handleLogin}>
                 <div className="login-box">
                     <h2>{t("login_mode")}</h2>
-                    <table className="login-element">
-                      <tbody>
-                        <tr>
-                            <td colSpan={2} id="login_error">
-                                {t("beta_version_login_message")}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label id="username-label" htmlFor="username">{t("login_username")}</label>
-                            </td>
-                            <td>
-                                <input type="text" id="username" name="username" ref={usernameInput} required />
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <label id="password-label" htmlFor="password">{t("login_password")}</label>
-                            </td>
-                            <td>
-                                <input type="password" id="password" name="password" ref={passwordInput} required />
-                            </td>
-                        </tr>
-                        {loginErrorText != "" && <tr>
-                            <td colSpan={2} id="login_error">
-                                {loginErrorText}
-                            </td>
-                        </tr>}
-                        {loginSuccessText != "" && <tr>
-                            <td colSpan={2} id="login_success">
-                                {loginSuccessText}
-                            </td>
-                        </tr>}
-                      </tbody>
-                    </table>
-                    <button type="submit" data-umami-event="login button">{t("login_button")}</button>
-                    <div><a id="registration_link" href="/register">
-                        {t("registration_link")}
-                    </a></div>
-                    <div>
-                      <a id="forgot_password_link" onClick={()=>{setRecoveryModalDisplay(true)}}>
-                        {t("forgot_password_link")}</a>
+                    <div className="login-fields">
+                        <div className="login-field">
+                            <label htmlFor="username">{t("login_username_or_email")}</label>
+                            <input type="text" id="username" name="username" ref={usernameInput} required />
+                        </div>
+                        <div className="login-field">
+                            <label htmlFor="password">{t("login_password")}</label>
+                            <input type="password" id="password" name="password" ref={passwordInput} required />
+                        </div>
+                    </div>
+                    {loginErrorText != "" && <p className="login-message error">{loginErrorText}</p>}
+                    {loginSuccessText != "" && <p className="login-message">{loginSuccessText}</p>}
+                    <p className="login-message info">{t("beta_version_login_message")}</p>
+                    <button type="submit" className="login-submit" data-umami-event="login button">{t("login_button")}</button>
+                    <div className="login-links">
+                        <a href="/register">{t("registration_link")}</a>
+                        <a onClick={()=>{setRecoveryModalDisplay(true)}}>{t("forgot_password_link")}</a>
                     </div>
                 </div>
             </form>
             { recoveryModalDisplay &&
-                <div id="password-recovery-modal" className="modal">
-                    <div className="modal-content">
-                        <span className="close-button" id="close-password-recovery">&times;</span>
+                <div id="password-recovery-modal" className="modal" onClick={() => setRecoveryModalDisplay(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <span className="close-button" id="close-password-recovery" onClick={()=>{setRecoveryModalDisplay(false)}}>&times;</span>
                         <h2>{t("password_recovery_title")}</h2>
                         <p>{t("password_recovery_instructions")}</p>
 

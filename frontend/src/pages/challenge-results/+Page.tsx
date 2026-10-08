@@ -3,8 +3,7 @@ import { useApp } from '../../context/AppContext';
 import './ChallengeResults.css';
 import { formatTime } from '../../utils/formatters';
 import ChallengeEmailOptIn from '../../components/ChallengeEmailOptIn';
-import SearchBar from '../../components/SearchBar';
-import GameSelector from '../welcome/GameSelector';
+import { GameSelectorWithSearch } from '../welcome/GameSelectorWithSearch';
 
 interface Challenge {
   id: number;
@@ -189,162 +188,173 @@ export function Page() {
   }
 
   const { challenge, sessionCode, state, participants, teamRankings } = data;
-
-  // Use backend-calculated team rankings (includes all users, even those who didn't publish)
   const hasTeams = teamRankings && teamRankings.length > 0;
-
-  // Find current user's participation from participants array
   const currentUserParticipation = participants.find(p => p.username === userUsername) || null;
   const title = t("challenge_results_title", { challengeName: challenge.name }) || 'Challenge Results';
+
+  const rankEmoji = (r: number) => r === 1 ? '🏆' : r === 2 ? '🥈' : r === 3 ? '🥉' : null;
+
   return (
     <>
       <title>{title}</title>
-      <SearchBar />
-      <GameSelector />
-        <div className="challenge-results-page">
+      <GameSelectorWithSearch forceTab="challenges" />
+      <div className="challenge-results-page">
+        <p className="cr-page-title">{t("challenge_results_section_title") || "Résultats du défi"} · <span>{challenge.name}</span></p>
+
+        {/* ── HEADER CARD ── */}
         <div className="challenge-header">
+          <div className="challenge-header-top">
             <h1>{challenge.name || t("classic_challenge")}</h1>
-            <div className="challenge-results-info">
+            <span className={`status status-${state}`}>
+              {state === 'pending' && `${t("not_started_yet")}${timeDisplay ? ` · ${timeDisplay}` : ''}`}
+              {state === 'started'  && `${t("in_progress")}${timeDisplay ? ` · ${timeDisplay} ${t("remaining")}` : ''}`}
+              {state === 'finished' && t("completed")}
+            </span>
+          </div>
+          <div className="challenge-results-info">
             <div className="info-item">
-                <strong>{t("created_by")}:</strong> {challenge.creator}
-            </div>
-            <div className="info-item">
-                <strong>{t("status")}:</strong>
-                <span className={`status status-${state}`}>
-                {state === 'pending' && `${t("not_started_yet")} ${timeDisplay ? `(${timeDisplay} ${t("until_start")})` : ''}`}
-                {state === 'started' && `${t("in_progress")} ${timeDisplay ? `(${timeDisplay} ${t("remaining")})` : ''}`}
-                {state === 'finished' && t("completed")}
-                </span>
-            </div>
-            <div className="info-item">
-                <strong>{t("start")}:</strong> {formatDate(challenge.startDate)}
+              <strong>{t("created_by")}</strong>
+              <span>{challenge.creator}</span>
             </div>
             <div className="info-item">
-                <strong>{t("end")}:</strong> {formatDate(challenge.endDate)}
+              <strong>{t("start")}</strong>
+              <span>{formatDate(challenge.startDate)}</span>
             </div>
+            <div className="info-item">
+              <strong>{t("end")}</strong>
+              <span>{formatDate(challenge.endDate)}</span>
             </div>
-            {userIsAdmin && (
-              <div className="admin-controls">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={fullResults} 
-                    onChange={(e) => setFullResults(e.target.checked)}
-                  />
-                  {" "}{t("show_full_results") || "Show Full Results"}
-                </label>
+          </div>
+          {userIsAdmin && (
+            <div className="admin-controls">
+              <label>
+                <input type="checkbox" checked={fullResults} onChange={e => setFullResults(e.target.checked)} />
+                {" "}{t("show_full_results") || "Show Full Results"}
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* ── BODY: sidebar + main ── */}
+        <div className="challenge-results-body">
+
+          {/* LEFT SIDEBAR */}
+          <div className="challenge-results-sidebar">
+
+            {/* Votre participation */}
+            {currentUserParticipation && (
+              <div className="cr-card">
+                <p className="cr-card-title">{t("your_participation")}</p>
+                <div className="participation-rank-hero">
+                  <div className="participation-rank-number">
+                    {rankEmoji(currentUserParticipation.ranking) || `#${currentUserParticipation.ranking}`}
+                  </div>
+                  <div className="participation-rank-label">/ {participants.length} {t("participants")}</div>
+                </div>
+                <div className="participation-grid">
+                  <div className="participation-stat">
+                    <span className="participation-stat-label">{t("score")}</span>
+                    <span className="participation-stat-value">{currentUserParticipation.score}</span>
+                  </div>
+                  <div className="participation-stat">
+                    <span className="participation-stat-label">{t("time_per_region")}</span>
+                    <span className="participation-stat-value">{Math.round(currentUserParticipation.avgTimePerRegion/100)/10}s</span>
+                  </div>
+                  <div className="participation-stat">
+                    <span className="participation-stat-label">{t("completed_at")}</span>
+                    <span className="participation-stat-value">{formatDate(currentUserParticipation.completionDate)}</span>
+                  </div>
+                </div>
+                <div className="cr-actions-row">
+                  {state !== 'finished' && (
+                    <ChallengeEmailOptIn challengeId={challenge.id} className="email-optin-btn" />
+                  )}
+                  {isCompleted && (
+                    <a href={`/multiplayer/?replay_multi=${challenge.id}`} className="review-button review-button--primary">
+                      {t("see_your_results") || "Revoir ma partie"}
+                    </a>
+                  )}
+                </div>
               </div>
             )}
-        </div>
 
-        {currentUserParticipation && (
-            <div className="user-participation">
-            <h2>{t("your_participation")}</h2>
-            <div className="participation-details">
-                <div className="detail-item">
-                <strong>{t("ranking")}:</strong>
-                {currentUserParticipation.ranking == 1 ? "🏆 " : ""}
-                {currentUserParticipation.ranking == 2 ? "🥈 " : ""}
-                {currentUserParticipation.ranking == 3 ? "🥉 " : ""}
-                #{currentUserParticipation.ranking} / {participants.length}
-                </div>
-                <div className="detail-item">
-                <strong>{t("score")}:</strong> {currentUserParticipation.score}
-                </div>
-                <div className="detail-item">
-                <strong>{t("time_per_region")}:</strong> {Math.round(currentUserParticipation.avgTimePerRegion/100)/10}
-                </div>
-                <div className="detail-item">
-                <strong>{t("completed_at")}:</strong> {formatDate(currentUserParticipation.completionDate)}
-                </div>
-            </div>
-            
-            {currentUserParticipation && state !== 'finished' && (
-                <div className="email-optin-section">
-                <ChallengeEmailOptIn challengeId={challenge.id} />
-                </div>
-            )}
-            </div>
-        )}
-
-        {hasTeams && teamRankings.length > 0 && (
-            <div className="teams-section">
-            <h2>Teams Results</h2>
-            <div className="teams-table">
-                <div className="table-header">
-                <div className="col-rank">#</div>
-                <div className="col-team-name">Team</div>
-                <div className="col-players">Players</div>
-                <div className="col-score">Avg Score</div>
-                <div className="col-tpr">Avg Time/Region</div>
-                </div>
-                {teamRankings.map((team, index) => (
-                <div 
-                    key={team.teamId ?? 'no-team'} 
-                    className={`table-row ${team.teamId === currentUserParticipation?.teamId ? 'current-user-team' : ''}`}
-                >
-                    <div className="col-rank">#{index + 1}</div>
-                    <div className="col-team-name">
-                    {team.teamName}
-                    </div>
-                    <div className="col-players">{team.playerCount}</div>
-                    <div className="col-score">{Math.round(team.avgScore * 10) / 10}</div>
-                    <div className="col-tpr">{Math.round(team.avgTimePerRegion / 100) / 10}</div>
-                </div>
-                ))}
-            </div>
-            </div>
-        )}
-
-        <div className="participants-section">
-            <h2>{t("participants")} ({participants.length})</h2>
-            {participants.length === 0 ? (
-            <p className="no-participants">
-                {state === 'pending' && t("no_participants_pending")}
-                {state === 'started' && t("no_participants_started")}
-                {state === 'finished' && t("no_participants_finished")}
-            </p>
-            ) : (
-            <div className="participants-table">
-                <div className="table-header">
-                <div className="col-rank">#</div>
-                <div className="col-name">{t("name_header")}</div>
-                {hasTeams && <div className="col-team">Team</div>}
-                <div className="col-score">{t("score")}</div>
-                <div className="col-tpr">{t("time_per_region")}</div>
-                </div>
-                {participants.map((participant) => (
-                <div 
-                    key={participant.userId} 
-                    className={`table-row ${participant.username === userUsername ? 'current-user' : ''}`}
-                >
-                    <div className="col-rank">#{participant.ranking}</div>
-                    <div className="col-name">
-                    {participant.username}
-                    </div>
-                    {hasTeams && <div className="col-team">{participant.teamName || '-'}</div>}
-                    <div className="col-score">{participant.score}</div>
-                    <div className="col-tpr">{Math.round(participant.avgTimePerRegion/100)/10}</div>
-                </div>
-                ))}
-            </div>
-            )}
-        </div>
-
-        <div className="actions">
+            {/* Join button (non-participant) */}
             {state !== 'finished' && sessionCode && !currentUserParticipation && !isCompleted && (
-            <a href={`/multiplayer/${sessionCode}`} className="join-button">
+              <a href={`/multiplayer/${sessionCode}`} className="join-button">
                 {state === 'pending' ? t("view_challenge") : t("join_challenge")}
-            </a>
+              </a>
             )}
-            
-            {isCompleted && (
-            <a href={`/multiplayer/?replay_multi=${challenge.id}`} className="review-button">
-                {t("see_your_results") || "See Your Results"}
-            </a>
+
+          </div>
+
+          {/* RIGHT MAIN */}
+          <div className="challenge-results-main">
+
+            {/* Teams */}
+            {hasTeams && teamRankings!.length > 0 && (
+              <div>
+                <p className="section-title">Teams Results</p>
+                <div className="cr-table-wrap">
+                  <div className="teams-table">
+                    <div className="table-header">
+                      <div className="col-rank">#</div>
+                      <div className="col-team-name">Team</div>
+                      <div className="col-players">Players</div>
+                      <div className="col-score">Avg Score</div>
+                      <div className="col-tpr">Avg s/région</div>
+                    </div>
+                    {teamRankings!.map((team, i) => (
+                      <div key={team.teamId ?? 'no-team'}
+                        className={`table-row ${team.teamId === currentUserParticipation?.teamId ? 'current-user-team' : ''}`}>
+                        <div className="col-rank">#{i + 1}</div>
+                        <div className="col-team-name">{team.teamName}</div>
+                        <div className="col-players">{team.playerCount}</div>
+                        <div className="col-score">{Math.round(team.avgScore * 10) / 10}</div>
+                        <div className="col-tpr">{Math.round(team.avgTimePerRegion / 100) / 10}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
+
+            {/* Participants */}
+            <div>
+              <p className="section-title">{t("participants")} · {participants.length}</p>
+              {participants.length === 0 ? (
+                <p className="no-participants">
+                  {state === 'pending' && t("no_participants_pending")}
+                  {state === 'started' && t("no_participants_started")}
+                  {state === 'finished' && t("no_participants_finished")}
+                </p>
+              ) : (
+                <div className="cr-table-wrap">
+                  <div className="participants-table">
+                    <div className="table-header">
+                      <div className="col-rank">#</div>
+                      <div className="col-name">{t("name_header")}</div>
+                      {hasTeams && <div className="col-team">Team</div>}
+                      <div className="col-score">{t("score")}</div>
+                      <div className="col-tpr">s/région</div>
+                    </div>
+                    {participants.map(p => (
+                      <div key={p.userId}
+                        className={`table-row ${p.username === userUsername ? 'current-user' : ''}`}>
+                        <div className="col-rank">{rankEmoji(p.ranking) || `#${p.ranking}`}</div>
+                        <div className="col-name">{p.username}</div>
+                        {hasTeams && <div className="col-team">{p.teamName || '—'}</div>}
+                        <div className="col-score">{p.score}</div>
+                        <div className="col-tpr">{Math.round(p.avgTimePerRegion/100)/10}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
         </div>
-        </div>
+      </div>
     </>
   );
 }

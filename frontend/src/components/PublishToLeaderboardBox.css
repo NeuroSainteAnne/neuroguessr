@@ -1,3 +1,34 @@
 .publish-btn {
-    color: white;
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 10px 28px;
+    border-radius: 9999px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    transition: background-color 0.2s;
+}
+
+.publish-btn:hover {
+    background: var(--text-main);
+    color: var(--bg-page);
+    border-color: var(--text-main);
+}
+
+.publish-btn-group {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    justify-content: center;
+    margin: 16px 0;
+}
+
+.publish-error {
+    color: var(--error-color, #f87171);
+    font-size: 0.9rem;
+    font-weight: 300;
+    text-align: center;
+    margin-top: 8px;
 }

@@ -1,194 +1,468 @@
-html {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-size: 16px;
-  /* Base font size */
+/* Import Open Sans (Light 300, Regular 400, SemiBold 600) */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&display=swap');
+
+:root {
+    /* --- PALETTE "SOFT PRO" --- */
+    /* On remplace le noir pur (#121212) par un gris très sombre (#1a1a1a) */
+    --bg-page: #000000;
+    
+    /* Les cartes deviennent nettement plus claires (#2d2d2d) pour le contraste */
+    --bg-card: #1e1e1e;
+    --bg-card-hover: #2a2a2a;
+    
+    /* Une couleur spéciale pour la "Target Box" du header */
+    --bg-panel: #333333;
+    
+    /* Textes */
+    --text-main: #ffffff;
+    --text-sub: #e0e0e0;      /* Blanc cassé très lisible */
+    --text-muted: #aaaaaa;
+    
+    /* Accent (Bleu plus doux, moins néon) */
+    --accent: #4a90e2;
+    --success-color: #66bb6a;
+    --error-color: #ef5350;
+
+    --border-color: rgba(255,255,255,0.08);
+    --radius-std: 8px;
 }
+
+html { height: 100%; font-size: 16px; }
 
 body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  width: 100vw;
-  font-family: 'Open Sans', system-ui, Arial, Helvetica, sans-serif;
-  user-select: none;
-  /* Prevent text selection */
-  color: #d9dddc;
-  /* Default text color */
-  box-sizing: border-box;
-  overflow-x: hidden;
-  /* Prevent horizontal scroll */
-  position: relative;
-  /* Fallback color */
-  background: url('/interface/background-1143.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-color: #363636;
+    display: flex; flex-direction: column;
+    margin: 0; padding: 0;
+    min-height: 100vh; width: 100vw;
+
+    /* POLICE MODERNE & FINE */
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300; /* Light par défaut */
+
+    color: var(--text-main);
+    background-color: var(--bg-page);
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
-/* Specific background for index page */
-#root {
-  /* Background image set here */
-  width: 100%;
-  height: 100vh;
-  position: relative;
+* {
+  font-family: 'Open Sans', sans-serif !important;
+  font-weight: 300 !important;
 }
 
-
-/* Add a pseudo-element for background opacity and blur */
-#blur-root {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(54, 54, 54, 0.8);
-  backdrop-filter: blur(1px);
+*:where(b, strong, .bold, [class*="bold"], [class*="semibold"]) {
+  font-weight: 400 !important;
 }
 
-.grecaptcha-badge {
-  z-index: 100;
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 300; /* Open Sans Light for headings */
+  font-family: 'Open Sans', sans-serif;
 }
 
-a {
-  /*display: block;*/
-  color: #A2B9F0;
-  /* Lighter, more visible link color */
-  text-decoration: none;
-  transition: color 0.3s ease;
-  cursor: pointer;
+b, strong {
+  font-weight: 400; /* Regular weight for emphasis */
+  font-family: 'Open Sans', sans-serif;
 }
 
-a:hover {
-  text-decoration: underline;
-  color: #8A9CEE;
-  /* Changed to match register hover */
+/* Important elements use weight 400-600 for emphasis */
+.game-info-panel b,
+.guest-sign-in-button,
+.segment-button.active,
+.stat-item b {
+  font-weight: 400;
+  font-family: 'Open Sans', sans-serif;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root { width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Liens sans soulignement par défaut, propre */
+a { color: var(--accent); text-decoration: none; transition: color 0.2s; cursor: pointer; }
+a:hover { color: var(--accent); text-decoration: underline; /* FORCE PAS DE SOULIGNEMENT */ }
+
+/* Inputs plus doux */
+input[type="text"], input[type="email"], input[type="password"] {
+    width: 100%; padding: 12px 15px;
+    background-color: var(--bg-panel);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 1rem; color: var(--text-main);
+    outline: none; transition: background 0.2s;
 }
+input:focus { background-color: #404040; }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+button { font-family: 'Open Sans', sans-serif; border: none; cursor: pointer; }
+
+/* Layouts */
+.main-container { 
+    display: flex; 
+    flex-direction: column; 
+    width: 100%; 
+    height: 100vh; 
 }
-
-button:hover {
-  border-color: #646cff;
-}
-
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-input[type="text"]:not(.search-input),
-input[type="email"],
-/* Added email input type */
-input[type="password"] {
-  width: calc(100% - 20px);
-  padding: 12px 10px;
-  background-color: #3B3B3B;
-  /* Darker input background */
-  border: 1px solid rgba(255, 255, 255, 0);
-  /* Slightly lighter border for inputs */
-  border-radius: 50px;
-  font-size: 1em;
-  color: #E0E0E0;
-  /* Light text color inside inputs */
-  outline: none;
-  box-sizing: border-box;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-/* Added email input type focus */
-input[type="password"]:focus {
-  border-color: #8A9CEE;
-}
-
-
-button[type="submit"] {
-  background-color: rgb(63, 109, 159);
-  /* Your primary button color (light blue/purple) */
-  color: #d9dddc;
-  /* Dark text for button for contrast */
-  padding: 14px 25px;
-  border: none;
-  border-radius: 50px;
-  font-size: 1.1em;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 20px;
-  font-weight: 600;
-}
-
-button[type="submit"]:hover {
-  background-color: #728AD2;
-  /* Darker shade on hover */
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #C0C0C0;
-  /* Slightly softer light label color */
-  font-size: 1em;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-
-  a:hover {
-    color: #747bff;
-  }
-
-  button {
-    background-color: #f9f9f9;
-  }
-}
-
-.main-container{
+.page-container {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
+    padding: 0;
     width: 100%;
-    height: 100vh;
+    box-sizing: border-box;
+}
+.lower-bar-phantom { height: 52px; min-height: 52px; width: 100%; }
+
+/* ── End-of-game Overlay ── */
+.streak-overlay,
+.time-attack-overlay,
+.practice-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+    backdrop-filter: blur(2px);
 }
 
-.page-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  flex-grow: 1;
-  padding: 0 2vw 0 2vw;
-  /* Adjusted padding top */
-  box-sizing: border-box;
-  /* Adjust min-height as header is smaller */
-  background: transparent !important;
-  /* Background handled by body pseudo-element */
+.overlay-content {
+    background-color: #141414;
+    border-radius: 20px;
+    padding: 36px 32px 28px;
+    max-width: 420px;
+    width: 100%;
+    max-height: 88vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
-.lower-bar-phantom {
-    height:60px;
-    min-height:60px;
-    width: 100%;
+/* Title */
+.overlay-content h2 {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+}
+
+/* Big score block */
+.overlay-score-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 20px 0 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+}
+
+.overlay-score-value {
+    font-size: 3.5rem;
+    font-weight: 300;
+    color: var(--text-main);
+    line-height: 1;
+    letter-spacing: -1px;
+}
+
+.overlay-score-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 400;
+}
+
+/* Stats row */
+.overlay-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 24px;
+}
+
+.overlay-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.overlay-stat-value {
+    font-size: 1.3rem;
+    font-weight: 300;
+    color: var(--text-main);
+}
+
+.overlay-stat-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Leaderboard / ranking section */
+.overlay-ranking {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.overlay-ranking p {
+    margin: 4px 0;
+    font-size: 0.9rem;
+    color: var(--text-sub);
+    font-weight: 300;
+}
+
+.overlay-ranking p strong {
+    color: var(--text-main);
+    font-weight: 400;
+}
+
+/* Players list (multiplayer) */
+.overlay-players-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.overlay-players-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--text-sub);
+    font-weight: 300;
+}
+
+.overlay-players-list li.is-me {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-main);
+}
+
+.overlay-players-list li.is-me.won {
+    border-left: 3px solid var(--success-color, #66bb6a);
+}
+
+.overlay-players-list li.is-me.lost {
+    border-left: 3px solid var(--error-color, #ef5350);
+}
+
+/* Fallback for old p spans structure */
+.overlay-content p {
+    margin: 8px 0;
+    font-size: 0.9rem;
+    color: var(--text-sub);
+    font-weight: 300;
+}
+
+.overlay-content p span:first-child {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.overlay-content p span:last-child {
+    display: block;
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--text-main);
+}
+
+.streak-number,
+#final-time-attack-time {
+    color: var(--text-main) !important;
+}
+
+/* Action buttons */
+.overlay-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.eye-button,
+.restart-button,
+.home-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 9999px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    transition: background-color 0.2s, color 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+    flex: unset;
+    max-width: unset;
+}
+
+.eye-button {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+    border: none;
+}
+.eye-button:hover {
+    background-color: var(--text-sub, #d1d5db);
+    color: var(--bg-page, #1a1a1a);
+}
+
+.restart-button,
+.home-button {
+    background-color: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255,255,255,0.12);
+}
+.restart-button:hover,
+.home-button:hover {
+    background-color: rgba(255,255,255,0.08);
+    color: var(--text-main);
+    text-decoration: none;
+}
+
+.eye-button img,
+.home-button img,
+.restart-button img {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+/* Start classic challenge screen */
+.start-classic-challenge-button {
+    background-color: var(--text-main, #ffffff);
+    color: var(--bg-page, #1a1a1a);
+    border: none;
+    padding: 14px 36px;
+    border-radius: 9999px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'Open Sans', sans-serif;
+    transition: background-color 0.2s;
+    margin-top: 24px;
+}
+.start-classic-challenge-button:hover {
+    background-color: var(--text-sub, #d1d5db);
+}
+
+.start-classic-challenge-warning {
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted, #9ca3af);
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
+    font-style: italic;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Score Progress Bar */
+.score-progress-bar {
+    position: relative;
+    height: 6px;
+    margin: 0 0 24px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+}
+
+.w3-container.w3-blue {
+    height: 100%;
+    background: var(--text-main, #fff);
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0;
+}
+
+.progress-label {
+    position: absolute;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    top: calc(100% + 6px);
+    transform: none;
+}
+
+.progress-label-med {
+    left: 25%;
+    transform: translateX(-50%);
+}
+
+.progress-label-max {
+    right: 0;
+    transform: translateX(0);
+}
+
+/* Challenge results link */
+.overlay-challenge-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 10px 20px;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-sub);
+    font-size: 0.85rem;
+    font-weight: 300;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+.overlay-challenge-link:hover {
+    background: rgba(255,255,255,0.12);
+    color: var(--text-main);
+    text-decoration: none;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+    .overlay-content {
+        padding: 28px 20px 22px;
+        max-height: 92vh;
+        border-radius: 16px;
+    }
+
+    .overlay-score-value {
+        font-size: 2.8rem;
+    }
+
+    .overlay-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .eye-button,
+    .home-button,
+    .restart-button {
+        justify-content: center;
+    }
 }

@@ -42,6 +42,7 @@ export interface SinglePlayerGameState {
   lastAsked: number; // timestamp of last sent command (start-game, next-region)
   regionSuccessDurations: number[]; // durations for successful regions
   regionFailedDurations: number[]; // durations for failed attempts
+  sessionId: number | null; // id of the finished_sessions row created at game start
 }
 
 // In-memory storage for active single player games
@@ -97,6 +98,21 @@ export async function startSingleGame(socket: Socket, data: {
       await endSingleGame(socket.id, 'abandoned');
     }
 
+    // Create a preliminary finished_sessions row so we have an id to link individual_clicks
+    let sessionId: number | null = null;
+    if (userId !== null) {
+      try {
+        const sessionRow = await sql`
+          INSERT INTO finished_sessions (user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect, duration, quit_reason)
+          VALUES (${userId}, ${mode}, ${atlas}, ${blindMode}, 0, 0, 0, 0, 0, 'in_progress')
+          RETURNING id
+        `;
+        sessionId = sessionRow[0].id;
+      } catch (err) {
+        logger.error('Error creating preliminary finished_sessions row:', err);
+      }
+    }
+
     // Initialize game state
     const gameState: SinglePlayerGameState = {
       userId,
@@ -117,7 +133,8 @@ export async function startSingleGame(socket: Socket, data: {
       incorrectCount: 0,
       lastAsked: Date.now(), // Set when game starts
       regionSuccessDurations: [],
-      regionFailedDurations: []
+      regionFailedDurations: [],
+      sessionId
     };
 
     // Set up automatic end timer for time-attack mode
@@ -457,6 +474,7 @@ export async function validateSingleGuess(socket: Socket, data: {
       INSERT INTO individual_clicks (
         is_authenticated,
         user_id,
+        singleplayer_session_id,
         singleplayer_mode,
         command_index,
         atlas,
@@ -483,6 +501,7 @@ export async function validateSingleGuess(socket: Socket, data: {
       ) VALUES (
         ${gameState.userId !== null},
         ${gameState.userId},
+        ${gameState.sessionId},
         ${gameState.mode},
         ${gameState.askedId},
         ${gameState.atlas},
@@ -655,20 +674,43 @@ export async function endSingleGame(socketId: string, reason: string = 'complete
       scorePercentage = Math.round((gameState.score / theoreticalMaxScore) * 10000) / 100;
     }
 
-    await sql`
-      INSERT INTO finished_sessions (
-        user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
-        min_time_per_region, max_time_per_region, avg_time_per_region, 
-        min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
-        quit_reason, duration, theoretical_maximum_score, score_percentage
-      ) VALUES (
-        ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
-        ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.totalAttempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
-        ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion}, 
-        ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
-        ${reason}, ${elapsedTime}, ${theoreticalMaxScore}, ${scorePercentage}
-      )
-    `;
+    if (gameState.sessionId !== null) {
+      // Update the preliminary row created at game start
+      await sql`
+        UPDATE finished_sessions SET
+          score = ${Math.round(gameState.score)},
+          attempts = ${gameState.totalAttempts},
+          correct = ${gameState.correctCount},
+          incorrect = ${gameState.incorrectCount},
+          min_time_per_region = ${minTimePerRegion},
+          max_time_per_region = ${maxTimePerRegion},
+          avg_time_per_region = ${avgTimePerRegion},
+          min_time_per_correct_region = ${minTimePerCorrectRegion},
+          max_time_per_correct_region = ${maxTimePerCorrectRegion},
+          avg_time_per_correct_region = ${avgTimePerCorrectRegion},
+          quit_reason = ${reason},
+          duration = ${elapsedTime},
+          theoretical_maximum_score = ${theoreticalMaxScore},
+          score_percentage = ${scorePercentage}
+        WHERE id = ${gameState.sessionId}
+      `;
+    } else {
+      // Fallback for unauthenticated users (no sessionId)
+      await sql`
+        INSERT INTO finished_sessions (
+          user_id, mode, atlas, blind_mode, score, attempts, correct, incorrect,
+          min_time_per_region, max_time_per_region, avg_time_per_region,
+          min_time_per_correct_region, max_time_per_correct_region, avg_time_per_correct_region,
+          quit_reason, duration, theoretical_maximum_score, score_percentage
+        ) VALUES (
+          ${gameState.userId}, ${gameState.mode}, ${gameState.atlas},
+          ${gameState.blindMode}, ${Math.round(gameState.score)}, ${gameState.totalAttempts}, ${gameState.correctCount}, ${gameState.incorrectCount},
+          ${minTimePerRegion}, ${maxTimePerRegion}, ${avgTimePerRegion},
+          ${minTimePerCorrectRegion}, ${maxTimePerCorrectRegion}, ${avgTimePerCorrectRegion},
+          ${reason}, ${elapsedTime}, ${theoreticalMaxScore}, ${scorePercentage}
+        )
+      `;
+    }
 
     logger.info('Single player game ended and saved', {
       userId: gameState.userId,

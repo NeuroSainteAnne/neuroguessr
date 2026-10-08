@@ -31,6 +31,7 @@
         "secretKey" : ""
     },
     "allowAnonymousInMultiplayer": false,
+    "activateMultiplayerBot": false, // enables a bot in test environment (activates when NODE_ENV != production)
     "addTestUser": true, // adds a user with name "test" and password "test" for testing purposes
     "salt": "xxx",
     "jwt_secret": "xxx",

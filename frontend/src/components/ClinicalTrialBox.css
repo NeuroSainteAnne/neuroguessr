@@ -1,44 +1,212 @@
-.clinical-trial-container{
+.clinical-trial-container {
     width: 100%;
-    margin: 5px;
-    margin-bottom: 20px;
-    border: 1px solid #808080;
-    padding: 8px;
+    margin-top: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
-.clinical-trial-element{
-    width: 100%;
-    border-collapse: collapse;
+.clinical_trial_header {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: center;
+    margin-bottom: 16px;
+    display: block;
 }
 
-.clinical-trial-element td {
-    padding: 10px 0;
-    vertical-align: middle;
+/* Each row: label + control stacked */
+.clinical-trial-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
 }
 
-.clinical-trial-element td:first-child {
-    vertical-align: middle;
+.clinical-trial-row:last-child {
+    margin-bottom: 0;
 }
 
-.clinical-trial-element td:first-child {
-    text-align: left;
-    width: 35%;
+.clinical-trial-row > label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
 }
 
-.clinical-trial-element td:last-child {
-    text-align: right;
-    width: 65%;
+/* Age input */
+.clinical-trial-age-input {
+    width: 90px !important;
+    padding: 10px 14px;
+    background-color: var(--bg-panel);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    outline: none;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
 }
 
-.clinical_trial_header{
-    text-align: center !important;
-    color: #979797;
+.clinical-trial-age-input:focus {
+    background-color: #404040;
 }
 
-.clinical_trial_radio{
-    text-align: left !important;
-    display:flex;
+/* Radio pill group */
+.clinical_trial_radio {
+    display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap:10px;
+    gap: 8px;
+}
+
+.clinical_trial_radio label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background-color: var(--bg-panel);
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text-sub);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.clinical_trial_radio label:hover {
+    background-color: #404040;
+    color: var(--text-main);
+}
+
+.clinical_trial_radio input[type="radio"] {
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    border: 1px solid var(--text-muted);
+    background-color: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.clinical_trial_radio input[type="radio"]:checked {
+    background-color: var(--text-main);
+    border-color: var(--text-main);
+}
+
+/* --- Custom Select --- */
+.ct-select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.ct-select-trigger {
+    width: 100%;
+    padding: 10px 36px 10px 14px;
+    background-color: var(--bg-panel);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s, border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.ct-select-trigger:hover,
+.ct-select-trigger.open {
+    background-color: #404040;
+}
+
+.ct-select-trigger.open {
+    border-color: rgba(255,255,255,0.15);
+    border-radius: 12px 12px 0 0;
+}
+
+.ct-select-placeholder {
+    color: var(--text-muted);
+}
+
+.ct-select-chevron {
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: transform 0.2s;
+}
+
+.ct-select-trigger.open .ct-select-chevron {
+    transform: rotate(180deg);
+}
+
+.ct-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    z-index: 100;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.ct-select-search {
+    width: 100% !important;
+    padding: 10px 14px !important;
+    background-color: #222 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 0 !important;
+    font-family: 'Open Sans', sans-serif !important;
+    font-size: 0.85rem !important;
+    color: var(--text-main) !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+}
+
+.ct-select-list {
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #444 transparent;
+}
+
+.ct-select-list::-webkit-scrollbar {
+    width: 4px;
+}
+.ct-select-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ct-select-list::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 4px;
+}
+
+.ct-select-option {
+    padding: 9px 14px;
+    font-size: 0.87rem;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.ct-select-option:hover {
+    background-color: #3a3a3a;
+    color: var(--text-main);
+}
+
+.ct-select-option.selected {
+    color: var(--text-main);
+    background-color: #383838;
 }

@@ -200,6 +200,28 @@
   background-color: rgba(0, 173, 181, 0.05);
 }
 
+.review-link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #ffffff;
+  color: #000000 !important;
+  text-decoration: none !important;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.review-link:hover,
+.review-link:visited,
+.review-link:link,
+.review-link:active {
+  background-color: #f0f0f0;
+  color: #000000 !important;
+  text-decoration: none !important;
+}
+
 .no-data-message {
   padding: 3rem 1rem;
   text-align: center;

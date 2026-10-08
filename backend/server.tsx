@@ -12,11 +12,12 @@ import { register, verifyEmail, passwordLink, resetPassword, validateResetToken 
 import { configUser } from "./modules/config_user.ts";
 import { globalAuthentication } from "./modules/global_auth.ts";
 import type { Config } from "./interfaces/config.interfaces.ts";
+import { assertConfig } from "./interfaces/config.interfaces.ts";
 import configJson from './config.json' with { type: "json" };
 import type {  GetStatsRequest } from "./interfaces/requests.interfaces.ts";
 import { getLeaderboard, getMostUsedAtlases } from "./modules/leaderboard.ts";
-import { getUserStats } from "./modules/stats.ts";
-import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate, replayMultiSession } from "./modules/multi.ts";
+import { getUserStats, getPastMultiplayerGames } from "./modules/stats.ts";
+import { createMultiplayerSession, destroyMultiplayerSession, getMultiplayerSessionStartDate, replayMultiSession, replayMultiSessionById, replaySingleSessionById } from "./modules/multi.ts";
 import { checkIfClassicChallenge } from "modules/multi_classic_challenge.ts";
 import { getClassicChallengeResults } from "modules/multi_classic_challenge.ts";
 import { classicChallengeEmailOptIn } from "modules/multi_classic_challenge.ts";
@@ -42,9 +43,11 @@ import {
     getAllUsers,
     requireAdmin
 } from 'modules/teams.ts';
+import { getActiveNews, getAllNews, createNews, updateNews, deleteNews } from 'modules/news.ts';
 import rateLimit from 'express-rate-limit';
 import { logger } from './modules/logging.ts';
 
+assertConfig(configJson);
 const config: Config = configJson;
 
 const app = express();
@@ -97,6 +100,8 @@ app.post('/api/get-most-used-atlases', getMostUsedAtlases);
 // stats.ts
 app.post('/api/get-stats', authenticateToken, 
     (req, res) => getUserStats(req as GetStatsRequest, res));
+app.get('/api/multi/past-games', authenticateToken,
+    (req, res, next) => Promise.resolve(getPastMultiplayerGames(req, res)).catch(next));
 
 // multi.ts
 app.post('/api/create-multiplayer-session', authenticateToken, createMultiplayerSession)
@@ -144,6 +149,12 @@ app.delete('/api/classic-challenges/:sessionCode', authenticateToken, (req, res,
 app.get('/api/multi/replay-challenge/:challengeId', authenticateToken, (req, res, next) => {
     Promise.resolve(replayMultiSession(req, res)).catch(next);
 })
+app.get('/api/multi/replay-session/:sessionId', authenticateToken, (req, res, next) => {
+    Promise.resolve(replayMultiSessionById(req, res)).catch(next);
+})
+app.get('/api/single/replay-session/:sessionId', authenticateToken, (req, res, next) => {
+    Promise.resolve(replaySingleSessionById(req, res)).catch(next);
+})
 
 // advanced_game.ts
 app.post('/api/advanced-game/save', authenticateToken, saveAdvancedSettings);
@@ -164,6 +175,13 @@ app.get("/favicon.ico", (req: express.Request, res: express.Response) => {
 app.get('/api/altcha/challenge', generateChallenge as express.RequestHandler)
 
 // teams.ts - Admin only routes
+// news.ts routes
+app.get('/api/news/active', getActiveNews);
+app.get('/api/news', authenticateToken, requireAdmin, getAllNews);
+app.post('/api/news', authenticateToken, requireAdmin, createNews);
+app.put('/api/news/:id', authenticateToken, requireAdmin, updateNews);
+app.delete('/api/news/:id', authenticateToken, requireAdmin, deleteNews);
+
 app.get('/api/teams', authenticateToken, requireAdmin, getAllTeams);
 app.get('/api/teams/:id', authenticateToken, requireAdmin, getTeamById);
 app.get('/api/teams/:id/members', authenticateToken, requireAdmin, getTeamMembers);

@@ -1,12 +1,73 @@
-/* main loading screen elements are loaded in html render file */
 #loading-screen-inside {
-    min-height: calc(100% - var(--header-height, 70px) - var(--footer-height, 50px) + 40px);
     width: 100%;
 }
+
 #loading-screen-inside .loader-container {
     height: 100%;
+    min-height: 100vh;
+    margin-top: -80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    #loading-screen-inside .loader-container {
+        min-height: 100vh;
+        margin-top: -80px;
+    }
+}
+
+/* Logo + spinner ring stacked */
+.loading-logo-spinner {
+    position: relative;
+    width: 100px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
 }
+
+.loading-logo-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.loading-logo-container svg {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+}
+
+/* Spinner ring around the logo */
+.ls-ring {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: 50%;
+    animation: ls-rotate 1.4s linear infinite;
+    /* conic gradient: white arc fading to transparent */
+    background: conic-gradient(
+        from 0deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.55) 75%,
+        rgba(255,255,255,0) 100%
+    );
+    -webkit-mask:
+        radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+    mask:
+        radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+}
+
+@keyframes ls-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+

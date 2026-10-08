@@ -1,0 +1,92 @@
+.help-page {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 0 24px 60px;
+  box-sizing: border-box;
+}
+
+.help-page h1 {
+  font-size: 1.8rem;
+  font-weight: 300;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--text-main);
+  margin: 0 0 32px 0;
+}
+
+.help-section {
+  margin-bottom: 36px;
+}
+
+.help-section h2 {
+  font-size: 1.1rem;
+  font-weight: 400;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--text-main);
+  margin: 0 0 12px 0;
+}
+
+.help-section > p {
+  color: var(--text-sub);
+  font-size: 0.9rem;
+  font-weight: 300;
+  font-family: 'Open Sans', sans-serif;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.help-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.help-mode-item {
+  display: flex;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 18px 20px;
+  align-items: flex-start;
+}
+
+.help-mode-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.help-mode-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.help-mode-body h3 {
+  font-size: 0.95rem;
+  font-weight: 400;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+}
+
+.help-mode-body p {
+  font-size: 0.87rem;
+  font-weight: 300;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--text-sub);
+  line-height: 1.65;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .help-page {
+    padding: 0 16px 60px;
+    margin: 24px auto;
+  }
+}

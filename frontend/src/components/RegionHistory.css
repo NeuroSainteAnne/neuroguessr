@@ -1,55 +1,110 @@
 /* Region Summary Styles */
 .region-summary {
   grid-column: 1;
-  grid-row: 2;
-  margin: 20px;
-  max-height: calc(100% - 40px);
-  height: calc(100% - 40px);
+  grid-row: 1;
+  margin: 0px 12px;
+  height: auto;
+  max-height: 80vh;
   overflow-y: auto;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   padding: 10px;
-  background-color: #59595988;
+  background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: min-content min-content auto min-content;
 }
 
 @media (max-width: 700px) {
     .region-summary {
-        grid-column: 2 / span 2;
-        grid-row: 1;
         height: auto;
-        flex-direction: column; /* Stack elements vertically */
-        align-items: center; /* Center elements horizontally */
-        justify-content: center; /* Center elements vertically */
+        grid-column: 1 / span 2;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 }
 
-.region-summary h3 {
-  margin-top: 0;
+.region-summary-header {
+  grid-column: 1;
+  grid-row: 1;
   text-align: center;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #2a2a2a;
-}
-
-.region-list {
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 12px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.answers-info{
-  font-size: 0.85em;
-  color: #ccc;
-  text-align: center;
-  margin-bottom: 10px;
+.sidebar-toggle-button {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #d1d5db;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 768px) { 
+  .sidebar-toggle-button {
+      display: none;
+  }
+}
+
+.region-summary h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.region-summary-title {
+  font-size: 0.75rem;
+  color: #888888;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.region-list {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 150px;
+  overflow-y: auto;
 }
 
 .region-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px 1fr 36px 32px;
   align-items: center;
-  padding: 8px;
+  gap: 4px;
+  padding: 6px;
   border-radius: 4px;
   background-color: rgba(23, 21, 21, 0.489);
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  min-height: 36px;
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 .region-item.correct {
@@ -62,13 +117,13 @@
 
 .region-number {
   font-weight: bold;
-  margin-right: 10px;
-  min-width: 25px;
+  text-align: right;
 }
 
 .region-name {
-  flex-grow: 1;
-  margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .incorrect-answer {
@@ -79,21 +134,179 @@
 
 .region-score {
   font-weight: bold;
-  color: #2196f3;
-  margin-right: 10px;
+  font-size: 0.82em;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.region-score.distance {
+  color: #ef9a3a;
+}
+
+.region-score.correct-score {
+  color: #4caf50;
+}
+
+.region-score.no-guess {
+  color: #888;
+  font-style: italic;
+  font-size: 0.75em;
 }
 
 .highlight-region-button {
-  background: none;
+  background: #ffffff;
   border: none;
-  color: #888;
+  color: #000000;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+  flex-shrink: 0;
 }
 
 .highlight-region-button:hover {
-  background-color: #eee;
-  color: #000;
+  background-color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.highlight-region-button svg {
+  color: #000000;
+}
+
+.answers-info {
+  font-size: 0.85rem;
+  color: #b0b0b0;
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid rgba(100, 200, 255, 0.5);
+  line-height: 1.4;
+}
+
+.answers-info svg {
+  display: inline;
+  vertical-align: middle;
+  margin: 0 4px;
+  color: #64c8ff;
+  width: 16px;
+  height: 16px;
+}
+
+.region-detail-panel {
+  grid-column: 1;
+  grid-row: 2;
+  background: rgba(100, 200, 255, 0.1);
+  border: 1px solid rgba(100, 200, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.region-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.region-detail-label {
+  color: #888888;
+  font-weight: 500;
+}
+
+.region-detail-value {
+  color: #ffffff;
+  font-weight: 600;
+  word-break: break-word;
+  text-align: right;
+  flex: 1;
+  margin-left: 8px;
+}
+
+.region-item.selected {
+  background-color: rgba(100, 200, 255, 0.15);
+  border-left-color: #64c8ff;
+}
+
+.region-score.correct-score svg {
+  display: inline;
+  color: #4caf50;
+}
+
+.region-navigation {
+  grid-column: 1;
+  grid-row: 4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-button {
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000000;
+  transition: background-color 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.nav-button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.nav-button:disabled {
+  background-color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.nav-counter {
+  color: #888888;
+  font-size: 0.85rem;
+  font-weight: 500;
+  min-width: 50px;
+  text-align: center;
+}
+
+.review-init-message {
+  background: rgba(100, 200, 255, 0.15);
+  border: 1px solid rgba(100, 200, 255, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.review-init-message p {
+  margin: 0;
+  color: #b0d4ff;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.review-init-message strong {
+  font-weight: 600;
+  color: #64c8ff;
 }

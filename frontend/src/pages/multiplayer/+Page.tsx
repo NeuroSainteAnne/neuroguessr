@@ -4,14 +4,14 @@ import "../../components/BrainViewer.css"
 import { useApp } from '../../context/AppContext';
 import ChallengeEmailOptIn from '../../components/ChallengeEmailOptIn';
 import { useSocket } from '../../context/SocketContext';
-import {  MultiplayerParametersType } from '../../types/types';
+import {  MultiplayerParametersType, PastRegion } from '../../types/types';
 import config from "../../../config.json"
 import { Socket } from 'socket.io-client';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import { consoleLog } from '../../utils/logging';
 import { prefetchAtlasJSON, preloadAtlas } from '../../utils/nifti_cache';
-import { formatTime } from '../../utils/formatters';
+import { GuessResult } from '../../hooks/useSinglePlayerSocket';
 
 export function Page() {
     const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
@@ -77,11 +77,14 @@ const MultiPlayer = ({
   const [forceDisplayUpdate, setForceDisplayUpdate] = useState<number>(0);
   const isFirstGuess = useRef<boolean>(true);
   const hasAnswered = useRef<boolean>(false);
+  const sessionNameRef = useRef<string>("");
+  const sessionDateRef = useRef<string>("");
   const [showMultiplayerOverlay, setShowMultiplayerOverlay] = useState<boolean>(false)
   const multiplayerOverlayRef = useRef<HTMLDivElement>(null);
   const [hasWon, setHasWon] = useState<boolean>(false)
   const isGuessCooldownRef = useRef<boolean>(false);
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
+  const countdownTotal = useRef<number>(5);
   const [classicChallengeId, setClassicChallengeId] = useState<number | null>(null);
   const [classicChallengeRankings, setClassicChallengeRankings] = useState<Array<{username: string, score: number, ranking?: number}>>([]);
   const [classicChallengeTotalParticipants, setClassicChallengeTotalParticipants] = useState<number>(0);
@@ -92,12 +95,18 @@ const MultiPlayer = ({
   const joiningInProgressRef = useRef<boolean>(false);
   const pastRegionIdCounter = useRef<number>(0);
   const currentPastRegionId = useRef<number | null>(null);
-  const isReplayMode = useState<boolean>(!askedSessionCode && !!pageContext?.urlParsed.search["replay_multi"]);
+  const isReplayMode = !askedSessionCode && (!!pageContext?.urlParsed.search["replay_multi"] || !!pageContext?.urlParsed.search["replay_session"]);
+
+  // Chat state
+  type ChatMsg = { userName: string; message: string; timestamp: number; visibleUntil: number };
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState<string>("");
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const handleConnect = () => {
     setError(null);
     if (!inputCode.match(/^\d{8}$/)) {
-      setError("Please enter a valid 8-digit code.");
+      setError(t("Invalid session code format. Must be 8 digits."));
       return;
     }
 
@@ -124,7 +133,7 @@ const MultiPlayer = ({
         joinLobby(inputCode)
       })
       .catch(_ => {
-        setError("Failed to check session type.");
+        setError(t("Failed to check session type"));
       });
   }
   const anonUsernameInputRef = useRef<HTMLInputElement>(null);
@@ -162,44 +171,43 @@ const MultiPlayer = ({
     anonUsernameRef.current = anonUsername;
   }, [anonUsername])
 
-  // Handle replay_multi URL parameter
+  // Handle replay_multi and replay_session URL parameters — runs only once
+  const replayMultiId = pageContext?.urlParsed.search["replay_multi"];
+  const replaySessionId = pageContext?.urlParsed.search["replay_session"];
+  const replayId = replayMultiId || replaySessionId;
+  const replayLoadedRef = useRef(false);
+
   useEffect(() => {
-    const replayMultiId = pageContext?.urlParsed.search["replay_multi"]
-    
-    if (replayMultiId) {
-      if(!isLoggedIn || !authToken){
-        setShowAuthRequired(true);
-        return;
-      } 
-      // Fetch replay data from backend
-      fetch(`/api/multi/replay-challenge/${replayMultiId}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      })
+    if (!replayId || replayLoadedRef.current) return;
+    if (!isLoggedIn || !authToken) {
+      setShowAuthRequired(true);
+      return;
+    }
+    replayLoadedRef.current = true;
+
+    const url = replayMultiId
+      ? `/api/multi/replay-challenge/${replayMultiId}`
+      : `/api/multi/replay-session/${replaySessionId}`;
+
+    fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` } })
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch replay data: ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`Failed to fetch replay data: ${res.statusText}`);
         return res.json();
       })
       .then(data => {
-        const { pastRegions, atlas, blindMode } = data;
-        
-        // Set up the game for replay mode
+        const { pastRegions, atlas, blindMode, sessionName, sessionDate } = data;
+        setHasEnded(true);
         setPastRegions(pastRegions);
         setAskedAtlas({atlas, blindMode});
-        setHasEnded(true);
-        
-        // Start the game directly in replay mode
-        consoleLog('verbose', `Starting replay mode for challenge ${replayMultiId} with ${pastRegions.length} regions`);
+        if (sessionName) sessionNameRef.current = sessionName;
+        if (sessionDate) sessionDateRef.current = sessionDate;
+        consoleLog('verbose', `Starting replay mode for ${replayId} with ${pastRegions.length} regions`);
       })
       .catch(err => {
         console.error('Error loading replay data:', err);
-        setError(err.message || 'Failed to load replay data');
+        setError(t(err.message) || t('Failed to load replay data'));
       });
-    }
-  }, [isLoggedIn, authToken, setPastRegions, setAskedAtlas]);
+  }, [replayId, isLoggedIn, authToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const joinLobby = async (inputCode: string) => {
     if (isConnected || joiningInProgressRef.current) return;
@@ -229,7 +237,7 @@ const MultiPlayer = ({
     // Connection error
     socket.on('connect_error', (err: any) => {
       consoleLog("verbose", `Multiplayer connection error: ${err.message}`);
-      setError(`Connection error: ${err.message}`);
+      setError(`${t("Connection error")}: ${t(err.message)}`);
       joiningInProgressRef.current = false;
       cleanupSocket();
     });
@@ -239,12 +247,14 @@ const MultiPlayer = ({
       let message = data.message || 'An error occurred';
       if(message == "You have already completed this classic challenge"){
         message = t("error_already_completed_challenge", {challengeId: thisClassicChallengeId})  
+      } else {
+        message = t(message)
       }
       setError(message);
       joiningInProgressRef.current = false;
     });
     socket.on('fatal-error', (data: any) => {
-      setError(data.message);
+      setError(t(data.message));
       joiningInProgressRef.current = false;
       cleanupSocket();
     });
@@ -298,6 +308,7 @@ const MultiPlayer = ({
       if (data.command.action === 'countdown') {
         // Handle countdown command
         const duration = data.command.duration || 5; // Default to 5 seconds
+        countdownTotal.current = duration;
         setCountdownRemaining(duration);
         
         // Start countdown timer
@@ -329,6 +340,7 @@ const MultiPlayer = ({
             blindMode: data.command.blindMode || false
           })
           cleanHeader();
+          setHeaderTime(`${t("loading-atlas")} ${data.command.atlas}`);
         }
         startStepCountdown(`${t("loading-atlas")} ${data.command.atlas}`, data.command.duration);
       } else if (data.command === 'preload-atlas') {
@@ -407,9 +419,16 @@ const MultiPlayer = ({
       
       setShowMultiplayerOverlay(true)
     });
-    socket.on('guess-result', (data: any) => {
+    socket.on('guess-result', (data: GuessResult) => {
         // Update existing pastRegion if pastRegionId is provided
         if (data.pastRegionId !== undefined) {
+          const clickedVox = data.clickedPosition?.vox;
+          const clickedIdx = (clickedVox && atlasRef.current)
+              ? atlasRef.current.getValue(clickedVox[0]!, clickedVox[1]!, clickedVox[2]!)
+              : undefined;
+          const clickedRegionName = clickedIdx !== undefined && atlasRef.current
+              ? atlasRef.current.labels?.[clickedIdx] ?? undefined
+              : undefined;
           setPastRegions(prev => prev.map(region =>
             region.id === data.pastRegionId
               ? {
@@ -417,13 +436,11 @@ const MultiPlayer = ({
                   isCorrect: data.isCorrect,
                   score: data.scoreIncrement,
                   distance: data.isCorrect ? 0 : data.distance,
-                  clickedPosition: data.clickedVoxelProp ? {
-                    mm: [...data.clickedVoxelProp.mm],
-                    vox: [...data.clickedVoxelProp.vox]
-                  } : undefined,
-                  regionCenter: data.nearestCenter,
-                  regionBoundary: data.nearestBoundary
-                }
+                  clickedPosition: data.clickedPosition,
+                  regionCenter: data.regionCenter,
+                  regionBoundary: data.regionBoundary,
+                  clickedRegionName: clickedRegionName
+                } as PastRegion
               : region
           ));
         }
@@ -434,6 +451,11 @@ const MultiPlayer = ({
         }
     });
     
+    socket.on('chat-message', (data: any) => {
+      const visibleUntil = Date.now() + 10_000;
+      setChatMessages(prev => [...prev, { ...data, visibleUntil }]);
+    });
+
     socket.on('session-code-changed', (data: any) => {
       consoleLog("verbose", `Session code changed from ${data.oldCode} to ${data.newCode}`);
       setInputCode(data.newCode);
@@ -446,7 +468,7 @@ const MultiPlayer = ({
     
     socket.on('session-destroyed', (data: any) => {
       consoleLog("verbose", `Session destroyed: ${data.reason}`);
-      setError(`Session ended: ${data.reason}`);
+      setError(`${t('Session ended')}: ${t(data.reason)}`);
       cleanupSocket();
     });
     
@@ -508,6 +530,7 @@ const MultiPlayer = ({
           socket.off('all-scores-update');
           socket.off('game-end');
           socket.off('guess-result');
+          socket.off('chat-message');
           socket.off('session-code-changed');
           socket.off('session-destroyed');
           socket.off('game-launched');
@@ -546,7 +569,7 @@ const MultiPlayer = ({
           if (data.success) {
             consoleLog('verbose', 'Game launched successfully');
           } else {
-            setError(data.message || t('error_launching_game'));
+            setError(t(data.message) || t('error_launching_game'));
           }
         });
       }
@@ -688,6 +711,32 @@ const MultiPlayer = ({
     };
   }, [])
 
+  // Prune chat messages that have expired (auto-hide after 10s, only during game)
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!isGameRunning) return;
+      const now = Date.now();
+      setChatMessages(prev => prev.filter(m => m.visibleUntil > now));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isGameRunning]);
+
+  // Auto-scroll chat to bottom on new message
+  useEffect(() => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const sendChat = () => {
+    const msg = chatInput.trim();
+    if (!msg || msg.length > 500) return;
+    const socket = getSocket();
+    if (!socket || !socket.connected || !isLoggedIn || !authToken) return;
+    const sessionCode = isClassicChallenge ? implicitCodeRef.current : inputCodeRef.current;
+    if (!sessionCode) return;
+    socket.emit('send-chat-message', { sessionCode, userToken: authToken, message: msg });
+    setChatInput("");
+  };
+
   // Frontend - queue guess submissions
   const guessQueue = useRef<boolean>(false);
 
@@ -724,17 +773,49 @@ const MultiPlayer = ({
   }, [validateGuessCallbackRef, isGameRunning, isAnonymous, userUsername, isLoggedIn, authToken, getSocket]);
 
 
+  const renderChat = () => (
+    <div
+      className="multiplayer-chat"
+    >
+      <div className="chat-messages">
+        {chatMessages.map((m, i) => (
+          <div key={i} className="chat-bubble">
+            <span className="chat-username">{m.userName}</span>
+            <span className="chat-text">{m.message}</span>
+          </div>
+        ))}
+        <div ref={chatMessagesEndRef} />
+      </div>
+      {isLoggedIn && (
+        <div className="chat-input-row">
+          <input
+            className="chat-input"
+            type="text"
+            value={chatInput}
+            maxLength={500}
+            placeholder={t("chat_placeholder") || "Say something..."}
+            onChange={e => setChatInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } }}
+          />
+          <button className="chat-send-btn" onClick={sendChat}>&#9654;</button>
+        </div>
+      )}
+    </div>
+  );
+
   const renderWaitingContent = ({error}: {error: string|null}) => {
     // Show auth required screen for classic challenges when not logged in
     if (showAuthRequired) {
       return (
         <div className="waiting-content">
-          <div className="join-multiplayer-box">
-            <h2>{t("classic_challenge_requires_login") || "Classic Challenge Requires Login"}</h2>
-            <p>{t("please_login_or_signup") || "Please log in or sign up to participate in this classic challenge."}</p>
-            <div className="auth-buttons">
-              <a href={`/login?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button">{t("sign_in") || "Sign In"}</a>
-              <a href={`/register?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button ">{t("sign_up") || "Sign Up"}</a>
+          <div className="waiting-content-left">
+            <div className="join-multiplayer-box">
+              <h2>{t("classic_challenge_requires_login") || "Classic Challenge Requires Login"}</h2>
+              <p>{t("please_login_or_signup") || "Please log in or sign up to participate in this classic challenge."}</p>
+              <div className="auth-buttons">
+                <a href={`/login?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button">{t("sign_in") || "Sign In"}</a>
+                <a href={`/register?returnURL=${encodeURIComponent(currentPath)}`} className="join-multiplayer-button ">{t("sign_up") || "Sign Up"}</a>
+              </div>
             </div>
           </div>
         </div>
@@ -745,10 +826,12 @@ const MultiPlayer = ({
     if (error && !isConnected && !isGameRunning) {
       return (
         <div className="waiting-content">
-          <div className="join-multiplayer-box">
-            <h2>{t("join_multiplayer_lobby")}</h2>
-            {challengeTitle && <h2>{challengeTitle}</h2>}
-            <div style={{ color: 'red', marginTop: 16, fontSize: 18 }} dangerouslySetInnerHTML={{__html:error}}></div>
+          <div className="waiting-content-left">
+            <div className="join-multiplayer-box">
+              <h2>{t("join_multiplayer_lobby")}</h2>
+              {challengeTitle && <h2>{challengeTitle}</h2>}
+              <div style={{ color: 'red', marginTop: 16, fontSize: 18 }} dangerouslySetInnerHTML={{__html:error}}></div>
+            </div>
           </div>
         </div>
       );
@@ -758,14 +841,14 @@ const MultiPlayer = ({
         (!isLoggedIn && config.activateAnonymousMode && 
           !isConnected && !askedSessionToken && isClassicChallengeFromCheck !== true && !isCheckingClassicChallenge)) {
       return (<div className="waiting-content">
-        <div className="join-multiplayer-box">
+        <div className="waiting-content-left"><div className="join-multiplayer-box">
           <h2>{t("join_multiplayer_lobby")}</h2>
           <input
             type="text"
             value={inputCode}
             onChange={e => setInputCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
             placeholder={t("multi_8_digits")}
-            style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', width: 250, border:"1px solid white" }}
+            style={{ fontSize: 24, letterSpacing: 4, textAlign: 'center', minWidth: 250, border:"1px solid white", boxSizing:"border-box" }}
           />
           {!isLoggedIn && config.activateAnonymousMode &&
             <input
@@ -775,7 +858,7 @@ const MultiPlayer = ({
               onChange={e => setAnonUsername(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 16))}
               placeholder={t("placeholder_tempusername")}
               style={{ fontSize: 18, letterSpacing: 4, textAlign: 'center', 
-                width: 250, border:"1px solid white" }}
+                minWidth: 250, border:"1px solid white", boxSizing:"border-box" }}
             />
           }
           <button className="join-multiplayer-button"  data-umami-event="multiplayer join button" onClick={handleConnect}>{t("join_multiplayer_button")}</button>
@@ -784,7 +867,7 @@ const MultiPlayer = ({
         {!isLoggedIn && <div className="multiplayer-suggest-login" 
           dangerouslySetInnerHTML={{__html:t("multi_suggest_login")
           .replace("#",`?redirect=multiplayer-game${(askedSessionCode?`&redirect_asked_session_code=${askedSessionCode}`:"")}${(askedSessionToken?`&redirect_asked_session_token=${askedSessionToken}`:"")}#`)}}></div>}
-      </div>)
+      </div></div>)
     }
 
     if (isConnected && !isGameRunning && isClassicChallenge && !classicChallengeValidated.current) {
@@ -793,66 +876,76 @@ const MultiPlayer = ({
           {challengeTitle && <h2>{challengeTitle}</h2>}
           <button className="start-classic-challenge-button"  data-umami-event="multiplayer start-classic button" onClick={handleClassicChallengeStart}>{t("start_classic_button")}</button>
           <div className='start-classic-challenge-warning'>{t("classic_challenge_start_warning")}</div>
+          {renderChat()}
         </div>
       );
     }
 
     if (isConnected && !isGameRunning) {
       if(countdownRemaining !== null && countdownRemaining >= 0){
+        const circumference = 2 * Math.PI * 44;
+        const strokeDashoffset = circumference * (1 - (countdownRemaining / countdownTotal.current));
         return (
           <div className="waiting-content">
               <div className="countdown-display">
-                <h3>{t("game_starting_in") || "Game starting in..."}</h3>
-                <div className="countdown-number" style={{ 
-                  fontSize: '48px', 
-                  fontWeight: 'bold', 
-                  color: '#ff6b6b',
-                  textAlign: 'center',
-                  margin: '20px 0'
-                }}>
-                  {formatTime({ms:countdownRemaining*1000})}
+                <p className="countdown-label">{t("game_starting_in") || "Game starting in..."}</p>
+                <div className="countdown-ring-container">
+                  <svg className="countdown-ring-svg" viewBox="0 0 100 100">
+                    <circle className="countdown-ring-bg" cx="50" cy="50" r="44" />
+                    <circle
+                      className="countdown-ring-progress"
+                      cx="50" cy="50" r="44"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                    />
+                  </svg>
+                  <span className="countdown-number">{countdownRemaining}</span>
                 </div>
-                {!isClassicChallenge && <div>
-                  <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
-                  <ul>
+                {!isClassicChallenge && lobbyUsers.length > 0 && (
+                  <div className="countdown-players-box">
+                    <p className="countdown-players-title">{t("players_in_lobby")}: {lobbyUsers.length}</p>
+                    <ul className="countdown-players-list">
                       {lobbyUsers.map((user, index) => (
-                        <li key={`waiting-user-${index}`}>
-                          {user}
-                        </li>
+                        <li key={`waiting-user-${index}`}>{user}</li>
                       ))}
-                  </ul>
-                </div>}
+                    </ul>
+                  </div>
+                )}
               </div>
             {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+            {renderChat()}
           </div>
         );
       } else if (!isClassicChallenge) {
         return (
           <div className="waiting-content">
-            <h3>{t("waiting_game_start") || "Waiting for game to start..."}</h3>
-            <div className="waiting-display">
-              <div>
-                <h4>{t("players_in_lobby")}: {lobbyUsers.length}</h4>
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                    {lobbyUsers.map((user, index) => (
-                      <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
-                        {user}
-                      </li>
-                    ))}
-                </ul>
+            <div className="waiting-content-left">
+              <h3>{t("waiting_game_start") || "Waiting for game to start..."}</h3>
+              <div className="waiting-display">
+                <div className="countdown-players-box">
+                  <p className="countdown-players-title">{t("players_in_lobby")}: {lobbyUsers.length}</p>
+                  <ul className="countdown-players-list">
+                      {lobbyUsers.map((user, index) => (
+                        <li key={`waiting-user-${index}`} style={{ margin: '5px 0' }}>
+                          {user}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+                {parameters && <div className="countdown-players-box">
+                  <p className="countdown-players-title">{t("parameters")}</p>
+                  {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
+                  {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
+                  {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
+                  {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
+                  {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
+                  {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
+                  {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
+                </div>}
               </div>
-              {parameters && <div>
-                <h4>{t("parameters")}</h4>
-                {parameters?.commands && <div>{t("parameters_manual_commands")}</div>}
-                {!parameters?.commands && parameters?.atlas && <div>{t("parameters_atlas")}: {parameters.atlas}</div>}
-                {<div>{t("number_regions")}: {parameters.regionsNumber}</div>}
-                {parameters?.commands && parameters?.totalDuration && <div>{t("parameters_total_duration")}: {Math.floor(parameters.totalDuration / 60)}m {parameters.totalDuration % 60}s</div>}
-                {!parameters?.commands &&<div>{t("duration_per_region")}: {parameters.durationPerRegion}</div>}
-                {!parameters?.commands && parameters?.blindMode && <div>{t("blind_mode")}</div>}
-                {false && parameters?.gameoverOnError && <div>{t("gameover_first_error_activated")}</div>}
-              </div>}
             </div>
             {error && <div style={{ color: 'red', marginTop: 16 }}>{error}</div>}
+            {renderChat()}
           </div>
         );
       }
@@ -866,9 +959,12 @@ const MultiPlayer = ({
     <>
       <title>{title}</title>
       
-      <BrainViewer alternateContent={renderWaitingContent({error})} />
+      <BrainViewer alternateContent={renderWaitingContent({error})} sessionName={sessionNameRef.current} sessionDate={sessionDateRef.current} />
       
       {isGameRunning && (
+        <div className="multiplayer-side-panel">
+        {renderChat()}
+
         <div className="multiplayer-score-display">
           <div className="current-user-score">
             <div>
@@ -920,6 +1016,7 @@ const MultiPlayer = ({
             </div>
           </div>
         </div>
+        </div>
       )}
       
       {!isLoggedIn && !config.activateAnonymousMode && 
@@ -931,119 +1028,90 @@ const MultiPlayer = ({
       {showMultiplayerOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
         <div className="overlay-content" ref={multiplayerOverlayRef}>
           {isClassicChallenge ? (
-            // Classic Challenge Ending Screen
             <>
               <h2>{t("classic_challenge_ended_title") || "Classic Challenge Completed"}</h2>
-              
-              {/* User's Score */}
-              <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {t("your_score") || "Your Score"}: {playerScores[isLoggedIn ? userUsername : anonUsername] || 0}
-                </p>
+              <div className="overlay-score-block">
+                <span className="overlay-score-value">
+                  {playerScores[isLoggedIn ? userUsername : anonUsername] || 0}
+                </span>
+                <span className="overlay-score-label">{t("your_score") || "Your Score"}</span>
               </div>
 
-              {/* Ranking or Publish Prompt */}
               {(() => {
                 const currentUser = isLoggedIn ? userUsername : anonUsername;
                 const userScore = playerScores[currentUser] || 0;
-                
                 if (userPublishToLeaderboard === true) {
-                  // User publishes to leaderboard - show their ranking from the rankings array
                   const existingRanking = classicChallengeRankings.find(r => r.username === currentUser);
-                  
                   let rankingsToUse = classicChallengeRankings;
                   let totalParticipants = classicChallengeTotalParticipants;
-                  
                   if (!existingRanking) {
-                    // Add user's score to rankings if not already included
                     rankingsToUse = [...classicChallengeRankings, { username: currentUser, score: userScore }];
-                    // Sort by score descending, then by username for tie-breaking
-                    rankingsToUse.sort((a, b) => {
-                      if (b.score !== a.score) return b.score - a.score;
-                      return a.username.localeCompare(b.username);
-                    });
-                    // Add ranking numbers
+                    rankingsToUse.sort((a, b) => b.score !== a.score ? b.score - a.score : a.username.localeCompare(b.username));
                     rankingsToUse = rankingsToUse.map((r, index) => ({ ...r, ranking: index + 1 }));
                     totalParticipants += 1;
                   }
-                  
                   const userRanking = rankingsToUse.find(r => r.username === currentUser);
-                  
                   return (
-                    <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                      <p style={{ fontSize: '20px' }}>
-                        {t("your_temp_ranking") || "Your Temporary Ranking"}: #{userRanking?.ranking || '?'} / {totalParticipants}
-                      </p>
-                      <p style={{ fontSize: '16px', color: '#666' }}>
-                        {t("total_participants") || "Total Participants"}: {totalParticipants}
-                      </p>
+                    <div className="overlay-ranking">
+                      <p><strong>#{userRanking?.ranking || '?'}</strong> / {totalParticipants} {t("total_participants") || "participants"}</p>
                     </div>
                   );
                 } else {
-                  // User doesn't publish to leaderboard
-                  return (
-                    <PublishToLeaderboardBox forRank={true}/>
-                  );
+                  return <PublishToLeaderboardBox forRank={true}/>;
                 }
               })()}
 
-              {/* Publish to Leaderboard Box for users who haven't set preference */}
-              {isLoggedIn && !isClassicChallenge && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
-              
-              {/* Challenge Results Button */}
               {classicChallengeId && (
-                <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                  <a 
-                    href={`/challenge-results/${classicChallengeId}`}
-                    className="join-multiplayer-button"
-                    style={{ display: 'inline-block', textDecoration: 'none' }}
-                  >
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                  <a href={`/challenge-results/${classicChallengeId}`} className="overlay-challenge-link">
                     {t("view_challenge_results") || "View Challenge Results"}
                   </a>
-                  <div style={{ marginTop: 12 }}>
-                    <ChallengeEmailOptIn challengeId={classicChallengeId} />
-                  </div>
+                  <ChallengeEmailOptIn challengeId={classicChallengeId} />
                 </div>
               )}
             </>
           ) : (
-            // Regular Multiplayer Ending Screen
             <>
-              <h2>{t("multiplayer_ended_title")}</h2>
-              <p><span>{t("multiplayer_ended_score")}</span></p>
-              <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
+              <h2>{hasWon ? t("multiplayer_you_won") : t("multiplayer_you_lost")}</h2>
+              <div className="overlay-score-block">
+                <span className="overlay-score-value">
+                  {playerScores[isLoggedIn ? userUsername : anonUsername] ?? 0}
+                </span>
+                <span className="overlay-score-label">{t("your_score") || "Your Score"}</span>
+              </div>
+              <ul className="overlay-players-list">
                 {[...lobbyUsers]
                   .sort((a, b) => {
-                    const scoreA = playerScores[a];
-                    const scoreB = playerScores[b];
-                    if (scoreA === undefined && scoreB === undefined) return 0;
-                    if (scoreA === undefined) return 1;
-                    if (scoreB === undefined) return -1;
-                    return scoreB - scoreA;
+                    const sa = playerScores[a]; const sb = playerScores[b];
+                    if (sa === undefined && sb === undefined) return 0;
+                    if (sa === undefined) return 1; if (sb === undefined) return -1;
+                    return sb - sa;
                   })
-                  .map((u) => (
-                    <li key={u} style={(u === userUsername || u === anonUsername) ? { color: (hasWon?'green':'red'), fontWeight: 'bold' } : {}}>
-                      {u}{playerScores[u] !== undefined ? " " + playerScores[u] : ""}
-                    </li>
-                  ))
-                }
+                  .map((u) => {
+                    const isMe = u === userUsername || u === anonUsername;
+                    return (
+                      <li key={u} className={isMe ? `is-me ${hasWon ? 'won' : 'lost'}` : ''}>
+                        <span>{u}</span>
+                        <span>{playerScores[u] ?? '—'}</span>
+                      </li>
+                    );
+                  })}
               </ul>
-              <h2>{hasWon?t("multiplayer_you_won"):t("multiplayer_you_lost")}</h2>
               {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
             </>
           )}
 
           <div className="overlay-buttons">
-            <button 
-              className="eye-button" 
+            <button
+              className="eye-button"
               onClick={() => setShowMultiplayerOverlay(false)}
-              data-umami-event="show review button" 
+              data-umami-event="show review button"
               data-umami-event-overlay="time-attack"
             >
-              <i className="fas fa-eye"></i>
+              {t("review_button") || "Review"}
             </button>
             <a id="go-back-menu-button-time-attack" className="home-button" href="/welcome/multiplayer">
-              <i className="fas fa-home"></i>
+              {t("home_button")}
             </a>
           </div>
         </div>

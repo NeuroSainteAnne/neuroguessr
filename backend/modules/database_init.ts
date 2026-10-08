@@ -153,7 +153,8 @@ export const database_init = async () => {
                     classic_challenge_end_date TIMESTAMP WITH TIME ZONE,
                     theoretical_maximum_score DECIMAL(8,2),
                     score_percentage DECIMAL(5,2),
-                    send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE
+                    send_classic_challenge_email BOOLEAN NOT NULL DEFAULT FALSE,
+                    chat JSONB DEFAULT NULL
                 );
             `;
             await sql`CREATE INDEX IF NOT EXISTS idx_finished_sessions_user_id ON finished_sessions(user_id);`;
@@ -345,7 +346,25 @@ export const database_init = async () => {
                 ALTER TABLE finished_sessions 
                 ADD COLUMN IF NOT EXISTS score_percentage DECIMAL(5,2);
             `;
+
+            await sql`
+                ALTER TABLE finished_sessions 
+                ADD COLUMN IF NOT EXISTS chat JSONB DEFAULT NULL;
+            `;
         });
+
+            // News table
+            await sql`
+                CREATE TABLE IF NOT EXISTS news (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+            `;
+            await sql`CREATE INDEX IF NOT EXISTS idx_news_active ON news(active, created_at DESC);`;
 
         // Allow NULL user_id for challenge metadata records
         await sql.begin(async sql => {
@@ -371,14 +390,20 @@ export const database_init = async () => {
             const salt = await bcrypt.genSalt(Number(config.salt));
             const hashedPassword = await bcrypt.hash("test", salt);
             await sql`
-                INSERT INTO users (username, firstname, lastname, email, password, verified)
-                VALUES ('test', 'Test', 'User', '', ${hashedPassword}, ${true})
-                ON CONFLICT (username) DO NOTHING
+                INSERT INTO users (username, firstname, lastname, email, password, verified, admin)
+                VALUES ('test', 'Test', 'User', '', ${hashedPassword}, ${true}, ${false})
+                ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, admin = EXCLUDED.admin
             `;
-            logger.info("Test user added successfully.");
+            const hashedPasswordAdmin = await bcrypt.hash("admin", salt);
+            await sql`
+                INSERT INTO users (username, firstname, lastname, email, password, verified, admin)
+                VALUES ('admin', 'Admin', 'User', 'admin', ${hashedPasswordAdmin}, ${true}, ${true})
+                ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, admin = EXCLUDED.admin
+            `;
+            logger.info("Test users added successfully.");
         }
     } catch (err) {
-        logger.error("Error initializing database schema:", (err instanceof Error ? err.message : err));
+        logger.error("Error initializing database schema:", err);
     }
 }
 

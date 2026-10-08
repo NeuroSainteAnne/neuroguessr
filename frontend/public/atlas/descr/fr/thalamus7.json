@@ -1,177 +1,81 @@
 {
-  "R": [
-    0,
-    255,
-    255,
-    0,
-    0,
-    220,
-    240,
-    178,
-    46,
-    199,
-    124,
-    218,
-    65,
-    255,
-    50
-  ],
-  "G": [
-    0,
-    0,
-    215,
-    200,
-    105,
-    20,
-    230,
-    34,
-    139,
-    21,
-    252,
-    165,
-    105,
-    50,
-    110
-  ],
-  "B": [
-    0,
-    0,
-    0,
-    80,
-    255,
-    60,
-    140,
-    34,
-    87,
-    133,
-    0,
-    32,
-    225,
-    10,
-    76
-  ],
-  "labels": [
-    "Ind\u00e9fini",
-    "Pulvinar-Gauche",
-    "R\u00e9gion-Ant\u00e9rieure-Gauche",
-    "R\u00e9gion-Dorso-M\u00e9dianne-Gauche",
-    "R\u00e9gion-Ventrale-Dorso-Lat\u00e9rale-Gauche",
-    "Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Gauche",
-    "R\u00e9gion-Ventrale_Ant\u00e9rieure-Gauche",
-    "R\u00e9gion-Ventrale_Ventro-lat\u00e9rale-Gauche",
-    "Pulvinar-Droit",
-    "R\u00e9gion-Ant\u00e9rieure-Droite",
-    "R\u00e9gion-Dorso-M\u00e9dianne-Droite",
-    "R\u00e9gion-Ventrale-Dorso-Lat\u00e9rale-Droit",
-    "Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Droit",
-    "R\u00e9gion-Ventrale-Ant\u00e9rieure-Droite",
-    "R\u00e9gion-Ventrale_Ventro-lat\u00e9rale-Droite"
-  ],
-  "centers": [
-    [
-      [
-        0,
-        0,
-        0
-      ]
-    ],
-    [
-      [
-        -20,
-        -30,
-        3
-      ]
-    ],
-    [
-      [
-        -7,
-        -6,
-        2
-      ]
-    ],
-    [
-      [
-        -6,
-        -17,
-        3
-      ]
-    ],
-    [
-      [
-        -16,
-        -20,
-        14
-      ]
-    ],
-    [
-      [
-        -11,
-        -27,
-        6
-      ]
-    ],
-    [
-      [
-        -11,
-        -10,
-        12
-      ]
-    ],
-    [
-      [
-        -18,
-        -19,
-        2
-      ]
-    ],
-    [
-      [
-        18,
-        -30,
-        3
-      ]
-    ],
-    [
-      [
-        7,
-        -5,
-        4
-      ]
-    ],
-    [
-      [
-        5,
-        -15,
-        3
-      ]
-    ],
-    [
-      [
-        15,
-        -22,
-        13
-      ]
-    ],
-    [
-      [
-        9,
-        -25,
-        4
-      ]
-    ],
-    [
-      [
-        12,
-        -11,
-        13
-      ]
-    ],
-    [
-      [
-        17,
-        -19,
-        2
-      ]
-    ]
-  ]
+	"R": [
+		0, 255, 255, 0, 0, 220, 240, 178, 46, 199, 124, 218, 65, 255, 50
+	],
+	"G": [
+		0, 0, 215, 200, 105, 20, 230, 34, 139, 21, 252, 165, 105, 50, 110
+	],
+	"B": [
+		0, 0, 0, 80, 255, 60, 140, 34, 87, 133, 0, 32, 225, 10, 76
+	],
+	"labels": [
+		"Indéfini",
+		"Pulvinar-Gauche",
+		"Région-Antérieure-Gauche",
+		"Région-Dorso-Médianne-Gauche",
+		"Région-Ventrale-Dorso-Latérale-Gauche",
+		"Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Gauche",
+		"Région-Ventrale_Antérieure-Gauche",
+		"Région-Ventrale_Ventro-latérale-Gauche",
+		"Pulvinar-Droit",
+		"Région-Antérieure-Droite",
+		"Région-Dorso-Médianne-Droite",
+		"Région-Ventrale-Dorso-Latérale-Droit",
+		"Pulvinar-Central_Lateral-Lateral_Posterior-Medial-Droit",
+		"Région-Ventrale-Antérieure-Droite",
+		"Région-Ventrale_Ventro-latérale-Droite"
+	],
+	"info":[
+"",
+"Hub thalamique de haut niveau modulant perception et cognition",
+"Impliqué dans la mémoire spatiale et l’attention",
+"Régule le contrôle cognitif et la prise de décision",
+"Relais principal des informations somesthésiques vers le cortex",
+"Impliqué dans l’éveil et la modulation de l’activité épileptique",
+"Relais moteur reliant ganglions de la base et cortex frontal",
+"Participe au contrôle moteur et à la transmission sensorimotrice",
+"Hub thalamique de haut niveau modulant perception et cognition",
+"Impliqué dans la mémoire spatiale et l’attention",
+"Régule le contrôle cognitif et la prise de décision",
+"Relais principal des informations somesthésiques vers le cortex",
+"Impliqué dans l’éveil et la modulation de l’activité épileptique",
+"Relais moteur reliant ganglions de la base et cortex frontal",
+"Participe au contrôle moteur et à la transmission sensorimotrice"
+],
+"info_detail":[
+	"",
+	"Le pulvinar est un hub thalamique de haut niveau avec des connexions étendues cortico-corticales et cortico-limbiques. Il module la perception et la cognition via trois mécanismes principaux : un gain pondéré par la précision pour le routage de l’information visuelle, une cartographie des priorités pour sélectionner les stimuli pertinents, et un alignement temporel facilitant l’intégration multisensorielle. Il joue un rôle clé dans l’intégration des réseaux occipito-temporaux, fronto-pariétaux et limbiques.",
+	"Les noyaux thalamiques antérieurs constituent un nœud essentiel des circuits hippocampo-diencéphalo-cingulaires impliqués dans la mémoire spatiale et l’apprentissage. Ils participent également aux discriminations temporelles, aux processus contextuels dépendants de l’hippocampe et à l’attention sélective.",
+	"Le thalamus médiodorsal est un partenaire clé du cortex préfrontal dans le contrôle cognitif. Il intervient dans la gestion de l’incertitude décisionnelle et favorise la flexibilité cognitive.",
+	"Le noyau ventro-postéro-latéral (VPL) est le relais principal des informations somesthésiques issues du tronc et des membres, transmettant les signaux vers le cortex somatosensoriel primaire du gyrus postcentral.",
+	"Les noyaux centraux latéraux et latéro-postérieurs participent à des fonctions d’éveil et de régulation de l’activité corticale. Ils jouent également un rôle dans le contrôle de l’activité épileptique.",
+	"Le noyau ventral antérieur reçoit des projections de la substance noire et du globus pallidus, et projette vers le cortex frontal. Il participe aux circuits moteurs et exécutifs.",
+	"Le noyau ventral latéral est impliqué dans les circuits moteurs et relaie les informations sensorimotrices vers le cortex cérébral.",
+	"Le pulvinar est un hub thalamique de haut niveau avec des connexions étendues cortico-corticales et cortico-limbiques. Il module la perception et la cognition via trois mécanismes principaux : un gain pondéré par la précision, une sélection des stimuli pertinents et une intégration multisensorielle.",
+	"Les noyaux thalamiques antérieurs participent aux circuits de mémoire spatiale et d’attention, en interaction avec l’hippocampe et le cortex cingulaire.",
+	"Le thalamus médiodorsal module le contrôle cognitif, la prise de décision et la flexibilité comportementale en lien avec le cortex préfrontal.",
+	"Le noyau VPL relaie les informations somesthésiques vers le cortex somatosensoriel primaire.",
+	"Les noyaux centraux et latéro-postérieurs interviennent dans l’éveil et la régulation de l’activité épileptique.",
+	"Le noyau ventral antérieur relaie les informations des ganglions de la base vers le cortex frontal.",
+	"Le noyau ventral latéral participe aux circuits moteurs en transmettant les informations vers le cortex."
+],
+"info_source":[
+	[],
+	[{"auteur":"Cortes", "journal":"Brain Research Bulletin", "year": "2026", "doi": "10.1016/j.brainresbull.2025.111672"}],
+	[{"auteur":"Nelson", "journal":"Neuroscience & Biobehavioral Reviews", "year": "2021", "doi": "10.1016/j.neubiorev.2021.02.047"}],
+	[{"auteur":"Zhang", "journal":"Nature Communications", "year": "2025", "doi": "10.1038/s41467-025-58011-1"}],
+	[{"auteur":"Erzurumlu", "journal":"Human Neuroanatomy", "year": "2024", "doi": "10.1016/B978-0-323-99725-6.00005-5"}],
+	[{"auteur":"Schiff", "journal":"Neuron", "year": "2020", "doi": "10.1016/j.neuron.2020.02.016"},
+	 {"auteur":"Sonoda", "journal":"Epilepsy and Behavior", "year": "2013", "doi": "10.1016/j.yebeh.2013.03.025"}],
+	[{"auteur":"Ohye", "journal":"Encyclopedia of the Human Brain", "year": "2002", "doi": "10.1016/B0-12-227210-2/00346-0"}],
+	[{"auteur":"Mihailoff", "journal":"Fundamental Neuroscience for Basic and Clinical Applications", "year": "2018", "doi": "10.1016/B978-0-323-39632-5.00015-3"}],
+	[{"auteur":"Nelson", "journal":"Neuroscience & Biobehavioral Reviews", "year": "2021", "doi": "10.1016/j.neubiorev.2021.02.047"}],
+	[{"auteur":"Nelson", "journal":"Neuroscience & Biobehavioral Reviews", "year": "2021", "doi": "10.1016/j.neubiorev.2021.02.047"}],
+	[{"auteur":"Zhang", "journal":"Nature Communications", "year": "2025", "doi": "10.1038/s41467-025-58011-1"}],
+	[{"auteur":"Erzurumlu", "journal":"Human Neuroanatomy", "year": "2024", "doi": "10.1016/B978-0-323-99725-6.00005-5"}],
+	[{"auteur":"Schiff", "journal":"Neuron", "year": "2020", "doi": "10.1016/j.neuron.2020.02.016"},
+	 {"auteur":"Sonoda", "journal":"Epilepsy and Behavior", "year": "2013", "doi": "10.1016/j.yebeh.2013.03.025"}],
+	[{"auteur":"Ohye", "journal":"Encyclopedia of the Human Brain", "year": "2002", "doi": "10.1016/B0-12-227210-2/00346-0"}],
+	[{"auteur":"Mihailoff", "journal":"Fundamental Neuroscience for Basic and Clinical Applications", "year": "2018", "doi": "10.1016/B978-0-323-39632-5.00015-3"}]
+]
 }

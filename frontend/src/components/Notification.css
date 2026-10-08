@@ -9,21 +9,26 @@
     gap: 10px;
 }
 .notification {
-  padding: 15px;
-  border-radius: 0.5rem;
-  font-size: 2rem;
+  padding: 15px 30px;
+  border-radius: 9999px;
+  font-size: 1.5rem;
   color: #fff;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  animation: fadeIn 0.3s ease; /* Fade-in animation */
-  transition: opacity 0.5s ease, transform 0.5s ease, top 0.5s ease; /* Smooth fade-out and movement */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.3s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease, top 0.5s ease;
+  font-weight: 300;
+  font-family: 'Open Sans', sans-serif;
+  backdrop-filter: blur(4px);
 }
 .notification.success {
-    background: #4ade80CC;
-    color: #1a3c1f;
+    background: #ffffffff;
+    color: #1a1a1a;
+    font-weight: 400;
 }
 .notification.error {
-    background: #f87171CC;
-    color: #3c1a1a;
+    background: #ef5350CC;
+    color: #ffffff;
+    font-weight: 400;
 }
 .notification.removing {
   opacity: 0;

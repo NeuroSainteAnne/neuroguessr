@@ -2,28 +2,31 @@
 .info-tooltip-fixed-up {
     position: fixed;
     transform: translate(-50%, -100%);
-    padding: 8px 12px;
+    padding: 10px 14px;
     background-color: #1a1a1a;
-    color: #ffffff;
-    border: 1px solid #4a90e2;
-    border-radius: 6px;
-    font-size: 0.875rem;
+    color: #d1d5db;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    font-size: 0.85rem;
     line-height: 1.4;
     white-space: normal;
     word-wrap: break-word;
-    max-width: 400px;
+    max-width: 300px;
     pointer-events: none;
     z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     animation: tooltipFadeIn 0.2s ease;
+    margin-bottom: 8px;
 }
 
 @keyframes tooltipFadeIn {
     from {
         opacity: 0;
+        transform: translate(-50%, -95%);
     }
     to {
         opacity: 1;
+        transform: translate(-50%, -100%);
     }
 }
 
@@ -32,48 +35,50 @@
     position: fixed;
     transform: translate(-50%, 1.4rem);
     margin-top: 8px;
-    padding: 8px 12px;
+    padding: 10px 14px;
     background-color: #1a1a1a;
-    color: #ffffff;
-    border: 1px solid #4a90e2;
-    border-radius: 6px;
-    font-size: 0.875rem;
+    color: #d1d5db;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    font-size: 0.85rem;
     line-height: 1.4;
     white-space: normal;
     word-wrap: break-word;
-    max-width: 400px;
+    max-width: 300px;
     pointer-events: none;
     z-index: 10000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    animation: tooltipFadeIn 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: tooltipFadeInDown 0.2s ease;
+    margin-top: 8px;
 }
 
-@keyframes tooltipFadeIn {
+@keyframes tooltipFadeInDown {
     from {
         opacity: 0;
+        transform: translate(-50%, 1.2rem);
     }
     to {
         opacity: 1;
+        transform: translate(-50%, 1.4rem);
     }
 }
 
 .info-tooltip-fixed-up::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: -6px;
     left: 50%;
     transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: #4a90e2;
+    border: 5px solid transparent;
+    border-top-color: #1a1a1a;
 }
-
 
 .info-tooltip-fixed-down::after {
     content: '';
     position: absolute;
-    top: -12px;
+    top: -6px;
     left: 50%;
     transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-bottom-color: #4a90e2;
+    border: 5px solid transparent;
+    border-bottom-color: #1a1a1a;
 }

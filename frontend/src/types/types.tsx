@@ -1,3 +1,5 @@
+import { SourceElement } from "../context/AppContext";
+
 export type AtlasRegion = {
   id: number;
   name: string;
@@ -10,6 +12,8 @@ export type DisplayOptions = {
   radiologicalOrientation: boolean;
   displayAtlas: boolean;
   displayOpacity: number;
+  brainOpacity: number;
+  clipPlane: number; // -1 (fully clipped) to 1 (no clip), passed as depth to setClipPlane
 }
 
 export interface ExternalGameCommands {
@@ -43,7 +47,7 @@ export type ColorMap = {
   labels: string[];
   info?: string[];
   info_detail?: string[];
-  info_source?: string[];
+  info_source?: SourceElement[][];
   centers?: number[][][];
   autocenter?: {
     center?: number[],
@@ -74,6 +78,7 @@ export type PastRegion = {
   regionCenter?: number[] | undefined;
   regionBoundary?: number[] | undefined;
   atlas: string;
+  clickedRegionName?: string | undefined;
 }
 
 export type ImageMetadata = {

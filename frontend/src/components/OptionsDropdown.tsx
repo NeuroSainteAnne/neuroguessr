@@ -1,16 +1,35 @@
+import { useRef, useState } from 'react';
 import { DisplayOptions } from '../types/types';
 import { useApp } from '../context/AppContext';
+import { useGame } from './BrainViewer';
 import "./OptionsDropdown.css";
 
 function OptionsDropdown() {
     const { t, viewerOptions, setViewerOption } = useApp();
+    const { gameMode } = useGame();
+    const isNavigation = gameMode === 'navigation';
+    const [open, setOpen] = useState(false);
+    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const updateViewerOptions = (e: Partial<DisplayOptions>) => {
         const newOptions = { ...viewerOptions, ...e };
         setViewerOption(newOptions);
     }
 
+    const handleMouseEnter = () => {
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+        setOpen(true);
+    };
+    const handleMouseLeave = () => {
+        closeTimer.current = setTimeout(() => setOpen(false), 300);
+    };
+
     return (<>
-        <div className="dropdown">
+        <div className="dropdown"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+        >
             <button className="dropbtn" data-umami-event="open viewer options">
                 {t("view_options")}
                 <span className="hamburger">
@@ -21,7 +40,7 @@ function OptionsDropdown() {
                     </svg>
                 </span>
             </button>
-            <div className="dropdown-content">
+            <div className={`dropdown-content${open ? ' dropdown-content--open' : ''}`}>
                 <button className={viewerOptions.displayType == "Axial" ? "viewBtn dropdown-item-checked" : "viewBtn"}
                      data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="axial"
                     onClick={() => updateViewerOptions({ displayType: "Axial" })}>{t("axial")}</button>
@@ -41,12 +60,12 @@ function OptionsDropdown() {
                      data-umami-event="set viewer options" data-umami-event-option="display type" data-umami-event-displaytype="multiplanar render"
                     onClick={() => updateViewerOptions({ displayType: "MultiPlanarRender" })}>{t("multiplanar_render")}</button>
                 <button className={viewerOptions.radiologicalOrientation ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                     data-umami-event="set viewer options" data-umami-event-option="orientation" data-umami-event-orientation={viewerOptions.radiologicalOrientation ? "neurological" : "radiological"}  
+                     data-umami-event="set viewer options" data-umami-event-option="orientation" data-umami-event-orientation={viewerOptions.radiologicalOrientation ? "neurological" : "radiological"}
                     onClick={() => updateViewerOptions({ radiologicalOrientation: !viewerOptions.radiologicalOrientation })}>
                     {t("radiological")}
                 </button>
                 <button className={viewerOptions.displayAtlas ? "viewBtn dropdown-item-checked" : "viewBtn"}
-                     data-umami-event="set viewer options" data-umami-event-option="show atlas" data-umami-event-showatlas={viewerOptions.displayAtlas ? "off" : "on"}  
+                     data-umami-event="set viewer options" data-umami-event-option="show atlas" data-umami-event-showatlas={viewerOptions.displayAtlas ? "off" : "on"}
                     onClick={() => updateViewerOptions({ displayAtlas: !viewerOptions.displayAtlas })}>
                     {t("colored_atlas")}
                 </button>
@@ -65,6 +84,36 @@ function OptionsDropdown() {
                         id="alphaSlider"
                     />
                 </div>
+                {isNavigation && <>
+                    <div className="slider-container">
+                        <label className="slider-label" htmlFor="brainOpacitySlider">{t("brain_opacity") || "Brain opacity"}</label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={ Math.round((viewerOptions.brainOpacity ?? 1) * 100) }
+                            onChange={(e) => {
+                                updateViewerOptions({ brainOpacity: parseInt(e.target.value, 10) / 100 });
+                            }}
+                            className="slider"
+                            id="brainOpacitySlider"
+                        />
+                    </div>
+                    <div className="slider-container">
+                        <label className="slider-label" htmlFor="clipPlaneSlider">{t("clip_plane") || "Clip plane"}</label>
+                        <input
+                            type="range"
+                            min="-100"
+                            max="200"
+                            value={ Math.round((viewerOptions.clipPlane ?? 2) * 100) }
+                            onChange={(e) => {
+                                updateViewerOptions({ clipPlane: parseInt(e.target.value, 10) / 100 });
+                            }}
+                            className="slider"
+                            id="clipPlaneSlider"
+                        />
+                    </div>
+                </>}
             </div>
         </div>
     </>)

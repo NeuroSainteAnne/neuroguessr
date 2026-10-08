@@ -85,6 +85,9 @@ export default {
     port: 9876,
     host: true,
   },
+  optimizeDeps: {
+    exclude: ['altcha']
+  },
   build: {
     sourcemap: false
   }

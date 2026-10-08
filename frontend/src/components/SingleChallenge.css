@@ -1,183 +1,295 @@
-.next-challenge-widget {
-    margin: 5px auto;
-    padding: 10px;
-    max-width: 800px;
-    background: #575757cc;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* ── INLINE CONTENT inside PopupStack (when isNext=true) ── */
+.challenge-popup-content {
     display: flex;
     flex-direction: row;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 40px 16px 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* ── SLIDE-IN POPUP (used when isNext=true on welcome page) ── */
+.challenge-slidein {
+    position: fixed;
+    bottom: 88px; /* above the footer bar */
+    left: 20px;
+    z-index: 500;
+    width: 300px;
+
+    background: var(--bg-card, #1e1e1e);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-left: 3px solid var(--success-color, #66bb6a);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 40px 16px 16px;
+    box-sizing: border-box;
+
+    /* Slide-in from left */
+    transform: translateX(calc(-100% - 30px));
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.34, 1.26, 0.64, 1), opacity 0.3s ease;
+}
+
+.challenge-slidein--visible {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.challenge-slidein-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted, #aaa);
+    transition: background 0.2s, color 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.challenge-slidein-close:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+.challenge-slidein-logo {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.challenge-slidein-logo img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    opacity: 0.9;
+}
+
+.challenge-slidein-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.challenge-slidein-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--success-color, #66bb6a);
+    font-weight: 600;
+}
+
+.challenge-slidein-title {
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text-main);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.challenge-slidein-tagline {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 300;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.challenge-slidein-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.challenge-slidein-meta-item {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 300;
+}
+
+.challenge-slidein-meta-sep {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.challenge-slidein-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+/* ── STANDARD WIDGET (challenge list in /defis page) ── */
+.next-challenge-widget {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: background-color 0.2s;
+}
+
+.next-challenge-widget:hover {
+    background-color: var(--bg-card-hover);
 }
 
 .challenge-info {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 4px;
+    min-width: 160px;
 }
 
 .challenge-info h3 {
-    margin: 0 0 0 0;
-    color: #e6e6e6;
-    font-size: 1.2em;
-    text-align: center;
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 400;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .session-code {
     font-family: monospace;
-    font-weight: bold;
-    color: #4698ef;
-    font-size: 1.1em;
-    text-align: center;
-}
-
-.creator {
-    color: #6c757d;
-    font-size: 0.9em;
+    color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 .challenge-details {
     display: flex;
     flex-direction: column;
+    gap: 4px;
     flex: 1;
 }
 
 .start-time {
-    color: #48ec6e;
-    font-size: 1.1em;
-    text-align: center;
+    color: var(--success-color);
+    font-size: 0.95rem;
+    font-weight: 400;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .scheduled-time {
-    color: #bec7ce;
-    font-size: 0.9em;
-    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .challenge-meta {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .meta-item {
-    color: #bec7ce;
-    font-size: 0.9em;
-    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
 }
 
 .meta-item strong {
-    color: #e6e6e6;
+    color: var(--text-sub);
+    font-weight: 400;
 }
 
-.atlas, .duration {
-    color: #495057;
-    font-size: 0.9em;
-}
-
-.join-challenge-btn, .see-results-btn {
-    background-color: #007bff;
-    color: white;
+/* ── SHARED BUTTONS ── */
+.join-challenge-btn,
+.see-results-btn {
+    background-color: var(--text-main);
+    color: var(--bg-page) !important;
     border: none;
-    padding: 5px 12px;
-    border-radius: 6px;
+    padding: 8px 20px;
+    border-radius: 9999px;
     cursor: pointer;
-    font-size: 1em;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
     transition: background-color 0.2s;
-    margin-top: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    text-decoration: none;
-    text-align: center;
-    min-height: 32px;
-    box-sizing: border-box;
-}
-
-.join-challenge-btn:hover, .see-results-btn:hover {
-    text-decoration: none;
-    color: white;
+    text-decoration: none !important;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .join-challenge-btn:hover:not(:disabled),
-.see-results-btn:hover:not(:disabled) {
-  background-color: #0056b3;
-  transform: scale(1.1);
+.see-results-btn:hover,
+.see-results-btn:visited,
+.see-results-btn:link,
+.see-results-btn:active {
+    background-color: var(--text-sub);
+    text-decoration: none !important;
+    color: var(--bg-page) !important;
+}
+
+.join-challenge-btn:disabled {
+    background-color: var(--bg-card-hover);
+    color: var(--text-muted);
+    cursor: not-allowed;
 }
 
 .delete-challenge-btn {
-    background: #ff4444;
-    color: white;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 6px;
+    background: transparent;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
+    padding: 6px 14px;
+    border-radius: 9999px;
     cursor: pointer;
-    font-size: 1em;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
     transition: background-color 0.2s;
-    margin-top: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    text-align: center;
-    min-height: 32px;
-    box-sizing: border-box;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .delete-challenge-btn:hover {
-  background: #cc0000;
-  transform: scale(1.1);
-}
-
-.delete-challenge-btn:active {
-  transform: scale(0.95);
-}
-
-.loading {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
-}
-
-.error {
-    text-align: center;
-    color: #dc3545;
-    background-color: #f8d7da;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #f5c6cb;
-}
-
-.no-challenge {
-    text-align: center;
-    color: #6c757d;
-    font-style: italic;
+    background: var(--error-color);
+    color: #fff;
 }
 
 @media (max-width: 768px) {
     .next-challenge-widget {
-        margin: 15px;
-        padding: 15px;
         flex-direction: column;
-        gap: 15px;
-    }
-
-    .challenge-info {
-        align-items: center;
-    }
-
-    .challenge-details {
-        align-items: center;
-    }
-
-    .challenge-meta {
-        align-items: center;
-    }
-
-    .challenge-header {
-        flex-direction: column;
-        gap: 4px;
         align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .join-challenge-btn,
+    .see-results-btn,
+    .delete-challenge-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .challenge-slidein {
+        width: calc(100vw - 40px);
+        bottom: 80px;
     }
 }

@@ -54,6 +54,14 @@ export interface MultiplayerGame {
   classicChallengeId?: number;
   originalSessionCode: string; // For classic challenges, stores the original session code
   theoreticalMaximumScore?: number; // Pre-calculated theoretical maximum score for percentage calculations
+  chatMessages: ChatMessage[];
+}
+
+export interface ChatMessage {
+  userName: string;
+  userId: number;
+  message: string;
+  timestamp: number;
 }
 
 export type Recurrence = {

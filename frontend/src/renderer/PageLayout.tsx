@@ -9,6 +9,7 @@ import { AppProvider } from '../context/AppContext';
 import { SocketProvider } from '../context/SocketContext';
 import { Notification } from '../components/Notification';
 import { Help } from '../components/Help';
+import { PopupStack } from '../components/PopupStack';
 
 function PageLayout({ children, pageContext }: { children: React.ReactNode; pageContext: PageContext }) {
     return (
@@ -20,6 +21,7 @@ function PageLayout({ children, pageContext }: { children: React.ReactNode; page
                         <Content>{children}</Content>
                         <Footer />
                         <Help />
+                        <PopupStack />
                         <Notification />
                     </div>
                 </AppProvider>

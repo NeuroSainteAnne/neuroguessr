@@ -1,214 +1,260 @@
-/* --- Login Box Styles --- */
-
+/* --- Login Box --- */
 .login-box {
-    background-color: rgba(40, 40, 40, 0.3);
-    /* A slightly lighter dark background for the box */
-    padding: 40px;
-    border-radius: 12px;
+    background-color: var(--bg-card);
+    padding: 48px 40px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 400px;
-    text-align: center;
+    max-width: 420px;
     box-sizing: border-box;
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0);
-    /* Subtle light border for definition */
+    border: 1px solid var(--border-color);
+    margin-top: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
 
 .login-box h2 {
-    margin-bottom: 30px;
-    color: #E0E0E0;
-    /* Light heading color for contrast */
-    font-size: 2.2em;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-#login_error {
-    color: #FF7070;
-    /* Brighter red for error messages on dark background */
-    font-size: 0.9em;
-    height: 20px;
+    margin: 0 0 32px 0;
+    color: var(--text-main);
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.5px;
     text-align: center;
-    margin-top: 10px;
 }
 
-#login_success {
-    font-size: 0.9em;
-    height: 20px;
-    text-align: center;
-    margin-top: 10px;
+/* --- Form Fields --- */
+.login-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 8px;
 }
 
-#registration_link {
-    margin-top: 30px;
-}
-
-.login-element {
-    /* This class is reused for the table structure */
-    width: 100%;
-    margin-bottom: 20px;
-    border-collapse: collapse;
-}
-
-.login-element td {
-    padding: 10px 0;
-    vertical-align: middle;
-}
-
-.login-element td:first-child {
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     text-align: left;
-    width: 35%;
 }
 
-.login-element td:last-child {
-    text-align: right;
-    width: 65%;
+.login-field label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
 }
 
-/* RECOVERY */
+.login-field input {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: var(--bg-panel, #1e1e1e);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+    transition: background-color 0.2s;
+    font-family: 'Open Sans', sans-serif;
+}
 
+.login-field input:focus {
+    background-color: #404040;
+    border-color: rgba(255,255,255,0.2);
+}
+
+/* Messages */
+.login-message {
+    font-size: 0.85rem;
+    text-align: center;
+    min-height: 20px;
+    padding: 4px 0;
+}
+
+.login-message.error {
+    color: var(--error-color);
+}
+
+.login-message.info {
+    color: var(--text-muted);
+}
+
+/* --- Submit Button --- */
+.login-submit {
+    background-color: var(--text-main);
+    color: var(--bg-page);
+    padding: 12px 24px;
+    border: none;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    margin-top: 24px;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.login-submit:hover {
+    background-color: #e0e0e0;
+}
+
+/* --- Links --- */
+.login-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.login-links a {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.login-links a:hover {
+    color: var(--text-main);
+}
+
+/* --- Recovery Modal --- */
 .modal {
     position: fixed;
     z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(0, 0, 0, 0);
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .modal-content {
-    background-color: #3f3f3f;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid rgba(0, 0, 0, 0);
-    width: 30%;
-    border-radius: 8px;
-    text-align: center;
-}
-
-
-
-.form-field {
-    /* New class for all input fields you want styled identically */
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 40px;
     width: 100%;
-    padding: 12px 10px;
-    background-color: #3B3B3B;
-    /* Darker input background */
-    border: 1px solid rgba(0, 0, 0, 0);
-    /* Transparent border */
-    border-radius: 50px;
-    /* Fully rounded corners */
-    font-size: 1em;
-    color: #E0E0E0;
-    /* Light text color inside inputs */
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    max-width: 420px;
+    border-radius: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 }
-
-.form-field:focus {
-    border-color: rgb(63, 109, 159);
-    /* Your specific blue on focus */
-}
-
-.form-button {
-    /* New class for all buttons you want styled identically */
-    background-color: rgb(63, 109, 159);
-    /* Your specific blue button color */
-    color: #d9dddc;
-    /* Light text for button for contrast */
-    padding: 14px 25px;
-    border: none;
-    border-radius: 50px;
-    /* Fully rounded corners */
-    font-size: 1.1em;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    width: 100%;
-    margin-top: 20px;
-    font-weight: 600;
-}
-
-.form-button:hover {
-    background-color: #728AD2;
-    /* Darker shade on hover */
-    transform: translateY(-2px);
-    /* Slight lift on hover */
-}
-
 
 .modal-content h2 {
-    margin-bottom: 20px;
-    color: #E0E0E0;
-    font-size: 2em;
-    /* Slightly smaller for modal heading */
-    font-weight: 600;
-    text-align: left;
-
+    margin: 0 0 12px 0;
+    color: var(--text-main);
+    font-size: 1.5rem;
+    font-weight: 300;
 }
 
 .modal-content p {
-    color: #C0C0C0;
-    margin-bottom: 25px;
-    line-height: 1.5;
-    text-align: left;
-
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0 0 20px 0;
+    line-height: 1.6;
 }
-
-/* Input specific to the modal (already covered by input[type="email"] above, but for clarity) */
-#recovery-email {
-    margin-bottom: 15px;
-    /* Space between input and button */
-}
-
-/* Button specific to the modal (already covered by #send-recovery-email above) */
-#send-recovery-email {
-    margin-top: 10px;
-    /* Adjust as needed for spacing */
-}
-
-
 
 .close-button {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
+    color: var(--text-muted);
+    font-size: 22px;
     cursor: pointer;
     position: absolute;
-    top: 10px;
-    /* Distance from the top edge of .modal-content */
+    top: 16px;
     right: 20px;
+    line-height: 1;
+    transition: color 0.2s;
 }
 
-.close-button:hover,
-.close-button:focus {
-    color: black;
-    text-decoration: none;
+.close-button:hover {
+    color: var(--text-main);
+}
+
+.form-field {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: var(--bg-panel);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+    transition: background-color 0.2s;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.form-field:focus {
+    background-color: #404040;
+}
+
+.form-button {
+    background-color: var(--text-main);
+    color: var(--bg-page);
+    padding: 12px 24px;
+    border: none;
+    border-radius: 9999px;
+    font-size: 0.95rem;
     cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    width: 100%;
+    margin-top: 16px;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
 }
 
-@media (max-width: 768px) {
-    .close-button {
-        font-size: 1.8rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .close-button {
-        font-size: 1.5rem;
-        top: 5px;
-        right: 5px;
-    }
+.form-button:hover:not(:disabled) {
+    background-color: #e0e0e0;
 }
 
 .recovery-message {
-    margin-top: 10px;
-    font-size: 14px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    text-align: center;
 }
 
 #recovery_error {
-    color: #FF7070;
+    color: var(--error-color);
+}
+
+.altcha-container {
+    margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+    .login-box {
+        padding: 32px 20px;
+        margin: 24px auto 0;
+        max-width: calc(100% - 40px);
+    }
+
+    .login-box h2 {
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+    }
+
+    .login-field input {
+        font-size: 0.9rem;
+        padding: 10px 14px;
+    }
+
+    .modal-content {
+        padding: 24px 16px;
+        max-width: calc(100% - 32px);
+        margin: 0 auto;
+    }
+
+    .modal-content h2 {
+        font-size: 1.3rem;
+    }
+
+    .close-button {
+        top: 12px;
+        right: 12px;
+        font-size: 20px;
+    }
 }

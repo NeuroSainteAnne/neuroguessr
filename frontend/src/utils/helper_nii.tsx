@@ -3,6 +3,7 @@ import { ColorMap, DisplayOptions } from '../types/types';
 import type { Niivue, NVImage } from '@niivue/niivue';
 import { loadJSONFromCache } from './nifti_cache';
 import { consoleLog } from './logging';
+import { SourceElement } from '../context/AppContext';
 
 export async function fetchJSON(fnm: string): Promise<ColorMap> {
     try {
@@ -40,6 +41,12 @@ export const defineNiiOptions = (myniivue: any, myAtlasProxy: AtlasImageProxy | 
             }
         }
         myniivue.opts.isRadiologicalConvention = viewerOptions.radiologicalOrientation;
+        // Brain (volume 0) opacity
+        if (myniivue.volumes.length > 0) {
+            myniivue.setOpacity(0, viewerOptions.brainOpacity ?? 1.0);
+        }
+        // Clip plane
+        myniivue.setClipPlane([viewerOptions.clipPlane ?? 2, 270, 0]);
         myniivue.updateGLVolume();
     }
 }
@@ -110,7 +117,7 @@ export class AtlasImageProxy {
     public labels: string[];
     public info: string[] | undefined;
     public infoDetail: string[] | undefined;
-    public infoSource: string[] | undefined;
+    public infoSource: SourceElement[][] | undefined;
     public centers?: number[][][] | undefined;
     private data: Float32Array;
     private remappedData?: Float32Array;
@@ -131,7 +138,7 @@ export class AtlasImageProxy {
     private cmap_en: ColorMap|null;
 
     constructor({niivue, nvImage, labels, info, infoDetail, infoSource, centers, proposedLut, proposedMapping, proposedInverseMapping, blindMode = false, viewerOptions, cmap_en, atlas} :
-        {niivue: Niivue, nvImage: any, labels: string[], info?: string[] | undefined, infoDetail?: string[] | undefined, infoSource?: string[] | undefined, centers?: number[][][] | undefined,
+        {niivue: Niivue, nvImage: any, labels: string[], info?: string[] | undefined, infoDetail?: string[] | undefined, infoSource?: SourceElement[][] | undefined, centers?: number[][][] | undefined,
         proposedLut?: ColorMap | undefined, proposedMapping?: Record<number, number> | undefined, 
         proposedInverseMapping?: Record<number, number> | undefined, blindMode: boolean, 
         viewerOptions: DisplayOptions, cmap_en: ColorMap|null, atlas: string}) {

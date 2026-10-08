@@ -9,24 +9,83 @@ import { navigate } from "vike/client/router";
 import { loadNIfTIFromCache } from "../utils/nifti_cache";
 import "./BrainViewer.css"
 import { consoleLog } from "../utils/logging";
+import OptionsDropdown from "./OptionsDropdown";
 
-export const BrainViewer = ({ alternateContent }: { alternateContent?: React.ReactNode }) => {
+export const BrainViewer = ({ alternateContent, sessionName, sessionDate }: { alternateContent?: React.ReactNode, sessionName?: string | undefined, sessionDate?: string | undefined }) => {
     const { highlightWrapper, niivue, handleMouseDown, handleMouseMove,
         handleMouseUp, handleTouchStart, handleTouchEnd, handleTouchMove,
         handleCanvasMouseMove, canvasRef, guessButtonRef, scrollBarRef, scrollThumbRef,
         handleScrollStart, handleScrollMove, handleScrollEnd,
         mobileOrientation, setMobileOrientation,
         isLoading, hasEnded, highlightedRegion, handleRecolorization,
-        validateGuessHandler, startGameHandler, gameMode, pastRegions, isConnected, isGameRunning
+        validateGuessHandler, startGameHandler, gameMode, pastRegions, isConnected, isGameRunning,
+        isRegionLocked, setIsRegionLocked
     } = useGame();
     const { t, isMobileView } = useApp();
+    const optionsOverlayRef = useRef<HTMLDivElement>(null);
+    const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
+
+    // Block niivue's native canvas listeners when clicking inside the options overlay
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const blockIfOverOptions = (e: MouseEvent) => {
+            if (optionsOverlayRef.current && optionsOverlayRef.current.contains(e.target as Node)) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+        };
+        canvas.addEventListener('mousedown', blockIfOverOptions, true);
+        canvas.addEventListener('mouseup', blockIfOverOptions, true);
+        canvas.addEventListener('click', blockIfOverOptions, true);
+        return () => {
+            canvas.removeEventListener('mousedown', blockIfOverOptions, true);
+            canvas.removeEventListener('mouseup', blockIfOverOptions, true);
+            canvas.removeEventListener('click', blockIfOverOptions, true);
+        };
+    }, [canvasRef]);
+
+    // Non-passive touchmove on mobile scroll bar to allow preventDefault
+    useEffect(() => {
+        if (!isMobileView) return;
+        const scrollBar = scrollBarRef.current;
+        if (!scrollBar) return;
+        const prevent = (e: TouchEvent) => { if (e.cancelable) e.preventDefault(); };
+        scrollBar.addEventListener('touchmove', prevent, { passive: false });
+        return () => scrollBar.removeEventListener('touchmove', prevent);
+    }, [isMobileView, scrollBarRef, isLoading]);
+
+    // Ctrl/Cmd + scroll = zoom in navigation mode
+    useEffect(() => {
+        if (gameMode !== 'navigation' || !niivue) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const handleZoomWheel = (e: WheelEvent) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            const zoomDelta = e.deltaY < 0 ? 1.1 : 0.9;
+            const currentZoom = niivue.scene.pan2Dxyzmm[3] || 1;
+            const newZoom = Math.max(0.3, Math.min(8, currentZoom * zoomDelta));
+            niivue.scene.pan2Dxyzmm[3] = newZoom;
+            niivue.drawScene();
+        };
+        canvas.addEventListener('wheel', handleZoomWheel, { capture: true, passive: false });
+        return () => canvas.removeEventListener('wheel', handleZoomWheel, true);
+    }, [gameMode, niivue, canvasRef]);
+
+    const containerClassName = hasEnded && (gameMode == "time-attack" || gameMode == "streak" || gameMode == "multiplayer")
+        ? `canvas-and-scroll-container review-mode${sidebarExpanded ? ' sidebar-expanded' : ' sidebar-normal'}`
+        : 'canvas-and-scroll-container';
+
+    const canvasContainerClassName = isMobileView && !hasEnded ? 'canvas-container game-info-mobile' : 'canvas-container';
 
     return (
         <>
-            <div className='canvas-and-scroll-container'>
+            <div className={containerClassName}>
                     {hasEnded && (gameMode == "time-attack" || gameMode == "streak" || gameMode == "multiplayer") && <RegionHistory pastRegions={pastRegions} niivue={niivue}
-                        highlightPastRegion={highlightWrapper} />}
-                    <div className="canvas-container" style={{display:((gameMode !== "multiplayer" || (isGameRunning && isConnected) || hasEnded)?"block":"none")}}>
+                        highlightPastRegion={highlightWrapper} sessionName={sessionName} sessionDate={sessionDate} onToggleSidebar={setSidebarExpanded} sidebarExpanded={sidebarExpanded} />}
+                    <div className={canvasContainerClassName} style={{display:((gameMode !== "multiplayer" || (isGameRunning && isConnected) || hasEnded)?"block":"none")}}>
                         <canvas id="gl1"
                             onMouseDown={handleMouseDown}
                             onMouseMove={handleMouseMove}
@@ -36,6 +95,7 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                             onTouchMove={handleTouchMove}
                             onMouseLeave={handleCanvasMouseMove} ref={canvasRef}></canvas>
                     </div>
+                    {!isMobileView && <div className="canvas-options-overlay" ref={optionsOverlayRef}><OptionsDropdown /></div>}
                     {/* Show alternate content when canvas is hidden in multiplayer mode */}
                     {gameMode === "multiplayer" && alternateContent && !hasEnded && (
                         <div className="alternate-content-container">
@@ -43,14 +103,28 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                         </div>
                     )}
                     {!isLoading && <div className="button-container">
-                        {gameMode !== "multiplayer" && <button
+                        {(gameMode !== "multiplayer" || hasEnded) && !isMobileView && <button
                             data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
                             className="home-button" onClick={() => { navigate("/welcome") }}>
-                            <i className="fas fa-home"></i>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                            {t("home_button")}
                         </button>}
                         {gameMode === 'navigation' && <button className="return-button" disabled={highlightedRegion === null}
                             data-umami-event="recolorize button"
-                            onClick={handleRecolorization}>{t("restore_color")}</button>}
+                            onClick={handleRecolorization}>{isMobileView?t("restore_color_no_esc"):t("restore_color")}</button>}
+                        {gameMode === 'navigation' && highlightedRegion !== null && (
+                            <button
+                                className={`lock-button${isRegionLocked ? ' locked' : ''}`}
+                                onClick={() => setIsRegionLocked(l => !l)}
+                                title={isRegionLocked ? (t("unlock_region") || "Unlock region") : (t("lock_region") || "Lock region")}
+                            >
+                                {isRegionLocked
+                                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+                                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1C9.24 1 7 3.24 7 6v1H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-1V6c0-2.76-2.24-5-5-5zm0 15c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm4-8H8V6c0-2.21 1.79-4 4-4s4 1.79 4 4v2z"/><path d="M8 7h8v1H8z" opacity=".3"/></svg>
+                                }
+                                {isRegionLocked ? (t("unlock_region") || "Unlock") : (t("lock_region") || "Lock")}
+                            </button>
+                        )}
                         {((gameMode === "multiplayer" && isGameRunning && isConnected) || (gameMode !== 'navigation')) && !hasEnded && <button className="guess-button" ref={guessButtonRef}
                             data-umami-event="guess button" data-umami-event-guesssource={gameMode}
                             onClick={validateGuessHandler}>
@@ -60,10 +134,14 @@ export const BrainViewer = ({ alternateContent }: { alternateContent?: React.Rea
                             <button className="restart-button"
                                 data-umami-event="restart button" data-umami-event-gobacksource={gameMode}
                                 onClick={() => { startGameHandler() }}>
-                                <i className="fas fa-sync-alt"></i>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                </svg>
+                                {t("restart_button")}
                             </button>}
                     </div>}
-                {isMobileView && (
+                {isMobileView && !isLoading && (
                     <div className="mobile-controls">
                         {/* Custom scroll bar */}
                         <div
@@ -143,6 +221,7 @@ export function GameProvider({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const currentlyLoadedAtlas = useRef<any>(null);
     const [highlightedRegion, setHighlightedRegion] = useState<number | null>(gameMode === "navigation" ? routedRegion || null : null);
+    const [isRegionLocked, setIsRegionLocked] = useState<boolean>(false);
     const [pastRegions, setPastRegions] = useState<PastRegion[]>([]);
     const guessButtonRef = useRef<HTMLButtonElement>(null);
     const selectedVoxelProp = useRef<{ mm: number[], vox: number[], idx: number | undefined } | null>(null);
@@ -197,6 +276,8 @@ export function GameProvider({
         }
         return () => {
             const niivueInstance = niivue;
+            setAskedRegion(null)
+            setAskedAtlas(undefined)
             cleanGameCallbackRef.current()
             // Clean up Niivue properly
             if (niivueInstance) {
@@ -302,15 +383,24 @@ export function GameProvider({
         }
     }, [mobileOrientation, isMobileView, niivue]);
 
+    const loadInProgressRef = useRef(false);
     useEffect(() => {
         let cancelled = false;
-        const isMobile = window.innerWidth <= 768;
-        consoleLog("verbose", isMobile ? "Mobile view detected" : "Desktop view detected");
-        const doSequentialLoad = async () => {
-            setIsLoading(true);
 
+        const doSequentialLoad = async () => {
+            // Guard: don't run if already loading
+            if (loadInProgressRef.current) return;
+            loadInProgressRef.current = true;
+
+            const isMobile = window.innerWidth <= 768;
+
+            setIsLoading(true);
+            
             // 1. Wait for Niivue to be ready
-            if (!niivue || !canvasRef.current) return;
+            if (!niivue || !canvasRef.current) {
+                loadInProgressRef.current = false;
+                return;
+            }
 
             await new Promise<void>((resolve) => {
                 initNiivue(niivue, canvasRef.current!, viewerOptions, () => {
@@ -319,48 +409,66 @@ export function GameProvider({
             });
 
             // 2. Wait for atlas and background to be ready
-            if (!preloadedBackgroundMNI || !askedAtlas) return;
+            if (!preloadedBackgroundMNI || !askedAtlas) {
+                loadInProgressRef.current = false;
+                return;
+            }
 
-            if (currentlyLoadedAtlas.current != askedAtlas?.atlas) {
-                consoleLog('verbose', `🗺️ Loading atlas and background MNI ${askedAtlas?.atlas}`);
-                const atlas = atlasFiles[askedAtlas?.atlas];
+            if (currentlyLoadedAtlas.current !== askedAtlas.atlas) {
+                consoleLog('verbose', `🗺️ Loading atlas and background MNI ${askedAtlas.atlas}`);
+                const atlas = atlasFiles[askedAtlas.atlas];
                 if (atlas) {
                     atlasRef.current = null;
                     const niiFile = "/atlas/nii/" + atlas.nii;
-                    consoleLog('normal', `🗺️ Loading atlas ${askedAtlas?.atlas} from cache...`);
+                    consoleLog('normal', `🗺️ Loading atlas ${askedAtlas.atlas} from cache...`);
                     const altasNv = await loadNIfTIFromCache(niiFile);
-                    loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
+                    if (!cancelled) loadAtlasNii(niivue, preloadedBackgroundMNI, altasNv);
                 }
-                currentlyLoadedAtlas.current = askedAtlas?.atlas
-
-                // 3. Load atlas data
-                consoleLog("verbose", "Loading atlas regions", askedAtlas?.atlas);
-                await loadAtlasData();
+                if (!cancelled) {
+                    currentlyLoadedAtlas.current = askedAtlas.atlas;
+                    consoleLog("verbose", "Loading atlas regions", askedAtlas.atlas);
+                    await loadAtlasData();
+                }
             }
 
-
-            // 4. Start game
+            // 4. Start game (or restore colors in replay/ended mode)
             if (!cancelled) {
-                consoleLog("normal", "Starting game...");
-                startGameCallbackRef.current();
+                if (hasEndedRef.current && atlasRef.current) {
+                    atlasRef.current.showShuffledRegions();
+                } else {
+                    consoleLog("normal", "Starting game...");
+                    startGameCallbackRef.current();
+                }
                 setIsLoading(false);
             }
 
-            // 5. load region
-            if (askedRegion && !cancelled) {
+            // 5. Load specific region (navigation mode)
+            if (!cancelled && askedRegion) {
                 consoleLog("verbose", "Loading region...", askedRegion);
-                setHighlightedRegion(askedRegion)
+                setHighlightedRegion(askedRegion);
                 highlightWrapper(askedRegion, true, gameMode === 'navigation');
-                if (atlasRef.current && atlasRef.current.labels[askedRegion]){
+                if (atlasRef.current && atlasRef.current.labels[askedRegion]) {
                     showNotification(atlasRef.current.labels[askedRegion], true, {}, 1500);
                 }
             }
+
+            loadInProgressRef.current = false;
         };
 
         doSequentialLoad();
 
-        return () => { cancelled = true; };
-    }, [niivue, canvasRef.current, preloadedBackgroundMNI, askedAtlas, viewerOptions, askedRegion]);
+        return () => {
+            cancelled = true;
+            loadInProgressRef.current = false;
+        };
+    }, [niivue, preloadedBackgroundMNI, askedAtlas?.atlas, askedAtlas?.blindMode, askedRegion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Apply viewer options changes (display type, radiological, atlas opacity) without reloading
+    useEffect(() => {
+        if (niivue && atlasRef.current) {
+            defineNiiOptions(niivue, atlasRef.current, viewerOptions);
+        }
+    }, [viewerOptions]);
 
     const highlightWrapper = (regionId: number, moveToCenter: boolean, allowFibers: boolean = false) => {
         if (atlasRef.current)
@@ -417,6 +525,7 @@ export function GameProvider({
             addHeaderMessage({ text: t('click_to_identify'), color: 'info' });
             selectedVoxelProp.current = null;
             setHighlightedRegion(null);
+            setIsRegionLocked(false);
             unHighlight();
             if (setTooltip && tooltip) setTooltip({ ...tooltip, visible: false });
             niivue.opts.crosshairColor = [1, 1, 1, 1]; // Restore crosshair color
@@ -455,6 +564,8 @@ export function GameProvider({
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
             if (e.code === 'Space' && gameMode !== "navigation") {
                 e.preventDefault();
                 handleSpaceBar();
@@ -620,8 +731,6 @@ export function GameProvider({
         if(clientY !== undefined){
             updateScrollThumb(clientY);
         }
-        // Prevent default to avoid page scrolling
-        e.preventDefault();
     };
 
     // Handle scroll end
@@ -740,6 +849,7 @@ export function GameProvider({
             canvasRef,
             currentlyLoadedAtlas,
             highlightedRegion, setHighlightedRegion,
+            isRegionLocked, setIsRegionLocked,
             pastRegions, setPastRegions,
             guessButtonRef,
             selectedVoxelProp,
@@ -804,6 +914,8 @@ type GameContextType = {
     currentlyLoadedAtlas: React.RefObject<any>;
     highlightedRegion: number | null;
     setHighlightedRegion: React.Dispatch<React.SetStateAction<number | null>>;
+    isRegionLocked: boolean;
+    setIsRegionLocked: React.Dispatch<React.SetStateAction<boolean>>;
     pastRegions: PastRegion[],
     setPastRegions: React.Dispatch<React.SetStateAction<PastRegion[]>>;
     guessButtonRef: RefObject<HTMLButtonElement | null>;

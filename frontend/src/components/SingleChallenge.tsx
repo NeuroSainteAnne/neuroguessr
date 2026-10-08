@@ -129,13 +129,66 @@ export function SingleChallenge({
                   
   const isDisabled = !canJoin || (challenge.type === 'classic' && isCompleted);
 
+  const actionButton = challenge.type === 'classic' && isDisabled ? (
+    <a className="see-results-btn" href={`/challenge-results/${challenge.id}`}>
+      {t("see_results") || 'See Results'}
+    </a>
+  ) : (
+    <button className="join-challenge-btn" onClick={handleJoinChallenge} disabled={isDisabled}>
+      {getJoinButtonText()}
+    </button>
+  );
+
+  // POPUP style when displayed as the active challenge on the welcome page
+  // Rendering is delegated to PopupStack — just return inline content here
+  if (challenge.isNext) {
+    return (
+      <div className="challenge-popup-content">
+        <div className="challenge-slidein-body">
+          <span className="challenge-slidein-label">
+            {challenge.type === 'classic' ? t('active_challenge_label') : t('next_challenge')}
+          </span>
+          <h3 className="challenge-slidein-title">
+            {challenge.name || t('next_challenge')}
+          </h3>
+          <p className="challenge-slidein-tagline">
+            {t('active_challenge_tagline')}
+          </p>
+          <div className="challenge-slidein-meta">
+            {challenge.type === 'classic' ? (
+              <>
+                <span className="challenge-slidein-meta-item">
+                  {formatChallengeStatus(challenge.startDate, challenge.endDate, challenge.status)}
+                </span>
+                <span className="challenge-slidein-meta-sep">·</span>
+                <span className="challenge-slidein-meta-item">
+                  {Math.floor(challenge.totalDuration / 60)}m {challenge.totalDuration % 60}s
+                </span>
+              </>
+            ) : (
+              <span className="challenge-slidein-meta-item">
+                {t('scheduled_for')}: {formatTimeUntil(challenge.startTime)}
+              </span>
+            )}
+          </div>
+          <div className="challenge-slidein-actions">
+            {actionButton}
+            {allowDeletion && userIsAdmin && (
+              <button className="delete-challenge-btn" onClick={() => handleDeleteChallenge(challenge.sessionCode)}>
+                {t('delete_challenge')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard widget for challenge list pages
   return (
     <div className="next-challenge-widget">
       <div className="challenge-info">
-        {challenge.type === 'realtime' && challenge.isNext ?
-          <h3>{t('next_challenge')}{challenge.name ? `: "${challenge.name}"` : ''}</h3> :
-          <h3>{challenge.name || 'Unnamed Challenge'}</h3>
-        }
+        <h3>{challenge.name || 'Unnamed Challenge'}</h3>
         <span className="session-code">#{challenge.sessionCode}</span>
       </div>
 
@@ -149,12 +202,6 @@ export function SingleChallenge({
               <div className="meta-item">
                 <strong>{t("challenge_duration")}:</strong> {Math.floor(challenge.totalDuration / 60)}m {challenge.totalDuration % 60}s
               </div>
-              {/*<div className="meta-item">
-                <strong>Start:</strong> {new Date(challenge.startDate).toLocaleString()}
-              </div>
-              <div className="meta-item">
-                <strong>End:</strong> {new Date(challenge.endDate).toLocaleString()}
-              </div>*/}
             </div>
           </>
         ) : (
@@ -169,20 +216,7 @@ export function SingleChallenge({
         )}
       </div>
 
-      {challenge.type === 'classic' && isDisabled ? (
-        <a
-          className="see-results-btn"
-          href={`/challenge-results/${challenge.id}`}
-        >
-          {t("see_results") || 'See Results'}
-        </a>
-      ) : (<button
-        className="join-challenge-btn"
-        onClick={handleJoinChallenge}
-        disabled={isDisabled}
-      >
-        {getJoinButtonText()}
-      </button>)}
+      {actionButton}
 
       {allowDeletion && userIsAdmin && <button
         className="delete-challenge-btn"

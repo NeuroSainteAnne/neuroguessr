@@ -9,7 +9,8 @@ import type { OnRenderHtmlAsync } from 'vike/types'
 import neuroGuessrImage from "../../public/interface/neuroguessr-360.png"
 import neuroGuessrLogo from "../../public/interface/neuroguessr-128.png"
 import i18nInstance from '../context/i18n'
-import { PageContextProvider } from 'vike-react/usePageContext'
+// import { PageContextProvider } from 'vike-react/usePageContext'
+import { PageContextProvider } from './PageContext'
 import logoSvg from "../../public/interface/neuroguessr.svg?raw";
 import config from "../../config.json"  
 import backendConfig from "../../../backend/config.json"
@@ -26,7 +27,7 @@ const onRenderHtml: OnRenderHtmlAsync = async (pageContext) => {
   const PageComponent = Page as React.ComponentType<any>
   // Important: Use StaticRouter for server-side rendering
   const pageHtml = renderToString(
-    <PageContextProvider pageContext={pageContext}>
+    <PageContextProvider pageContext={pageContext as any}>
       <PageLayout pageContext={pageContext}>
           <PageComponent />
       </PageLayout>
@@ -110,143 +111,54 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       z-index: 1000;
     }
     #loading-screen .loader-container {
-      background-color: #363636;
+      background-color: #1a1a1a;
       height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+    }
+    .loading-logo-spinner {
+      position: relative;
+      width: 100px;
+      height: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      position: relative;
     }
     .loading-logo-container {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 2;
-      animation: pulse 1.5s infinite ease-in-out;
     }
     .loading-logo-container svg {
-      width: 80px;
-      height: 80px;
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
     }
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.1); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.8; }
-    }
-    .loader {
+    .ls-ring {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      inset: 0;
       z-index: 1;
+      border-radius: 50%;
+      animation: ls-rotate 1.4s linear infinite;
+      background: conic-gradient(
+        from 0deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.55) 75%,
+        rgba(255,255,255,0) 100%
+      );
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #fff calc(100% - 3px));
     }
-    .sk-chase {
-      width: 120px;
-      height: 120px;
-      position: relative;
-      animation: sk-chase 2.5s infinite linear both;
-    }
-
-    .sk-chase-dot {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      left: 0;
-      top: 0;
-      animation: sk-chase-dot 2s infinite ease-in-out both;
-    }
-
-    .sk-chase-dot:before {
-      content: "";
-      display: block;
-      width: 15%;
-      height: 15%;
-      background-color: #fff;
-      border-radius: 100%;
-      animation: sk-chase-dot-before 2s infinite ease-in-out both;
-    }
-
-    .sk-chase-dot:nth-child(1) {
-      animation-delay: -1.1s;
-    }
-
-    .sk-chase-dot:nth-child(2) {
-      animation-delay: -1s;
-    }
-
-    .sk-chase-dot:nth-child(3) {
-      animation-delay: -0.9s;
-    }
-
-    .sk-chase-dot:nth-child(4) {
-      animation-delay: -0.8s;
-    }
-
-    .sk-chase-dot:nth-child(5) {
-      animation-delay: -0.7s;
-    }
-
-    .sk-chase-dot:nth-child(6) {
-      animation-delay: -0.6s;
-    }
-
-    .sk-chase-dot:nth-child(1):before {
-      animation-delay: -1.1s;
-    }
-
-    .sk-chase-dot:nth-child(2):before {
-      animation-delay: -1s;
-    }
-
-    .sk-chase-dot:nth-child(3):before {
-      animation-delay: -0.9s;
-    }
-
-    .sk-chase-dot:nth-child(4):before {
-      animation-delay: -0.8s;
-    }
-
-    .sk-chase-dot:nth-child(5):before {
-      animation-delay: -0.7s;
-    }
-
-    .sk-chase-dot:nth-child(6):before {
-      animation-delay: -0.6s;
-    }
-
-    @keyframes sk-chase {
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    @keyframes sk-chase-dot {
-
-      80%,
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    @keyframes sk-chase-dot-before {
-      50% {
-        transform: scale(0.4);
-      }
-
-      100%,
-      0% {
-        transform: scale(1);
-      }
+    @keyframes ls-rotate {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
     }
     .i18n-content-hidden {
       opacity: 0;
@@ -256,7 +168,8 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       opacity: 1;
     }
   </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
@@ -276,25 +189,16 @@ const customHeader = config.customHeaderScript ? dangerouslySkipEscape(config.cu
       window.__NEEDS_LANGUAGE_SWITCH__ = storedLang && storedLang !== "fr";
     })();
   </script>
-  <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha@main/dist/altcha.min.js" type="module"></script>
-  <script async defer src="https://cdn.jsdelivr.net/gh/altcha-org/altcha/dist_i18n/fr-fr.min.js" type="module"></script>
 </head>
 
 <body>
   <div id="loading-screen">
     <div class="loader-container">
-      <div class="loading-logo-container">
-        ${dangerouslySkipEscape(logoSvg)}
-      </div>
-      <div class="loader">
-        <div class="sk-chase">
-          <div class="sk-chase-dot"></div>
-          <div class="sk-chase-dot"></div>
-          <div class="sk-chase-dot"></div>
-          <div class="sk-chase-dot"></div>
-          <div class="sk-chase-dot"></div>
-          <div class="sk-chase-dot"></div>
+      <div class="loading-logo-spinner">
+        <div class="loading-logo-container">
+          ${dangerouslySkipEscape(logoSvg)}
         </div>
+        <div class="ls-ring"></div>
       </div>
     </div>
   </div>

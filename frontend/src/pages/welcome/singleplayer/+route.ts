@@ -7,9 +7,13 @@ function route(pageContext: PageContext) {
   if (parts[1] !== 'welcome') {
     return false
   } else {
-    if(!parts[2] || parts[2] == 'singleplayer') {
+    if(!parts[2] || parts[2] == 'singleplayer' || parts[2] == 'multiplayer-create'){
       return {
-        routeParams: {}
+        routeParams: {
+          category: parts[3] || "",
+          atlas: parts[4] || "",
+          gameMode: parts[5] || ""
+        }
       }
     }
   }

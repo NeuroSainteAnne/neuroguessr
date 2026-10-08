@@ -1,49 +1,28 @@
 import { navigate } from 'vike/client/router';
 import { useApp } from '../../context/AppContext';
-import './LandingPage.css';
 import { useEffect } from 'react';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import NeuroGuessrLandingPage from '../../components/NeuroGuessrLandingPage';
 
 function LandingPage() {
-    const { t, isLoggedIn } = useApp();
-    
-    // Add redirect effect for logged-in users
+    const { isLoggedIn } = useApp();
+
+    // Redirect logic
     useEffect(() => {
         if (isLoggedIn) {
-            // Redirect to dashboard or welcome page
             navigate('/welcome');
         }
     }, [isLoggedIn]);
-    
-    return (<>
-        <title>NeuroGuessr</title>
-        {isLoggedIn && <LoadingScreen />}
-        {!isLoggedIn && <div id="unlogged-landing-page" className="landing-content">
-            <div className="welcome-section">
-                <h2 className="welcome-message">{t("welcome_unlogged")}</h2>
-                <p>{t("welcome_text_unlogged")}</p>
-            </div>
-            <div className="sign-in-panel">
-                <div className="sign-in-options-container">
-                    <a href="/login" 
-                        data-umami-event="goto login button" data-umami-event-source="landing page"
-                        className="option-button sign-in-button">
-                        {t("sign_in")}
-                    </a>
-                    <a href="/register" 
-                        data-umami-event="goto register button" data-umami-event-source="landing page"
-                        className="option-button sign-up-button">
-                        {t("sign_up")}
-                    </a>
-                    <a href="/welcome/singleplayer" 
-                        data-umami-event="guest mode button"
-                        className="option-button continue-button">
-                        {t("no_sign_in")}
-                    </a>
-                </div>
-            </div>
-        </div>}
-    </>)
+
+    return (
+        <>
+            <title>NeuroGuessr</title>
+
+            {isLoggedIn && <LoadingScreen />}
+
+            {!isLoggedIn && <NeuroGuessrLandingPage />}
+        </>
+    );
 }
 
-export default LandingPage
+export default LandingPage;

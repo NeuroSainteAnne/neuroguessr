@@ -4,7 +4,7 @@ import { sql } from "./database_init.ts";
 import { logger } from "./logging.ts";
 import { socketInfo, config, games, handleValidateGuess, 
   handleUpdateParameters, handleLaunchGame, broadcastToSession, 
-  socketClients, playerInfo, multiJoinLobby, multiLeaveLobby } from "./multi.ts";
+  socketClients, playerInfo, multiJoinLobby, multiLeaveLobby, handleChatMessage } from "./multi.ts";
 import { handleSaveAsRealtimeChallenge } from "./multi_challenge.ts";
 import { canJoinClassicChallengeSocket, deactivateClassicChallenge, 
   getActiveClassicChallengesRaw, getAllClassicChallengesRaw, 
@@ -357,6 +357,19 @@ export function initSocketHandlers() {
         socket.emit('public-lobbies-update', { lobbies });
       } catch (e) {
         // no-op
+      }
+    });
+
+    // Handle chat message
+    socket.on('send-chat-message', async (data: {
+      sessionCode: string;
+      userToken: string;
+      message: string;
+    }) => {
+      try {
+        await handleChatMessage(data);
+      } catch (error) {
+        logger.error('Send chat message error:', error);
       }
     });
   });

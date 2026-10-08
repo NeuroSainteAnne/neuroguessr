@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { GameSelectorWithSearch } from '../GameSelectorWithSearch';
 import { SingleChallenge } from '../../../components/SingleChallenge';
 import './ChallengesPage.css';
-import GameSelector from '../GameSelector';
-import SearchBar from '../../../components/SearchBar';
 import { consoleLog } from '../../../utils/logging';
 import { ClassicChallenge, RTChallenge } from '../../../types/types';
-import News from '../../../components/News';
 
 export function Page() {
-  const { t, authToken, isLoggedIn, userIsAdmin, atlasRegions, refreshNextChallenge } = useApp();
+  const { t, authToken, isLoggedIn, userIsAdmin, refreshNextChallenge } = useApp();
   const [realtimeChallenges, setRealtimeChallenges] = useState<RTChallenge[]>([]);
   const [classicChallenges, setClassicChallenges] = useState<ClassicChallenge[]>([]);
   const [pastChallenges, setPastChallenges] = useState<any[]>([]);
@@ -105,18 +103,19 @@ export function Page() {
   return (
     <>
       <title>{title}</title>
-      <News />
-      {atlasRegions.length > 0 && <SearchBar />}
-      <GameSelector />
+      <GameSelectorWithSearch />
       <div className="challenges-page">
         <div className="challenges-header">
           <h1>{title}</h1>
-          <button 
+          <button
             className="refresh-btn"
             onClick={fetchChallenges}
             disabled={loading}
           >
-            <i className="fas fa-sync-alt"></i>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={loading ? {animation:'spin 1s linear infinite'} : {}}>
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
             {loading ? (t('loading') || 'Loading...') : (t('refresh') || 'Refresh')}
           </button>
         </div>
@@ -199,9 +198,16 @@ export function Page() {
                           <p><strong>{t('your_ranking') || 'Your Ranking'}:</strong> {challenge.userRanking == 1 ? "🏆 " : challenge.userRanking == 2 ? "🥈 " : challenge.userRanking == 3 ? "🥉 " : ""}#{challenge.userRanking} / {challenge.participantCount}</p>
                         </>
                       )}
-                      <a href={`/challenge-results/${challenge.id}`} className="view-results-btn">
-                        {t('view_results') || 'View Results'}
-                      </a>
+                      <div className="challenge-card-actions">
+                        <a href={`/challenge-results/${challenge.id}`} className="view-results-btn">
+                          {t('view_results') || 'View Results'}
+                        </a>
+                        {challenge.userScore !== null && (
+                          <a href={`/multiplayer/?replay_multi=${challenge.id}`} className="view-results-btn replay-btn">
+                            {t('see_your_results') || 'Revoir ma partie'}
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -212,7 +218,7 @@ export function Page() {
 
         {loading && (
           <div className="loading-spinner">
-            <i className="fas fa-spinner fa-spin"></i>
+            <img src="/interface/spinner.png" alt="Loading" className="icon-spinner" style={{width: '24px', height: '24px'}} />
             {t('loading_challenges') || 'Loading challenges...'}
           </div>
         )}

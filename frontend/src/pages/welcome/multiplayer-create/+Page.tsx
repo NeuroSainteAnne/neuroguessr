@@ -1,22 +1,20 @@
 import { useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
-import GameSelector from '../GameSelector';
-import SearchBar from '../../../components/SearchBar';
 import { GameSelectorProvider } from '../../../context/GameSelectorContext';
+import { GameSelectorWithSearch } from '../GameSelectorWithSearch';
 import MultiplayerConfigScreen from './MultiplayerConfigScreen';
 
 export function Page() {
-   const { atlasRegions, activateGuestMode, isLoggedIn } = useApp();
+   const { activateGuestMode, isLoggedIn } = useApp();
    useEffect(()=>{
     if(!isLoggedIn) activateGuestMode();
    }, [])
-  
+
   return (
     <>
       <title>NeuroGuessr</title>
-      {atlasRegions.length > 0 && <SearchBar />}
       <GameSelectorProvider>
-        <GameSelector />
+        <GameSelectorWithSearch />
         <MultiplayerConfigScreen />
       </GameSelectorProvider>
     </>

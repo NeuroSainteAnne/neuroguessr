@@ -36,7 +36,7 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
                 MIN(min_time_per_correct_region) as min_time_per_correct_region,
                 MAX(max_time_per_correct_region) as max_time_per_correct_region
             FROM finished_sessions
-            WHERE user_id = ${userId}
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
         `;
         const stats = statsResult[0];
         const firstGame = stats?.first_game || null;
@@ -55,9 +55,9 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
         const maxTimePerCorrectRegion = Number(stats?.max_time_per_correct_region) || 0;
 
         const quitReasonsResult = await sql`
-            SELECT quit_reason, COUNT(*) as count 
-            FROM finished_sessions 
-            WHERE user_id = ${userId} 
+            SELECT quit_reason, COUNT(*) as count
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
             GROUP BY quit_reason
         `;
         const quitReasons = quitReasonsResult.reduce((acc: Record<string, number>, row: any) => {
@@ -67,45 +67,45 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
 
         // Get most played mode
         const mostPlayedModeResult = await sql`
-            SELECT mode, COUNT(*) as count 
-            FROM finished_sessions 
-            WHERE user_id = ${userId} 
-            GROUP BY mode 
-            ORDER BY count DESC 
+            SELECT mode, COUNT(*) as count
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
+            GROUP BY mode
+            ORDER BY count DESC
             LIMIT 1
         `;
         const mostPlayedMode = mostPlayedModeResult[0]?.mode || null;
 
         // Get most played atlas
         const mostPlayedAtlasResult = await sql`
-            SELECT atlas, COUNT(*) as count 
-            FROM finished_sessions 
-            WHERE user_id = ${userId} 
-            GROUP BY atlas 
-            ORDER BY count DESC 
+            SELECT atlas, COUNT(*) as count
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
+            GROUP BY atlas
+            ORDER BY count DESC
             LIMIT 1
         `;
         const mostPlayedAtlas = mostPlayedAtlasResult[0]?.atlas || null;
 
-        // Get all sessions
+        // Get all sessions (exclude in_progress rows created at game start)
         const sessionsResult = await sql`
-            SELECT * 
-            FROM finished_sessions 
-            WHERE user_id = ${userId} 
+            SELECT *
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
             ORDER BY created_at ASC
         ` as FinishedSession[];
         const sessions = transformKeysSnakeToCamel(sessionsResult) as FinishedSessionCamelCase[];;
         
         // Per-mode stats
         const perModeArrResult = await sql`
-            SELECT 
-                mode, 
-                COUNT(*) as games, 
-                AVG(score) as avg_score, 
-                MAX(score) as best_score, 
+            SELECT
+                mode,
+                COUNT(*) as games,
+                AVG(score) as avg_score,
+                MAX(score) as best_score,
                 AVG(duration) as avg_duration
-            FROM finished_sessions 
-            WHERE user_id = ${userId} 
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND quit_reason != 'in_progress'
             GROUP BY mode
         `;
 
@@ -182,6 +182,30 @@ export const getUserStats = async (req: GetStatsRequest, res: Response): Promise
             error: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined
         });
+        res.status(500).send({ message: "Internal Server Error" });
+    }
+}
+
+export const getPastMultiplayerGames = async (req: Request, res: Response): Promise<void> => {
+    const userId: number = (req as AuthenticatedRequest).user.id;
+    try {
+        const games = await sql`
+            SELECT
+                id, atlas, blind_mode, score, correct, incorrect,
+                multiplayer_games_won, name, created_at,
+                classic_challenge_id, theoretical_maximum_score
+            FROM finished_sessions
+            WHERE user_id = ${userId} AND mode = 'multiplayer' AND classic_challenge_id IS NULL
+            ORDER BY created_at DESC
+            LIMIT 5
+        `;
+        const normalized = games.map((g: any) => ({
+            ...g,
+            created_at: g.created_at instanceof Date ? g.created_at.toISOString() : String(g.created_at)
+        }));
+        res.status(200).json({ games: normalized });
+    } catch (error) {
+        logger.error('Error fetching past multiplayer games:', error);
         res.status(500).send({ message: "Internal Server Error" });
     }
 }

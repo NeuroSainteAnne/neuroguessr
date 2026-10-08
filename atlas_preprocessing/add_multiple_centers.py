@@ -72,11 +72,16 @@ atlas_files = {
         "nii": "ArterialAtlas_stride_round.nii.gz",
         "json": "artery_territories.json",
         "bilateral": False
-    },"""
+    },
     "BSA": {
         "nii": "bsa_atlas.nii.gz",
         "json": "bsa_atlas.json",
         "bilateral": False
+    },"""
+    "GHU": {
+        "nii": "ghu_atlas.nii.gz",
+        "json": "ghu_atlas.json",
+        "bilateral": True
     }
 
 }

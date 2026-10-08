@@ -1,105 +1,195 @@
-/* --- Registration Box Styles --- */
+/* --- Register Box --- */
 .register-box {
-    /* Changed from .login-box */
-    background-color: rgba(40, 40, 40, 0.3);
-    /* A slightly lighter dark background for the box */
+    background-color: var(--bg-card);
     padding: 40px;
-    border-radius: 12px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 800px;
-    /* Slightly wider for more input fields */
-    text-align: center;
+    max-width: 880px;
     box-sizing: border-box;
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0);
-    /* Subtle light border for definition */
+    border: 1px solid var(--border-color);
+    margin: 32px 0 24px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Two-column layout: form left, clinical right --- */
+.register-columns {
+    display: flex;
+    flex-direction: row;
+    gap: 48px;
+    align-items: flex-start;
+}
+
+.register-columns > .register-fields {
+    flex: 1;
+    min-width: 0;
+}
+
+.register-columns > .clinical-trial-container {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
+@media (max-width: 768px) {
+    .register-columns {
+        flex-direction: column;
+        gap: 0;
+    }
+    .register-box {
+        max-width: calc(100% - 40px);
+        margin: 20px auto 16px;
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
+
+    .register-box h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .register-field input {
+        font-size: 0.9rem;
+        padding: 10px 14px;
+    }
 }
 
 .register-box h2 {
-    /* Changed from .login-box h2 */
-    margin-bottom: 30px;
-    color: #E0E0E0;
-    /* Light heading color for contrast */
-    font-size: 2.2em;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-#register_error {
-    /* Specific ID for register error */
-    font-size: 0.9em;
-    height: 20px;
-    /* Reserve space for error messages */
+    margin: 0 0 6px 0;
+    color: var(--text-main);
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.5px;
     text-align: center;
-    margin-top: 10px;
-    color: #FF7070;
-    /* Brighter red for error messages on dark background */
 }
 
-.beta-info{
-    color: #FF7070;
-    font-size: 0.9em;
-}
-
-#register_success {
-    /* Specific ID for register error */
-    font-size: 0.9em;
-    height: 20px;
-    /* Reserve space for error messages */
+.beta-info {
+    color: var(--text-muted);
+    font-size: 0.8rem;
     text-align: center;
-    margin-top: 10px;
+    margin-bottom: 28px;
+}
+
+/* --- Form fields (single column) --- */
+.register-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 0;
+}
+
+.register-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    text-align: left;
+}
+
+.register-field label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+}
+
+.register-field input {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: var(--bg-panel, #1e1e1e);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+    transition: background-color 0.2s;
+    font-family: 'Open Sans', sans-serif;
+}
+
+.register-field input:focus {
+    background-color: #404040;
+    border-color: rgba(255,255,255,0.2);
 }
 
 .password-helper {
-    /* New style for the password helper text */
-    color: #A2B9F0;
-    /* Use a similar color to links for helper text */
-    font-size: 0.85em;
-    line-height: 1.4;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    padding: 0 4px;
+}
+
+/* --- Messages --- */
+#register_error {
+    font-size: 0.85rem;
     text-align: center;
-    padding: 5px 0;
-    margin-top: -10px;
-    /* Adjust margin to bring it closer to password input */
-    margin-bottom: 15px;
-    /* Space below helper text */
+    margin-top: 12px;
+    color: var(--error-color);
 }
 
-/* --- Common Styles (Login and Register) --- */
-.login-element {
-    /* This class is reused for the table structure */
+#register_success {
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 12px;
+    color: var(--success-color);
+}
+
+/* --- Submit Button --- */
+button[type="submit"] {
+    background-color: var(--text-main);
+    color: var(--bg-page);
+    padding: 12px 24px;
+    border: none;
+    border-radius: 9999px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
     width: 100%;
-    margin-bottom: 20px;
-    border-collapse: collapse;
+    margin-top: 20px;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
 }
 
-.login-element td {
-    padding: 10px 0;
-    vertical-align: middle;
+button[type="submit"]:hover:not(:disabled) {
+    background-color: #e0e0e0;
+    color: var(--bg-page);
 }
 
-.login-element td:first-child {
-    text-align: left;
-    width: 35%;
-}
-
-.login-element td:last-child {
-    text-align: right;
-    width: 65%;
+button[type="submit"]:active:not(:disabled) {
+    background-color: #cccccc;
+    color: var(--bg-page);
 }
 
 .button-disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.register-content {
-    display: flex;
-    flex-direction: row;
-    gap:25px;
+.altcha-container {
+    margin-top: 16px;
 }
-@media (max-width: 800px) {
-    .register-content {
-        flex-direction: column;
-        gap: 15px;
+
+@media (max-width: 480px) {
+    .register-box {
+        max-width: calc(100% - 32px);
+        padding: 20px 16px;
+        margin: 16px auto 12px;
+    }
+
+    .register-box h2 {
+        font-size: 1.3rem;
+        margin-bottom: 16px;
+    }
+
+    .register-fields {
+        gap: 12px;
+    }
+
+    .register-field input {
+        font-size: 0.85rem;
+        padding: 9px 12px;
+    }
+
+    .beta-info {
+        font-size: 0.75rem;
+        margin-bottom: 20px;
     }
 }

@@ -1,7 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import './Leaderboard.css';
 import atlasFiles from '../utils/atlas_files';
 import { useApp } from '../context/AppContext';
+
+interface FilterDropdownProps {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+const FilterDropdown = forwardRef<HTMLDivElement, FilterDropdownProps>(
+  ({ label, value, options, onChange, isOpen, onToggle }, ref) => {
+    const selectedLabel = options.find(opt => opt.value === value)?.label || label;
+
+    return (
+      <div ref={ref} className="filter-dropdown-wrapper">
+        <label>{label}:</label>
+        <button className="filter-dropdown-btn" onClick={onToggle}>
+          {selectedLabel}
+        </button>
+        {isOpen && (
+          <div className="filter-dropdown-menu">
+            {options.map(option => (
+              <button
+                key={option.value}
+                className={`filter-dropdown-item ${option.value === value ? 'active' : ''}`}
+                onClick={() => {
+                  onChange(option.value);
+                  onToggle();
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+FilterDropdown.displayName = 'FilterDropdown';
 
 interface LeaderboardEntry {
   username: string;
@@ -39,6 +80,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
   const [modeOptions, setModeOptions] = useState<{ value: string; label: string }[]>([]);
   const [atlasOptions, setAtlasOptions] = useState<string[]>([]);
   const [timeLimitOptions, setTimeLimitOptions] = useState<{ value: number; label: string }[]>([]);
+
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   useEffect(() => {
     // Initialize mode and atlas options
@@ -140,6 +184,20 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
     fetchLeaderboard();
   }, [mode, atlas, timeLimit, numberLimit, blindMode]); // Re-fetch when filters change
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      let clicked = false;
+      Object.values(dropdownRefs.current).forEach(ref => {
+        if (ref && ref.contains(event.target as Node)) {
+          clicked = true;
+        }
+      });
+      if (!clicked) setOpenDropdown(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setMode(e.target.value);
   };
@@ -182,81 +240,60 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
   return (
     <div className={`leaderboard-container ${className}`}>      
       <div className="leaderboard-filters">
-        <div className="filter-group">
-          <label htmlFor="mode-filter">{t('game_mode')}:</label>
-          <select 
-            id="mode-filter" 
-            value={mode} 
-            onChange={handleModeChange}
-            className="filter-select"
-          >
-            {modeOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <label htmlFor="atlas-filter">{t('atlas')}:</label>
-          <select 
-            id="atlas-filter" 
-            value={atlas} 
-            onChange={handleAtlasChange}
-            className="filter-select"
-          >
-            {atlasOptions.map(option => (
-              <option key={option} value={option}>
-                {getAtlasName(option)}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <label htmlFor="time-filter">{t('time_period')}:</label>
-          <select 
-            id="time-filter" 
-            value={timeLimit} 
-            onChange={handleTimeLimitChange}
-            className="filter-select"
-          >
-            {timeLimitOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="filter-group">
-          <label htmlFor="limit-filter">{t('show')}:</label>
-          <select 
-            id="limit-filter" 
-            value={numberLimit} 
-            onChange={handleNumberLimitChange}
-            className="filter-select"
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-          <div className="filter-group">
-          <label htmlFor="blind-filter">{t('blind_mode')}:</label>
-          <select 
-            id="blind-filter" 
-            value={blindMode === null ? "" : blindMode.toString()} 
-            onChange={handleBlindModeChange}
-            className="filter-select"
-          >
-            <option value={""}></option>
-            <option value={"true"}>{t("yes")}</option>
-            <option value={"false"}>{t("no")}</option>
-          </select>
-        </div>
+        <FilterDropdown
+          label={t('game_mode')}
+          value={mode}
+          options={modeOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+          onChange={(val) => setMode(val)}
+          isOpen={openDropdown === 'mode'}
+          onToggle={() => setOpenDropdown(openDropdown === 'mode' ? null : 'mode')}
+          ref={(el) => { dropdownRefs.current['mode'] = el; }}
+        />
+        <FilterDropdown
+          label={t('atlas')}
+          value={atlas}
+          options={atlasOptions.map(opt => ({ value: opt, label: getAtlasName(opt) }))}
+          onChange={(val) => setAtlas(val)}
+          isOpen={openDropdown === 'atlas'}
+          onToggle={() => setOpenDropdown(openDropdown === 'atlas' ? null : 'atlas')}
+          ref={(el) => { dropdownRefs.current['atlas'] = el; }}
+        />
+        <FilterDropdown
+          label={t('time_period')}
+          value={timeLimit.toString()}
+          options={timeLimitOptions.map(opt => ({ value: opt.value.toString(), label: opt.label }))}
+          onChange={(val) => setTimeLimit(parseInt(val))}
+          isOpen={openDropdown === 'time'}
+          onToggle={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}
+          ref={(el) => { dropdownRefs.current['time'] = el; }}
+        />
+        <FilterDropdown
+          label={t('show')}
+          value={numberLimit.toString()}
+          options={[
+            { value: '10', label: '10' },
+            { value: '25', label: '25' },
+            { value: '50', label: '50' },
+            { value: '100', label: '100' }
+          ]}
+          onChange={(val) => setNumberLimit(parseInt(val))}
+          isOpen={openDropdown === 'limit'}
+          onToggle={() => setOpenDropdown(openDropdown === 'limit' ? null : 'limit')}
+          ref={(el) => { dropdownRefs.current['limit'] = el; }}
+        />
+        <FilterDropdown
+          label={t('blind_mode')}
+          value={blindMode === null ? "" : blindMode.toString()}
+          options={[
+            { value: '', label: '—' },
+            { value: 'true', label: t("yes") },
+            { value: 'false', label: t("no") }
+          ]}
+          onChange={(val) => handleBlindModeChange({ target: { value: val } } as any)}
+          isOpen={openDropdown === 'blind'}
+          onToggle={() => setOpenDropdown(openDropdown === 'blind' ? null : 'blind')}
+          ref={(el) => { dropdownRefs.current['blind'] = el; }}
+        />
       </div>
       
       {loading ? (
@@ -293,9 +330,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
             <tbody>
               {leaderboard.length > 0 ? (
                 leaderboard.map((entry, index) => (
-                  <tr key={`${entry.username}-${entry.mode}-${entry.atlas}-${entry.blind_mode}`} 
+                  <tr key={`${entry.username}-${entry.mode}-${entry.atlas}-${entry.blind_mode}`}
                       className={`${entry.username == userUsername ? "current-user-row" : ""}`} >
-                    <td className="rank-cell">{index + 1}</td>
+                    <td className="rank-cell">
+                      {(index === 0 || index === 1 || index === 2) ? (
+                        <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
+                      ) : (
+                        <span>{index + 1}</span>
+                      )}
+                    </td>
                     <td className="username-cell">{entry.username}</td>
                     <td className="mode-cell">{getModeName(entry.mode)}</td>
                     <td className="atlas-cell">{getAtlasName(entry.atlas)}</td>

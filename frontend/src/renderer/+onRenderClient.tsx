@@ -13,7 +13,7 @@ import React from 'react'
 import ReactDOM, { createRoot, hydrateRoot } from 'react-dom/client'
 import { PageLayout } from './PageLayout'
 import type { OnRenderClientAsync } from 'vike/types'
-import { PageContextProvider } from 'vike-react/usePageContext'
+import { PageContextProvider } from './PageContext'
 let root: ReactDOM.Root | null = null;
 
 // Check for server-injected state

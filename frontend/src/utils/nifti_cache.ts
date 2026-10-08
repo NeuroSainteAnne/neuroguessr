@@ -20,6 +20,8 @@ interface JSONCacheEntry {
   accessCount: number;
   lastAccessed: number;
   size: number;
+  etag?: string | undefined;
+  lastModified?: string | undefined;
 }
 
 interface IndexedDBCacheEntry {
@@ -233,39 +235,56 @@ export class NIfTICacheManager {
   public async loadJSON(url: string): Promise<any> {
     this.stats.jsonTotalRequests++;
     
-    // Check cache first
     const cached = this.jsonCache.get(url);
-    if (cached) {
-      this.stats.jsonCacheHits++;
-      cached.accessCount++;
-      cached.lastAccessed = Date.now();
-      this.updateStats();
-      
-      consoleLog('verbose', `📋 JSON Cache HIT for ${url}`);
-      
-      // Return a deep clone to prevent modification of cached object
-      return JSON.parse(JSON.stringify(cached.data));
+
+    // Build conditional request headers if we have a cached entry
+    const headers: Record<string, string> = {};
+    if (cached?.etag) {
+      headers['If-None-Match'] = cached.etag;
+    } else if (cached?.lastModified) {
+      headers['If-Modified-Since'] = cached.lastModified;
     }
 
-    // Cache miss - load from network
-    this.stats.jsonCacheMisses++;
-    consoleLog('normal', `🌐 JSON Cache MISS for ${url}`);
-    
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { headers });
+
+      // 304 Not Modified — cached data is still fresh
+      if (response.status === 304 && cached) {
+        this.stats.jsonCacheHits++;
+        cached.accessCount++;
+        cached.lastAccessed = Date.now();
+        this.updateStats();
+        consoleLog('verbose', `📋 JSON Cache REVALIDATED (304) for ${url}`);
+        return JSON.parse(JSON.stringify(cached.data));
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
+      // New or updated data
       const jsonData = await response.json();
-      
-      // Add to cache
-      await this.addJSONToCache(url, jsonData);
-      
+      const etag = response.headers.get('etag') ?? undefined;
+      const lastModified = response.headers.get('last-modified') ?? undefined;
+
+      await this.addJSONToCache(url, jsonData, etag, lastModified);
+
+      if (cached) {
+        consoleLog('normal', `🔄 JSON Cache UPDATED for ${url}`);
+      } else {
+        this.stats.jsonCacheMisses++;
+        consoleLog('normal', `🌐 JSON Cache MISS for ${url}`);
+      }
+
       this.updateStats();
       return jsonData;
-      
+
     } catch (error) {
+      // Network failure: fall back to stale cache if available
+      if (cached) {
+        console.warn(`Network error for ${url}, returning stale cache:`, error);
+        return JSON.parse(JSON.stringify(cached.data));
+      }
       console.error(`Failed to load JSON file from ${url}:`, error);
       throw error;
     }
@@ -306,7 +325,7 @@ export class NIfTICacheManager {
   /**
    * Add JSON data to the cache
    */
-  private async addJSONToCache(url: string, data: any): Promise<void> {
+  private async addJSONToCache(url: string, data: any, etag?: string, lastModified?: string): Promise<void> {
     try {
       // Check if we need to make space in JSON cache
       while (this.shouldEvictJSON()) {
@@ -322,6 +341,8 @@ export class NIfTICacheManager {
         accessCount: 1,
         lastAccessed: Date.now(),
         size: dataSize,
+        etag,
+        lastModified,
       };
 
       this.jsonCache.set(url, entry);

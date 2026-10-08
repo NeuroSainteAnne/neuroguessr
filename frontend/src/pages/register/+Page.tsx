@@ -184,89 +184,55 @@ function RegisterScreen() {
       <form id="register_form" onSubmit={handleRegister}>
         <div className="register-box">
           <h2>{t("register_mode")}</h2>
-          <div className="beta-info">
-            {t("beta_version_login_message")}
+          <div className="beta-info">{t("beta_version_login_message")}</div>
+          <div className="register-columns">
+          <div className="register-fields">
+            <div className="register-field">
+              <label htmlFor="username">{t("login_username")}</label>
+              <input type="text" id="username" name="username" ref={usernameInput} required />
+            </div>
+            <div className="register-field">
+              <label htmlFor="email">{t("login_email")}</label>
+              <input type="email" id="email" name="email" ref={emailInput} required />
+            </div>
+            <div className="register-field">
+              <label htmlFor="firstname">{t("login_firstname")}</label>
+              <input type="text" id="firstname" name="firstname" ref={firstnameInput} required />
+            </div>
+            <div className="register-field">
+              <label htmlFor="lastname">{t("login_lastname")}</label>
+              <input type="text" id="lastname" name="lastname" ref={lastnameInput} required />
+            </div>
+            <div className="register-field">
+              <label htmlFor="password">{t("login_password")}</label>
+              <input type="password" id="password" name="password" ref={passwordInput} required />
+              <span className="password-helper">{t("password_helper")}</span>
+            </div>
+            <div className="register-field">
+              <label htmlFor="confirm_password">{t("login_confirm_password")}</label>
+              <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} required />
+            </div>
           </div>
-          <div className="register-content">
-            <table className="login-element">
-              <tbody>
-              <tr>
-                <td>
-                  <label id="username-label" htmlFor="username">{t("login_username")}</label>
-                </td>
-                <td>
-                  <input type="text" id="username" name="username" ref={usernameInput} required />
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label id="email-label" htmlFor="email">{t("login_email")}</label>
-                </td>
-                <td>
-                  <input type="email" id="email" name="email" ref={emailInput} required />
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label id="firstname-label" htmlFor="firstname">{t("login_firstname")}</label>
-                </td>
-                <td>
-                  <input type="text" id="firstname" name="firstname" ref={firstnameInput} required />
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label id="lastname-label" htmlFor="lastname">{t("login_lastname")}</label>
-                </td>
-                <td>
-                  <input type="text" id="lastname" name="lastname" ref={lastnameInput} required />
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label id="password-label" htmlFor="password">{t("login_password")}</label>
-                </td>
-                <td>
-                  <input type="password" id="password" name="password" ref={passwordInput} required />
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={2} id="password-helper" className="password-helper">
-                  {t("password_helper")}
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <label id="confirm_password-label" htmlFor="confirm_password">{t("login_confirm_password")}</label>
-                </td>
-                <td>
-                  <input type="password" id="confirm_password" name="confirm_password" ref={confirmPasswordInput} required />
-                </td>
-              </tr>
-              </tbody>
-            </table>
-            <ClinicalTrialBox clinicalTrialData={clinicalTrialData} setClinicalTrialData={setClinicalTrialData} />
+          <ClinicalTrialBox clinicalTrialData={clinicalTrialData} setClinicalTrialData={setClinicalTrialData} />
           </div>
-          
-          {registerErrorText != "" && <div id="register_error">
-              {registerErrorText}
-            </div>}
-          {registerSuccessText != "" && <div id="register_success">
-              {registerSuccessText}
-            </div>}
-          { registerSuccessText == "" && activateCaptcha && captchaLoad && <div className="altcha-container">
+
+          {registerErrorText != "" && <div id="register_error">{registerErrorText}</div>}
+          {registerSuccessText != "" && <div id="register_success">{registerSuccessText}</div>}
+          {registerSuccessText == "" && activateCaptcha && captchaLoad && (
+            <div className="altcha-container">
               <Altcha onStateChange={handleAltchaChange}/>
-            </div> }
+            </div>
+          )}
           {registerSuccessText == "" && (
-            <button 
-              data-umami-event="register button" 
-              type="submit" 
+            <button
+              data-umami-event="register button"
+              type="submit"
               disabled={activateCaptcha && (!captchaToken || sentRequest)}
               className={activateCaptcha && (!captchaToken || sentRequest) ? "button-disabled" : ""}
             >
               {activateCaptcha && !captchaToken ? t("verify_captcha_first") : t("register_button")}
             </button>
-          )}        
+          )}
         </div>
       </form>
     </>

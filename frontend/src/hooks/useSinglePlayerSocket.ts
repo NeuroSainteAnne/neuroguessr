@@ -57,7 +57,7 @@ export interface RegionHighlightData {
   reason: string;
 }
 
-export function useSinglePlayerSocket() {
+export function useSinglePlayerSocket(isReplay?: number) {
   const { authToken } = useApp();
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -71,6 +71,8 @@ export function useSinglePlayerSocket() {
   const joiningInProgressRef = useRef<boolean>(false);
 
   useEffect(() => {
+    // Skip socket initialization if in replay mode
+    if (isReplay) return;
     if (isConnected || joiningInProgressRef.current) return;
 
     joiningInProgressRef.current = true;
@@ -171,7 +173,7 @@ export function useSinglePlayerSocket() {
       setRegionHighlight(null);
       setError(null);
     };
-  }, [authToken]);
+  }, [authToken, isReplay]);
 
   // Ensure game cleanup when user leaves the page
   useEffect(() => {

@@ -1,0 +1,97 @@
+/* Container for GameSelector and SearchBar - keeps them on one line */
+.game-selector-with-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    width: 100%;
+    margin: 40px auto 0;
+    padding: 0 20px;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+}
+
+/* GameSelector styling - prevent it from taking full width */
+.game-selector-with-search .game-nav-container {
+    display: flex;
+    justify-content: flex-start;
+    width: auto;
+    margin: 0;
+    margin-bottom: 0;
+}
+
+.game-selector-with-search .segmented-control {
+    background-color: var(--bg-card);
+    padding: 4px;
+    border-radius: 50px;
+    display: inline-flex;
+    gap: 0;
+}
+
+/* SearchBar styling to match GameSelector */
+.game-selector-with-search .search-bar-container-main {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.game-selector-with-search .search-container {
+    position: relative;
+    width: auto;
+    overflow: visible;
+    z-index: 10;
+}
+
+.game-selector-with-search .search-input {
+    width: 423px;
+    height: 45px;
+    box-sizing: border-box;
+    padding: 8px 24px;
+    background: var(--bg-card);
+    color: var(--text-sub);
+    font-size: 0.9rem;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    border: none;
+    border-radius: 50px;
+    transition: all 0.1s;
+    cursor: text;
+}
+
+.game-selector-with-search .search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.game-selector-with-search .search-input:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+}
+
+.game-selector-with-search .search-input:focus {
+    outline: none;
+    background: var(--bg-card-hover);
+    color: var(--text-main);
+}
+
+/* Responsive: Stack on smaller screens */
+@media (max-width: 900px) {
+    .game-selector-with-search {
+        flex-direction: column;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .game-selector-with-search .game-nav-container {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .game-selector-with-search .search-input {
+        width: 100%;
+        max-width: 400px;
+    }
+}

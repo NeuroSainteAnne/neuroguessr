@@ -34,17 +34,10 @@ export const PublishToLeaderboardBox = ({forRank = false}:{forRank?: boolean | u
               ? t("publish_results_for_rank") 
               : t("publish_to_leaderboard_header")}</h2>
       <p dangerouslySetInnerHTML={{ __html: t("publish_to_leaderboard_explanation") }}></p>
-      <div style={{ margin: "1em 0", display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}>
+      <div className="publish-btn-group">
         <button
           type="button" className="publish-btn"
           data-umami-event="publish button" data-umami-event-publishchoice="yes"
-          style={{
-            padding: "0.5em 1.5em",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: "bold"
-          }}
           onClick={() => handleClick(true)}
         >
           {t("publish_yes")}
@@ -52,21 +45,12 @@ export const PublishToLeaderboardBox = ({forRank = false}:{forRank?: boolean | u
         <button
           type="button" className="publish-btn"
           data-umami-event="publish button" data-umami-event-publishchoice="no"
-          style={{
-            padding: "0.5em 1.5em",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontWeight: "bold"
-          }}
           onClick={() => handleClick(false)}
         >
           {t("publish_no")}
         </button>
       </div>
-      {publishErrorText && <div style={{ color: "red" }}>
-        {publishErrorText}
-      </div>}
+      {publishErrorText && <div className="publish-error">{publishErrorText}</div>}
     </>
   );
 };

@@ -112,6 +112,7 @@
   "register_mode": "Register",
   "login_button": "Login",
   "login_username": "Username",
+  "login_username_or_email": "Username / email",
   "login_email": "Email",
   "login_firstname": "First Name",
   "login_lastname": "Last Name",

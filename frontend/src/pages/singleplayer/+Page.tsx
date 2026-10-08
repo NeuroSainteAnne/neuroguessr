@@ -6,7 +6,6 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { navigate } from 'vike/client/router';
 import { consoleLog } from '../../utils/logging';
 import { PublishToLeaderboardBox } from '../../components/PublishToLeaderboardBox';
-import SearchBar from '../../components/SearchBar';
 import { BrainViewer, GameProvider, useGame } from '../../components/BrainViewer';
 import CacheMonitor from '../../components/CacheMonitor';
 import { CanvasInteractionContent, useSinglePlayerSocket } from '../../hooks/useSinglePlayerSocket';
@@ -21,6 +20,7 @@ export function Page() {
     const blindMode = routeParams?.['blind'] === "true" || false;
     const routedAtlas = routeParams?.['atlas']
     const routedRegion = routeParams?.['region'] ? parseInt(routeParams?.['region']) : undefined;
+    const replaySessionId = routeParams?.['replay_session'] ? parseInt(routeParams?.['replay_session']) : undefined;
     const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
     const cleanGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Clean game callback not initialized") });
     const startGameCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Start game callback not initialized") });
@@ -28,13 +28,18 @@ export function Page() {
     const validateGuessCallbackRef = useRef<(() => void)>(() => { consoleLog("verbose", "Validate guess callback not initialized") });
     const genericKeyPressCallbackRef = useRef<((e: KeyboardEvent) => void)>(() => { consoleLog("verbose", "Generic key press callback not initialized") });
     const canvasInteractionRef = useRef<((e: CanvasInteractionContent) => void)>(() => { consoleLog("verbose", "Canvas interaction callback not initialized") });
+
+    // For replay mode, don't use game mode from routing, use 'multiplayer' style rendering
+    const renderGameMode = replaySessionId ? gameMode : gameMode;
+
     return (
-        <GameProvider gameMode={gameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
+        <GameProvider gameMode={renderGameMode} blindMode={blindMode} routedAtlas={routedAtlas} routedRegion={routedRegion} tooltip={tooltip} setTooltip={setTooltip}
             cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
             validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef}>
             <SinglePlayer tooltip={tooltip} setTooltip={setTooltip}
                 cleanGameCallbackRef={cleanGameCallbackRef} startGameCallbackRef={startGameCallbackRef} resetGameCallbackRef={resetGameCallbackRef}
-                validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef} />
+                validateGuessCallbackRef={validateGuessCallbackRef} genericKeyPressCallbackRef={genericKeyPressCallbackRef} canvasInteractionRef={canvasInteractionRef}
+                replaySessionId={replaySessionId} />
         </GameProvider>
     )
 }
@@ -42,7 +47,8 @@ export function Page() {
 function SinglePlayer({
     tooltip, setTooltip,
     cleanGameCallbackRef, startGameCallbackRef, resetGameCallbackRef,
-    validateGuessCallbackRef, genericKeyPressCallbackRef, canvasInteractionRef
+    validateGuessCallbackRef, genericKeyPressCallbackRef, canvasInteractionRef,
+    replaySessionId
 }: {
     tooltip: { visible: boolean; text: string; x: number; y: number; },
     setTooltip: React.Dispatch<React.SetStateAction<{ visible: boolean; text: string; x: number; y: number; }>>,
@@ -52,6 +58,7 @@ function SinglePlayer({
     validateGuessCallbackRef: React.RefObject<() => void>,
     genericKeyPressCallbackRef: React.RefObject<(e: KeyboardEvent) => void>,
     canvasInteractionRef: React.RefObject<(e: CanvasInteractionContent) => void>,
+    replaySessionId?: number | undefined,
 }) {
     const { t, askedAtlas, viewerOptions,
         isLoggedIn, userPublishToLeaderboard,
@@ -60,6 +67,7 @@ function SinglePlayer({
         setHeaderStreak, setHeaderScore, setHeaderErrors, setHeaderTime,
         setAllHeaderMessagesColor,
         setShowHelpOverlay, showNotification,
+        setAskedAtlas,
         pageContext } = useApp();
     const { routeParams } = pageContext;
     const gameMode = routeParams?.['mode'];
@@ -72,6 +80,7 @@ function SinglePlayer({
     const [currentErrors, setCurrentErrors] = useState<number>(0);
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const currentStreakRef = useRef<number>(0);
+    const maxStreakRef = useRef<number>(0);
     const [currentAttempts, setCurrentAttempts] = useState<number>(0);
     const currentAttemptsRef = useRef<number>(0);
     const usedRegions = useRef<number[]>([]);
@@ -80,15 +89,21 @@ function SinglePlayer({
     const streakOverlayRef = useRef<HTMLDivElement>(null);
     const [showTimeattackOverlay, setShowTimeattackOverlay] = useState<boolean>(false);
     const timeattackOverlayRef = useRef<HTMLDivElement>(null);
+    const [showPracticeOverlay, setShowPracticeOverlay] = useState<boolean>(false);
+    const practiceOverlayRef = useRef<HTMLDivElement>(null);
+    const [practiceAccuracy, setPracticeAccuracy] = useState<number>(0);
+    const [finalMaxStreak, setFinalMaxStreak] = useState<number>(0);
     const [showCacheMonitor, setShowCacheMonitor] = useState<boolean>(false);
     const [currentAskedId, setCurrentAskedId] = useState<number>(0);
     const [currentTotalNumRegions, setCurrentTotalNumRegions] = useState<number>(18);
     const [maxScore, setMaxScore] = useState<number | null>(null);
+    const [sessionName, setSessionName] = useState<string>("");
+    const [sessionDate, setSessionDate] = useState<string>("");
 
     const {
         setIsGameRunning, setPastRegions, currentTarget, selectedVoxelProp, setHasEnded, hasEndedRef,
         guessButtonRef, atlasRef, isGameRunning, highlightedRegion, highlightWrapper, setHighlightedRegion, unHighlight,
-        niivue, canvasRef, isLoading,
+        niivue, canvasRef, isLoading, isRegionLocked, setIsRegionLocked,
     } = useGame();
 
     // Use socket-based single player game management
@@ -102,7 +117,7 @@ function SinglePlayer({
         error,
         startGame: startSocketGame,
         validateGuess
-    } = useSinglePlayerSocket();
+    } = useSinglePlayerSocket(replaySessionId);
 
     // Handle socket connection status
     useEffect(() => {
@@ -111,35 +126,103 @@ function SinglePlayer({
         }
     }, [isConnected]);
 
+
+    useEffect(() => {
+        const handler = () => {
+            const parts = window.location.pathname.split('/');
+            if(gameMode === 'navigation' && parts.length >= 4 && atlasRef.current){
+                if(parts[3] && parts[3] != atlasRef.current.atlas){
+                    setAskedAtlas({atlas: parts[3], blindMode});
+                    setHighlightedRegion(parts[4] !== undefined ? parseInt(parts[4]) : null);
+                } else if(parts[3] === atlasRef.current.atlas){
+                    if(parts[4] !== undefined){
+                        setHighlightedRegion(parseInt(parts[4]));
+                        highlightWrapper(parseInt(parts[4]), true, true);
+                    } else {
+                        setHighlightedRegion(null);
+                        unHighlight();
+                    }
+                }
+            }
+        };
+        window.addEventListener('popstate', handler);
+        return () => window.removeEventListener('popstate', handler);
+    }, []);
+
+    // Handle replay mode for single player — runs only once when replaySessionId is known
+    const replayLoadedRef = useRef(false);
+    useEffect(() => {
+        if (!replaySessionId || replayLoadedRef.current) return;
+        replayLoadedRef.current = true;
+
+        const loadReplayData = async () => {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`/api/single/replay-session/${replaySessionId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load replay data: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const { pastRegions, atlas, blindMode, sessionName: sName, sessionDate: sDate } = data;
+
+                hasEndedRef.current = true;
+                setHasEnded(true);
+                setPastRegions(pastRegions);
+                setAskedAtlas({atlas, blindMode});
+                setSessionName(sName);
+                setSessionDate(sDate);
+                // Clear game header stats — not relevant in replay mode
+                setHeaderScore("");
+                setHeaderStreak("");
+                setHeaderErrors("");
+                setHeaderTime("");
+                clearHeaderMessages();
+
+                consoleLog('verbose', `Loaded replay for ${sName} with ${pastRegions.length} regions`);
+            } catch (err) {
+                console.error('Error loading replay data:', err);
+                showNotification('Failed to load replay data', false);
+            }
+        };
+
+        loadReplayData();
+    }, [replaySessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Handle game state updates from socket
     useEffect(() => {
-        if (gameState && gameMode !== "navigation") {
+        if (!replaySessionId && gameState && gameMode !== "navigation") {
             setCurrentScore(gameState.score);
             setCurrentStreak(gameState.streak);
-            
+
             // Store maxScore for time-attack mode
             if (gameMode === 'time-attack' && gameState.maxScore) {
                 setMaxScore(gameState.maxScore);
             }
-            
-            // Display score using new header message system
-            setHeaderScore(`${Math.round(gameState.score)}`);
-            
+
+            // Display score using new header message system (not in practice mode)
+            if (gameMode !== 'practice') {
+                setHeaderScore(`${Math.round(gameState.score)}`);
+            }
+
             if(gameMode === "streak"){
                 setHeaderStreak(`${gameState.streak}`);
             }
         }
-    }, [gameState, t, gameMode]);
+    }, [gameState, t, gameMode, replaySessionId]);
 
     // Handle timer for time-attack mode
     useEffect(() => {
-        if (gameState?.mode === 'time-attack' && gameState.endDate) {
+        if (!replaySessionId && gameState?.mode === 'time-attack' && gameState.endDate) {
             const endTime = gameState.endDate.getTime();
-            
+
             const updateTimer = () => {
                 const now = Date.now();
                 const remaining = Math.max(0, Math.ceil((endTime - now) / 1000));
-                
+
                 if (remaining > 0) {
                     const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
                     const seconds = (remaining % 60).toString().padStart(2, '0');
@@ -148,13 +231,13 @@ function SinglePlayer({
                     setHeaderTime("");
                 }
             };
-            
+
             // Update immediately
             updateTimer();
-            
+
             // Set up interval to update every 250ms for smooth countdown
             const intervalId = setInterval(updateTimer, 250);
-            
+
             return () => {
                 clearInterval(intervalId);
                 setHeaderTime("");
@@ -163,11 +246,14 @@ function SinglePlayer({
             setHeaderTime("");
             return () => {}; // Return empty cleanup function
         }
-    }, [gameState, t]);
+    }, [gameState, t, replaySessionId]);
+
+    const feedbackTimestampRef = useRef<number>(0);
+    const FEEDBACK_DURATION = 1000; // ms to show green/red before showing next region
 
     // Handle new region from socket
     useEffect(() => {
-        if (currentRegion && gameMode !== "navigation") {
+        if (!replaySessionId && currentRegion && gameMode !== "navigation") {
             // Prepopulate pastRegions with empty entry in time attack mode
             if (gameMode === "time-attack" && currentRegion.askedId !== undefined && atlasRef.current) {
                 setPastRegions(prev => [...prev, {
@@ -176,8 +262,9 @@ function SinglePlayer({
                     atlas: atlasRef.current!.atlas,
                     isCorrect: false,
                     clickedPosition: undefined,
+                    clickedRegionName: undefined,
                     score: 0,
-                    distance: -1, // Special value to indicate no guess was made
+                    distance: -1,
                 }]);
             }
 
@@ -185,29 +272,49 @@ function SinglePlayer({
             currentTarget.current = currentRegion.regionId;
             setCurrentAttempts(currentRegion.attempts);
             currentAttemptsRef.current = currentRegion.attempts;
-            
-            // Set current asked ID for time-attack mode
+
             if (gameMode === "time-attack"){
-                if(currentRegion.askedId !== undefined) {
-                    setCurrentAskedId(currentRegion.askedId);
-                }
-                if(currentRegion.totalNumRegions !== undefined){
-                    setCurrentTotalNumRegions(currentRegion.totalNumRegions)
-                }
+                if(currentRegion.askedId !== undefined) setCurrentAskedId(currentRegion.askedId);
+                if(currentRegion.totalNumRegions !== undefined) setCurrentTotalNumRegions(currentRegion.totalNumRegions);
             }
 
-            // show notification
-            if (atlasRef.current && atlasRef.current.labels) {
-                showNotification(`${t("find")} ${atlasRef.current.labels[currentRegion.regionId]}`, true);
+            // Delay header update to let the success/failure color be visible first
+            const showNewRegionHeader = () => {
+                if (!atlasRef.current?.labels) return;
+                const prefix = t('find') || 'Find: ';
+                let mainText = '';
+                if (gameMode === 'time-attack') {
+                    const askedId = currentRegion.askedId ?? currentAskedId;
+                    const total = currentRegion.totalNumRegions ?? currentTotalNumRegions;
+                    mainText = `${askedId}/${total} - ${prefix}${atlasRef.current.labels[currentRegion.regionId]}`;
+                } else {
+                    mainText = `${prefix}${atlasRef.current.labels[currentRegion.regionId]}`;
+                }
+                addHeaderMessages([{ text: mainText, minDuration: 500, forceClear: true }]);
+            };
+
+            const elapsed = Date.now() - feedbackTimestampRef.current;
+            const remaining = FEEDBACK_DURATION - elapsed;
+            if (remaining > 50) {
+                setTimeout(showNewRegionHeader, remaining);
+            } else {
+                showNewRegionHeader();
             }
         }
-    }, [currentRegion, gameMode]);
+    }, [currentRegion, gameMode, replaySessionId]);
 
     // Handle guess results from socket
     useEffect(() => {
-        if (lastGuessResult && gameMode !== "navigation") {
+        if (!replaySessionId && lastGuessResult && gameMode !== "navigation") {
             // Update pastRegions if pastRegionId is provided
             if (lastGuessResult.pastRegionId !== undefined) {
+                const clickedVox = lastGuessResult.clickedPosition?.vox;
+                const clickedIdx = (clickedVox && atlasRef.current)
+                    ? atlasRef.current.getValue(clickedVox[0]!, clickedVox[1]!, clickedVox[2]!)
+                    : undefined;
+                const clickedRegionName = clickedIdx !== undefined && atlasRef.current
+                    ? atlasRef.current.labels?.[clickedIdx] ?? undefined
+                    : undefined;
                 setPastRegions(prev => prev.map(region =>
                     region.id === lastGuessResult.pastRegionId
                         ? {
@@ -217,87 +324,91 @@ function SinglePlayer({
                             distance: lastGuessResult.distance,
                             regionCenter: lastGuessResult.regionCenter,
                             regionBoundary: lastGuessResult.regionBoundary,
-                            clickedPosition: lastGuessResult.clickedPosition
+                            clickedPosition: lastGuessResult.clickedPosition,
+                            clickedRegionName
                         }
                         : region
                 ));
             }
 
             // Update UI based on guess result
+            feedbackTimestampRef.current = Date.now();
             if (atlasRef.current && currentTarget.current && lastGuessResult.isCorrect) {
                 setCurrentCorrects(prev => prev + 1);
-                // Display success with green color for 500ms
                 let mainText = atlasRef.current.labels[currentTarget.current] || "";
                 if (gameMode === 'time-attack') {
                     mainText = `${currentAskedId}/${currentTotalNumRegions} - ${atlasRef.current.labels[currentTarget.current]}`;
                 }
-                addHeaderMessage({ text: mainText, minDuration: 1000, color: 'success' });
-                // The message will be updated by updateGameDisplay shortly after
+                addHeaderMessage({ text: mainText, minDuration: FEEDBACK_DURATION, color: 'success' });
                 if(gameMode === "practice"){
                     setHighlightedRegion(null);
                     unHighlight()
                 }
             } else {
                 setCurrentErrors(prev => prev + 1);
-                // Display failure with red color for 800ms
-                setAllHeaderMessagesColor('failure', 800);
-                if(gameMode === "streak"){ 
+                setAllHeaderMessagesColor('failure', FEEDBACK_DURATION);
+                if(gameMode === "streak"){
                     showNotification(`${t("incorrect")} ${lastGuessResult.consecutiveErrors}/${lastGuessResult.maxErrorsStreak}`, false);
                 }
             }
             setCurrentAttempts(lastGuessResult.attempts);
             currentAttemptsRef.current = lastGuessResult.attempts;
         }
-    }, [lastGuessResult]);
+    }, [lastGuessResult, replaySessionId]);
 
     // Handle game end from socket
     useEffect(() => {
-        if (gameEnded) {
+        if (!replaySessionId && gameEnded) {
             setHasEnded(true);
             hasEndedRef.current = true;
             setFinalScore(gameEnded.finalScore);
             if (gameEnded.elapsedTime) {
                 setFinalElapsed(gameEnded.elapsedTime);
             }
-            
+
             // Show appropriate end screen based on game mode and reason
             if (gameMode === 'time-attack') {
                 // For time attack, show the overlay with final score
                 setShowTimeattackOverlay(true);
             } else if (gameMode === 'streak' && gameEnded.reason === 'max-consecutive-errors') {
-                // For streak mode ending due to max consecutive errors, show streak overlay
+                setFinalMaxStreak(maxStreakRef.current);
                 setShowStreakOverlay(true);
             } else if (gameMode === 'streak' && gameEnded.reason === 'exceeded-max-distance') {
-                // For streak mode ending due to exceeded max distance, show streak overlay and notification
+                setFinalMaxStreak(maxStreakRef.current);
                 setShowStreakOverlay(true);
                 showNotification(t("streak_ended_too_far", { distance: gameEnded.lastDistance }), false);
+            } else if (gameEnded.reason === 'completed') {
+                const accuracy = gameEnded.attempts ? Math.round((gameEnded.correct / gameEnded.attempts) * 100) : 0;
+                setPracticeAccuracy(accuracy);
+                setFinalMaxStreak(maxStreakRef.current);
+                setShowPracticeOverlay(true);
             } else {
-                // For other modes, show regular end screen
                 const accuracy = gameEnded.attempts ? Math.round((gameEnded.correct / gameEnded.attempts) * 100) : 0;
                 const minutes = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime / 60) : 0;
                 const seconds = gameEnded.elapsedTime ? Math.floor(gameEnded.elapsedTime % 60) : 0;
                 showNotification(`${t("game_over", {accuracy, minutes, seconds})}! ${t("final_score")}: ${gameEnded.finalScore}`, true);
             }
         }
-    }, [gameEnded, gameMode, t]);
+    }, [gameEnded, gameMode, t, replaySessionId]);
 
     // Handle socket errors
     useEffect(() => {
-        if (error) {
+        if (!replaySessionId && error) {
             showNotification(error, false);
         }
-    }, [error]);
+    }, [error, replaySessionId]);
 
     // Handle region highlight from socket
     useEffect(() => {
-        if (regionHighlight && gameMode === 'practice') {
+        if (!replaySessionId && regionHighlight && gameMode === 'practice') {
             setHighlightedRegion(regionHighlight.regionId);
             highlightWrapper(regionHighlight.regionId, false, true);
         }
-    }, [regionHighlight, gameMode]);
+    }, [regionHighlight, gameMode, replaySessionId]);
 
     useEffect(() => {
-        currentStreakRef.current = currentStreak
+        currentStreakRef.current = currentStreak;
+        if (currentStreak > maxStreakRef.current) maxStreakRef.current = currentStreak;
     }, [currentStreak])
     useEffect(() => {
         currentScoreRef.current = currentScore
@@ -338,6 +449,7 @@ function SinglePlayer({
             setCurrentCorrects(0); // Reset correct count for Practice/Streak
             setCurrentErrors(0); // Reset errors
             setCurrentStreak(0); // Reset streak
+            maxStreakRef.current = 0; // Reset max streak
             setCurrentAskedId(0); // Reset asked ID for time-attack
             setMaxScore(null); // Reset max score
             usedRegions.current = []; // Reset used regions for time attack
@@ -354,7 +466,7 @@ function SinglePlayer({
                 setHeaderStreak("");
                 setHeaderErrors("");
             } else if (gameMode === 'practice') {
-                setHeaderScore(`0`);
+                setHeaderScore(``);
                 setHeaderErrors("0");
                 setHeaderStreak("");
             } else if (gameMode === 'streak') {
@@ -385,6 +497,9 @@ function SinglePlayer({
 
     useEffect(() => {
         const startGameInternal = () => {
+            // In replay mode, do not start a real socket game
+            if (replaySessionId) return;
+
             setIsGameRunning(true);
             if (!atlasRef.current) return;
 
@@ -399,7 +514,7 @@ function SinglePlayer({
         if (startGameCallbackRef) {
             startGameCallbackRef.current = startGameInternal; // Set the callback in the ref
         }
-    }, [startGameCallbackRef, gameMode, askedAtlas, blindMode]);
+    }, [startGameCallbackRef, gameMode, askedAtlas, blindMode, replaySessionId]);
 
     useEffect(() => {
         const genericKeyPressCallback = (e: KeyboardEvent) => {
@@ -426,23 +541,13 @@ function SinglePlayer({
     useEffect(() => {
         const canvasInteraction = (clickedRegionLocation: CanvasInteractionContent) => {
             if (!isGameRunning || !niivue || !atlasRef.current) return;
+            // In navigation mode, if region is locked, ignore canvas clicks
+            if (gameMode === 'navigation' && isRegionLocked) return;
             if (clickedRegionLocation && (clickedRegionLocation.idx !== undefined || blindMode)) {
                 selectedVoxelProp.current = clickedRegionLocation;
                 if (gameMode === 'navigation' && clickedRegionLocation.idx !== undefined) {
-                    let messages : AddHeaderMessageOptions[] = [{ 
-                        text: atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected'),
-                        minDuration: 500
-                    }]
-                    if(atlasRef.current.info){
-                        const atlasInfo = atlasRef.current.info[clickedRegionLocation.idx];
-                        const infoContent = atlasRef.current.infoDetail?.[clickedRegionLocation.idx] || undefined;
-                        const infoSource = atlasRef.current.infoSource?.[clickedRegionLocation.idx] || undefined;
-                        if(atlasInfo){
-                            messages.push({ text: atlasInfo, minDuration: 500, fontSize: '0.85em', fontWeight: 'normal',
-                            infoContent: infoContent, infoSource: infoSource });
-                        }
-                    }
-                    addHeaderMessages(messages);
+                    const regionName = atlasRef.current.labels?.[clickedRegionLocation.idx] || t('no_region_selected');
+                    addHeaderMessages([{ text: regionName, minDuration: 500, forceClear: true }]);
                     setHighlightedRegion(clickedRegionLocation.idx);
                     highlightWrapper(clickedRegionLocation.idx, false, true);
                     const currentLabel = atlasRef.current.labels[clickedRegionLocation.idx];
@@ -467,7 +572,7 @@ function SinglePlayer({
                 selectedVoxelProp.current = null;
                 if (gameMode === 'navigation') {
                     window.history.pushState(null, '', `/singleplayer/navigation/${atlasRef.current.atlas}`);
-                    addHeaderMessage({ 
+                    addHeaderMessage({
                         text: t('no_region_selected'),
                         forceClear: true,
                         minDuration: 100
@@ -482,7 +587,16 @@ function SinglePlayer({
         if (canvasInteractionRef) {
             canvasInteractionRef.current = canvasInteraction; // Set the callback in the ref
         }
-    }, [isGameRunning, canvasInteractionRef]);
+    }, [isGameRunning, canvasInteractionRef, isRegionLocked]);
+
+    // Auto-lock when a region is selected from the search bar
+    useEffect(() => {
+        if (gameMode !== 'navigation') return;
+        const handler = () => setIsRegionLocked(true);
+        window.addEventListener('navigation-region-selected', handler);
+        return () => window.removeEventListener('navigation-region-selected', handler);
+    }, [gameMode, setIsRegionLocked]);
+
 
     useEffect(() => {
         const validateGuessInternal = async () => {
@@ -503,6 +617,7 @@ function SinglePlayer({
                     atlas: atlasRef.current!.atlas,
                     isCorrect: false,
                     clickedPosition: selectedVoxelProp.current || undefined,
+                    clickedRegionName: undefined,
                     score: 0,
                     distance: -1, // Special value to indicate no guess was made
                 }]);
@@ -526,9 +641,12 @@ function SinglePlayer({
 
         if (gameMode === 'time-attack' || gameMode === 'streak' || gameMode === 'practice') {
             setHeaderErrors(`${currentErrors}`);
-            setHeaderScore(`${currentScore}`);
         } else {
             setHeaderErrors(``);
+        }
+        if (gameMode === 'time-attack' || gameMode === 'streak') {
+            setHeaderScore(`${currentScore}`);
+        } else {
             setHeaderScore(``);
         }
         if (gameMode === 'streak') {
@@ -558,7 +676,7 @@ function SinglePlayer({
 
         // Update header with combined messages
         if (mainText) {
-            messages.push({ text: mainText, minDuration: 500 });
+            messages.push({ text: mainText, minDuration: 500, forceClear: gameMode === 'navigation' });
         }
 
         if(gameMode === 'navigation' && atlasRef.current && atlasRef.current.info && (highlightedRegion !== null || currentTarget.current !== undefined)){
@@ -586,11 +704,15 @@ function SinglePlayer({
 
 
     useEffect(() => {
+        if (replaySessionId) return;
         updateGameScores();
-    }, [currentScore, currentCorrects, currentErrors, currentStreak, 
-        gameMode, currentTarget.current, highlightedRegion, 
-        currentAskedId, currentTotalNumRegions]);
+    }, [currentScore, currentCorrects, currentErrors, currentStreak,
+        gameMode, currentTarget.current, highlightedRegion,
+        currentAskedId, currentTotalNumRegions, replaySessionId]);
     useEffect(() => {
+        // Don't update header if we're still showing feedback (green/red)
+        const elapsed = Date.now() - feedbackTimestampRef.current;
+        if (elapsed < FEEDBACK_DURATION) return;
         updateGameHeader();
     }, [currentTarget.current, highlightedRegion, atlasRef.current]);
 
@@ -642,16 +764,24 @@ function SinglePlayer({
     return (
         <>
             <title>{myTitle}</title>
-            {isLoading && <LoadingScreen />}
-            {!isLoading && gameMode == "navigation" && <SearchBar />}
+            {isLoading && !replaySessionId && <LoadingScreen />}
             {tooltip.visible && <div className="region-tooltip" style={{ position: "absolute", left: tooltip.x, top: tooltip.y }}>{tooltip.text}</div>}
 
-            <BrainViewer />
+            <BrainViewer sessionName={sessionName} sessionDate={sessionDate} />
 
-            {showStreakOverlay && <div id="streak-end-overlay" className="streak-overlay">
+            {showStreakOverlay && !replaySessionId && <div id="streak-end-overlay" className="streak-overlay">
                 <div className="overlay-content" ref={streakOverlayRef}>
                     <h2>{t("streak_ended_title")}</h2>
-                    <p><span>{t("streak_ended_score")}</span><span id="final-streak" className="streak-number">{finalScore}</span></p>
+                    <div className="overlay-stats">
+                        <div className="overlay-stat-item">
+                            <span className="overlay-stat-value">{finalMaxStreak}</span>
+                            <span className="overlay-stat-label">{t("max_streak_label")}</span>
+                        </div>
+                        <div className="overlay-stat-item">
+                            <span className="overlay-stat-value" id="final-streak">{finalScore}</span>
+                            <span className="overlay-stat-label">{t("streak_ended_score")}</span>
+                        </div>
+                    </div>
                     {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
                     <div className="overlay-buttons">
                         <button
@@ -660,35 +790,46 @@ function SinglePlayer({
                             data-umami-event="show review button"
                             data-umami-event-overlay="streak"
                         >
-                            <i className="fas fa-eye"></i>
+                            {t("review_button") || "Review"}
+                        </button>
+                        <button id="restart-button-streak"
+                            data-umami-event="restart button" data-umami-event-restartsource="streak"
+                            className="restart-button" onClick={() => { setShowStreakOverlay(false); resetGameCallbackRef.current(); startGameCallbackRef.current() }}>
+                            {t("restart_button") || "↺"}
                         </button>
                         <button id="go-back-menu-button-streak"
                             data-umami-event="go back button" data-umami-event-gobacksource="streak"
                             className="home-button" onClick={() => { navigate("/welcome") }}>
-                            <i className="fas fa-home"></i>
-                        </button>
-                        <button id="restart-button-streak"
-                            data-umami-event="restart button" data-umami-event-restartsource="streak"
-                            className="restart-button" onClick={() => { startGameCallbackRef.current() }}>
-                            <i className="fas fa-sync-alt"></i>
+                            {t("home_button")}
                         </button>
                     </div>
                 </div>
             </div>}
 
-            {showTimeattackOverlay && <div id="time-attack-end-overlay" className="time-attack-overlay">
+            {showTimeattackOverlay && !replaySessionId && <div id="time-attack-end-overlay" className="time-attack-overlay">
                 <div className="overlay-content" ref={timeattackOverlayRef}>
                     <h2>{t("time_attack_ended_title")}</h2>
-                    <p><span>{t("time_attack_ended_time")}</span>
-                        <span id="final-time-attack-time">{finalElapsed}</span></p>
-                    <p><span>{t("time_attack_ended_score")} {Math.round(finalScore)}</span></p>
-                    {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
-                    <div className="score-progress-bar w3-light-grey w3-round">
-                        <div id="time-attack-score-bar" className="w3-container w3-round w3-blue"
+                    <div className="overlay-score-block">
+                        <span className="overlay-score-value">{Math.round(finalScore)}</span>
+                        <span className="overlay-score-label">{t("time_attack_ended_score")}</span>
+                    </div>
+                    {finalElapsed > 0 && (
+                        <div className="overlay-stats">
+                            <div className="overlay-stat-item">
+                                <span className="overlay-stat-value" id="final-time-attack-time">
+                                    {Math.floor(finalElapsed / 60)}:{String(Math.floor(finalElapsed % 60)).padStart(2, '0')}
+                                </span>
+                                <span className="overlay-stat-label">{t("time_attack_ended_time")}</span>
+                            </div>
+                        </div>
+                    )}
+                    <div className="score-progress-bar">
+                        <div id="time-attack-score-bar" className="w3-container w3-blue"
                             style={{ width: (maxScore ? (finalScore / maxScore) * 100 : (finalScore / 1000) * 100) + "%" }}></div>
                         <span className="progress-label progress-label-med">{Math.round((maxScore || 1000) * 0.5)}</span>
                         <span className="progress-label progress-label-max">{Math.round(maxScore || 1000)}</span>
                     </div>
+                    {isLoggedIn && userPublishToLeaderboard === null && <PublishToLeaderboardBox />}
                     <div className="overlay-buttons">
                         <button
                             className="eye-button"
@@ -696,27 +837,79 @@ function SinglePlayer({
                             data-umami-event="show review button"
                             data-umami-event-overlay="time-attack"
                         >
-                            <i className="fas fa-eye"></i>
-                        </button>
-                        <button id="go-back-menu-button-time-attack" className="home-button"
-                            data-umami-event="go back button" data-umami-event-gobacksource="time-attack"
-                            onClick={() => { navigate("/welcome") }}>
-                            <i className="fas fa-home"></i>
+                            {t("review_button") || "Review"}
                         </button>
                         <button id="restart-button-time-attack" className="restart-button"
                             data-umami-event="restart button" data-umami-event-restartsource="time-attack"
                             onClick={() => { setShowTimeattackOverlay(false);
                                 resetGameCallbackRef.current();
                                 startGameCallbackRef.current() }}>
-                            <i className="fas fa-sync-alt"></i>
+                            {t("restart_button") || "↺"}
+                        </button>
+                        <button id="go-back-menu-button-time-attack" className="home-button"
+                            data-umami-event="go back button" data-umami-event-gobacksource="time-attack"
+                            onClick={() => { navigate("/welcome") }}>
+                            {t("home_button")}
                         </button>
                     </div>
                 </div>
             </div>}
 
-            <CacheMonitor 
-                isVisible={showCacheMonitor} 
-                onClose={() => setShowCacheMonitor(false)} 
+            {showPracticeOverlay && !replaySessionId && <div id="practice-end-overlay" className="practice-overlay">
+                <div className="overlay-content" ref={practiceOverlayRef}>
+                    <h2>{gameMode === 'streak' ? t("serie_completed_title") : t("practice_completed_title")}</h2>
+                    <div className="overlay-stats">
+                        <div className="overlay-stat-item">
+                            <span className="overlay-stat-value">{practiceAccuracy}%</span>
+                            <span className="overlay-stat-label">{t("accuracy")}</span>
+                        </div>
+                        {finalElapsed > 0 && (
+                            <div className="overlay-stat-item">
+                                <span className="overlay-stat-value">
+                                    {Math.floor(finalElapsed / 60)}:{String(Math.floor(finalElapsed % 60)).padStart(2, '0')}
+                                </span>
+                                <span className="overlay-stat-label">{t("time_attack_ended_time")}</span>
+                            </div>
+                        )}
+                        {gameMode === 'streak' && (
+                            <>
+                                <div className="overlay-stat-item">
+                                    <span className="overlay-stat-value">{finalMaxStreak}</span>
+                                    <span className="overlay-stat-label">{t("max_streak_label")}</span>
+                                </div>
+                                <div className="overlay-stat-item">
+                                    <span className="overlay-stat-value">{Math.round(finalScore)}</span>
+                                    <span className="overlay-stat-label">{t("final_score")}</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <div className="overlay-buttons">
+                        <button
+                            className="eye-button"
+                            onClick={() => setShowPracticeOverlay(false)}
+                            data-umami-event="show review button"
+                            data-umami-event-overlay={gameMode}
+                        >
+                            {t("review_button")}
+                        </button>
+                        <button className="restart-button"
+                            data-umami-event="restart button" data-umami-event-restartsource={gameMode}
+                            onClick={() => { setShowPracticeOverlay(false); resetGameCallbackRef.current(); startGameCallbackRef.current() }}>
+                            {gameMode === 'streak' ? t("restart_button") : t("practice_continue_button")}
+                        </button>
+                        <button className="home-button"
+                            data-umami-event="go back button" data-umami-event-gobacksource={gameMode}
+                            onClick={() => { navigate("/welcome") }}>
+                            {t("home_button")}
+                        </button>
+                    </div>
+                </div>
+            </div>}
+
+            <CacheMonitor
+                isVisible={showCacheMonitor}
+                onClose={() => setShowCacheMonitor(false)}
             />
 
         </>

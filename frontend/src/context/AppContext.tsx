@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { isTokenValid, refreshToken } from '../utils/helper_login';
 import { jwtDecode } from 'jwt-decode';
 import type { AtlasRegion, DisplayOptions, CustomTokenPayload, ColorMap, Challenge } from '../types/types';
@@ -16,6 +16,13 @@ type NVImageConstructor = {
   loadFromUrl(options: { url: string }): Promise<NVImage>;
 }
 
+export type SourceElement = {
+  auteur: string;
+  journal: string;
+  year: string;
+  doi: string;
+}
+
 // Header message type
 export type HeaderMessage = {
   id: string;
@@ -28,7 +35,7 @@ export type HeaderMessage = {
   colorDuration?: number | undefined; // in milliseconds
   colorAddedAt?: number | undefined;
   infoContent?: string | undefined; // Optional additional info content for tooltips or details
-  infoSource?: string | undefined; // Optional source or reference for the message content
+  infoSource?: SourceElement[] | undefined; // Optional source or reference for the message content
 };
 
 export type AddHeaderMessageOptions = {
@@ -40,7 +47,7 @@ export type AddHeaderMessageOptions = {
   colorDuration?: number; // in milliseconds, duration after which color fades out
   forceClear?: boolean; // if true, clears all existing messages before adding
   infoContent?: string | undefined; // Optional additional info content for tooltips or details
-  infoSource?: string | undefined; // Optional source or reference for the message content
+  infoSource?: SourceElement[] | undefined; // Optional source or reference for the message content
 };
 
 // Tooltip type
@@ -86,6 +93,8 @@ type AppContextType = {
   // Overlays
   showHelpOverlay: boolean;
   showLegalOverlay: boolean;
+  showContributorsOverlay: boolean;
+  showInfoOverlay: boolean;
 
   // Atlas data
   atlasRegions: AtlasRegion[];
@@ -127,6 +136,8 @@ type AppContextType = {
   setAskedRegion: (region: number | null) => void;
   setShowHelpOverlay: (show: boolean) => void;
   setShowLegalOverlay: (show: boolean) => void;
+  setShowContributorsOverlay: (show: boolean) => void;
+  setShowInfoOverlay: (show: boolean) => void;
   setIsMobileView: (isMobile: boolean) => void;
   refreshNextChallenge: (token?: string | null) => void;
   t: (text: string, b?: any|undefined) => string //TFunction<"translation", undefined>;
@@ -203,6 +214,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     radiologicalOrientation: true,
     displayAtlas: true,
     displayOpacity: 0.6,
+    brainOpacity: 1.0,
+    clipPlane: 2,  // 2 = no clipping (niivue default)
   });
   
   // Atlas data
@@ -317,13 +330,13 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
   const [notifications, setNotifications] = useState<
     { id: string; message: string; isSuccess: boolean, removing: boolean }[]
   >([]);
-  const showNotification = (message: string, isSuccess: boolean, i18params = {}, duration=3000) => {
+  const showNotification = useCallback((message: string, isSuccess: boolean, i18params = {}, duration=3000) => {
     const id = Date.now() + "-" + Math.floor(Math.random() * 10000); // Unique ID for each notification
     const newNotification = {
       id,
       message: t(message, i18params),
       isSuccess,
-      removing: false, 
+      removing: false,
     };
     // Add the new notification to the queue
     setNotifications((prev) => [...prev, newNotification]);
@@ -338,27 +351,25 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
         setNotifications((prev) => prev.filter((notification) => notification.id !== id));
       }, 500);
     }, duration);
-  };
+  }, [t]);
 
   // Overlay system
   const [showHelpOverlay, setShowHelpOverlay] = useState<boolean>(false);
   const [showLegalOverlay, setShowLegalOverlay] = useState<boolean>(false);
+  const [showContributorsOverlay, setShowContributorsOverlay] = useState<boolean>(false);
+  const [showInfoOverlay, setShowInfoOverlay] = useState<boolean>(false);
   
   // Header message system
-  const addHeaderMessage = (options: AddHeaderMessageOptions) => {
-    addHeaderMessages([options]);
-  };
-
-  const addHeaderMessages = (optionsArray: AddHeaderMessageOptions[]) => {
+  const addHeaderMessages = useCallback((optionsArray: AddHeaderMessageOptions[]) => {
     setHeaderMessages(prev => {
       const now = Date.now();
-      
+
       // Check if any message has forceClear
       const shouldClear = optionsArray.some(opt => opt.forceClear);
-      
+
       // Auto-cleanup expired messages before adding new ones
       let base = shouldClear ? [] : prev.filter(msg => !isHeaderMessageExpired(msg, now));
-      
+
       // Create all new messages
       const newMessages: HeaderMessage[] = optionsArray.map((options, index) => {
         const { text, color, fontSize = undefined, fontWeight = undefined, minDuration = undefined, colorDuration = undefined, infoContent = undefined, infoSource = undefined } = options;
@@ -376,37 +387,40 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
           infoSource: infoSource
         };
       });
-      
+
       // Filter out all duplicate messages
       const result = [...base];
       for (const newMsg of newMessages) {
-        // Check if this message text already exists in the result
         const isDuplicate = result.some(msg => msg.text === newMsg.text);
         if (!isDuplicate) {
           result.push(newMsg);
         }
       }
-      
+
       return result;
     });
-  };
-  
-  const clearHeaderMessages = () => {
+  }, []);
+
+  const addHeaderMessage = useCallback((options: AddHeaderMessageOptions) => {
+    addHeaderMessages([options]);
+  }, [addHeaderMessages]);
+
+  const clearHeaderMessages = useCallback(() => {
     setHeaderMessages([]);
-  };
-  
-  const setAllHeaderMessagesColor = (color: string | undefined, colorDuration?: number) => {
+  }, []);
+
+  const setAllHeaderMessagesColor = useCallback((color: string | undefined, colorDuration?: number) => {
     setHeaderMessages(prev => {
       const now = Date.now();
-      return prev.map(msg => ({ 
-        ...msg, 
+      return prev.map(msg => ({
+        ...msg,
         color,
-        addedAt: now, // Reset addedAt to now to prevent immediate expiration after color change
+        addedAt: now,
         colorDuration: colorDuration !== undefined ? colorDuration : msg.colorDuration,
         colorAddedAt: color ? now : undefined
       }));
     });
-  };
+  }, []);
 
   const isHeaderMessageExpired = (msg: HeaderMessage, now: number) => {
     if (msg.minDuration === undefined){
@@ -528,6 +542,11 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
     setAuthToken("");
     setIsLoggedIn(false);
     refreshNextChallenge(null);
+    if(typeof window !== 'undefined' && 
+      (!window.location.href.includes("/welcome") || 
+      window.location.href.includes("multiplayer-create"))) {
+      window.location.href = '/welcome';
+    }
   };
   
   const activateGuestMode = () => {
@@ -801,6 +820,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       // Overlay state
       showHelpOverlay,
       showLegalOverlay,
+      showContributorsOverlay,
+      showInfoOverlay,
       
       // Functions
       activateGuestMode,
@@ -825,6 +846,8 @@ export function AppProvider({ children, pageContext }: { children: React.ReactNo
       setAskedRegion,
       setShowHelpOverlay,
       setShowLegalOverlay,
+      setShowContributorsOverlay,
+      setShowInfoOverlay,
       setIsMobileView,
       refreshNextChallenge,
       copyToClipboard,

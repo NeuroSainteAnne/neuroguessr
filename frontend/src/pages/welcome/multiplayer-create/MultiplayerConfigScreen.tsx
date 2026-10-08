@@ -85,17 +85,6 @@ const validateCountdownStartTime = (advancedSettingsJSON: string): { isValid: bo
     }
 };
 
-const hasCountdownWithStartTime = (advancedSettingsJSON: string): boolean => {
-    try {
-        const parsedJSON = JSON.parse(advancedSettingsJSON);
-        return parsedJSON.length > 0 && 
-               parsedJSON[0].action === "countdown" && 
-               parsedJSON[0].startTime;
-    } catch (err) {
-        return false;
-    }
-};
-
 const MultiplayerConfigScreen = () => {
     const { t, authToken, userUsername, userIsAdmin, currentLanguage, copyToClipboard, refreshNextChallenge } = useApp();
     const { selectedAtlas } = useGameSelector();
@@ -146,10 +135,12 @@ const MultiplayerConfigScreen = () => {
     const [recurrenceType, setRecurrenceType] = useState<"hour" | "day" | "week" | "month" | "year">("week");
     const [recurrenceInterval, setRecurrenceInterval] = useState<number>(1);
     
-    // Classic Challenge Creation Modal states
+    // Challenge Creation Modal states (unified)
     const [showClassicChallengeModal, setShowClassicChallengeModal] = useState<boolean>(false);
+    const [challengeModalType, setChallengeModalType] = useState<'classic' | 'realtime'>('classic');
+    const challengeTypeSwitcherRef = useRef<HTMLDivElement>(null);
+    const [challengeTypeSliderStyle, setChallengeTypeSliderStyle] = useState<React.CSSProperties>({ opacity: 0 });
     const [classicChallengeName, setClassicChallengeName] = useState<string>("");
-    //const [classicChallengeDescription, setClassicChallengeDescription] = useState<string>("");
     const [classicChallengeStartDate, setClassicChallengeStartDate] = useState<string>("");
     const [classicChallengeEndDate, setClassicChallengeEndDate] = useState<string>("");
     const [creatingClassicChallenge, setCreatingClassicChallenge] = useState<boolean>(false);
@@ -336,7 +327,10 @@ const MultiplayerConfigScreen = () => {
             socket.on('player-joined', (data: any) => {
                 consoleLog("verbose", `Player joined lobby: ${data.userName}`);
                 if (data.userName) {
-                    setLobbyUsers(prev => Array.from(new Set([...prev, data.userName])));
+                    setLobbyUsers(prev => {
+                        const updated = Array.from(new Set([...prev, data.userName]));
+                        return updated;
+                    });
                 }
             });
             socket.on('player-left', (data: any) => {
@@ -449,57 +443,87 @@ const MultiplayerConfigScreen = () => {
     }
 
     const handleSaveAsChallenge = async () => {
-        if (!showAdvancedSettings || !hasCountdownWithStartTime(advancedSettingsJSON)) {
-            setError("Challenge mode requires advanced settings with a scheduled countdown");
+        if (!classicChallengeName.trim()) {
+            setClassicChallengeError(t("challenge_name_required") || "Challenge name is required");
             return;
         }
 
-        const validation = validateCountdownStartTime(advancedSettingsJSON);
-        if (!validation.isValid) {
-            setError(validation.error || "Invalid countdown configuration");
+        if (!countdownStartTime) {
+            setClassicChallengeError(t("start_time_required") || "Start time is required");
+            return;
+        }
+
+        const startTime = new Date(countdownStartTime);
+        if (startTime <= new Date()) {
+            setClassicChallengeError(t("start_time_future") || "Start time must be in the future");
             return;
         }
 
         if (!socketRef.current || !socketRef.current.connected) {
-            setError("Not connected to server");
+            setClassicChallengeError("Not connected to server");
             return;
         }
 
         if (!sessionCode || !sessionToken) {
-            setError("Session information missing");
+            setClassicChallengeError("Session information missing");
             return;
         }
 
         setSaveAsChallengeLoading(true);
-        setError(null);
+        setClassicChallengeError(null);
 
-        const name = prompt(t("enter_challenge_name"));
-
-        // Prepare recurrence data if enabled
-        let recurrence = undefined;
-        if (enableRecurrence) {
-            recurrence = {
-                type: recurrenceType,
-                interval: recurrenceInterval
-            };
+        // Build commands from current parameters + startTime
+        const params = parametersRef.current;
+        let commands: any[];
+        if (params.commands && params.commands.length > 0) {
+            // Already has custom commands — just update the countdown startTime
+            commands = [...params.commands];
+            if (commands[0].action === 'countdown') {
+                commands[0] = { action: 'countdown', startTime: startTime.toISOString() };
+            } else {
+                commands.unshift({ action: 'countdown', startTime: startTime.toISOString() });
+            }
+        } else {
+            // Simple mode — generate commands from parameters
+            const durationPerRegion = params.durationPerRegion ?? DEFAULT_DURATION_PER_REGION;
+            commands = [
+                { action: 'countdown', startTime: startTime.toISOString() },
+                ...(params.atlas ? [{ action: 'load-atlas', atlas: params.atlas, duration: DEFAULT_LOAD_ATLAS_DURATION, blindMode: params.blindMode ?? false }] : []),
+                ...(params.atlas ? Array.from({ length: params.regionsNumber ?? 10 }, () => ({
+                    action: 'guess',
+                    duration: durationPerRegion,
+                })) : []),
+            ];
         }
 
-        try {
+        // Push updated parameters with commands to the server
+        const updatedParams = { ...params, commands };
+        parametersRef.current = updatedParams;
+        socketRef.current.emit('update-parameters', {
+            sessionCode,
+            sessionToken,
+            parameters: updatedParams
+        });
+
+        const recurrence = enableRecurrence ? { type: recurrenceType, interval: recurrenceInterval } : undefined;
+
+        // Wait one tick for the server to process update-parameters before saving
+        setTimeout(() => {
+            if (!socketRef.current || !socketRef.current.connected) {
+                setSaveAsChallengeLoading(false);
+                setClassicChallengeError("Lost connection to server");
+                return;
+            }
             socketRef.current.emit('save-as-realtime-challenge', {
                 sessionCode,
                 sessionToken,
                 userToken: authToken,
-                name: name || undefined,
+                name: classicChallengeName.trim(),
                 recurrent: recurrence
             });
-            
-            // Set flag to keep session alive when navigating to lobby
             shouldKeepSessionRef.current = true;
-        } catch (err) {
-            setSaveAsChallengeLoading(false);
-            setError('Failed to save challenge');
-            consoleLog("verbose", `Failed to save challenge: ${err}`);
-        }
+            setShowClassicChallengeModal(false);
+        }, 300);
     }
 
     const handleCreateClassicChallenge = async () => {
@@ -880,6 +904,7 @@ const MultiplayerConfigScreen = () => {
                             <label className="header-label">
                                 {t("loading_duration") || "Loading Duration"}:
                                 <input
+                                    className="adv-number-input"
                                     type="number"
                                     min={5}
                                     max={30}
@@ -905,7 +930,7 @@ const MultiplayerConfigScreen = () => {
                                 }}
                                 title={t("remove_atlas") || "Remove Atlas"}
                             >
-                                <i className="fas fa-trash"></i>
+                                <img src="/interface/trash.png" alt="Delete" style={{width: '16px', height: '16px'}} />
                             </button>
                         </div>
                     </div>
@@ -922,6 +947,7 @@ const MultiplayerConfigScreen = () => {
                                         <label className="block-label">
                                             {t("region_duration") || "Duration"}:&nbsp;
                                             <input
+                                                className="adv-number-input"
                                                 type="number"
                                                 min={5}
                                                 max={30}
@@ -930,7 +956,7 @@ const MultiplayerConfigScreen = () => {
                                             />
                                         </label>
                                         <button onClick={() => removeRegion(atlasIndex, regionIndex)} className="remove-block-button">
-                                            <i className="fas fa-trash"></i>
+                                            <img src="/interface/trash.png" alt="Delete" style={{width: '16px', height: '16px'}} />
                                         </button>
                                     </div>
                                 </div>
@@ -951,48 +977,50 @@ const MultiplayerConfigScreen = () => {
             <label htmlFor={`region-picker_${atlasIndex}`}>
                 {t("add_new_region") || "Add New Region"}
             </label>
-            <select
-            id={`region-picker_${atlasIndex}`}
-            className="region-picker"
-            value="" // Always reset to the blank option after a change
-            onChange={(e) => {
-                const newRegion = e.target.value;
-                if(newRegion === "") return;
-                // Update the JSON with the new region
-                try {
-                    const parsedJSON = JSON.parse(advancedSettingsJSON);
-                    const newRegionLine : {action: string, duration: number, regionId: number} = { 
-                        action: "guess", 
-                        duration: advancedDurationPerRegion || DEFAULT_DURATION_PER_REGION,
-                        regionId: 0
-                    }
-                    if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
-                    if(atlasIndex === -1){
-                        setAdvancedSettingsJSON(
-                            JSON.stringify([...parsedJSON, newRegionLine], null, 2)
-                        );
-                    } else {
-                        const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
-                        if(groupedByAtlas[atlasIndex]) {
-                            groupedByAtlas[atlasIndex].regions.push({regionId: newRegionLine.regionId, duration: newRegionLine.duration});
+            <div className="custom-select-wrapper">
+                <select
+                    id={`region-picker_${atlasIndex}`}
+                    className="region-picker custom-select"
+                    value="" // Always reset to the blank option after a change
+                    onChange={(e) => {
+                        const newRegion = e.target.value;
+                        if(newRegion === "") return;
+                        // Update the JSON with the new region
+                        try {
+                            const parsedJSON = JSON.parse(advancedSettingsJSON);
+                            const newRegionLine : {action: string, duration: number, regionId: number} = {
+                                action: "guess",
+                                duration: advancedDurationPerRegion || DEFAULT_DURATION_PER_REGION,
+                                regionId: 0
+                            }
+                            if(newRegion !== "random") newRegionLine.regionId = Number(newRegion)
+                            if(atlasIndex === -1){
+                                setAdvancedSettingsJSON(
+                                    JSON.stringify([...parsedJSON, newRegionLine], null, 2)
+                                );
+                            } else {
+                                const groupedByAtlas = parseJSONByAtlas(advancedSettingsJSON);
+                                if(groupedByAtlas[atlasIndex]) {
+                                    groupedByAtlas[atlasIndex].regions.push({regionId: newRegionLine.regionId, duration: newRegionLine.duration});
+                                }
+                                updateJSONFromGroupedData(groupedByAtlas);
+                            }
+                        } catch (err) {
+                            setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
                         }
-                        updateJSONFromGroupedData(groupedByAtlas);
-                    }
-                } catch (err) {
-                    setAdvancedSettingsError(t("invalid_json") || "Invalid JSON format");
-                }
-                e.target.value = "";
-                e.target.blur();
-            }}
-            >
-            <option value=""></option>
-            <option value="random">{t("random_region") || "Random Region"}</option>
-                {regionNames.filter((_, value) => value !== 0).map((key, value) => (
-                    <option value={value+1} key={"region_"+value}>
-                        {key}
-                    </option>
-                ))}
-            </select>
+                        e.target.value = "";
+                        e.target.blur();
+                    }}
+                >
+                    <option value=""></option>
+                    <option value="random">{t("random_region") || "Random Region"}</option>
+                    {regionNames.filter((_, value) => value !== 0).map((key, value) => (
+                        <option value={value+1} key={"region_"+value}>
+                            {key}
+                        </option>
+                    ))}
+                </select>
+            </div>
         </>)
     }
 
@@ -1001,88 +1029,101 @@ const MultiplayerConfigScreen = () => {
             <label htmlFor="atlas-picker" className="atlas-picker-header">
                 {t("add_atlas") || "Add Atlas"}
             </label>
-            <select
-                id="atlas-picker"
-                value={""}
-                className='atlas-picker'
-                onChange={addAtlas}
-            >
-                <option value="" key="atlas_blank"></option>
-                {atlasCategories.map((category) => (
-                    <optgroup label={t(category)} key={`category_${category}`}>
-                        {Object.entries(atlasFiles)
-                            .filter(([_key, atlas]) => atlas.atlas_category === category)
-                            .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
-                            .map(([key, atlas]) => (
-                            <option value={key} key={`atlas__${category}_${key}`}>
-                                {t(atlas.name)}
-                            </option>
-                            ))}
-                    </optgroup>
-                ))}
-            </select>
+            <div className="custom-select-wrapper">
+                <select
+                    id="atlas-picker"
+                    value={""}
+                    className='atlas-picker custom-select'
+                    onChange={addAtlas}
+                >
+                    <option value="" key="atlas_blank"></option>
+                    {atlasCategories.map((category) => (
+                        <optgroup label={t(category)} key={`category_${category}`}>
+                            {Object.entries(atlasFiles)
+                                .filter(([_key, atlas]) => atlas.atlas_category === category)
+                                .sort(([, a], [, b]) => (a.difficulty || 0) - (b.difficulty || 0))
+                                .map(([key, atlas]) => (
+                                <option value={key} key={`atlas__${category}_${key}`}>
+                                    {t(atlas.name)}
+                                </option>
+                                ))}
+                        </optgroup>
+                    ))}
+                </select>
+            </div>
         </>)
     }
 
     const renderAdvancedButtons = () => {
         return (<>
-            {advancedSettingsError && <div style={{ color: "red", marginBottom: "10px" }}>{advancedSettingsError}</div>}
+            {advancedSettingsError && <div style={{ color: "var(--error-color)", marginBottom: "10px", fontSize: '0.9rem' }}>{advancedSettingsError}</div>}
             <div className="advanced-settings-buttons">
-                {advancedMode === "code" && <button
-                    className="advanced-settings-validation"
-                    style={{backgroundColor:(isValidatedJSON?"#4caf50":"orange")}}
-                    onClick={() => {
-                        try {
-                            const parsedJSON = JSON.parse(advancedSettingsJSON);
-                            
-                            // Check if first command is countdown when there are commands
-                            if (parsedJSON.length > 0 && parsedJSON[0].action !== "countdown") {
-                                setAdvancedSettingsError(t("first_command_must_be_countdown") || "First command must be a countdown action");
-                                return;
+                {advancedMode === "code" && (
+                    <button
+                        className={`adv-icon-btn${isValidatedJSON ? " adv-icon-btn--success" : ""}`}
+                        onClick={() => {
+                            try {
+                                const parsedJSON = JSON.parse(advancedSettingsJSON);
+                                if (parsedJSON.length > 0 && parsedJSON[0].action !== "countdown") {
+                                    setAdvancedSettingsError(t("first_command_must_be_countdown") || "First command must be a countdown action");
+                                    return;
+                                }
+                                const success = validateExternalGameCommands(parsedJSON);
+                                if (!success) {
+                                    setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
+                                    return;
+                                }
+                                setAdvancedSettingsError(null);
+                                updateParameters({ commands: parsedJSON });
+                            } catch (err) {
+                                setAdvancedSettingsError(String(err) || t("invalid_json"));
                             }
-                            
-                            // Validate the JSON structure
-                            const success = validateExternalGameCommands(parsedJSON);
-                            if (!success) {
-                                setAdvancedSettingsError(t("invalid_json_structure") || "Invalid JSON structure");
-                                return;
-                            }
-                            setAdvancedSettingsError(null);
-                            updateParameters({ commands: parsedJSON }); // Send the validated JSON to the server
-                        } catch (err) {
-                            setAdvancedSettingsError(String(err) || t("invalid_json"));
-                        }
-                    }}
+                        }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>{t("validate_settings") || "Valider"}</span>
+                    </button>
+                )}
+                <button
+                    className={`adv-icon-btn${!isValidatedJSON ? " adv-icon-btn--disabled" : isSavedAdvanced ? " adv-icon-btn--success" : ""}`}
+                    disabled={!isValidatedJSON}
+                    onClick={isValidatedJSON ? handleSaveAdvancedSettings : () => {}}
                 >
-                {t("validate_settings") || "Validate Settings"}
-                </button>}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    <span>{t("save") || "Sauvegarder"}</span>
+                </button>
                 <button
-                    style={{backgroundColor:(isValidatedJSON?(isSavedAdvanced?"#4caf50":"#21669f"):"#6665"), 
-                        cursor:(isValidatedJSON?(isSavedAdvanced?"not-allowed":"pointer"):"not-allowed")}}
+                    className={`adv-icon-btn adv-icon-btn--toggle${!isValidatedJSON ? " adv-icon-btn--disabled" : ""}`}
                     disabled={!isValidatedJSON}
-                    onClick={isValidatedJSON?handleSaveAdvancedSettings:()=>{}}
-                    >💾</button>
-                <button
-                    style={{backgroundColor:(isValidatedJSON?"#21669f":"#6665"), 
-                        cursor:(isValidatedJSON?(isSavedAdvanced?"not-allowed":"pointer"):"not-allowed")}}
-                    disabled={!isValidatedJSON}
-                    onClick={()=>{setAdvancedMode(advancedMode === "ui" ? "code" : "ui")}}
-                    >{
-                        advancedMode === "ui" ? 
-                        <i className="fas fa-code"></i> :
-                        <i className="fas fa-desktop"></i>
-                    }</button>
+                    onClick={() => setAdvancedMode(advancedMode === "ui" ? "code" : "ui")}
+                >
+                    <img
+                        src={advancedMode === "ui" ? "/interface/code.png" : "/interface/desktop.png"}
+                        alt={advancedMode === "ui" ? "Code" : "UI"}
+                        style={{ width: '16px', height: '16px' }}
+                    />
+                    <span>{advancedMode === "ui" ? "Code" : "UI"}</span>
+                </button>
             </div>
-            <div className="mode-buttons">
-                <label>
+            <div className="blind-mode-container" style={{ marginTop: 8 }}>
+                <label className="blind-mode-label" htmlFor="public-lobby-checkbox-adv">
                     <input
+                        id="public-lobby-checkbox-adv"
                         type="checkbox"
                         checked={isPublic}
-                        onChange={(e) => { setIsPublic(e.target.checked); 
-                            updateParameters({public: e.target.checked})}}
-                        style={{ marginRight: 8 }}
+                        onChange={(e) => { setIsPublic(e.target.checked); updateParameters({public: e.target.checked}) }}
+                        style={{ marginRight: "10px", cursor: "pointer" }}
                     />
-                    {t('public_lobby') || 'Public lobby (show in list)'}
+                    <span>{t('public_lobby') || 'Public mode'}</span>
+                    <div className="blind-mode-description">
+                        {t('public_lobby_description') || 'This game will appear in the public lobby list and anyone can join.'}
+                    </div>
                 </label>
             </div>
         </>)
@@ -1363,25 +1404,27 @@ const MultiplayerConfigScreen = () => {
 
     const renderPresetPicker = () => {
         return (
-            <select
-                id="preset-picker"
-                className="preset-picker"
-                value=""
-                onChange={(e) => {
-                    const selectedPreset = advancedPresets.find(preset => preset.id === Number(e.target.value));
-                    if (selectedPreset) {
-                        updateCountdownDuration(DEFAULT_COUNTDOWN_TIME, selectedPreset.settings);
-                        setIsValidatedJSON(true); // Reset validation state
-                    }
-                }}
-            >
-                <option value="" key="preset_blank">{t("select_preset") || "Select a preset..."}</option>
-                {advancedPresets.map(preset => (
-                    <option value={preset.id} key={`preset_${preset.id}`}>
-                        {preset.name}
-                    </option>
-                ))}
-            </select>
+            <div className="custom-select-wrapper">
+                <select
+                    id="preset-picker"
+                    className="preset-picker custom-select"
+                    value=""
+                    onChange={(e) => {
+                        const selectedPreset = advancedPresets.find(preset => preset.id === Number(e.target.value));
+                        if (selectedPreset) {
+                            updateCountdownDuration(DEFAULT_COUNTDOWN_TIME, selectedPreset.settings);
+                            setIsValidatedJSON(true); // Reset validation state
+                        }
+                    }}
+                >
+                    <option value="" key="preset_blank">{t("select_preset") || "Select a preset..."}</option>
+                    {advancedPresets.map(preset => (
+                        <option value={preset.id} key={`preset_${preset.id}`}>
+                            {preset.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
         );
     };
 
@@ -1411,87 +1454,67 @@ const MultiplayerConfigScreen = () => {
         const { start, end } = getDefaultClassicChallengeDates();
         setClassicChallengeStartDate(start);
         setClassicChallengeEndDate(end);
+        setChallengeModalType('classic');
+        setClassicChallengeName('');
+        setClassicChallengeError(null);
         setShowClassicChallengeModal(true);
     };
 
-    const changeCodeWidget = () => {
-        return (
-            <div style={{ marginTop: 20, padding: 15, border: '2px solid #21669f', borderRadius: 5, backgroundColor: '#f0f8ff' }}>
-                <h3 style={{ color: '#21669f', marginBottom: 10 }}>{t("admin_change_session_code")}</h3>
-                <p style={{ fontSize: 14, marginBottom: 10, color: '#666' }}>
-                    {t("change_code_description")} 
-                </p>
-                {!showChangeCodeInput ? (
-                    <button 
-                        onClick={() => setShowChangeCodeInput(true)}
-                        style={{ 
-                            backgroundColor: '#21669f', 
-                            color: 'white', 
-                            padding: '8px 16px', 
-                            border: 'none', 
-                            borderRadius: 4, 
-                            cursor: 'pointer' 
-                        }}
-                    >
-                        {t("change_session_code")}
-                    </button>
-                ) : (
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <input
-                            type="text"
-                            placeholder={t("enter_new_code")}
-                            value={newCodeInput}
-                            onChange={(e) => setNewCodeInput(e.target.value)}
-                            maxLength={8}
-                            style={{ 
-                                padding: '8px 12px', 
-                                border: '1px solid #ccc', 
-                                borderRadius: 4, 
-                                fontSize: 16,
-                                fontFamily: 'monospace',
-                                letterSpacing: 2
-                            }}
-                        />
-                        <button 
-                            onClick={changeSessionCode}
-                            disabled={changeCodeLoading}
-                            style={{ 
-                                backgroundColor: '#28a745', 
-                                color: 'white', 
-                                padding: '8px 16px', 
-                                border: 'none', 
-                                borderRadius: 4, 
-                                cursor: changeCodeLoading ? 'not-allowed' : 'pointer',
-                                opacity: changeCodeLoading ? 0.6 : 1
-                            }}
-                        >
-                            {changeCodeLoading ? t("changing") : t("change")}
-                        </button>
-                    </div>
-                )}
-            </div>
-        )
-    }
+    // Slider for challenge type switcher (clone du lang-switcher)
+    useEffect(() => {
+        if (!challengeTypeSwitcherRef.current) return;
+        const activeBtn = challengeTypeSwitcherRef.current.querySelector('.challenge-type-btn.active') as HTMLElement;
+        if (!activeBtn) return;
+        const containerRect = challengeTypeSwitcherRef.current.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        setChallengeTypeSliderStyle({
+            left: btnRect.left - containerRect.left,
+            width: btnRect.width,
+            opacity: 1,
+        });
+    }, [challengeModalType, showClassicChallengeModal]);
 
     return (
-        <div className="page-container">
+        <div className="mc-page">
             <title>NeuroGuessr - Create multiplayer game</title>
-            {!sessionCode && (
-                <div>
-                    <div>Creating multiplayer session...</div>
+
+            {!authToken && (
+                <div className="mc-not-logged-in">
+                    <div style={{ fontSize: '1.1rem', marginBottom: '16px' }}>
+                        {t("multi_unavailable_login") ? (
+                            <div dangerouslySetInnerHTML={{__html: t("multi_unavailable_login").replace('/login?returnURL=%2Fwelcome%2Fmultiplayer-create', `/login?returnURL=${encodeURIComponent('/welcome/multiplayer-create')}`)}} />
+                        ) : (
+                            <>Please <a href={`/login?returnURL=${encodeURIComponent('/welcome/multiplayer-create')}`}>log in</a> to create a multiplayer game</>
+                        )}
+                    </div>
                 </div>
             )}
+
+            {authToken && !sessionCode && (
+                <div className="mc-loading">
+                    <div className="mc-loading-dot" /><div className="mc-loading-dot" /><div className="mc-loading-dot" />
+                </div>
+            )}
+
             {sessionCode && !challengeSavedSuccessfully && (
-                <div style={{ marginTop: 24 }}>
-                    <div style={{display:"flex", flexDirection:"row", alignItems:"flex-start", justifyContent:"space-between"}}>
-                    </div>
-                    <div id="single-player-options" className="single-player-options-container">
-                        {!showAdvancedSettings && <><section className="atlas-selection">
-                            <h2><img src="/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("select_atlas")}</span></h2>
-                            <GameSelectorAtlas />
-                        </section>
-                        <section className="mode-selection">
-                            <h2><img src="/interface/numero-2.png" alt="Parameters Icon" /> <span>{t("select_params")}</span></h2>
+                <div className="mc-layout">
+                    {error && <div className="mc-error">{error}</div>}
+
+                    {/* ── LEFT COLUMN : Atlas selector + Settings ── */}
+                    <div className="mc-left">
+                        <div className="mc-section-label">{t("select_region_family")}</div>
+                        <GameSelectorAtlas />
+
+                        {/* Config card */}
+                        <div className="mc-section-label" style={{marginTop: 16}}>{t("game_settings") || "Paramètres"}</div>
+                        <div className="mc-card">
+
+                        {!showAdvancedSettings && <section className="mode-selection">
+                            <div className={`default-atlas-badge ${selectedAtlas ? "atlas-selected" : "atlas-missing"}`}>
+                                {selectedAtlas
+                                    ? `${t("selected_atlas_label") || "Atlas"} : ${atlasFiles[selectedAtlas]?.name || selectedAtlas}`
+                                    : (t("please_select_atlas") || "Please select an atlas above")}
+                            </div>
                             <div className="mode-buttons">
                                 <label htmlFor="numRegionsSlider" style={{ fontSize: 18, marginRight: 12 }}>
                                     {t("number_regions")} <b>{numRegions}</b>
@@ -1536,25 +1559,25 @@ const MultiplayerConfigScreen = () => {
                                         data-umami-event-blind-mode-state={blindMode ? "on" : "off"}
                                     />
                                     <span>{t("blind_mode") || "Blind Mode"}</span>
-                                    <div className="blind-mode-description" style={{
-                                        fontSize: "0.9rem",
-                                        color: "#666",
-                                        marginLeft: "10px"
-                                    }}>
+                                    <div className="blind-mode-description">
                                         {t("blind_mode_description") || "No region highlighting. Challenge yourself for 1.5x points!"}
                                     </div>
                                 </label>
-                                
+
                             </div>
-                            <div className="mode-buttons">
-                                <label>
+                            <div className="blind-mode-container">
+                                <label className="blind-mode-label" htmlFor="public-lobby-checkbox">
                                     <input
+                                        id="public-lobby-checkbox"
                                         type="checkbox"
                                         checked={isPublic}
                                         onChange={(e) => { setIsPublic(e.target.checked); updateParameters({public: e.target.checked})}}
-                                        style={{ marginRight: 8 }}
+                                        style={{ marginRight: "10px", cursor: "pointer" }}
                                     />
-                                    {t('public_lobby') || 'Public lobby (show in list)'}
+                                    <span>{t('public_lobby') || 'Public mode'}</span>
+                                    <div className="blind-mode-description">
+                                        {t('public_lobby_description') || 'This game will appear in the public lobby list and anyone can join.'}
+                                    </div>
                                 </label>
                             </div>
                             {false && "FOR v2" && <div className="mode-buttons">
@@ -1572,13 +1595,13 @@ const MultiplayerConfigScreen = () => {
                                     {t("gameover_first_error")}
                                 </label>
                             </div>}
-                            {<button
+                            <button
                                 className="advanced-settings-show"
                                 onClick={() => { handleShowAdvancedBox() }}
                             >
                                 {t("show_advanced_settings")}
-                            </button>}
-                        </section></>}
+                            </button>
+                        </section>}
                         {showAdvancedSettings && advancedMode === "ui" && (
                             <div className="advanced-settings-ui">
                                 <div className="advanced-settings-header">
@@ -1587,33 +1610,11 @@ const MultiplayerConfigScreen = () => {
                                 </div>
                                 <div className="atlas-block">
                                     <div className='atlas-picker-ui' key="countdown-config">
-                                    <div style={{ display: 'flex', flexDirection: 'row'}}>
-                                        <label style={{ marginRight: '10px' }}>
-                                            {t("countdown_mode") || "Countdown Mode"}:
+                                        <label style={{ marginRight: '0px' }}>
+                                            {t("countdown_duration") || "Countdown Duration (seconds)"}:
                                         </label>
-                                        <select
-                                            value={countdownMode}
-                                            onChange={(e) => {
-                                                const newMode = e.target.value as "duration" | "startTime";
-                                                setCountdownMode(newMode);
-                                                if (newMode === "duration") {
-                                                    updateCountdownDuration(getCountdownDuration() || DEFAULT_COUNTDOWN_TIME);
-                                                } else {
-                                                    const defaultTime = new Date();
-                                                    defaultTime.setMinutes(defaultTime.getMinutes() + 5);
-                                                    const localString = convertToLocale(defaultTime);
-                                                    setCountdownStartTime(localString);
-                                                    updateCountdownStartTime(new Date(localString).toISOString());
-                                                }
-                                            }}
-                                            style={{ marginRight: '15px' }}
-                                        >
-                                            <option value="duration">{t("countdown_duration") || "Duration (seconds)"}</option>
-                                            <option value="startTime">{t("countdown_start_time") || "Specific Start Time"}</option>
-                                        </select>
-                                    </div>
-                                    {countdownMode === "duration" ? (
                                         <input
+                                            className="adv-number-input"
                                             type="number"
                                             min={5}
                                             max={30}
@@ -1622,29 +1623,15 @@ const MultiplayerConfigScreen = () => {
                                             onClick={(e) => { e.stopPropagation(); }}
                                             placeholder={t("seconds") || "seconds"}
                                         />
-                                    ) : (
-                                        <input
-                                            type="datetime-local"
-                                            value={countdownStartTime}
-                                            onChange={(e) => {
-                                                const localValue = e.target.value;
-                                                const isoString = new Date(localValue).toISOString();
-                                                setCountdownStartTime(localValue);
-                                                updateCountdownStartTime(isoString);
-                                            }}
-                                            onClick={(e) => { e.stopPropagation(); }}
-                                            min={new Date().toISOString().slice(0, 19)}
-                                        />
-                                    )}
-                                </div>
+                                    </div>
                                     {renderAtlasBlocks()}
                                     <div className='atlas-picker-ui' key="atlas-picker">
                                         {renderAtlasPicker()}
                                         {totalDuration > 0 && <div className="total-duration">
                                             <label htmlFor="total-duration">{t("total_duration") || "Total Duration"}:</label>&nbsp;
                                             <span id="total-duration">
-                                                {Math.floor(totalDuration / 60) > 0 ? 
-                                                    `${Math.floor(totalDuration / 60)} ${t("min") || "min"} ${totalDuration % 60} ${totalDuration < 60 ? t("sec") : ""}` : 
+                                                {Math.floor(totalDuration / 60) > 0 ?
+                                                    `${Math.floor(totalDuration / 60)} ${t("min") || "min"} ${totalDuration % 60} ${totalDuration < 60 ? t("sec") : ""}` :
                                                     `${totalDuration} ${t("sec")}`}
                                             </span>
                                         </div>}
@@ -1653,7 +1640,7 @@ const MultiplayerConfigScreen = () => {
                                 {renderAdvancedButtons()}
                             </div>
                         )}
-                        {showAdvancedSettings  && advancedMode === "code" && (<div className="advanced-settings-overall">
+                        {showAdvancedSettings && advancedMode === "code" && (<div className="advanced-settings-overall">
                             <div className="advanced-settings-header">
                                 <h3>{t("advanced_settings") || "Advanced Multiplayer Settings"}</h3>
                                 { renderPresetPicker() }
@@ -1692,334 +1679,326 @@ const MultiplayerConfigScreen = () => {
                                 </div>
                             </div>
                         </div>)}
+
+                        </div>
                     </div>
-                    {error && <div style={{ color: 'red', textAlign: 'center', display: 'block' }}>{error}</div>}
-                    <div id="single-player-options" className="single-player-options-container">
+
+                    {/* ── RIGHT COLUMN : Lobby ── */}
+                    <div className="mc-right">
+                        <div className="mc-section-label">{t("lobby") || "Lobby"}</div>
+                        {/* Lobby card */}
+                        <div className="mc-card mc-card--lobby">
                         <section className="lobby-wait">
-                            <h2><img src="/interface/numero-1.png" alt="Atlas Icon" /> <span>{t("wait_players_in_lobby")}</span></h2>
-                            {renderQRCodeContainer({})}
-                            {userIsAdmin && changeCodeWidget()}
-                        </section>
-                        <div className='lobby-and-buttons-container'>
-                            <h3>{t("players_in_lobby")}</h3>
-                            <ul style={{ fontSize: 20, listStyle: 'none', padding: 0 }}>
-                                {lobbyUsers.map(u => <li key={u}>{u}</li>)}
-                            </ul>
-                            <button
-                                className={(((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON)) || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
-                                data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
-                                data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
-                                data-umami-event-start-multi-lobbysize={lobbyUsers.length}
-                                onClick={()=>{
-                                    if(!loading && (selectedAtlas || (showAdvancedSettings && isValidatedJSON)) && lobbyUsers.length > 1){
-                                        // Additional validation for countdown start time before starting game
-                                        if (showAdvancedSettings) {
-                                            const validation = validateCountdownStartTime(advancedSettingsJSON);
-                                            if (!validation.isValid) {
-                                                setError(validation.error || "Invalid countdown configuration");
-                                                return;
-                                            }
-                                        }
-                                        // Set flag to keep session alive when navigating to lobby
-                                        shouldKeepSessionRef.current = true;
-                                        navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
-                                    } else {
-                                        // Set flag to keep session alive when navigating to lobby
-                                        shouldKeepSessionRef.current = true;
-                                        navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
-                                    } 
-                                }}
-                            >
-                                {t("start_game_button")}
-                            </button>
-
-                            {/* Save as Challenge button - only show if user is admin, advanced mode with countdown startTime */}
-                            {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
-                                <button
-                                    className={saveAsChallengeLoading ? "play-button disabled" : "play-button enabled"}
-                                    style={{ marginTop: '10px', backgroundColor: saveAsChallengeLoading ? '#bb9385ff' : '#ff6b35' }}
-                                    disabled={saveAsChallengeLoading}
-                                    onClick={handleSaveAsChallenge}
-                                >
-                                    {saveAsChallengeLoading ? t("saving-in-progress") : t("save-as-realtime-challenge")}
-                                </button>
-                            )}
-
-                            {/* Create Classic Challenge button - only show if user is admin */}
-                            {userIsAdmin && (
-                                <button
-                                    className={((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON))?"play-button disabled":"play-button enabled"}
-                                    style={{ marginTop: '10px', backgroundColor: !((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON)) ? '#28a745' : undefined }}
-                                    onClick={handleOpenClassicChallengeModal}
-                                >
-                                    {t("create_classic_challenge") || "Create Classic Challenge"}
-                                </button>
-                            )}
-
-                            {/* Recurrence settings - only show for admin with advanced settings and countdown startTime */}
-                            {userIsAdmin && showAdvancedSettings && hasCountdownWithStartTime(advancedSettingsJSON) && (
-                                <div style={{ marginTop: '15px', padding: '15px', border: '2px solid #ff6b35', borderRadius: '8px', backgroundColor: '#fff5f2' }}>
-                                    <h4 style={{ margin: '0 0 10px 0', color: '#ff6b35' }}>
-                                        {t("recurrence_settings") || "Recurrence Settings"}
-                                    </h4>
-                                    
-                                    <div style={{ marginBottom: '10px' }}>
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={enableRecurrence}
-                                                onChange={(e) => setEnableRecurrence(e.target.checked)}
-                                                style={{ marginRight: 8 }}
-                                            />
-                                            {t("enable_recurrence") || "Enable automatic recurrence"}
-                                        </label>
+                            <div className="lobby-wait-inner">
+                                <div className="lobby-qr-section">
+                                    <div className="lobby-code-display">
+                                        {sessionCode}
+                                        <button
+                                            className={`lobby-code-copy-btn${copiedIcon === "code" ? " copied" : ""}`}
+                                            title="Copy game code"
+                                            data-umami-event="copy game code button"
+                                            onClick={() => {
+                                                if (sessionCode && sessionToken) {
+                                                    copyToClipboard(sessionCode);
+                                                    setCopiedIcon("code");
+                                                    setTimeout(() => setCopiedIcon(null), 1000);
+                                                }
+                                            }}
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            className={`lobby-code-copy-btn${copiedIcon === "link" ? " copied" : ""}`}
+                                            title="Copy game link"
+                                            data-umami-event="copy game link button"
+                                            onClick={() => {
+                                                if (sessionCode && sessionToken) {
+                                                    const url = `${window.location.origin}/multiplayer/${sessionCode}`;
+                                                    copyToClipboard(url);
+                                                    setCopiedIcon("link");
+                                                    setTimeout(() => setCopiedIcon(null), 1000);
+                                                }
+                                            }}
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0l-1.41-1.41" />
+                                                <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0l1.41-1.41" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                    
-                                    {enableRecurrence && (
-                                        <div style={{ marginLeft: '20px' }}>
-                                            <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <label>{t("repeat_every") || "Repeat every"}:</label>
-                                                <input
-                                                    type="number"
-                                                    min={1}
-                                                    max={10}
-                                                    value={recurrenceInterval}
-                                                    onChange={(e) => setRecurrenceInterval(Number(e.target.value))}
-                                                    style={{ width: '60px', padding: '4px' }}
-                                                />
-                                                <select
-                                                    value={recurrenceType}
-                                                    onChange={(e) => setRecurrenceType(e.target.value as "hour" | "day" | "week" | "month" | "year")}
-                                                    style={{ padding: '4px' }}
-                                                >
-                                                    <option value="hour">{t("hours") || "hour(s)"}</option>
-                                                    <option value="day">{t("days") || "day(s)"}</option>
-                                                    <option value="week">{t("weeks") || "week(s)"}</option>
-                                                    <option value="month">{t("months") || "month(s)"}</option>
-                                                    <option value="year">{t("years") || "year(s)"}</option>
-                                                </select>
-                                            </div>
-                                            <div style={{ fontSize: '0.9em', color: '#666', fontStyle: 'italic' }}>
-                                                {t("recurrence_description") || "The challenge will automatically restart with the same configuration at the specified interval."}
-                                            </div>
+                                    <QRCodeSVG
+                                        value={`${window.location.origin}/multiplayer/${sessionCode}`}
+                                        bgColor="#00000000"
+                                        fgColor="#FFFFFF"
+                                        size={120}
+                                    />
+                                    <div className="lobby-code-label">{t("game_code")}</div>
+                                </div>
+                                <div className="lobby-players-section">
+                                    <h3>{t("players_in_lobby")}</h3>
+                                    <ul className="lobby-players-list">
+                                        {lobbyUsers.map(u => (
+                                            <li key={u} className="lobby-player-item">
+                                                <span className="lobby-player-dot"></span>
+                                                {u}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {lobbyUsers.length <= 1 && (
+                                        <p className="lobby-waiting-hint">{t("waiting_for_players") || "Waiting for other players to join..."}</p>
+                                    )}
+                                    {userIsAdmin && (
+                                        <div className="admin-change-code-widget">
+                                            <h3>{t("admin_change_session_code")}</h3>
+                                            <p>{t("change_code_description")}</p>
+                                            {!showChangeCodeInput ? (
+                                                <button className="play-button enabled" style={{width:'auto', padding:'6px 16px', fontSize:'0.85rem'}} onClick={() => setShowChangeCodeInput(true)}>
+                                                    {t("change_session_code")}
+                                                </button>
+                                            ) : (
+                                                <div className="admin-code-input-row">
+                                                    <input
+                                                        type="text"
+                                                        className="admin-code-input"
+                                                        placeholder={t("enter_new_code")}
+                                                        value={newCodeInput}
+                                                        onChange={(e) => setNewCodeInput(e.target.value)}
+                                                        maxLength={8}
+                                                    />
+                                                    <button
+                                                        className={changeCodeLoading ? "play-button disabled" : "play-button enabled"}
+                                                        style={{width:'auto', padding:'6px 16px', fontSize:'0.85rem'}}
+                                                        onClick={changeSessionCode}
+                                                        disabled={changeCodeLoading}
+                                                    >
+                                                        {changeCodeLoading ? t("changing") : t("change")}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {/* Challenge Success UI - Show only QR code with success message */}
-            {sessionCode && challengeSavedSuccessfully && (
-                <div style={{ marginTop: 24, textAlign: 'center' }}>
-                    <div style={{ 
-                        backgroundColor: '#4caf50', 
-                        color: 'white', 
-                        padding: '20px', 
-                        borderRadius: '10px', 
-                        marginBottom: '20px',
-                        fontSize: '24px',
-                        fontWeight: 'bold'
-                    }}>
-                        ✅ {lastCreatedChallengeType === 'classic' 
-                            ? (t("classic_challenge_created_successfully") || "Classic Challenge Created Successfully!")
-                            : (t("challenge_saved_successfully") || "Challenge Saved Successfully!")
-                        }
-                    </div>
-                    
-                    <div style={{ 
-                        backgroundColor: '#f0f0f0', 
-                        padding: '20px', 
-                        borderRadius: '10px',
-                        color: '#333'
-                    }}>
-                        {renderQRCodeContainer({ qrCodeColor: "#333", textColor: "#333", showDescription: lastCreatedChallengeType === 'realtime' })}
-                        {lastCreatedChallengeType === 'classic'&& (
-                            <div>
-                                <div style={{ 
-                                    backgroundColor: '#e8f5e8', 
-                                    padding: '15px', 
-                                    borderRadius: '8px',
-                                    marginBottom: '15px',
-                                    border: '1px solid #28a745'
-                                }}>
-                                    <strong>{t("challenge_details") || "Challenge Details:"}</strong>
-                                    <br />
-                                    <span style={{ color: '#666' }}>
-                                        {t("name") || "Name"}: {lastCreatedClassicChallenge?.name || 'N/A'}
-                                        <br />
-                                        {t("start_date") || "Start"}: {lastCreatedClassicChallenge?.startDate ? new Date(lastCreatedClassicChallenge.startDate).toLocaleString() : 'N/A'}
-                                        <br />
-                                        {t("end_date") || "End"}: {lastCreatedClassicChallenge?.endDate ? new Date(lastCreatedClassicChallenge.endDate).toLocaleString() : 'N/A'}
-                                    </span>
-                                </div>
                             </div>
-                        )}
-                        {userIsAdmin && changeCodeWidget()}
+                            <div className="lobby-start-section">
+                                <button
+                                    className={(((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON)) || lobbyUsers.length <= 1)?"play-button disabled":"play-button enabled"}
+                                    data-umami-event="start multiplayer button" data-umami-event-start-multi-altas={selectedAtlas}
+                                    data-umami-event-start-multi-effective={!loading && selectedAtlas && lobbyUsers.length > 1}
+                                    data-umami-event-start-multi-lobbysize={lobbyUsers.length}
+                                    onClick={()=>{
+                                        if(!loading && (selectedAtlas || (showAdvancedSettings && isValidatedJSON)) && lobbyUsers.length > 1){
+                                            if (showAdvancedSettings) {
+                                                const validation = validateCountdownStartTime(advancedSettingsJSON);
+                                                if (!validation.isValid) {
+                                                    setError(validation.error || "Invalid countdown configuration");
+                                                    return;
+                                                }
+                                            }
+                                            shouldKeepSessionRef.current = true;
+                                            navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
+                                        } else {
+                                            shouldKeepSessionRef.current = true;
+                                            navigate(`/multiplayer/${sessionCode}/${sessionToken}`)
+                                        }
+                                    }}
+                                >
+                                    {t("start_game_button")}
+                                </button>
+
+                                {userIsAdmin && (
+                                    <button
+                                        className={((!showAdvancedSettings && selectedAtlas=="") || (showAdvancedSettings && !isValidatedJSON))?"play-button disabled":"play-button admin-green enabled"}
+                                        onClick={handleOpenClassicChallengeModal}
+                                    >
+                                        {t("create_challenge") || "Create Challenge"}
+                                    </button>
+                                )}
+                            </div>
+                        </section>
+                        </div>
+
                     </div>
                 </div>
             )}
 
-            {/* Classic Challenge Creation Modal */}
-            {showClassicChallengeModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000
-                }}>
-                    <div style={{
-                        backgroundColor: 'black',
-                        padding: '30px',
-                        borderRadius: '10px',
-                        maxWidth: '500px',
-                        width: '90%',
-                        maxHeight: '80vh',
-                        overflow: 'auto'
-                    }}>
-                        <h2 style={{ marginTop: 0, color: '#21669f' }}>
-                            {t("create_classic_challenge") || "Create Classic Challenge"}
-                        </h2>
-                        
-                        {classicChallengeError && (
-                            <div style={{
-                                color: 'red',
-                                backgroundColor: '#ffebee',
-                                border: '1px solid #f44336',
-                                borderRadius: '4px',
-                                padding: '10px',
-                                marginBottom: '20px',
-                                fontSize: '14px'
-                            }}>
-                                {classicChallengeError}
+            {/* Challenge Success UI */}
+            {sessionCode && challengeSavedSuccessfully && (
+                <div className="challenge-success-page">
+                    <div className="challenge-success-icon">✓</div>
+                    <p className="challenge-success-title">
+                        {lastCreatedChallengeType === 'classic'
+                            ? (t("classic_challenge_created_successfully") || "Classic Challenge Created Successfully!")
+                            : (t("challenge_saved_successfully") || "Challenge Saved Successfully!")
+                        }
+                    </p>
+                    <div className="challenge-success-body">
+                        {lastCreatedChallengeType === 'classic' && lastCreatedClassicChallenge && (
+                            <div className="challenge-details-card">
+                                <div className="challenge-detail-row">
+                                    <span className="challenge-detail-label">{t("challenge_name") || "Nom"}</span>
+                                    <span className="challenge-detail-value">{lastCreatedClassicChallenge.name}</span>
+                                </div>
+                                <div className="challenge-detail-row">
+                                    <span className="challenge-detail-label">{t("start_date") || "Début"}</span>
+                                    <span className="challenge-detail-value">{new Date(lastCreatedClassicChallenge.startDate).toLocaleString()}</span>
+                                </div>
+                                <div className="challenge-detail-row">
+                                    <span className="challenge-detail-label">{t("end_date") || "Fin"}</span>
+                                    <span className="challenge-detail-value">{new Date(lastCreatedClassicChallenge.endDate).toLocaleString()}</span>
+                                </div>
+                                <div className="challenge-detail-row">
+                                    <span className="challenge-detail-label">{t("game_code") || "Code"}</span>
+                                    <span className="challenge-detail-value challenge-detail-code">{sessionCode}</span>
+                                </div>
                             </div>
                         )}
-                        
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                {t("challenge_name") || "Challenge Name"} *
-                            </label>
+                        <QRCodeSVG
+                            value={`${window.location.origin}/multiplayer/${sessionCode}`}
+                            bgColor="#00000000"
+                            fgColor="#FFFFFF"
+                            size={120}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Unified Challenge Creation Modal */}
+            {showClassicChallengeModal && (
+                <div className="challenge-modal-overlay" onClick={() => { setShowClassicChallengeModal(false); setClassicChallengeError(null); }}>
+                    <div className="challenge-modal" onClick={(e) => e.stopPropagation()}>
+                        <h2>{t("create_challenge") || "Create Challenge"}</h2>
+
+                        {/* Type selector — clone du lang-switcher */}
+                        <div className="challenge-type-switcher" ref={challengeTypeSwitcherRef}>
+                            <div className="challenge-type-slider" style={challengeTypeSliderStyle} />
+                            <button
+                                className={`challenge-type-btn ${challengeModalType === 'classic' ? 'active' : ''}`}
+                                onClick={() => setChallengeModalType('classic')}
+                                disabled={creatingClassicChallenge || saveAsChallengeLoading}
+                            >
+                                {t("classic_challenge") || "Classique"}
+                            </button>
+                            <button
+                                className={`challenge-type-btn ${challengeModalType === 'realtime' ? 'active' : ''}`}
+                                onClick={() => setChallengeModalType('realtime')}
+                                disabled={creatingClassicChallenge || saveAsChallengeLoading}
+                            >
+                                {t("realtime_challenge") || "Temps réel"}
+                            </button>
+                        </div>
+
+                        {classicChallengeError && (
+                            <div className="challenge-error">{classicChallengeError}</div>
+                        )}
+
+                        {/* Name — common to both */}
+                        <div className="challenge-modal-field">
+                            <label>{t("challenge_name") || "Challenge Name"} *</label>
                             <input
                                 type="text"
                                 value={classicChallengeName}
                                 onChange={(e) => setClassicChallengeName(e.target.value)}
                                 placeholder={t("enter_challenge_name") || "Enter challenge name"}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '16px'
-                                }}
-                                disabled={creatingClassicChallenge}
+                                disabled={creatingClassicChallenge || saveAsChallengeLoading}
                             />
                         </div>
 
-                        {/*<div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                {t("description") || "Description"}
-                            </label>
-                            <textarea
-                                value={classicChallengeDescription}
-                                onChange={(e) => setClassicChallengeDescription(e.target.value)}
-                                placeholder={t("enter_challenge_description") || "Enter challenge description (optional)"}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '16px',
-                                    minHeight: '80px',
-                                    resize: 'vertical'
-                                }}
-                                disabled={creatingClassicChallenge}
-                            />
-                        </div>*/}
+                        {/* Classic fields */}
+                        {challengeModalType === 'classic' && (<>
+                            <div className="challenge-modal-field">
+                                <label>{t("start_date") || "Start Date"} *</label>
+                                <input
+                                    type="datetime-local"
+                                    value={classicChallengeStartDate}
+                                    onChange={(e) => setClassicChallengeStartDate(e.target.value)}
+                                    min={new Date().toISOString().slice(0, 19)}
+                                    disabled={creatingClassicChallenge}
+                                />
+                            </div>
+                            <div className="challenge-modal-field">
+                                <label>{t("end_date") || "End Date"} *</label>
+                                <input
+                                    type="datetime-local"
+                                    value={classicChallengeEndDate}
+                                    onChange={(e) => setClassicChallengeEndDate(e.target.value)}
+                                    min={classicChallengeStartDate || new Date().toISOString().slice(0, 19)}
+                                    disabled={creatingClassicChallenge}
+                                />
+                            </div>
+                        </>)}
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                {t("start_date") || "Start Date"} *
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={classicChallengeStartDate}
-                                onChange={(e) => setClassicChallengeStartDate(e.target.value)}
-                                min={new Date().toISOString().slice(0, 19)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '16px'
-                                }}
-                                disabled={creatingClassicChallenge}
-                            />
-                        </div>
+                        {/* Realtime fields */}
+                        {challengeModalType === 'realtime' && (<>
+                            <div className="challenge-modal-field">
+                                <label>{t("challenge_start_time") || "Start time"} *</label>
+                                <input
+                                    type="datetime-local"
+                                    value={countdownStartTime}
+                                    onChange={(e) => setCountdownStartTime(e.target.value)}
+                                    min={new Date().toISOString().slice(0, 16)}
+                                    disabled={saveAsChallengeLoading}
+                                />
+                            </div>
+                            <div className="challenge-modal-field challenge-modal-recurrence">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={enableRecurrence}
+                                        onChange={(e) => setEnableRecurrence(e.target.checked)}
+                                        disabled={saveAsChallengeLoading}
+                                    />
+                                    {" "}{t("enable_recurrence") || "Récurrence"}
+                                </label>
+                                {enableRecurrence && (
+                                    <div className="challenge-recurrence-row">
+                                        <span>{t("every") || "Tous les"}</span>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={recurrenceInterval}
+                                            onChange={(e) => setRecurrenceInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                                            disabled={saveAsChallengeLoading}
+                                            style={{width: '60px'}}
+                                        />
+                                        <select
+                                            value={recurrenceType}
+                                            onChange={(e) => setRecurrenceType(e.target.value as any)}
+                                            disabled={saveAsChallengeLoading}
+                                        >
+                                            <option value="hour">{t("hour") || "heure(s)"}</option>
+                                            <option value="day">{t("day") || "jour(s)"}</option>
+                                            <option value="week">{t("week") || "semaine(s)"}</option>
+                                            <option value="month">{t("month") || "mois"}</option>
+                                            <option value="year">{t("year") || "an(s)"}</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        </>)}
 
-                        <div style={{ marginBottom: '30px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                                {t("end_date") || "End Date"} *
-                            </label>
-                            <input
-                                type="datetime-local"
-                                value={classicChallengeEndDate}
-                                onChange={(e) => setClassicChallengeEndDate(e.target.value)}
-                                min={classicChallengeStartDate || new Date().toISOString().slice(0, 19)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '16px'
-                                }}
-                                disabled={creatingClassicChallenge}
-                            />
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                        <div className="challenge-modal-actions">
                             <button
+                                className="challenge-modal-cancel"
                                 onClick={() => {
                                     setShowClassicChallengeModal(false);
                                     setClassicChallengeName("");
-                                    //setClassicChallengeDescription("");
                                     setClassicChallengeStartDate("");
                                     setClassicChallengeEndDate("");
                                     setClassicChallengeError(null);
                                 }}
-                                disabled={creatingClassicChallenge}
-                                style={{
-                                    padding: '10px 20px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    backgroundColor: '#f5f5f5',
-                                    cursor: creatingClassicChallenge ? 'not-allowed' : 'pointer',
-                                    opacity: creatingClassicChallenge ? 0.6 : 1
-                                }}
+                                disabled={creatingClassicChallenge || saveAsChallengeLoading}
                             >
                                 {t("cancel") || "Cancel"}
                             </button>
                             <button
-                                onClick={handleCreateClassicChallenge}
-                                disabled={creatingClassicChallenge}
-                                style={{
-                                    padding: '10px 20px',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    backgroundColor: creatingClassicChallenge ? '#ccc' : '#21669f',
-                                    color: 'white',
-                                    cursor: creatingClassicChallenge ? 'not-allowed' : 'pointer',
-                                    opacity: creatingClassicChallenge ? 0.6 : 1
-                                }}
+                                className="challenge-modal-submit"
+                                onClick={challengeModalType === 'classic' ? handleCreateClassicChallenge : handleSaveAsChallenge}
+                                disabled={creatingClassicChallenge || saveAsChallengeLoading}
                             >
-                                {creatingClassicChallenge ? (t("creating") || "Creating...") : (t("create_challenge") || "Create Challenge")}
+                                {(creatingClassicChallenge || saveAsChallengeLoading) ? (t("creating") || "Creating...") : (t("create_challenge") || "Create Challenge")}
                             </button>
                         </div>
                     </div>

@@ -25,6 +25,7 @@ interface Session {
   duration: number; // in seconds
   quitReason?: string;
   blindMode?: boolean;
+  multiplayerClassicChallengeId?: number | null;
 }
 
 // Mode-specific stats
@@ -610,6 +611,7 @@ export function Page() {
                 <th>{t('correct')}</th>
                 <th>{t('incorrect')}</th>
                 <th>{t('duration')}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -624,10 +626,25 @@ export function Page() {
                     <td>{session.correct}</td>
                     <td>{session.incorrect}</td>
                     <td>{formatTime({ms:session.duration})}</td>
+                    <td>
+                      {session.mode === 'multiplayer' ? (
+                        <a href={session.multiplayerClassicChallengeId
+                          ? `/multiplayer/?replay_multi=${session.multiplayerClassicChallengeId}`
+                          : `/multiplayer/?replay_session=${session.id}`}
+                          className="review-link">
+                          {t("review_button") || "Revoir"}
+                        </a>
+                      ) : (session.mode === 'streak' || session.mode === 'time-attack') && new Date(session.createdAt) >= new Date('2026-04-02') && (
+                        <a href={`/singleplayer/${session.mode}/?replay_session=${session.id}`}
+                          className="review-link">
+                          {t("review_button") || "Revoir"}
+                        </a>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (                <tr>
-                  <td colSpan={8} className="no-sessions">
+                  <td colSpan={9} className="no-sessions">
                     <div className="no-data-message">
                       {t('no_matching_sessions')}
                     </div>

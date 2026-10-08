@@ -11,7 +11,7 @@ const externalGameCommandsSchema = Joi.array().items(
     action: Joi.string().valid("load-atlas", "guess", "countdown").required(),
     atlas: Joi.string().optional(),
     regionId: Joi.number().integer().optional(),
-    duration: Joi.number().integer().min(5).when('action', {
+    duration: Joi.number().integer().min(1).when('action', {
       is: 'countdown',
       then: Joi.optional(),
       otherwise: Joi.required()
